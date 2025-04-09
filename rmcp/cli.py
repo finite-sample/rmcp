@@ -1,17 +1,8 @@
 # rmcp/cli.py
 import click
 import os
-
-# Import your server's main function from rmcp, adjust the import if necessary.
+from rmcp.tools import mcp  # Import the shared mcp instance with tool registrations
 from rmcp.server.stdio import stdio_server
-from rmcp.server.fastmcp import FastMCP
-
-# Initialize your MCP server (update the parameters as needed)
-mcp = FastMCP(
-    name="R Econometrics",
-    version="0.1.0",
-    description="A Model Context Protocol server for R-based econometric analysis"
-)
 
 @click.group()
 def cli():
@@ -26,6 +17,9 @@ def dev(server_file):
     
     SERVER_FILE: The Python file containing your MCP server definition.
     """
+    import sys
+    # Ensure the working directory is in sys.path so that package rmcp is found.
+    sys.path.insert(0, os.getcwd())
     click.echo(f"Running MCP server in development mode from {server_file}...")
     with open(server_file) as f:
         code = f.read()
