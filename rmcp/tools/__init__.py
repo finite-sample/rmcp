@@ -15,6 +15,7 @@ from .diagnostics import diagnostics
 from .descriptive import descriptive_stats
 from .correlation import correlation
 from .groupby import group_by
+from .file_analysis import analyze_csv        # NEW: Import the file analysis tool
 
-# Import prompts to make them available via the package.
+# Optional: Also import prompts if needed.
 from .prompts import panel_data_analysis_prompt, time_series_analysis_prompt
