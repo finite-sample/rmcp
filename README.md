@@ -1,4 +1,9 @@
-## R Econometrics MCP Server
+## R MCP Server
+
+[![PyPI version](https://img.shields.io/pypi/v/rmcp.svg)](https://pypi.org/project/rmcp/)
+[![Downloads](https://pepy.tech/badge/rmcp)](https://pepy.tech/project/rmcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 
 A Model Context Protocol (MCP) server that provides econometric modeling capabilities through R. This server enables AI assistants to perform sophisticated econometric analyses, including linear regression, panel data models, instrumental variables regression, and diagnostic tests.
 
