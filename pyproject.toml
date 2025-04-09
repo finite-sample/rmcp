@@ -21,4 +21,5 @@ dependencies = [
 Homepage = "https://github.com/gojiplus/rmcp"
 
 [project.scripts]
-rmcp = "rmcp.cli:cli"
+rmcp = "rmcp.__main__:main"
+

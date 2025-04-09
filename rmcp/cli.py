@@ -10,7 +10,14 @@ def cli():
 @cli.command()
 def start():
     click.echo("Starting the MCP server via standard input...")
-    stdio_server(mcp)
+    import sys, traceback
+    try:
+        stdio_server(mcp)
+    except Exception as e:
+        print("SERVER CRASHED!", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        raise
+
 
 @cli.command()
 def version():
