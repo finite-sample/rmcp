@@ -1,24 +1,19 @@
-# mcp/server/stdio.py
+# rmcp/server/stdio.py
 
 import sys
-import json
+import logging
 
 def stdio_server(server):
     """
-    Run the given server using standard input and output.
-    Reads one JSON message per line from stdin and writes the JSON response to stdout.
+    Launch the MCP server using standard I/O (stdin/stdout).
+    Should be passed an MCP-compatible server instance (e.g., FastMCP).
     """
-    for line in sys.stdin:
-        if not line.strip():
-            continue
-        try:
-            message = json.loads(line)
-            result = server.process_message(message)
-            sys.stdout.write(json.dumps(result))
-            sys.stdout.write("\n")
-            sys.stdout.flush()
-        except Exception as e:
-            error_response = {"error": str(e)}
-            sys.stdout.write(json.dumps(error_response))
-            sys.stdout.write("\n")
-            sys.stdout.flush()
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logger = logging.getLogger("rmcp-mcp")
+
+    try:
+        logger.debug("Starting MCP stdio server...")
+        server.run()
+    except Exception as e:
+        logger.exception("Fatal error running MCP server")
+        raise

@@ -1,30 +1,39 @@
-FROM python:3.10-slim
+# Use the official Rocker R base image (with a recent R version)
+FROM rocker/r-base:4.2.2
 
-# Install R and required system dependencies
+# Install Python3, pip and required system dependencies for R packages.
 RUN apt-get update && apt-get install -y \
-    r-base \
-    r-base-dev \
+    python3 \
+    python3-pip \
     libxml2-dev \
     libcurl4-openssl-dev \
     libssl-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    gfortran \
+    libopenblas-dev \
+    liblapack-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install required R packages
+# Install required R packages.
 RUN R -e "install.packages(c('plm', 'lmtest', 'sandwich', 'AER', 'jsonlite'), repos='https://cloud.r-project.org/')"
 
-# Set up Python environment
+# Set the working directory
 WORKDIR /app
 
-# Copy requirements.txt first for better caching
+# Copy the project files to the container.
+# (Assumes your package files and pyproject.toml are in the repository root)
+COPY pyproject.toml .
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY rmcp ./rmcp
 
-# Copy the server code
-COPY r_econometrics_mcp.py .
+# Upgrade pip, install Python dependencies from requirements.txt, 
+# and then install your package using pyproject.toml configuration.
+# We add --break-system-packages to avoid PEP 668 issues.
+RUN pip3 install --upgrade pip --break-system-packages && \
+    pip3 install --no-cache-dir -r requirements.txt --break-system-packages && \
+    pip3 install --no-cache-dir . --break-system-packages
 
-# Set environment variables
+# Ensure stdout is unbuffered.
 ENV PYTHONUNBUFFERED=1
 
-# Run the server
-CMD ["python", "r_econometrics_mcp.py"]
+# Run the server using the CLI entry point defined in your pyproject.toml
+CMD ["rmcp", "start"]
