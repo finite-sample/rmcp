@@ -1,7 +1,7 @@
 # rmcp/tools/correlation.py
 
 from typing import Dict, Any
-from rmcp.tools import mcp
+from rmcp.tools.mcp_instance import mcp
 from rmcp.tools.common import execute_r_script
 
 CORRELATION_SCRIPT = """

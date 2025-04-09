@@ -1,7 +1,7 @@
 # rmcp/tools/regression.py
 
 from typing import Dict, Any, List
-from rmcp.tools import mcp
+from rmcp.tools.mcp_instance import mcp
 from rmcp.tools.common import execute_r_script
 
 LINEAR_REGRESSION_SCRIPT = """

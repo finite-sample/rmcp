@@ -13,32 +13,69 @@ logging.basicConfig(level=logging.DEBUG,
                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("rmcp-mcp")
 
-class MCPServer:
-    def __init__(self, name: str, version: str, description: str):
+class FastMCP:
+    def __init__(self, name=None, version=None, description=None):
+        """
+        Initialize the FastMCP server.
+        
+        Args:
+            name (str, optional): Name of the server
+            version (str, optional): Version of the server
+            description (str, optional): Description of the server
+        """
         self.name = name
         self.version = version
         self.description = description
         self.tools = {}
+
+    def tool(self, name=None, description=None, input_schema=None, schema=None, **kwargs):
+        """
+        Decorator to register a tool with optional metadata.
         
-    def register_tool(self, name: str, func, description: str = "", schema: Dict = None):
-        """Register a tool with the server"""
+        Args:
+            name (str, optional): Name of the tool. Defaults to function name.
+            description (str, optional): Description of the tool.
+            input_schema (dict, optional): JSON schema for input validation.
+            schema (dict, optional): Alternative name for input_schema.
+            **kwargs: Additional keyword arguments
+        """
+        def decorator(func):
+            # Determine tool name
+            tool_name = name or func.__name__
+            
+            # Prefer input_schema, fallback to schema
+            tool_schema = input_schema or schema or {"type": "object", "properties": {}}
+            
+            # Register the tool with additional metadata
+            self.register_tool(
+                name=tool_name, 
+                func=func, 
+                description=description or "",
+                schema=tool_schema
+            )
+            return func
+        return decorator
+
+    def register_tool(self, name, func, description="", schema=None):
+        """
+        Register a tool with optional metadata.
+        
+        Args:
+            name (str): Name of the tool
+            func (callable): The tool function
+            description (str, optional): Description of the tool
+            schema (dict, optional): JSON schema for input validation
+        """
+        # Use default empty schema if none provided
         if schema is None:
             schema = {"type": "object", "properties": {}}
-            
+        
+        # Store tool with additional metadata
         self.tools[name] = {
             "function": func,
             "description": description,
             "schema": schema
         }
-        logger.debug(f"Registered tool: {name}")
-        
-    def tool(self, name: str = None, description: str = "", schema: Dict = None):
-        """Decorator to register a tool"""
-        def decorator(func):
-            tool_name = name if name else func.__name__
-            self.register_tool(tool_name, func, description, schema)
-            return func
-        return decorator
     
     def run(self):
         """Run the server, reading from stdin and writing to stdout"""
