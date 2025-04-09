@@ -4,17 +4,20 @@
 [![Downloads](https://pepy.tech/badge/rmcp)](https://pepy.tech/project/rmcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-
-A Model Context Protocol (MCP) server that provides econometric modeling capabilities through R. This server enables AI assistants to perform sophisticated econometric analyses, including linear regression, panel data models, instrumental variables regression, and diagnostic tests.
+A Model Context Protocol (MCP) server that provides advanced econometric modeling and data analysis capabilities through R. This server enables AI assistants to perform sophisticated econometric and statistical analyses seamlessly, helping you quickly gain insights from your data.
 
 ## Features
 
-- **Linear Regression**: Run linear models with optional robust standard errors.
-- **Panel Data Analysis**: Fixed effects, random effects, pooling, between, and first-difference models.
-- **Instrumental Variables**: Estimate IV regression models.
-- **Diagnostic Tests**: Heteroskedasticity, autocorrelation, and functional form tests.
-- **Resources**: Reference documentation for econometric techniques.
-- **Prompts**: Pre-defined prompt templates for common econometric analyses.
+- **Linear Regression:** Run linear models with optional robust standard errors.
+- **Panel Data Analysis:** Estimate fixed effects, random effects, pooling, between, and first-difference models.
+- **Instrumental Variables:** Build and estimate IV regression models.
+- **Diagnostic Tests:** Assess heteroskedasticity, autocorrelation, and model misspecification.
+- **Descriptive Statistics:** Generate summary statistics for datasets using R’s summary() functionality.
+- **Correlation Analysis:** Compute Pearson or Spearman correlations between variables.
+- **Group-By Aggregations:** Group data by specified columns and compute summary statistics using dplyr.
+- **Resources:** Access reference documentation for various econometric techniques.
+- **Prompts:** Use pre-defined prompt templates for common econometric analyses.
+
 
 ## Installation
 
