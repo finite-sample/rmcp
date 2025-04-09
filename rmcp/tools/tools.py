@@ -9,7 +9,7 @@ from typing import Dict, List, Any
 from rmcp.server.fastmcp import FastMCP
 from rmcp.server.stdio import stdio_server
 
-# Create the shared MCP server instance
+# Create the shared MCP server instance.
 mcp = FastMCP(
     name="R Econometrics",
     version="0.1.0",
@@ -37,10 +37,12 @@ def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
         # Construct the R command.
         r_command = f"""
         library(jsonlite)
+        # Load necessary libraries for different functions.
         library(plm)
         library(lmtest)
         library(sandwich)
         library(AER)
+        library(dplyr)
         
         # Define NULL coalescing operator if not available.
         '%||%' <- function(x, y) if (is.null(x)) y else x
@@ -78,8 +80,7 @@ def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
                 pass
 
 # -------------------------------------------------------------------
-# R Scripts (as constants)
-
+# Existing R Script for Linear Regression.
 LINEAR_REGRESSION_SCRIPT = """
 # Perform linear regression.
 data <- as.data.frame(args$data)
@@ -118,6 +119,7 @@ result <- list(
 )
 """
 
+# Existing R Script for Panel Data Analysis.
 PANEL_MODEL_SCRIPT = """
 # Perform panel data analysis.
 data <- as.data.frame(args$data)
@@ -139,13 +141,11 @@ panel_model <- plm::plm(
 
 # Extract the summary.
 model_summary <- summary(panel_model)
-
-# Extract coefficients and standard errors.
 coeffs <- coef(panel_model)
 std_err <- model_summary$coefficients[, "Std. Error"]
 
 # Check if the 't value' column exists.
-if("t value" %in% colnames(model_summary$coefficients)) {
+if ("t value" %in% colnames(model_summary$coefficients)) {
   t_vals <- model_summary$coefficients[, "t value"]
 } else {
   t_vals <- rep(NA, length(coeffs))
@@ -166,7 +166,7 @@ result <- list(
 )
 """
 
-
+# Existing R Script for Diagnostics.
 DIAGNOSTICS_SCRIPT = """
 # Perform model diagnostics.
 data <- as.data.frame(args$data)
@@ -175,7 +175,6 @@ tests <- args$tests
 
 # Fit a linear model.
 model <- lm(formula, data = data)
-
 results <- list()
 
 # Run the requested diagnostic tests.
@@ -208,6 +207,7 @@ for (test in tests) {
 result <- results
 """
 
+# Existing R Script for IV Regression.
 IV_REGRESSION_SCRIPT = """
 # Perform instrumental variables regression.
 data <- as.data.frame(args$data)
@@ -228,118 +228,102 @@ result <- list(
 """
 
 # -------------------------------------------------------------------
-# Register Tools
+# Additional Tools for Descriptive Stats, Correlation, and Group-By
+
+# Descriptive Statistics tool using summary() in R.
+DESCRIPTIVE_STATS_SCRIPT = """
+# Compute descriptive statistics.
+data <- as.data.frame(args$data)
+# Capture the output of summary() as a character vector.
+desc_output <- capture.output(summary(data))
+result <- list(summary = desc_output)
+"""
 
 @mcp.tool(
-    name="linear_model",
-    description="Run a linear regression model",
+    name="descriptive_stats",
+    description="Compute basic descriptive statistics for numeric columns.",
     input_schema={
         "type": "object",
         "properties": {
-            "formula": {
-                "type": "string",
-                "description": "The regression formula (e.g., 'y ~ x1 + x2')"
-            },
             "data": {
                 "type": "object",
-                "description": "Dataset as a dictionary/JSON object"
-            },
-            "robust": {
-                "type": "boolean",
-                "description": "Whether to use robust standard errors"
+                "description": "Dataset as a dictionary/JSON object."
             }
         },
-        "required": ["formula", "data"]
+        "required": ["data"]
     }
 )
-def linear_model(formula: str, data: Dict[str, Any], robust: bool = False) -> Dict[str, Any]:
-    args = {"formula": formula, "data": data, "robust": robust}
-    return execute_r_script(LINEAR_REGRESSION_SCRIPT, args)
+def descriptive_stats(data: Dict[str, Any]) -> Dict[str, Any]:
+    args = {"data": data}
+    return execute_r_script(DESCRIPTIVE_STATS_SCRIPT, args)
+
+# Correlation tool: compute correlation between two variables.
+CORRELATION_SCRIPT = """
+# Compute correlation between two variables.
+data <- as.data.frame(args$data)
+var1 <- args$var1
+var2 <- args$var2
+method <- args$method %||% "pearson"  # default method is Pearson
+# Compute correlation value.
+corr_value <- cor(data[[var1]], data[[var2]], method = method, use = "complete.obs")
+result <- list(correlation = corr_value, method = method)
+"""
 
 @mcp.tool(
-    name="panel_model",
-    description="Run a panel data model",
+    name="correlation",
+    description="Compute correlation between two variables (Pearson or Spearman).",
     input_schema={
         "type": "object",
         "properties": {
-            "formula": {
-                "type": "string",
-                "description": "The regression formula (e.g., 'y ~ x1 + x2')"
-            },
-            "data": {
-                "type": "object",
-                "description": "Dataset as a dictionary/JSON object"
-            },
-            "index": {
-                "type": "array",
-                "description": "Panel index variables (e.g., ['individual', 'time'])"
-            },
-            "effect": {
-                "type": "string",
-                "description": "Type of effects: 'individual', 'time', or 'twoways'"
-            },
-            "model": {
-                "type": "string",
-                "description": "Model type: 'within', 'random', 'pooling', 'between', or 'fd'"
-            }
+            "data": {"type": "object", "description": "Dataset as a dictionary/JSON object."},
+            "var1": {"type": "string", "description": "First variable name."},
+            "var2": {"type": "string", "description": "Second variable name."},
+            "method": {"type": "string", "description": "Method: 'pearson' (default) or 'spearman'."}
         },
-        "required": ["formula", "data", "index"]
+        "required": ["data", "var1", "var2"]
     }
 )
-def panel_model(formula: str, data: Dict[str, Any], index: List[str], effect: str = "individual", model: str = "within") -> Dict[str, Any]:
-    args = {"formula": formula, "data": data, "index": index, "effect": effect, "model": model}
-    return execute_r_script(PANEL_MODEL_SCRIPT, args)
+def correlation(data: Dict[str, Any], var1: str, var2: str, method: str = "pearson") -> Dict[str, Any]:
+    args = {"data": data, "var1": var1, "var2": var2, "method": method}
+    return execute_r_script(CORRELATION_SCRIPT, args)
+
+# Group-by tool: Group data by a specified column and compute summary with dplyr.
+GROUP_BY_SCRIPT = """
+# Use dplyr to group data and compute a summary statistic.
+library(dplyr)
+data <- as.data.frame(args$data)
+group_col <- args$group_col
+summarise_col <- args$summarise_col
+stat_fun <- args$stat %||% "mean"  # default summary function is mean
+
+# Group by the specified column and compute the summary for the summarise column.
+grouped <- data %>%
+  group_by_at(group_col) %>%
+  summarise(s_value = match.fun(stat_fun)(get(summarise_col), na.rm = TRUE))
+
+result <- list(summary = as.data.frame(grouped))
+"""
 
 @mcp.tool(
-    name="diagnostics",
-    description="Perform model diagnostics",
+    name="group_by",
+    description="Group data by a column and compute a summary statistic using dplyr.",
     input_schema={
         "type": "object",
         "properties": {
-            "formula": {
-                "type": "string",
-                "description": "The regression formula (e.g., 'y ~ x1 + x2')"
-            },
-            "data": {
-                "type": "object",
-                "description": "Dataset as a dictionary/JSON object"
-            },
-            "tests": {
-                "type": "array",
-                "description": "Tests to run (e.g., ['bp', 'reset', 'dw'])"
-            }
+            "data": {"type": "object", "description": "Dataset as a dictionary/JSON object."},
+            "group_col": {"type": "string", "description": "Column name to group by."},
+            "summarise_col": {"type": "string", "description": "Column name to summarize."},
+            "stat": {"type": "string", "description": "Summary function (e.g., 'mean', 'median'); default is 'mean'."}
         },
-        "required": ["formula", "data", "tests"]
+        "required": ["data", "group_col", "summarise_col"]
     }
 )
-def diagnostics(formula: str, data: Dict[str, Any], tests: List[str]) -> Dict[str, Any]:
-    args = {"formula": formula, "data": data, "tests": tests}
-    return execute_r_script(DIAGNOSTICS_SCRIPT, args)
-
-@mcp.tool(
-    name="iv_regression",
-    description="Estimate instrumental variables regression",
-    input_schema={
-        "type": "object",
-        "properties": {
-            "formula": {
-                "type": "string",
-                "description": "The regression formula (e.g., 'y ~ x1 + x2 | z1 + z2')"
-            },
-            "data": {
-                "type": "object",
-                "description": "Dataset as a dictionary/JSON object"
-            }
-        },
-        "required": ["formula", "data"]
-    }
-)
-def iv_regression(formula: str, data: Dict[str, Any]) -> Dict[str, Any]:
-    args = {"formula": formula, "data": data}
-    return execute_r_script(IV_REGRESSION_SCRIPT, args)
+def group_by(data: Dict[str, Any], group_col: str, summarise_col: str, stat: str = "mean") -> Dict[str, Any]:
+    args = {"data": data, "group_col": group_col, "summarise_col": summarise_col, "stat": stat}
+    return execute_r_script(GROUP_BY_SCRIPT, args)
 
 # -------------------------------------------------------------------
-# Register Resources
+# Existing Resource and Prompt Registrations remain unchanged
 
 @mcp.resource("econometrics:formulas")
 def get_econometrics_formulas() -> str:
@@ -391,9 +375,6 @@ Key models include:
 Effects: individual, time, twoways.
     """
 
-# -------------------------------------------------------------------
-# Register Prompts
-
 @mcp.prompt("panel_data_analysis")
 def panel_data_analysis_prompt(dataset_name: str, dependent_var: str, independent_vars: str) -> List[Dict[str, Any]]:
     return [
@@ -433,7 +414,7 @@ def time_series_analysis_prompt(dataset_name: str, time_var: str, dependent_var:
     ]
 
 # -------------------------------------------------------------------
-# Main server function (optional in tools, typically used in rmcp.py or cli.py)
+# Optional: Provide a convenience function to run the MCP server.
 def run_server():
     """Convenience function to run the MCP server via standard I/O."""
     return stdio_server(mcp)

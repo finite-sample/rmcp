@@ -2,12 +2,8 @@
 import pytest
 import sys
 import os
-# Add the parent directory to sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-
-# Import the functions you want to test from rmcp.py.
-# Adjust the import statement if your module is in a package or different directory.
 from rmcp.tools import linear_model, diagnostics, iv_regression, panel_model, panel_data_analysis_prompt
 
 def test_linear_model():
