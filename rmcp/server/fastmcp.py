@@ -3,6 +3,8 @@ import sys
 import os
 import json
 import logging
+import select
+import time
 from typing import Dict, Any, List, Optional, Union
 
 # Set up logging
@@ -17,12 +19,10 @@ class MCPServer:
         self.version = version
         self.description = description
         self.tools = {}
-        self.next_id = 1
         
     def register_tool(self, name: str, func, description: str = "", schema: Dict = None):
         """Register a tool with the server"""
         if schema is None:
-            # Create a basic schema if none provided
             schema = {"type": "object", "properties": {}}
             
         self.tools[name] = {
@@ -44,47 +44,81 @@ class MCPServer:
         """Run the server, reading from stdin and writing to stdout"""
         logger.debug("Starting MCP server")
         
-        # Use binary mode for stdin/stdout to avoid encoding issues
+        # Properly handle stdin/stdout in binary mode
         stdin = os.fdopen(sys.stdin.fileno(), 'rb')
         stdout = os.fdopen(sys.stdout.fileno(), 'wb')
         
-        # Process messages in a loop
+        # Message buffer and state
+        buffer = b""
+        content_length = None
+        
+        # Main loop
         while True:
-            try:
-                # Read the message header
-                header = stdin.readline().decode('utf-8').strip()
-                if not header:
-                    logger.debug("Empty header received, exiting")
+            # Check if stdin is ready to read
+            ready, _, _ = select.select([stdin], [], [], 0.1)
+            
+            if stdin in ready:
+                # Read available data
+                chunk = stdin.read(4096)
+                if not chunk:
+                    logger.debug("End of input stream, exiting")
                     break
+                
+                buffer += chunk
+                
+                # Process complete messages
+                while True:
+                    # If we don't know the content length yet, look for the header
+                    if content_length is None:
+                        header_end = buffer.find(b'\r\n\r\n')
+                        if header_end == -1:
+                            # Header not complete yet
+                            break
+                            
+                        # Parse headers
+                        header = buffer[:header_end].decode('utf-8')
+                        logger.debug(f"Received header: {header}")
+                        
+                        for line in header.split('\r\n'):
+                            if line.startswith('Content-Length: '):
+                                content_length = int(line[16:])
+                                logger.debug(f"Content length: {content_length}")
+                                
+                        # Remove header from buffer
+                        buffer = buffer[header_end + 4:]  # +4 for '\r\n\r\n'
                     
-                # Parse message length
-                if not header.startswith("Content-Length: "):
-                    logger.error(f"Invalid header: {header}")
-                    continue
-                    
-                content_length = int(header.split(": ")[1])
-                
-                # Skip the empty line after the header
-                stdin.readline()
-                
-                # Read the message content
-                content = stdin.read(content_length).decode('utf-8')
-                message = json.loads(content)
-                logger.debug(f"Received message: {message}")
-                
-                # Process the message and send a response
-                response = self.process_message(message)
-                if response:
-                    self.send_response(stdout, response)
-                    
-            except Exception as e:
-                logger.error(f"Error processing message: {e}")
-                import traceback
-                logger.error(traceback.format_exc())
-                break
-                
-        logger.debug("Server shutting down")
-    
+                    # If we have the content length, check if we have enough data
+                    if content_length is not None:
+                        if len(buffer) >= content_length:
+                            # We have a complete message
+                            content = buffer[:content_length].decode('utf-8')
+                            buffer = buffer[content_length:]
+                            content_length = None
+                            
+                            # Process the message
+                            try:
+                                message = json.loads(content)
+                                logger.debug(f"Received message: {message}")
+                                
+                                response = self.process_message(message)
+                                if response:
+                                    self.send_response(stdout, response)
+                            except json.JSONDecodeError:
+                                logger.error(f"Invalid JSON: {content}")
+                            except Exception as e:
+                                logger.error(f"Error processing message: {e}")
+                                import traceback
+                                logger.error(traceback.format_exc())
+                        else:
+                            # Need more data
+                            break
+                    else:
+                        # No content length found
+                        break
+            
+            # Small sleep to prevent CPU spinning
+            time.sleep(0.01)
+            
     def send_response(self, stdout, response):
         """Send a response message over stdout"""
         response_json = json.dumps(response)
@@ -96,7 +130,7 @@ class MCPServer:
         stdout.flush()
         
         logger.debug(f"Sent response: {response}")
-    
+        
     def process_message(self, message):
         """Process an incoming JSON-RPC message"""
         method = message.get("method")
