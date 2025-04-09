@@ -1,3 +1,4 @@
+# Use a lightweight Python base image
 FROM python:3.10-slim
 
 # Install R and required system dependencies
@@ -13,18 +14,23 @@ RUN apt-get update && apt-get install -y \
 # Install required R packages
 RUN R -e "install.packages(c('plm', 'lmtest', 'sandwich', 'AER', 'jsonlite'), repos='https://cloud.r-project.org/')"
 
-# Set up Python environment
+# Set up the working directory
 WORKDIR /app
 
-# Copy requirements.txt first for better caching
+# Copy package management files and source code
+# (Assumes you have a requirements.txt file for additional Python dependencies.)
+COPY pyproject.toml .
 COPY requirements.txt .
+COPY rmcp ./rmcp
+
+# Install Python dependencies and then install your package using pyproject.toml configuration
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir .
 
-# Copy the server code
-COPY r_econometrics_mcp.py .
-
-# Set environment variables
+# Ensure standard output is unbuffered
 ENV PYTHONUNBUFFERED=1
 
-# Run the server
-CMD ["python", "r_econometrics_mcp.py"]
+# Run the server using the CLI entry point defined in your pyproject.toml;
+# this should trigger "rmcp start"
+CMD ["rmcp", "start"]
