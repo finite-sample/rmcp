@@ -1,0 +1,16 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Distribution / packaging
+rmcp.egg-info/
+build/
+dist/
+
+# Virtual environment
+venv/
+
+# OS specific files
+.DS_Store
+/venv-release-test
+/venv-test
