@@ -37,7 +37,7 @@ jobs:
 
       # Run unit tests on your Python functions (not over HTTP)
       - name: Run unit tests
-        run: pytest test_rmcp.py
+        run: pytest tests/test_rmcp.py
 
       # Optionally, you can simulate a full end-to-end message to the container:
       - name: End-to-end test via Docker
