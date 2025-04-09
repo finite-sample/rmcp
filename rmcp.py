@@ -2,33 +2,31 @@ import os
 import json
 import tempfile
 import subprocess
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
-from mcp.server import Server
 from mcp.server.fastmcp import FastMCP
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, JsonSchema, JsonSchemaProperty
 
-# Initialize the MCP server
+# Initialize the MCP server using FastMCP from our package.
 mcp = FastMCP(
     name="R Econometrics",
     version="0.1.0",
     description="A Model Context Protocol server for R-based econometric analysis"
 )
 
-# Function to execute R script
 def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
     """
     Execute an R script with the given arguments and return the results.
     
+    This version captures and prints stdout and stderr from the Rscript call.
+    
     Args:
-        script: The R script to execute
-        args: Arguments to pass to the R script
+        script: The R script to execute.
+        args: Arguments to pass to the R script.
         
     Returns:
-        The results of the R execution as a dictionary
+        The results of the R execution as a dictionary.
     """
-    # Create temporary files for the script, arguments, and results
     with tempfile.NamedTemporaryFile(suffix='.R', delete=False, mode='w') as script_file, \
          tempfile.NamedTemporaryFile(suffix='.json', delete=False, mode='w') as args_file, \
          tempfile.NamedTemporaryFile(suffix='.json', delete=False) as result_file:
@@ -37,12 +35,12 @@ def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
         args_path = args_file.name
         result_path = result_file.name
         
-        # Write the script and arguments to temporary files
+        # Write the script and arguments to temporary files.
         script_file.write(script)
         json.dump(args, args_file)
-        
+    
     try:
-        # Construct the R command to execute the script
+        # Construct the R command.
         r_command = f"""
         library(jsonlite)
         library(plm)
@@ -50,56 +48,56 @@ def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
         library(sandwich)
         library(AER)
         
-        # Define NULL coalescing operator if not available
+        # Define NULL coalescing operator if not available.
         '%||%' <- function(x, y) if (is.null(x)) y else x
         
-        # Read arguments
+        # Read arguments from the temporary file.
         args <- fromJSON('{args_path}')
         
-        # Execute the script
+        # Execute the provided R script.
         {script}
         
-        # Write the results to a file
+        # Write the results to the temporary results file.
         writeLines(toJSON(result, auto_unbox = TRUE), '{result_path}')
         """
         
-        # Execute the R command
-        subprocess.run(
-            ['Rscript', '-e', r_command],
-            check=True,
-            capture_output=True,
-            text=True
-        )
+        try:
+            subprocess.run(
+                ['Rscript', '-e', r_command],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+        except subprocess.CalledProcessError as e:
+            print("Rscript STDOUT:")
+            print(e.stdout)
+            print("Rscript STDERR:")
+            print(e.stderr)
+            raise
         
-        # Read and parse the results
         with open(result_path, 'r') as f:
             result = json.load(f)
-            
         return result
     
     finally:
-        # Clean up temporary files
         for file_path in [script_path, args_path, result_path]:
             try:
                 os.unlink(file_path)
-            except:
+            except Exception:
                 pass
 
-# Define R scripts for different econometric models
-
-# Linear regression script
+# Define the R script for a linear regression model.
 LINEAR_REGRESSION_SCRIPT = """
-# Perform linear regression
+# Perform linear regression.
 data <- as.data.frame(args$data)
 formula <- as.formula(args$formula)
 robust <- args$robust %||% FALSE
 
-# Run the model
+# Fit the model.
 model <- lm(formula, data = data)
 
-# Format results
+# Format the results.
 if (robust) {
-  library(sandwich)
   robust_se <- lmtest::coeftest(model, vcov = sandwich::vcovHC(model, type = "HC1"))
   coefficients <- coef(model)
   std_errors <- robust_se[, "Std. Error"]
@@ -127,19 +125,19 @@ result <- list(
 )
 """
 
-# Panel data model script
+# Define the R script for panel data analysis.
 PANEL_MODEL_SCRIPT = """
-# Perform panel data analysis
+# Perform panel data analysis.
 data <- as.data.frame(args$data)
 formula <- as.formula(args$formula)
 index <- args$index
 effect <- args$effect %||% "individual"
 model_type <- args$model %||% "within"
 
-# Create panel data object
+# Create the panel data object.
 panel_data <- plm::pdata.frame(data, index = index)
 
-# Run the panel model
+# Fit the panel data model.
 panel_model <- plm::plm(
   formula,
   data = panel_data,
@@ -147,7 +145,7 @@ panel_model <- plm::plm(
   model = model_type
 )
 
-# Extract results
+# Extract the results.
 model_summary <- summary(panel_model)
 result <- list(
   coefficients = as.list(coef(panel_model)),
@@ -162,23 +160,22 @@ result <- list(
 )
 """
 
-# Diagnostics script
+# Define the R script for diagnostic tests.
 DIAGNOSTICS_SCRIPT = """
-# Perform model diagnostics
+# Perform model diagnostics.
 data <- as.data.frame(args$data)
 formula <- as.formula(args$formula)
 tests <- args$tests
 
-# Run the linear model
+# Fit a linear model.
 model <- lm(formula, data = data)
 
-# Initialize results list
+# Initialize an empty list for test results.
 results <- list()
 
-# Run requested tests
+# Run the requested diagnostic tests.
 for (test in tests) {
   if (test == "bp") {
-    # Breusch-Pagan test for heteroskedasticity
     bp_test <- lmtest::bptest(model)
     results$bp <- list(
       statistic = as.numeric(bp_test$statistic),
@@ -187,7 +184,6 @@ for (test in tests) {
       method = bp_test$method
     )
   } else if (test == "reset") {
-    # Ramsey RESET test for functional form
     reset_test <- lmtest::resettest(model)
     results$reset <- list(
       statistic = as.numeric(reset_test$statistic),
@@ -196,7 +192,6 @@ for (test in tests) {
       method = reset_test$method
     )
   } else if (test == "dw") {
-    # Durbin-Watson test for autocorrelation
     dw_test <- lmtest::dwtest(model)
     results$dw <- list(
       statistic = as.numeric(dw_test$statistic),
@@ -205,20 +200,19 @@ for (test in tests) {
     )
   }
 }
-
 result <- results
 """
 
-# Instrumental variables script
+# Define the R script for instrumental variables regression.
 IV_REGRESSION_SCRIPT = """
-# Perform instrumental variables regression
+# Perform instrumental variables regression.
 data <- as.data.frame(args$data)
 formula <- as.formula(args$formula)
 
-# Run the IV regression
+# Fit the IV regression model.
 iv_model <- AER::ivreg(formula, data = data)
 
-# Extract results
+# Extract the model results.
 model_summary <- summary(iv_model)
 result <- list(
   coefficients = as.list(coef(iv_model)),
@@ -232,7 +226,7 @@ result <- list(
 )
 """
 
-# Define MCP tools
+# Register the linear_model tool.
 @mcp.tool(
     name="linear_model",
     description="Run a linear regression model",
@@ -240,15 +234,15 @@ result <- list(
         "type": "object",
         "properties": {
             "formula": {
-                "type": "string", 
+                "type": "string",
                 "description": "The regression formula (e.g., 'y ~ x1 + x2')"
             },
             "data": {
-                "type": "object", 
+                "type": "object",
                 "description": "Dataset as a dictionary/JSON object"
             },
             "robust": {
-                "type": "boolean", 
+                "type": "boolean",
                 "description": "Whether to use robust standard errors"
             }
         },
@@ -256,25 +250,14 @@ result <- list(
     }
 )
 def linear_model(formula: str, data: Dict[str, Any], robust: bool = False) -> Dict[str, Any]:
-    """
-    Run a linear regression model with the given formula and data.
-    
-    Args:
-        formula: The regression formula (e.g., 'y ~ x1 + x2')
-        data: The dataset as a dictionary
-        robust: Whether to use robust standard errors
-        
-    Returns:
-        The model results
-    """
     args = {
         "formula": formula,
         "data": data,
         "robust": robust
     }
-    
     return execute_r_script(LINEAR_REGRESSION_SCRIPT, args)
 
+# Register the panel_model tool.
 @mcp.tool(
     name="panel_model",
     description="Run a panel data model",
@@ -282,49 +265,30 @@ def linear_model(formula: str, data: Dict[str, Any], robust: bool = False) -> Di
         "type": "object",
         "properties": {
             "formula": {
-                "type": "string", 
+                "type": "string",
                 "description": "The regression formula (e.g., 'y ~ x1 + x2')"
             },
             "data": {
-                "type": "object", 
+                "type": "object",
                 "description": "Dataset as a dictionary/JSON object"
             },
             "index": {
-                "type": "array", 
+                "type": "array",
                 "description": "Panel index variables (e.g., ['individual', 'time'])"
             },
             "effect": {
-                "type": "string", 
+                "type": "string",
                 "description": "Type of effects: 'individual', 'time', or 'twoways'"
             },
             "model": {
-                "type": "string", 
+                "type": "string",
                 "description": "Model type: 'within', 'random', 'pooling', 'between', or 'fd'"
             }
         },
         "required": ["formula", "data", "index"]
     }
 )
-def panel_model(
-    formula: str, 
-    data: Dict[str, Any], 
-    index: List[str], 
-    effect: str = "individual", 
-    model: str = "within"
-) -> Dict[str, Any]:
-    """
-    Run a panel data model with the given formula, data, and panel specifications.
-    
-    Args:
-        formula: The regression formula (e.g., 'y ~ x1 + x2')
-        data: The dataset as a dictionary
-        index: Panel index variables (e.g., ['individual', 'time'])
-        effect: Type of effects: 'individual', 'time', or 'twoways'
-        model: Model type: 'within', 'random', 'pooling', 'between', or 'fd'
-        
-    Returns:
-        The model results
-    """
+def panel_model(formula: str, data: Dict[str, Any], index: List[str], effect: str = "individual", model: str = "within") -> Dict[str, Any]:
     args = {
         "formula": formula,
         "data": data,
@@ -332,9 +296,9 @@ def panel_model(
         "effect": effect,
         "model": model
     }
-    
     return execute_r_script(PANEL_MODEL_SCRIPT, args)
 
+# Register the diagnostics tool.
 @mcp.tool(
     name="diagnostics",
     description="Perform model diagnostics",
@@ -342,15 +306,15 @@ def panel_model(
         "type": "object",
         "properties": {
             "formula": {
-                "type": "string", 
+                "type": "string",
                 "description": "The regression formula (e.g., 'y ~ x1 + x2')"
             },
             "data": {
-                "type": "object", 
+                "type": "object",
                 "description": "Dataset as a dictionary/JSON object"
             },
             "tests": {
-                "type": "array", 
+                "type": "array",
                 "description": "Tests to run (e.g., ['bp', 'reset', 'dw'])"
             }
         },
@@ -358,25 +322,14 @@ def panel_model(
     }
 )
 def diagnostics(formula: str, data: Dict[str, Any], tests: List[str]) -> Dict[str, Any]:
-    """
-    Perform diagnostic tests on a linear model.
-    
-    Args:
-        formula: The regression formula (e.g., 'y ~ x1 + x2')
-        data: The dataset as a dictionary
-        tests: Tests to run (e.g., ['bp', 'reset', 'dw'])
-        
-    Returns:
-        The diagnostic test results
-    """
     args = {
         "formula": formula,
         "data": data,
         "tests": tests
     }
-    
     return execute_r_script(DIAGNOSTICS_SCRIPT, args)
 
+# Register the iv_regression tool.
 @mcp.tool(
     name="iv_regression",
     description="Estimate instrumental variables regression",
@@ -384,11 +337,11 @@ def diagnostics(formula: str, data: Dict[str, Any], tests: List[str]) -> Dict[st
         "type": "object",
         "properties": {
             "formula": {
-                "type": "string", 
+                "type": "string",
                 "description": "The regression formula (e.g., 'y ~ x1 + x2 | z1 + z2')"
             },
             "data": {
-                "type": "object", 
+                "type": "object",
                 "description": "Dataset as a dictionary/JSON object"
             }
         },
@@ -396,29 +349,15 @@ def diagnostics(formula: str, data: Dict[str, Any], tests: List[str]) -> Dict[st
     }
 )
 def iv_regression(formula: str, data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Run an instrumental variables regression with the given formula and data.
-    
-    Args:
-        formula: The regression formula (e.g., 'y ~ x1 + x2 | z1 + z2')
-        data: The dataset as a dictionary
-        
-    Returns:
-        The model results
-    """
     args = {
         "formula": formula,
         "data": data
     }
-    
     return execute_r_script(IV_REGRESSION_SCRIPT, args)
 
-# Define resources
+# Register resource endpoints.
 @mcp.resource("econometrics:formulas")
 def get_econometrics_formulas() -> str:
-    """
-    Get information about common econometric model formulations and interpretations.
-    """
     return """
 Common Econometric Formula Patterns:
 
@@ -435,9 +374,6 @@ Common Econometric Formula Patterns:
 
 @mcp.resource("econometrics:diagnostics")
 def get_econometrics_diagnostics() -> str:
-    """
-    Get information about common econometric diagnostic tests.
-    """
     return """
 Common Econometric Diagnostics:
 
@@ -464,56 +400,42 @@ Common Econometric Diagnostics:
 
 @mcp.resource("econometrics:panel_data")
 def get_panel_data_info() -> str:
-    """
-    Get information about panel data analysis.
-    """
     return """
 Panel Data Analysis in R:
 
-Panel data (also known as longitudinal data) has observations on multiple entities (individuals, firms, countries), where each entity is observed at multiple points in time.
+Panel data (also known as longitudinal data) has observations on multiple entities observed at multiple points in time.
 
 Key panel data models in R using the 'plm' package:
 
 1. Pooled OLS Model (model = "pooling"):
-   - Ignores panel structure
-   - Assumes homogeneity across entities and time
+   - Ignores panel structure.
+   - Assumes homogeneity across entities and time.
 
 2. Fixed Effects Model (model = "within"):
-   - Controls for time-invariant unobserved heterogeneity
-   - Uses variation within entities over time
+   - Controls for time-invariant unobserved heterogeneity.
+   - Uses variation within entities over time.
 
 3. Random Effects Model (model = "random"):
-   - Assumes unobserved heterogeneity is uncorrelated with regressors
-   - More efficient than fixed effects if assumption holds
+   - Assumes unobserved heterogeneity is uncorrelated with regressors.
+   - More efficient than fixed effects if the assumption holds.
 
 4. First-Difference Model (model = "fd"):
-   - Eliminates time-invariant effects by differencing
-   - Useful for dealing with certain types of endogeneity
+   - Eliminates time-invariant effects by differencing.
+   - Useful for addressing certain forms of endogeneity.
 
 5. Between Model (model = "between"):
-   - Uses entity means (cross-sectional variation)
-   - Ignores within-entity variation
+   - Uses entity means (cross-sectional variation).
+   - Ignores within-entity variation.
 
 Effects specifications:
-- individual: Entity fixed/random effects
-- time: Time fixed/random effects
-- twoways: Both entity and time effects
+- individual: Entity fixed/random effects.
+- time: Time fixed/random effects.
+- twoways: Both entity and time effects.
     """
 
-# Define prompts
+# Register prompt endpoints.
 @mcp.prompt("panel_data_analysis")
 def panel_data_analysis_prompt(dataset_name: str, dependent_var: str, independent_vars: str) -> List[Dict[str, Any]]:
-    """
-    A prompt template for panel data analysis.
-    
-    Args:
-        dataset_name: The name of the dataset
-        dependent_var: The dependent variable
-        independent_vars: The independent variables (comma separated)
-    
-    Returns:
-        A prompt template as a list of messages
-    """
     return [
         {
             "role": "system",
@@ -543,17 +465,6 @@ Please help me:
 
 @mcp.prompt("time_series_analysis")
 def time_series_analysis_prompt(dataset_name: str, time_var: str, dependent_var: str) -> List[Dict[str, Any]]:
-    """
-    A prompt template for time series analysis.
-    
-    Args:
-        dataset_name: The name of the dataset
-        time_var: The time variable
-        dependent_var: The dependent variable
-    
-    Returns:
-        A prompt template as a list of messages
-    """
     return [
         {
             "role": "system",
@@ -581,12 +492,12 @@ Please help me:
         }
     ]
 
-# Main function to run the server
 def main():
     """
-    Run the MCP server
+    Run the MCP server via standard I/O.
     """
-    return stdio_server(mcp.server)
+    return stdio_server(mcp)
+
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest
+          pip install -r requirements.txt
+
+      - name: Build Docker image
+        run: docker build -t mcp-r .
+
+      # If you want to test the server running inside a container:
+      - name: Run Docker container
+        run: docker run -d --name mcp-container mcp-r
+
+      - name: Wait for container startup (if necessary)
+        run: sleep 5
+
+      # Run unit tests on your Python functions (not over HTTP)
+      - name: Run unit tests
+        run: pytest test_rmcp.py
+
+      # Optionally, you can simulate a full end-to-end message to the container:
+      - name: End-to-end test via Docker
+        run: |
+          echo '{
+            "tool": "linear_model",
+            "args": {
+              "formula": "y ~ x1",
+              "data": {"x1": [1,2,3,4,5], "y": [1,3,5,7,9]},
+              "robust": false
+            }
+          }' | docker exec -i mcp-container python rmcp.py
+
+      - name: Stop Docker container
+        run: docker stop mcp-container || true
+
