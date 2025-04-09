@@ -1,10 +1,10 @@
-# Use a lightweight Python base image
-FROM python:3.10-slim
+# Use the official Rocker R base image
+FROM rocker/r-base:4.2.2
 
-# Install R and required system dependencies
+# Install Python 3, pip, and required system dependencies for R packages
 RUN apt-get update && apt-get install -y \
-    r-base \
-    r-base-dev \
+    python3 \
+    python3-pip \
     libxml2-dev \
     libcurl4-openssl-dev \
     libssl-dev \
@@ -18,19 +18,18 @@ RUN R -e "install.packages(c('plm', 'lmtest', 'sandwich', 'AER', 'jsonlite'), re
 WORKDIR /app
 
 # Copy package management files and source code
-# (Assumes you have a requirements.txt file for additional Python dependencies.)
 COPY pyproject.toml .
 COPY requirements.txt .
 COPY rmcp ./rmcp
 
-# Install Python dependencies and then install your package using pyproject.toml configuration
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir .
+# Upgrade pip, install Python dependencies, and install your package
+RUN pip3 install --upgrade pip && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    pip3 install --no-cache-dir .
 
 # Ensure standard output is unbuffered
 ENV PYTHONUNBUFFERED=1
 
-# Run the server using the CLI entry point defined in your pyproject.toml;
-# this should trigger "rmcp start"
+# Run the server using the CLI entry point defined in your pyproject.toml,
+# which should trigger "rmcp start"
 CMD ["rmcp", "start"]
