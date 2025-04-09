@@ -137,13 +137,27 @@ panel_model <- plm::plm(
   model = model_type
 )
 
-# Extract the results.
+# Extract the summary.
 model_summary <- summary(panel_model)
+
+# Extract coefficients and standard errors.
+coeffs <- coef(panel_model)
+std_err <- model_summary$coefficients[, "Std. Error"]
+
+# Check if the 't value' column exists.
+if("t value" %in% colnames(model_summary$coefficients)) {
+  t_vals <- model_summary$coefficients[, "t value"]
+} else {
+  t_vals <- rep(NA, length(coeffs))
+}
+
+p_vals <- model_summary$coefficients[, "Pr(>|t|)"]
+
 result <- list(
-  coefficients = as.list(coef(panel_model)),
-  std_errors = as.list(model_summary$coefficients[, "Std. Error"]),
-  t_values = as.list(model_summary$coefficients[, "t value"]),
-  p_values = as.list(model_summary$coefficients[, "Pr(>|t|)"]),
+  coefficients = as.list(coeffs),
+  std_errors = as.list(std_err),
+  t_values = as.list(t_vals),
+  p_values = as.list(p_vals),
   r_squared = model_summary$r.squared,
   adj_r_squared = model_summary$adj.r.squared,
   model_call = format(panel_model$call),
@@ -151,6 +165,7 @@ result <- list(
   effect_type = effect
 )
 """
+
 
 DIAGNOSTICS_SCRIPT = """
 # Perform model diagnostics.

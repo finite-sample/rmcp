@@ -1,9 +1,14 @@
 # test_rmcp.py
 import pytest
+import sys
+import os
+# Add the parent directory to sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 # Import the functions you want to test from rmcp.py.
 # Adjust the import statement if your module is in a package or different directory.
-from rmcp import linear_model, diagnostics, iv_regression, panel_model, panel_data_analysis_prompt
+from rmcp.tools import linear_model, diagnostics, iv_regression, panel_model, panel_data_analysis_prompt
 
 def test_linear_model():
     # Create a simple dataset where y = 2*x1 - 1
@@ -47,16 +52,16 @@ def test_iv_regression():
     assert "coefficients" in result, "Coefficients missing in IV regression result."
 
 def test_panel_model():
-    # Create a dummy panel dataset.
+    # Create a dummy panel dataset with within-group variation in x1.
     data = {
         "id": [1, 1, 2, 2],
         "time": [1, 2, 1, 2],
-        "y": [1, 3, 2, 4],
-        "x1": [1, 1, 2, 2]
+        "y": [1, 3, 2, 5],  # Group 1: y values 1 and 3; Group 2: y values 2 and 5
+        "x1": [1, 2, 2, 3]  # Group 1: x1 varies from 1 to 2; Group 2: from 2 to 3
     }
     formula = "y ~ x1"
     index = ["id", "time"]
-    
+
     result = panel_model(formula=formula, data=data, index=index, effect="individual", model="within")
     assert "coefficients" in result, "Panel model result should include coefficients."
 
