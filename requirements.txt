@@ -1,4 +1,0 @@
-modelcontextprotocol~=0.1.1
-rpy2~=3.5.14
-pandas>=2.0.0
-numpy>=1.24.0
