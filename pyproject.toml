@@ -1,25 +1,19 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "rmcp"
 version = "0.1.1"
 description = "A Model Context Protocol server for R"
+authors = ["Gaurav Sood <gsood07@gmail.com>"]
+license = "MIT License"
 readme = "README.md"
-authors = [
-    { name = "Gaurav Sood", email = "gsood07@gmail.com" }
-]
-license = { text = "MIT License" }
-requires-python = ">=3.8"
-dependencies = [
-    "click>=8.1.0"
-    # add other dependencies here
-]
+homepage = "https://github.com/gojiplus/rmcp"
 
-[project.urls]
-Homepage = "https://github.com/gojiplus/rmcp"
+[tool.poetry.dependencies]
+python = ">=3.8"
+click = ">=8.1.0"
 
-[project.scripts]
+[tool.poetry.scripts]
 rmcp = "rmcp.__main__:main"
 
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
