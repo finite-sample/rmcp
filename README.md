@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/gojiplus-rmcp-badge.png)](https://mseep.ai/app/gojiplus-rmcp)
+
 ## R MCP Server
 
 [![PyPI version](https://img.shields.io/pypi/v/rmcp.svg)](https://pypi.org/project/rmcp/)
