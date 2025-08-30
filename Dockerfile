@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
     liblapack-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install required R packages.
-RUN R -e "install.packages(c('plm', 'lmtest', 'sandwich', 'AER', 'jsonlite'), repos='https://cloud.r-project.org/')"
+# Install required R packages for comprehensive statistical analysis.
+RUN R -e "install.packages(c('plm', 'lmtest', 'sandwich', 'AER', 'jsonlite', 'forecast', 'dplyr', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'vars', 'ggplot2', 'reshape2', 'gridExtra', 'cluster'), repos='https://cloud.r-project.org/')"
 
 # Set the working directory
 WORKDIR /app
@@ -23,7 +23,7 @@ WORKDIR /app
 # (Assumes your package files and pyproject.toml are in the repository root)
 COPY pyproject.toml .
 COPY requirements.txt .
-COPY rmcp ./rmcp
+COPY src/rmcp ./src/rmcp
 
 # Upgrade pip, install Python dependencies from requirements.txt, 
 # and then install your package using pyproject.toml configuration.
