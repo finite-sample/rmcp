@@ -1,20 +1,18 @@
-# Use the official Rocker R base image (with a recent R version)
-FROM rocker/r-base:4.2.2
+# Use lightweight Python base with R
+FROM python:3.11-slim
 
-# Install Python3, pip and required system dependencies for R packages.
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install minimal R and only essential system dependencies
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    libxml2-dev \
+    r-base \
     libcurl4-openssl-dev \
     libssl-dev \
-    gfortran \
-    libopenblas-dev \
-    liblapack-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install required R packages for comprehensive statistical analysis.
-RUN R -e "install.packages(c('plm', 'lmtest', 'sandwich', 'AER', 'jsonlite', 'forecast', 'dplyr', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'vars', 'ggplot2', 'reshape2', 'gridExtra', 'cluster'), repos='https://cloud.r-project.org/')"
+# Install only core R packages (others installed on-demand by RMCP tools)
+RUN R -e "install.packages(c('jsonlite'), repos='https://cloud.r-project.org/', quiet=TRUE)"
 
 # Set the working directory
 WORKDIR /app
