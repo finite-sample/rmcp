@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install only core R packages (others installed on-demand by RMCP tools)
-RUN R -e "install.packages(c('jsonlite'), repos='https://cloud.r-project.org/', quiet=TRUE)"
+# Install essential R packages to avoid CI/CD timeouts
+RUN R -e "install.packages(c('jsonlite', 'dplyr', 'tseries'), repos='https://cloud.r-project.org/', quiet=TRUE)"
 
 # Set the working directory
 WORKDIR /app
