@@ -21,24 +21,10 @@ jobs:
           pip install -r requirements.txt
       - name: Build Docker image
         run: docker build -t mcp-r .
-      # Run the container with R installed
-      - name: Run Docker container
-        run: docker run -d --name mcp-container mcp-r
-      - name: Wait for container startup (if necessary)
-        run: sleep 5
       # Run unit tests inside the Docker container where R is available
-      - name: Run unit tests
-        run: docker exec -i mcp-container pytest tests/test_rmcp.py
+      - name: Run unit tests in container
+        run: docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace mcp-r python tests/test_mcp_interface.py
       # End-to-end test using the container
       - name: End-to-end test via Docker
         run: |
-          echo '{
-            "tool": "linear_model",
-            "args": {
-              "formula": "y ~ x1",
-              "data": {"x1": [1,2,3,4,5], "y": [1,3,5,7,9]},
-              "robust": false
-            }
-          }' | docker exec -i mcp-container python rmcp.py
-      - name: Stop Docker container
-        run: docker stop mcp-container || true
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace mcp-r python tests/test_direct_capabilities.py
