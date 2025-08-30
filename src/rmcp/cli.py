@@ -29,9 +29,9 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-@click.version_option(version="0.2.0")
+@click.version_option(version="0.3.0")
 def cli():
-    """RMCP MCP Server - Production-ready statistical analysis via Model Context Protocol."""
+    """RMCP MCP Server - Comprehensive statistical analysis with 33 tools across 8 categories."""
     pass
 
 
@@ -254,16 +254,63 @@ def _load_config(config_file: str) -> dict:
 def _register_builtin_tools(server):
     """Register built-in statistical tools."""
     from .tools.regression import linear_model, correlation_analysis, logistic_regression
+    from .tools.timeseries import arima_model, decompose_timeseries, stationarity_test
+    from .tools.transforms import lag_lead, winsorize, difference, standardize
+    from .tools.statistical_tests import t_test, anova, chi_square_test, normality_test
+    from .tools.descriptive import summary_stats, outlier_detection, frequency_table
+    from .tools.fileops import read_csv, write_csv, data_info, filter_data
+    from .tools.econometrics import panel_regression, instrumental_variables, var_model
+    from .tools.machine_learning import kmeans_clustering, decision_tree, random_forest
+    from .tools.visualization import scatter_plot, histogram, boxplot, time_series_plot, correlation_heatmap, regression_plot
     
-    # Register our working statistical tools
+    # Register all statistical tools
     register_tool_functions(
         server.tools,
+        # Original regression tools
         linear_model,
         correlation_analysis, 
-        logistic_regression
+        logistic_regression,
+        # Time series analysis
+        arima_model,
+        decompose_timeseries,
+        stationarity_test,
+        # Data transformations
+        lag_lead,
+        winsorize,
+        difference,
+        standardize,
+        # Statistical tests
+        t_test,
+        anova,
+        chi_square_test,
+        normality_test,
+        # Descriptive statistics
+        summary_stats,
+        outlier_detection,
+        frequency_table,
+        # File operations
+        read_csv,
+        write_csv,
+        data_info,
+        filter_data,
+        # Econometrics
+        panel_regression,
+        instrumental_variables,
+        var_model,
+        # Machine learning
+        kmeans_clustering,
+        decision_tree,
+        random_forest,
+        # Visualization
+        scatter_plot,
+        histogram,
+        boxplot,
+        time_series_plot,
+        correlation_heatmap,
+        regression_plot
     )
     
-    logger.info("Registered statistical analysis tools")
+    logger.info("Registered comprehensive statistical analysis tools (30 total)")
 
 
 if __name__ == "__main__":
