@@ -43,7 +43,7 @@ class MCPServer:
     def __init__(
         self,
         name: str = "RMCP MCP Server",
-        version: str = "0.3.0",
+        version: str = "0.3.1",
         description: str = "R-based statistical analysis MCP server",
     ):
         self.name = name
@@ -254,7 +254,7 @@ class MCPServer:
 
 def create_server(
     name: str = "RMCP MCP Server",
-    version: str = "0.3.0", 
+    version: str = "0.3.1", 
     description: str = "R-based statistical analysis MCP server",
 ) -> MCPServer:
     """Create and return a new MCP server instance."""

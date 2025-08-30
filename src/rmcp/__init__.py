@@ -15,7 +15,7 @@ from .registries.tools import ToolsRegistry, tool
 from .registries.resources import ResourcesRegistry, resource
 from .registries.prompts import PromptsRegistry, prompt
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "Gaurav Sood"
 __email__ = "gsood07@gmail.com"
 
