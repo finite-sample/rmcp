@@ -14,8 +14,9 @@ RMCP is a Model Context Protocol (MCP) server that provides advanced econometric
 - **CLI Interface**: `rmcp/cli.py` provides command-line interface with `start`, `version` commands
 
 ### Tool System
-The server implements various econometric tools as Python functions that execute R scripts:
+The server implements comprehensive econometric and statistical tools as Python functions that execute R scripts:
 
+#### Core Econometric Tools
 - **Regression Tools** (`rmcp/tools/regression.py`): Linear models, panel data analysis, IV regression
 - **Diagnostics** (`rmcp/tools/diagnostics.py`): Model diagnostic tests (heteroskedasticity, autocorrelation, etc.)
 - **Correlation Analysis** (`rmcp/tools/correlation.py`): Pearson/Spearman correlations
@@ -23,10 +24,34 @@ The server implements various econometric tools as Python functions that execute
 - **Groupby Operations** (`rmcp/tools/groupby.py`): Data aggregation using dplyr
 - **File Analysis** (`rmcp/tools/file_analysis.py`): CSV file processing
 
+#### Advanced Statistical Tools (NEW)
+- **Data Transformations** (`rmcp/tools/transformations.py`): 
+  - Lag/lead variables for time series
+  - Differencing and growth rates (log transforms)
+  - Winsorization for outlier treatment
+  - Standardization (z-score, min-max, robust)
+
+- **Time Series Analysis** (`rmcp/tools/timeseries.py`):
+  - ARIMA modeling with automatic order selection
+  - VAR (Vector Autoregression) for multivariate series  
+  - Forecasting with confidence intervals
+  - Unit root tests (ADF, Phillips-Perron, KPSS)
+  - Cointegration testing (Johansen, Engle-Granger)
+
+- **Professional Visualizations** (`rmcp/tools/visualization.py`):
+  - Scatter plots with trend lines and grouping
+  - Time series plots for single/multiple variables
+  - Histograms with density overlays
+  - Correlation heatmaps
+  - Comprehensive residual diagnostic plots
+
 ### R Integration
 - **Common Utilities** (`rmcp/tools/common.py`): Contains `execute_r_script()` function that creates temporary files, executes R code, and parses JSON results
-- **Required R Packages**: plm, lmtest, sandwich, AER, jsonlite
+- **Required R Packages**: 
+  - Core: plm, lmtest, sandwich, AER, jsonlite, dplyr
+  - Advanced: forecast, vars, urca, ggplot2, gridExtra, tidyr, rlang
 - All data exchange between Python and R happens via JSON serialization
+- Enhanced error handling with custom `RExecutionError` class for detailed diagnostics
 
 ## Development Commands
 
