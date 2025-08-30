@@ -20,6 +20,8 @@ rmcp start
 
 That's it! RMCP is now ready to handle statistical analysis requests via the Model Context Protocol.
 
+**👉 [See Working Examples →](examples/quick_start_guide.md)** - Copy-paste ready commands with real datasets!
+
 ## ✨ Features
 
 ### Statistical Analysis ✅ Available Now
