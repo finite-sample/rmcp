@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-A production-ready Model Context Protocol (MCP) server that provides advanced statistical analysis capabilities through R. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, and data science tasks seamlessly.
+**Version 0.2.0** - A production-ready Model Context Protocol (MCP) server that provides advanced statistical analysis capabilities through R. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, and data science tasks seamlessly.
 
 ## 🚀 Quick Start
 
@@ -22,16 +22,17 @@ That's it! RMCP is now ready to handle statistical analysis requests via the Mod
 
 ## ✨ Features
 
-### Statistical Analysis
-- **Linear Regression**: OLS with robust standard errors, diagnostic tests
-- **Logistic Regression**: Binary classification with odds ratios and accuracy metrics  
-- **Correlation Analysis**: Pearson, Spearman, and Kendall correlations
-- **Advanced Modeling**: Full R statistical ecosystem access
+### Statistical Analysis ✅ Available Now
+- **Linear Regression** (`linear_model`): OLS with robust standard errors, R², p-values
+- **Logistic Regression** (`logistic_regression`): Binary classification with odds ratios and accuracy
+- **Correlation Analysis** (`correlation_analysis`): Pearson, Spearman, and Kendall correlations
 
-### Data Operations  
-- **File Analysis**: CSV, Excel, and data file processing
-- **Data Transformation**: Cleaning, filtering, and reshaping
-- **Descriptive Statistics**: Comprehensive summary statistics
+### Coming Soon 🚧
+- **Time Series Analysis**: ARIMA, VAR models, forecasting
+- **Panel Data Models**: Fixed effects, random effects regression  
+- **Data Transformation**: Lag/lead variables, differencing, winsorization
+- **Advanced Diagnostics**: Heteroskedasticity, autocorrelation tests
+- **File Operations**: CSV analysis, data import/export
 
 ### Production Ready
 - **MCP Protocol**: Full JSON-RPC 2.0 compliance
@@ -132,23 +133,41 @@ Add to your Claude Desktop MCP configuration:
 rmcp start
 
 # Check version
-rmcp version
+rmcp --version
 
-# Run with specific configuration
-rmcp start --transport stdio --port 3000
+# Advanced server configuration  
+rmcp serve --log-level DEBUG --read-only
+
+# List available tools and capabilities
+rmcp list-capabilities
 ```
 
 ### Programmatic Usage
 
 ```python
-import asyncio
-from rmcp import MCPServer
+# RMCP is primarily designed as a CLI MCP server
+# For programmatic R analysis, use the MCP protocol:
 
-async def main():
-    server = MCPServer()
-    await server.start()
+import json
+import subprocess
 
-asyncio.run(main())
+# Send analysis request to RMCP server
+request = {
+    "tool": "linear_model",
+    "args": {
+        "formula": "y ~ x",
+        "data": {"x": [1, 2, 3], "y": [2, 4, 6]}
+    }
+}
+
+# Start server and send request via stdin
+proc = subprocess.Popen(['rmcp', 'start'], 
+                       stdin=subprocess.PIPE, 
+                       stdout=subprocess.PIPE, 
+                       stderr=subprocess.PIPE, 
+                       text=True)
+result, _ = proc.communicate(json.dumps(request))
+print(result)
 ```
 
 ### API Examples
@@ -209,9 +228,11 @@ RMCP includes comprehensive testing with realistic scenarios:
 # Run all user scenarios (should show 100% pass rate)
 python tests/realistic_scenarios.py
 
-# Run development tests
-./src/rmcp/scripts/test.sh
+# Run development test script
+bash src/rmcp/scripts/test.sh
 ```
+
+**Current Test Coverage**: 100% success rate across 4 realistic user scenarios covering business analysis, economics research, data science, and academic research use cases.
 
 ## 🏗️ Architecture
 
@@ -257,7 +278,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🙋 Support
 
-- 📖 **Documentation**: Check the examples in `/examples`
+- 📖 **Documentation**: See [Quick Start Guide](examples/quick_start_guide.md) for working examples
 - 🐛 **Issues**: [GitHub Issues](https://github.com/gojiplus/rmcp/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/gojiplus/rmcp/discussions)
 
