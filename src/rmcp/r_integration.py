@@ -78,7 +78,7 @@ write_json(result, "{result_path}", auto_unbox = TRUE)
                 ['R', '--slave', '--no-restore', '--file=' + script_path],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=120
             )
             
             if process.returncode != 0:
