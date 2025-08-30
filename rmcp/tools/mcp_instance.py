@@ -5,6 +5,6 @@ from rmcp.server.fastmcp import FastMCP
 # Central MCP instance
 mcp = FastMCP(
     name="R Econometrics",
-    version="0.1.0",
+    version="0.1.1",
     description="A Model Context Protocol server for R-based econometric analysis"
 )

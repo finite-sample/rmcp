@@ -1,13 +1,7 @@
-from rmcp.server.fastmcp import FastMCP
+# Import the MCP instance from its own module to avoid circular imports
+from .mcp_instance import mcp
 
-# Central MCP instance
-mcp = FastMCP(
-    name="R Econometrics",
-    version="0.1.0",
-    description="A Model Context Protocol server for R-based econometric analysis"
-)
-
-# Import all tools
+# Import all tools (this will register them with the mcp instance via decorators)
 from .regression import linear_model, panel_model, iv_regression
 from .diagnostics import diagnostics
 from .correlation import correlation
@@ -28,12 +22,5 @@ __all__ = [
     'panel_data_analysis_prompt'
 ]
 
-# Optional: Register tools with the MCP instance
-mcp.register_tool(name="linear_model", func=linear_model)
-mcp.register_tool(name="panel_model", func=panel_model)
-mcp.register_tool(name="iv_regression", func=iv_regression)
-mcp.register_tool(name="diagnostics", func=diagnostics)
-mcp.register_tool(name="correlation", func=correlation)
-mcp.register_tool(name="group_by", func=group_by)
-mcp.register_tool(name="analyze_csv", func=analyze_csv)
-mcp.register_tool(name="panel_data_analysis_prompt", func=panel_data_analysis_prompt)
+# Tools are automatically registered via decorators in their respective modules
+# No need for manual registration as they use @mcp.tool decorator

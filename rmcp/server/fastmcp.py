@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
+import io
 import json
 import logging
 import select
@@ -81,22 +82,41 @@ class FastMCP:
         """Run the server, reading from stdin and writing to stdout"""
         logger.debug("Starting MCP server")
         
-        # Properly handle stdin/stdout in binary mode
-        stdin = os.fdopen(sys.stdin.fileno(), 'rb')
-        stdout = os.fdopen(sys.stdout.fileno(), 'wb')
+        # Handle stdin/stdout properly - check if they're already redirected
+        try:
+            stdin = os.fdopen(sys.stdin.fileno(), 'rb')
+            stdout = os.fdopen(sys.stdout.fileno(), 'wb')
+            use_binary = True
+        except (io.UnsupportedOperation, OSError):
+            # stdin/stdout have been redirected (e.g., by StringIO), use them as text
+            stdin = sys.stdin
+            stdout = sys.stdout
+            use_binary = False
         
         # Message buffer and state
-        buffer = b""
+        if use_binary:
+            buffer = b""
+        else:
+            buffer = ""
         content_length = None
         
         # Main loop
         while True:
             # Check if stdin is ready to read
-            ready, _, _ = select.select([stdin], [], [], 0.1)
+            if use_binary:
+                ready, _, _ = select.select([stdin], [], [], 0.1)
+                stdin_ready = stdin in ready
+            else:
+                # For text mode (StringIO), data is immediately available
+                stdin_ready = True
             
-            if stdin in ready:
+            if stdin_ready:
                 # Read available data
-                chunk = stdin.read(4096)
+                if use_binary:
+                    chunk = stdin.read(4096)
+                else:
+                    chunk = stdin.read()
+                    
                 if not chunk:
                     logger.debug("End of input stream, exiting")
                     break
@@ -107,28 +127,42 @@ class FastMCP:
                 while True:
                     # If we don't know the content length yet, look for the header
                     if content_length is None:
-                        header_end = buffer.find(b'\r\n\r\n')
+                        if use_binary:
+                            header_end = buffer.find(b'\r\n\r\n')
+                            header_sep = b'\r\n'
+                            header_term = 4  # length of '\r\n\r\n'
+                        else:
+                            header_end = buffer.find('\r\n\r\n')
+                            header_sep = '\r\n'
+                            header_term = 4
+                            
                         if header_end == -1:
                             # Header not complete yet
                             break
                             
                         # Parse headers
-                        header = buffer[:header_end].decode('utf-8')
+                        if use_binary:
+                            header = buffer[:header_end].decode('utf-8')
+                        else:
+                            header = buffer[:header_end]
                         logger.debug(f"Received header: {header}")
                         
-                        for line in header.split('\r\n'):
+                        for line in header.split(header_sep if not use_binary else '\r\n'):
                             if line.startswith('Content-Length: '):
                                 content_length = int(line[16:])
                                 logger.debug(f"Content length: {content_length}")
                                 
                         # Remove header from buffer
-                        buffer = buffer[header_end + 4:]  # +4 for '\r\n\r\n'
+                        buffer = buffer[header_end + header_term:]
                     
                     # If we have the content length, check if we have enough data
                     if content_length is not None:
                         if len(buffer) >= content_length:
                             # We have a complete message
-                            content = buffer[:content_length].decode('utf-8')
+                            if use_binary:
+                                content = buffer[:content_length].decode('utf-8')
+                            else:
+                                content = buffer[:content_length]
                             buffer = buffer[content_length:]
                             content_length = None
                             
@@ -139,7 +173,7 @@ class FastMCP:
                                 
                                 response = self.process_message(message)
                                 if response:
-                                    self.send_response(stdout, response)
+                                    self.send_response(stdout, response, use_binary)
                             except json.JSONDecodeError:
                                 logger.error(f"Invalid JSON: {content}")
                             except Exception as e:
@@ -156,14 +190,19 @@ class FastMCP:
             # Small sleep to prevent CPU spinning
             time.sleep(0.01)
             
-    def send_response(self, stdout, response):
+    def send_response(self, stdout, response, use_binary=True):
         """Send a response message over stdout"""
         response_json = json.dumps(response)
-        response_bytes = response_json.encode('utf-8')
         
-        header = f"Content-Length: {len(response_bytes)}\r\n\r\n"
-        stdout.write(header.encode('utf-8'))
-        stdout.write(response_bytes)
+        if use_binary:
+            response_bytes = response_json.encode('utf-8')
+            header = f"Content-Length: {len(response_bytes)}\r\n\r\n"
+            stdout.write(header.encode('utf-8'))
+            stdout.write(response_bytes)
+        else:
+            header = f"Content-Length: {len(response_json.encode('utf-8'))}\r\n\r\n"
+            stdout.write(header)
+            stdout.write(response_json)
         stdout.flush()
         
         logger.debug(f"Sent response: {response}")

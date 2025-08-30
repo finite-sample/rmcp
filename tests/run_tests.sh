@@ -3,7 +3,7 @@
 
 # Test linear_model via stdio
 echo "Testing linear_model..."
-cat <<EOF | python rmcp.py > response.json
+cat <<EOF | rmcp start > response.json
 {
   "tool": "linear_model",
   "args": {
