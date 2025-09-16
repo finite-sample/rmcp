@@ -1,7 +1,23 @@
 """
-Regression analysis tools for RMCP MCP server.
+Regression Analysis Tools for RMCP MCP Server.
 
-Production-ready statistical modeling tools using the new registry architecture.
+This module provides comprehensive regression modeling capabilities including:
+- Linear regression with diagnostics
+- Logistic regression for binary outcomes  
+- Correlation analysis with significance testing
+- Comprehensive model validation and statistics
+
+All tools support missing value handling, weighted observations, and return
+detailed statistical outputs suitable for research and business analysis.
+
+Example Usage:
+    >>> # Linear regression on sales data
+    >>> data = {"sales": [100, 120, 140], "advertising": [10, 15, 20]}
+    >>> result = await linear_model(context, {
+    ...     "data": data,
+    ...     "formula": "sales ~ advertising"
+    ... })
+    >>> print(f"R-squared: {result['r_squared']}")
 """
 
 from typing import Dict, Any
@@ -25,7 +41,61 @@ from ..r_integration import execute_r_script
     description="Fit linear regression model with comprehensive diagnostics"
 )
 async def linear_model(context, params):
-    """Fit linear regression model."""
+    """
+    Fit ordinary least squares (OLS) linear regression model.
+    
+    This tool performs comprehensive linear regression analysis using R's lm() function.
+    It supports weighted regression, missing value handling, and returns detailed
+    model diagnostics including coefficients, significance tests, and goodness-of-fit.
+    
+    Args:
+        context: Request execution context for logging and progress
+        params: Dictionary containing:
+            - data: Dataset as dict of column_name -> [values] 
+            - formula: R formula string (e.g., "y ~ x1 + x2")
+            - weights: Optional array of observation weights
+            - na_action: How to handle missing values ("na.omit", "na.exclude", "na.fail")
+    
+    Returns:
+        Dictionary containing:
+            - coefficients: Model coefficients by variable name
+            - std_errors: Standard errors of coefficients
+            - t_values: t-statistics for coefficient tests
+            - p_values: p-values for coefficient significance
+            - r_squared: Coefficient of determination
+            - adj_r_squared: Adjusted R-squared
+            - fstatistic: Overall F-statistic value
+            - f_pvalue: p-value for overall model significance
+            - residual_se: Residual standard error
+            - fitted_values: Predicted values for each observation
+            - residuals: Model residuals
+            - n_obs: Number of observations used
+            
+    Example:
+        >>> # Simple linear regression
+        >>> data = {
+        ...     "price": [100, 120, 140, 160, 180],
+        ...     "size": [1000, 1200, 1400, 1600, 1800]
+        ... }
+        >>> result = await linear_model(context, {
+        ...     "data": data,
+        ...     "formula": "price ~ size"
+        ... })
+        >>> print(f"Price increases ${result['coefficients']['size']:.2f} per sq ft")
+        >>> print(f"Model explains {result['r_squared']:.1%} of variance")
+        
+        >>> # Multiple regression with weights
+        >>> data = {
+        ...     "sales": [100, 150, 200, 250],
+        ...     "advertising": [10, 20, 30, 40], 
+        ...     "price": [50, 45, 40, 35]
+        ... }
+        >>> result = await linear_model(context, {
+        ...     "data": data,
+        ...     "formula": "sales ~ advertising + price",
+        ...     "weights": [1, 1, 2, 2]  # Weight later observations more
+        ... })
+    """
     
     await context.info("Fitting linear regression model")
     
@@ -106,7 +176,50 @@ async def linear_model(context, params):
     description="Comprehensive correlation analysis with significance tests"
 )
 async def correlation_analysis(context, params):
-    """Perform correlation analysis."""
+    """
+    Compute correlation matrix with significance testing.
+    
+    This tool calculates pairwise correlations between numeric variables using
+    Pearson, Spearman, or Kendall methods. It includes significance tests for
+    each correlation and handles missing values appropriately.
+    
+    Args:
+        context: Request execution context for logging and progress
+        params: Dictionary containing:
+            - data: Dataset as dict of column_name -> [values]
+            - variables: Optional list of variable names to include
+            - method: Correlation method ("pearson", "spearman", "kendall")
+            - use: Missing value handling strategy
+    
+    Returns:
+        Dictionary containing:
+            - correlation_matrix: Pairwise correlations as nested dict
+            - significance_tests: p-values for each correlation
+            - sample_sizes: Number of complete observations for each pair
+            - variables_used: List of variables included in analysis
+            - method_used: Correlation method applied
+            
+    Example:
+        >>> # Basic correlation analysis
+        >>> data = {
+        ...     "sales": [100, 150, 200, 250, 300],
+        ...     "advertising": [10, 20, 25, 35, 40],
+        ...     "price": [50, 48, 45, 42, 40]
+        ... }
+        >>> result = await correlation_analysis(context, {
+        ...     "data": data,
+        ...     "method": "pearson"
+        ... })
+        >>> sales_ad_corr = result["correlation_matrix"]["sales"]["advertising"]
+        >>> print(f"Sales-Advertising correlation: {sales_ad_corr:.3f}")
+        
+        >>> # Spearman correlation for non-linear relationships
+        >>> result = await correlation_analysis(context, {
+        ...     "data": data,
+        ...     "method": "spearman",
+        ...     "variables": ["sales", "advertising"]
+        ... })
+    """
     
     await context.info("Computing correlation matrix")
     

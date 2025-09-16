@@ -57,7 +57,7 @@ class StdioTransport(Transport):
         )
         self._stdout_writer = asyncio.StreamWriter(stdout_transport, stdout_protocol, None, loop)
         
-        logger.info("Stdio transport initialized", file=sys.stderr)
+        logger.info("Stdio transport initialized")
     
     async def shutdown(self) -> None:
         """Clean up streams."""
@@ -68,7 +68,7 @@ class StdioTransport(Transport):
             await self._stdout_writer.wait_closed()
         
         self._shutdown_event.set()
-        logger.info("Stdio transport shutdown complete", file=sys.stderr)
+        logger.info("Stdio transport shutdown complete")
     
     async def receive_messages(self) -> AsyncIterator[Dict[str, Any]]:
         """
@@ -79,7 +79,7 @@ class StdioTransport(Transport):
         if not self._stdin_reader:
             raise RuntimeError("Transport not started")
         
-        logger.info("Starting to read messages from stdin", file=sys.stderr)
+        logger.info("Starting to read messages from stdin")
         
         try:
             while self._running and not self._shutdown_event.is_set():
@@ -92,14 +92,14 @@ class StdioTransport(Transport):
                     
                     if not line:
                         # EOF reached
-                        logger.info("EOF reached on stdin", file=sys.stderr)
+                        logger.info("EOF reached on stdin")
                         break
                     
                     line_str = line.decode('utf-8').rstrip('\n\r')
                     if not line_str:
                         continue  # Skip empty lines
                     
-                    logger.debug(f"Received message: {line_str[:100]}...", file=sys.stderr)
+                    logger.debug(f"Received message: {line_str[:100]}...")
                     
                     # Parse JSON-RPC message
                     try:
@@ -126,7 +126,7 @@ class StdioTransport(Transport):
                         yield message_dict
                         
                     except JSONRPCError as e:
-                        logger.error(f"JSON-RPC parse error: {e}", file=sys.stderr)
+                        logger.error(f"JSON-RPC parse error: {e}")
                         
                         # Send error response if we can determine request ID
                         error_response = e.to_dict()
@@ -137,14 +137,14 @@ class StdioTransport(Transport):
                     continue
                 
                 except Exception as e:
-                    logger.error(f"Error reading from stdin: {e}", file=sys.stderr)
+                    logger.error(f"Error reading from stdin: {e}")
                     break
         
         except Exception as e:
-            logger.error(f"Fatal error in message reception: {e}", file=sys.stderr)
+            logger.error(f"Fatal error in message reception: {e}")
         
         finally:
-            logger.info("Stopped reading messages", file=sys.stderr)
+            logger.info("Stopped reading messages")
     
     async def send_message(self, message: Dict[str, Any]) -> None:
         """
@@ -159,14 +159,14 @@ class StdioTransport(Transport):
             # Encode to single-line JSON
             json_line = JSONRPCEnvelope.encode(message)
             
-            logger.debug(f"Sending message: {json_line[:100]}...", file=sys.stderr)
+            logger.debug(f"Sending message: {json_line[:100]}...")
             
             # Write to stdout with newline
             self._stdout_writer.write((json_line + '\n').encode('utf-8'))
             await self._stdout_writer.drain()
             
         except Exception as e:
-            logger.error(f"Error sending message: {e}", file=sys.stderr)
+            logger.error(f"Error sending message: {e}")
             raise
     
     async def send_notification(self, method: str, params: Any = None) -> None:
@@ -197,5 +197,5 @@ class StdioTransport(Transport):
     
     def request_shutdown(self) -> None:
         """Request graceful shutdown."""
-        logger.info("Shutdown requested", file=sys.stderr)
+        logger.info("Shutdown requested")
         self._shutdown_event.set()
