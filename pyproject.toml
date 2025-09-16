@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rmcp"
-version = "0.3.2"
+version = "0.3.3"
 description = "Comprehensive Model Context Protocol server with 33 statistical analysis tools across 8 categories"
 authors = [{name = "Gaurav Sood", email = "gsood07@gmail.com"}]
 license = {text = "MIT"}

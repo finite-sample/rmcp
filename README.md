@@ -153,7 +153,35 @@ Add to your Claude Desktop MCP configuration:
 }
 ```
 
-## 📚 Usage
+## 📚 Usage Examples
+
+### Quick Start with Claude Desktop
+
+Once RMCP is configured in Claude Desktop, you can immediately start asking for statistical analysis:
+
+**Business Analysis Example:**
+```
+You: "I have sales data: month 1-12, sales [120, 135, 148, 165, 178, 185, 192, 210, 225, 240, 255, 270]. 
+Can you analyze the trend and predict next 3 months?"
+
+Claude: "I'll analyze your sales trend using linear regression and forecasting."
+[Claude automatically calls linear_model and then arima_model]
+
+Claude: "Analysis shows strong growth trend with 12.5 units/month increase (R²=0.99). 
+Predicted sales for next 3 months: 285, 298, 311 units with 95% confidence intervals."
+```
+
+**Scientific Research Example:**
+```
+You: "I want to test if a new drug is effective. Control group: [2.1, 2.3, 2.0, 2.4, 2.2]. 
+Treatment group: [3.1, 3.4, 3.0, 3.3, 3.2]. Please run appropriate statistical test."
+
+Claude: "I'll perform a two-sample t-test to compare the groups."
+[Claude calls t_test tool]
+
+Claude: "Results: Treatment group mean (3.2) significantly higher than control (2.2), 
+p-value = 0.0001, 95% CI: [0.8, 1.2]. Strong evidence of treatment effect."
+```
 
 ### Command Line Interface
 
@@ -161,93 +189,182 @@ Add to your Claude Desktop MCP configuration:
 # Start MCP server (stdio transport)
 rmcp start
 
-# Check version
+# Check version and available tools
 rmcp --version
 
-# Advanced server configuration  
-rmcp serve --log-level DEBUG --read-only
-
-# List available tools and capabilities
-rmcp list-capabilities
+# Development server with debug logging
+rmcp start --log-level DEBUG
 ```
 
-### Programmatic Usage
+### Direct Tool Usage (Advanced)
+
+For developers building MCP clients or testing tools directly:
 
 ```python
-# RMCP is primarily designed as a CLI MCP server
-# For programmatic R analysis, use the MCP protocol:
+import asyncio
+from rmcp.core.server import create_server
+from rmcp.tools.regression import linear_model
 
-import json
-import subprocess
+# Create server and context
+server = create_server()
+context = server.create_context("test-1", "tools/call")
 
-# Send analysis request to RMCP server
-request = {
-    "tool": "linear_model",
-    "args": {
-        "formula": "y ~ x",
-        "data": {"x": [1, 2, 3], "y": [2, 4, 6]}
+# Call tool directly
+result = await linear_model(context, {
+    "data": {
+        "sales": [100, 120, 140, 160, 180],
+        "advertising": [10, 15, 20, 25, 30]
+    },
+    "formula": "sales ~ advertising"
+})
+
+print(f"Advertising effectiveness: ${result['coefficients']['advertising']:.2f} per dollar")
+print(f"Model explains {result['r_squared']:.1%} of variance")
+```
+
+### MCP Protocol Example
+
+Testing with raw JSON-RPC messages:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+        "name": "correlation_analysis",
+        "arguments": {
+            "data": {
+                "sales": [100, 150, 200, 250, 300],
+                "marketing": [10, 20, 30, 40, 50],
+                "satisfaction": [7.5, 8.0, 8.5, 9.0, 9.5]
+            },
+            "method": "pearson"
+        }
     }
 }
-
-# Start server and send request via stdin
-proc = subprocess.Popen(['rmcp', 'start'], 
-                       stdin=subprocess.PIPE, 
-                       stdout=subprocess.PIPE, 
-                       stderr=subprocess.PIPE, 
-                       text=True)
-result, _ = proc.communicate(json.dumps(request))
-print(result)
 ```
 
-### API Examples
-
-#### Linear Regression
-```python
+**Response:**
+```json
 {
-  "tool": "linear_model",
-  "args": {
-    "formula": "outcome ~ treatment + age + baseline", 
-    "data": {
-      "outcome": [4.2, 6.8, 3.8, 7.1],
-      "treatment": [0, 1, 0, 1],
-      "age": [25, 30, 22, 35],
-      "baseline": [3.8, 4.2, 3.5, 4.8]
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+        "content": [{
+            "type": "text",
+            "text": {
+                "correlation_matrix": {
+                    "sales": {"marketing": 1.0, "satisfaction": 0.996},
+                    "marketing": {"sales": 1.0, "satisfaction": 0.996},
+                    "satisfaction": {"sales": 0.996, "marketing": 0.996}
+                },
+                "significance_tests": {
+                    "sales_marketing": 0.0,
+                    "sales_satisfaction": 0.000056,
+                    "marketing_satisfaction": 0.000056
+                }
+            }
+        }]
     }
-  }
 }
+## 🔬 Advanced Usage Scenarios
+
+### Time Series Forecasting
+
+**Business Scenario: Sales Forecasting**
+```
+You: "I have monthly sales data for 2 years: [150, 162, 178, 195, 210, 225, 240, 255, 270, 285, 300, 315, 
+330, 345, 360, 375, 390, 405, 420, 435, 450, 465, 480, 495]. Can you forecast next 6 months?"
+
+Claude: "I'll analyze the time series and create forecasts using ARIMA modeling."
+[Claude calls decompose_timeseries and arima_model]
+
+Claude: "Strong upward trend detected. ARIMA(1,1,1) model selected. 
+Forecasted sales: 510, 525, 540, 555, 570, 585 with confidence intervals."
 ```
 
-#### Correlation Analysis  
-```python
-{
-  "tool": "correlation_analysis",
-  "args": {
-    "data": {
-      "x": [1, 2, 3, 4, 5],
-      "y": [2, 4, 6, 8, 10]
-    },
-    "variables": ["x", "y"],
-    "method": "pearson"
-  }
-}
+### Panel Data Analysis  
+
+**Economic Research: Income and Education**
+```
+You: "I have panel data on income and education across countries and years. 
+Can you analyze if education affects income while controlling for country differences?"
+
+Claude: "I'll run a panel regression with fixed effects to control for country characteristics."
+[Claude calls panel_regression]
+
+Claude: "Results show each additional year of education increases income by $2,450 (p<0.001), 
+controlling for unobserved country characteristics. R²=0.87 within countries."
 ```
 
-#### Logistic Regression
-```python
-{
-  "tool": "logistic_regression", 
-  "args": {
-    "formula": "churn ~ tenure_months + monthly_charges",
-    "data": {
-      "churn": [0, 1, 0, 1],
-      "tenure_months": [24, 6, 36, 3], 
-      "monthly_charges": [70, 85, 65, 90]
-    },
-    "family": "binomial",
-    "link": "logit"
-  }
-}
+### Machine Learning Workflow
+
+**Customer Segmentation Analysis**
 ```
+You: "Help me segment customers based on: age [25,35,45,30,40], 
+spending [1200,2500,800,1800,3200], frequency [12,25,8,15,30]. 
+How many segments should I use?"
+
+Claude: "I'll perform k-means clustering to identify customer segments."
+[Claude calls kmeans_clustering with different k values]
+
+Claude: "Optimal segmentation shows 3 distinct customer groups:
+- Young High-Value (age~30, spend~$2650, freq~27)
+- Mature Moderate (age~40, spend~$1500, freq~13) 
+- Budget Conscious (age~45, spend~$800, freq~8)"
+```
+
+### Statistical Testing Workflow
+
+**A/B Test Analysis**
+```
+You: "I ran an A/B test. Control conversion: [0.12, 0.11, 0.13, 0.10, 0.14]. 
+Treatment conversion: [0.18, 0.19, 0.17, 0.20, 0.16]. Is the difference significant?"
+
+Claude: "I'll run appropriate tests to evaluate your A/B test results."
+[Claude calls t_test and normality_test]
+
+Claude: "Treatment significantly outperforms control:
+- Control: 12.0% conversion rate
+- Treatment: 18.0% conversion rate  
+- Lift: +50% improvement (p=0.003, 95% CI: [2.8%, 9.2%])
+- Power analysis: 89% power to detect this effect size"
+```
+
+## 📋 Complete Tool Reference
+
+### Regression & Modeling
+| Tool | Purpose | Key Outputs |
+|------|---------|-------------|
+| `linear_model` | OLS regression | R², coefficients, p-values, diagnostics |
+| `logistic_regression` | Binary/categorical outcomes | Odds ratios, accuracy, ROC |
+| `panel_regression` | Longitudinal data | Fixed/random effects, within R² |
+| `instrumental_variables` | Causal inference | 2SLS estimates, endogeneity tests |
+
+### Time Series Analysis
+| Tool | Purpose | Key Outputs |
+|------|---------|-------------|
+| `arima_model` | Forecasting | Predictions, confidence intervals, AIC |
+| `decompose_timeseries` | Trend/seasonal analysis | Components, seasonality strength |
+| `stationarity_test` | Unit root testing | ADF, KPSS, PP test statistics |
+| `var_model` | Multivariate series | IRF, FEVD, Granger causality |
+
+### Statistical Testing  
+| Tool | Purpose | Key Outputs |
+|------|---------|-------------|
+| `t_test` | Mean comparisons | t-statistic, p-value, confidence intervals |
+| `anova` | Group differences | F-statistic, effect sizes, post-hoc |
+| `chi_square_test` | Independence/goodness-of-fit | χ² statistic, Cramér's V |
+| `normality_test` | Distribution testing | Shapiro-Wilk, Jarque-Bera p-values |
+
+### Data Analysis
+| Tool | Purpose | Key Outputs |
+|------|---------|-------------|
+| `correlation_analysis` | Association strength | Correlation matrix, significance tests |
+| `summary_stats` | Descriptive statistics | Mean, median, SD, quartiles |
+| `outlier_detection` | Anomaly identification | Outlier indices, methods comparison |
+| `frequency_table` | Categorical analysis | Counts, percentages, sorted tables |
 
 ## 🧪 Testing & Validation
 
@@ -308,9 +425,43 @@ pytest tests/                        # Unit tests (if any)
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
+## 🛠️ Troubleshooting
+
+### Quick Fixes for Common Issues
+
+**R not found:**
+```bash
+# Check R installation
+R --version
+
+# Install R if missing (macOS)
+brew install r
+
+# Install R (Ubuntu)
+sudo apt-get install r-base
+```
+
+**Missing R packages:**
+```r
+# In R console, install required packages
+install.packages(c("jsonlite", "plm", "lmtest", "sandwich", "AER"))
+```
+
+**MCP connection issues:**
+```bash
+# Test server directly
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start
+
+# Check Claude Desktop MCP configuration
+# Ensure rmcp is in PATH: which rmcp
+```
+
+**For detailed troubleshooting:** See [docs/troubleshooting.md](docs/troubleshooting.md)
+
 ## 🙋 Support
 
 - 📖 **Documentation**: See [Quick Start Guide](examples/quick_start_guide.md) for working examples
+- 🔧 **Troubleshooting**: [Comprehensive troubleshooting guide](docs/troubleshooting.md)
 - 🐛 **Issues**: [GitHub Issues](https://github.com/gojiplus/rmcp/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/gojiplus/rmcp/discussions)
 
