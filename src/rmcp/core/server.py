@@ -283,6 +283,44 @@ class MCPServer:
             self._active_requests[request_id].cancel()
             logger.info(f"Cancelled request {request_id}")
     
+    async def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle MCP initialize request.
+        
+        Returns server capabilities and metadata according to MCP protocol.
+        
+        Args:
+            params: Initialize parameters from client
+            
+        Returns:
+            Initialize response with server capabilities
+        """
+        client_info = params.get("clientInfo", {})
+        logger.info(f"Initializing MCP connection with client: {client_info.get('name', 'unknown')}")
+        
+        return {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+                "tools": {
+                    "listChanged": False
+                },
+                "resources": {
+                    "subscribe": False,
+                    "listChanged": False  
+                },
+                "prompts": {
+                    "listChanged": False
+                },
+                "logging": {
+                    "level": "info"
+                }
+            },
+            "serverInfo": {
+                "name": self.name,
+                "version": self.version
+            }
+        }
+    
     async def handle_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Handle incoming MCP request and route to appropriate handler.
@@ -300,6 +338,7 @@ class MCPServer:
             JSON-RPC response dict or None for notifications
             
         Supported methods:
+            - initialize: Initialize MCP connection and return capabilities
             - tools/list: List available tools
             - tools/call: Execute a tool with parameters
             - resources/list: List available resources
@@ -320,7 +359,9 @@ class MCPServer:
             context = self.create_context(request_id, method)
             
             # Route to appropriate handler
-            if method == "tools/list":
+            if method == "initialize":
+                result = await self._handle_initialize(params)
+            elif method == "tools/list":
                 result = await self.tools.list_tools(context)
             elif method == "tools/call":
                 tool_name = params.get("name")
