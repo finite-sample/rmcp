@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2025-09-16
+
+### Changed
+- **Package Structure**: Reorganized codebase with standard Python package layout
+  - Moved all package code from `src/rmcp/` to `rmcp/` at root level
+  - Updated `pyproject.toml` to reflect new package discovery structure
+  - Cleaner, more maintainable repository organization following Python best practices
+
+### Added
+- **Streamlit Cloud Deployment**: Added complete Streamlit app for cloud deployment
+  - Cloud-ready econometric analysis interface with Claude AI integration
+  - Sample data generators (economic panel, time series, financial datasets)
+  - Basic statistical analysis capabilities using Python/pandas
+  - Instructions for deployment on Streamlit Community Cloud
+  - Professional UI showcasing RMCP's econometric capabilities
+
+### Fixed
+- Updated all configuration files (pyproject.toml, tooling) for new package structure
+- Verified package installation and CLI functionality with reorganized codebase
+
 ## [0.3.3] - 2025-09-16
 
 ### Fixed

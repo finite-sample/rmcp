@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rmcp"
-version = "0.3.3"
+version = "0.3.4"
 description = "Comprehensive Model Context Protocol server with 33 statistical analysis tools across 8 categories"
 authors = [{name = "Gaurav Sood", email = "gsood07@gmail.com"}]
 license = {text = "MIT"}
@@ -64,12 +64,9 @@ r = [
 [project.scripts]
 rmcp = "rmcp.cli:cli"
 
-# Package discovery for src layout
+# Package discovery for standard layout
 [tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-dir]
-"" = "src"
+where = ["."]
 
 # Tool configurations
 [tool.pytest.ini_options]
@@ -113,7 +110,7 @@ force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
 line_length = 88
-src_paths = ["src", "tests"]
+src_paths = ["rmcp", "tests"]
 
 [tool.mypy]
 python_version = "3.8"
@@ -129,7 +126,7 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
-packages = ["src"]
+packages = ["rmcp"]
 
 [[tool.mypy.overrides]]
 module = [
@@ -138,7 +135,7 @@ module = [
 disallow_untyped_defs = false
 
 [tool.coverage.run]
-source = ["src"]
+source = ["rmcp"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
