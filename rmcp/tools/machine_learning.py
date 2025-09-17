@@ -4,10 +4,11 @@ Machine learning tools for RMCP.
 Clustering, classification trees, and ML capabilities.
 """
 
-from typing import Dict, Any
-from ..registries.tools import tool
-from ..core.schemas import table_schema, formula_schema
+from typing import Any, Dict
+
+from ..core.schemas import formula_schema, table_schema
 from ..r_integration import execute_r_script
+from ..registries.tools import tool
 
 
 @tool(

@@ -5,22 +5,23 @@ Unit tests for the new tools added in v0.3.6:
 - Enhanced file operations (Excel, JSON)
 """
 
-import pytest
 import asyncio
 import json
-import tempfile
 import os
-from pathlib import Path
 
 # Add rmcp to path
 import sys
+import tempfile
+from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from rmcp.core.context import Context, LifespanState
+from rmcp.tools.fileops import read_excel, read_json
 from rmcp.tools.formula_builder import build_formula, validate_formula
-from rmcp.tools.helpers import suggest_fix, validate_data, load_example
-from rmcp.tools.fileops import read_json, read_excel
+from rmcp.tools.helpers import load_example, suggest_fix, validate_data
 
 
 async def create_test_context():

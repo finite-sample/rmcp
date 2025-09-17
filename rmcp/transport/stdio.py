@@ -11,9 +11,10 @@ Following mature MCP patterns: "stdio servers never print to stdout."
 """
 
 import asyncio
-import sys
 import logging
-from typing import Any, Dict, AsyncIterator
+import sys
+from typing import Any, AsyncIterator, Dict
+
 from ..transport.base import Transport
 from ..transport.jsonrpc import JSONRPCEnvelope, JSONRPCError, JSONRPCMessage
 

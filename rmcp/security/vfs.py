@@ -10,11 +10,11 @@ Implements mature MCP server patterns:
 Following the pattern: "Gate filesystem access with a tiny VFS."
 """
 
-import os
-import mimetypes
-from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
 import logging
+import mimetypes
+import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 

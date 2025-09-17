@@ -17,12 +17,12 @@ from pathlib import Path
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from rmcp.core.context import Context, LifespanState
 from rmcp.tools.regression import (
-    linear_model,
     correlation_analysis,
+    linear_model,
     logistic_regression,
 )
-from rmcp.core.context import Context, LifespanState
 
 
 async def create_test_context():

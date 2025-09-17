@@ -12,9 +12,9 @@ This enables:
 - Type-safe interfaces
 """
 
-from .tools import ToolsRegistry, tool
-from .resources import ResourcesRegistry, resource
 from .prompts import PromptsRegistry, prompt
+from .resources import ResourcesRegistry, resource
+from .tools import ToolsRegistry, tool
 
 __all__ = [
     "ToolsRegistry",

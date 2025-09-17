@@ -12,8 +12,8 @@ Following the principle: "No hand-rolled JSON-RPC, no 'close enough' message sha
 
 import json
 import logging
-from typing import Any, Dict, Optional, Union
 from dataclasses import dataclass
+from typing import Any, Dict, Optional, Union
 
 logger = logging.getLogger(__name__)
 

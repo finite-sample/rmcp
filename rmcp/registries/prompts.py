@@ -9,12 +9,12 @@ Implements mature MCP patterns:
 Following the principle: "Ship prompts as workflows."
 """
 
-from typing import Any, Dict, List, Optional, Callable
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 from ..core.context import Context
-from ..core.schemas import validate_schema, SchemaError
+from ..core.schemas import SchemaError, validate_schema
 
 logger = logging.getLogger(__name__)
 

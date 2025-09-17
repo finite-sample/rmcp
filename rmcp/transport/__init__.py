@@ -9,8 +9,8 @@ Implements transport-agnostic message handling:
 Following the principle: "Business logic never cares whether messages arrive over stdio or HTTP."
 """
 
-from .stdio import StdioTransport
-from .jsonrpc import JSONRPCEnvelope, JSONRPCError
 from .base import Transport
+from .jsonrpc import JSONRPCEnvelope, JSONRPCError
+from .stdio import StdioTransport
 
 __all__ = ["StdioTransport", "JSONRPCEnvelope", "JSONRPCError", "Transport"]

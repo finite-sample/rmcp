@@ -7,10 +7,12 @@ Provides utilities for:
 - Type conversion helpers
 """
 
-from typing import Any, Dict, List, Optional, Union
 import json
+from typing import Any, Dict, List, Optional, Union
+
 import jsonschema
-from jsonschema import validate, ValidationError as JsonSchemaValidationError
+from jsonschema import ValidationError as JsonSchemaValidationError
+from jsonschema import validate
 
 
 class SchemaError(Exception):

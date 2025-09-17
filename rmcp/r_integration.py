@@ -23,12 +23,12 @@ Example:
     >>> print(result["mean_value"])  # 3.0
 """
 
-import os
 import json
-import tempfile
-import subprocess
 import logging
-from typing import Dict, Any
+import os
+import subprocess
+import tempfile
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 

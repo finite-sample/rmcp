@@ -4,9 +4,9 @@ Basic test to ensure RMCP server core functionality works.
 This test verifies the server can start and respond to basic requests.
 """
 
+import json
 import subprocess
 import sys
-import json
 from pathlib import Path
 
 

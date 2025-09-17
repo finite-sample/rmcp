@@ -10,15 +10,15 @@ Provides:
 Following the principle: "Registries are discoverable and testable."
 """
 
-from typing import Any, Dict, List, Optional, Callable, Awaitable, Union
-from functools import wraps
-from dataclasses import dataclass
 import inspect
-import logging
 import json
+import logging
+from dataclasses import dataclass
+from functools import wraps
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 
 from ..core.context import Context
-from ..core.schemas import validate_schema, SchemaError, statistical_result_schema
+from ..core.schemas import SchemaError, statistical_result_schema, validate_schema
 
 logger = logging.getLogger(__name__)
 

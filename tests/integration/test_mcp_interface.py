@@ -13,14 +13,14 @@ from pathlib import Path
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from rmcp.core.server import create_server
 from rmcp.core.context import Context, LifespanState
+from rmcp.core.server import create_server
+from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.regression import (
-    linear_model,
     correlation_analysis,
+    linear_model,
     logistic_regression,
 )
-from rmcp.registries.tools import register_tool_functions
 
 
 async def create_mcp_server():

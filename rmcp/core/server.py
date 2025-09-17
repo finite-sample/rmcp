@@ -12,19 +12,20 @@ Following the principle: "A single shell centralizes initialization and teardown
 
 import asyncio
 import logging
-from typing import Any, Dict, Optional, Callable, Awaitable, List
-from pathlib import Path
 import sys
+from pathlib import Path
+from typing import Any, Awaitable, Callable, Dict, List, Optional
+
+from ..registries.prompts import PromptsRegistry
+from ..registries.resources import ResourcesRegistry
+from ..registries.tools import ToolsRegistry
+from ..security.vfs import VFS
+from .context import Context, LifespanState, RequestState
 
 # Official MCP SDK imports (to be added when SDK is available)
 # from mcp import Server, initialize_server
 # from mcp.types import Request, Response, Notification
 
-from .context import Context, LifespanState, RequestState
-from ..registries.tools import ToolsRegistry
-from ..registries.resources import ResourcesRegistry
-from ..registries.prompts import PromptsRegistry
-from ..security.vfs import VFS
 
 logger = logging.getLogger(__name__)
 

@@ -6,21 +6,22 @@ and configurations, following the principle of "multiple deployment targets."
 """
 
 import asyncio
-import click
 import logging
 import sys
 from pathlib import Path
 from typing import List, Optional
 
+import click
+
 from .core.server import create_server
-from .transport.stdio import StdioTransport
-from .registries.tools import register_tool_functions
-from .registries.resources import ResourcesRegistry
 from .registries.prompts import (
+    model_diagnostic_prompt,
     register_prompt_functions,
     statistical_workflow_prompt,
-    model_diagnostic_prompt,
 )
+from .registries.resources import ResourcesRegistry
+from .registries.tools import register_tool_functions
+from .transport.stdio import StdioTransport
 
 # Configure logging to stderr only
 logging.basicConfig(
@@ -239,8 +240,8 @@ def validate_config():
 @cli.command("check-r-packages")
 def check_r_packages():
     """Check R package installation status."""
-    import subprocess
     import json
+    import subprocess
 
     # Define all required packages with their categories
     packages = {
@@ -338,35 +339,35 @@ def _load_config(config_file: str) -> dict:
 
 def _register_builtin_tools(server):
     """Register built-in statistical tools."""
-    from .tools.regression import (
-        linear_model,
-        correlation_analysis,
-        logistic_regression,
-    )
-    from .tools.timeseries import arima_model, decompose_timeseries, stationarity_test
-    from .tools.transforms import lag_lead, winsorize, difference, standardize
-    from .tools.statistical_tests import t_test, anova, chi_square_test, normality_test
-    from .tools.descriptive import summary_stats, outlier_detection, frequency_table
+    from .tools.descriptive import frequency_table, outlier_detection, summary_stats
+    from .tools.econometrics import instrumental_variables, panel_regression, var_model
     from .tools.fileops import (
-        read_csv,
-        write_csv,
         data_info,
         filter_data,
+        read_csv,
         read_excel,
         read_json,
-    )
-    from .tools.econometrics import panel_regression, instrumental_variables, var_model
-    from .tools.machine_learning import kmeans_clustering, decision_tree, random_forest
-    from .tools.visualization import (
-        scatter_plot,
-        histogram,
-        boxplot,
-        time_series_plot,
-        correlation_heatmap,
-        regression_plot,
+        write_csv,
     )
     from .tools.formula_builder import build_formula, validate_formula
-    from .tools.helpers import suggest_fix, validate_data, load_example
+    from .tools.helpers import load_example, suggest_fix, validate_data
+    from .tools.machine_learning import decision_tree, kmeans_clustering, random_forest
+    from .tools.regression import (
+        correlation_analysis,
+        linear_model,
+        logistic_regression,
+    )
+    from .tools.statistical_tests import anova, chi_square_test, normality_test, t_test
+    from .tools.timeseries import arima_model, decompose_timeseries, stationarity_test
+    from .tools.transforms import difference, lag_lead, standardize, winsorize
+    from .tools.visualization import (
+        boxplot,
+        correlation_heatmap,
+        histogram,
+        regression_plot,
+        scatter_plot,
+        time_series_plot,
+    )
 
     # Register all statistical tools
     register_tool_functions(

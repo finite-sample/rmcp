@@ -4,10 +4,11 @@ Econometric analysis tools for RMCP.
 Advanced econometric modeling for panel data, instrumental variables, etc.
 """
 
-from typing import Dict, Any
-from ..registries.tools import tool
-from ..core.schemas import table_schema, formula_schema
+from typing import Any, Dict
+
+from ..core.schemas import formula_schema, table_schema
 from ..r_integration import execute_r_script
+from ..registries.tools import tool
 
 
 @tool(

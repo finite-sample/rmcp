@@ -5,9 +5,9 @@ Defines the contract that all transports must implement,
 enabling clean composition at the server edge.
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, AsyncIterator, Callable, Awaitable
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

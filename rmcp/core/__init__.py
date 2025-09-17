@@ -8,7 +8,7 @@ This module contains the fundamental building blocks:
 """
 
 from .context import Context
+from .schemas import SchemaError, validate_schema
 from .server import create_server
-from .schemas import validate_schema, SchemaError
 
 __all__ = ["Context", "create_server", "validate_schema", "SchemaError"]

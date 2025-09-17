@@ -11,9 +11,9 @@ This package implements a production-ready MCP server following established patt
 
 from .core.context import Context
 from .core.server import create_server
-from .registries.tools import ToolsRegistry, tool
-from .registries.resources import ResourcesRegistry, resource
 from .registries.prompts import PromptsRegistry, prompt
+from .registries.resources import ResourcesRegistry, resource
+from .registries.tools import ToolsRegistry, tool
 
 __version__ = "0.3.6"
 __author__ = "Gaurav Sood"
