@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "rmcp"
-version = "0.3.5"
-description = "Comprehensive Model Context Protocol server with 33 statistical analysis tools across 8 categories"
+version = "0.3.6"
+description = "Comprehensive Model Context Protocol server with 40 statistical analysis tools across 9 categories"
 authors = ["Gaurav Sood <gsood07@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -30,7 +30,7 @@ python = ">=3.8"
 click = ">=8.1.0"
 jsonschema = ">=4.0.0"
 # R integration dependencies
-subprocess32 = {version = ">=3.5.0", python = "<3.3"}
+# subprocess module is built-in for Python 3.8+
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0"

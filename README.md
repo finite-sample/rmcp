@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-**Version 0.3.5** - A comprehensive Model Context Protocol (MCP) server with 39 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
+**Version 0.3.6** - A comprehensive Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
 
-**🎉 Now with 39 statistical tools across 9 categories including natural language formula building and intelligent error recovery!**
+**🎉 Now with 40 statistical tools across 9 categories including natural language formula building and intelligent error recovery!**
 
 ## 🚀 Quick Start
 
@@ -29,7 +29,7 @@ That's it! RMCP is now ready to handle statistical analysis requests via the Mod
 
 ## ✨ Features
 
-### 📊 Comprehensive Statistical Analysis (39 Tools)
+### 📊 Comprehensive Statistical Analysis (40 Tools)
 
 #### **Regression & Correlation** ✅
 - **Linear Regression** (`linear_model`): OLS with robust standard errors, R², p-values

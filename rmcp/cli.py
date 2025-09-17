@@ -29,9 +29,9 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-@click.version_option(version="0.3.4")
+@click.version_option(version="0.3.6")
 def cli():
-    """RMCP MCP Server - Comprehensive statistical analysis with 33 tools across 8 categories."""
+    """RMCP MCP Server - Comprehensive statistical analysis with 40 tools across 9 categories."""
     pass
 
 
@@ -401,7 +401,7 @@ def _register_builtin_tools(server):
         load_example
     )
     
-    logger.info("Registered comprehensive statistical analysis tools (39 total)")
+    logger.info("Registered comprehensive statistical analysis tools (40 total)")
 
 
 if __name__ == "__main__":

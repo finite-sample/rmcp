@@ -164,7 +164,7 @@ jobs:
             result = await server.tools.list_tools(ctx)
             count = len(result['tools'])
             print(f'Registered tools: {count}')
-            assert count >= 39, f'Expected at least 39 tools, got {count}'
+            assert count >= 40, f'Expected at least 40 tools, got {count}'
             print('✅ Tool count verification passed')
         asyncio.run(count())
         "
@@ -246,7 +246,7 @@ jobs:
     
     - name: Check README mentions new features
       run: |
-        grep -q "39 statistical tools" README.md || (echo "❌ README doesn't mention 39 tools" && exit 1)
+        grep -q "40 statistical tools" README.md || (echo "❌ README doesn't mention 40 tools" && exit 1)
         grep -q "Natural Language" README.md || (echo "❌ README doesn't mention natural language features" && exit 1)
         grep -q "Error Recovery" README.md || (echo "❌ README doesn't mention error recovery" && exit 1)
         echo "✅ Documentation check passed"
