@@ -16,6 +16,9 @@ pip install rmcp
 ```
 
 ```bash
+# Check R packages are installed
+rmcp check-r-packages
+
 # Start the MCP server
 rmcp start
 ```
@@ -122,8 +125,42 @@ RMCP has been tested with real-world scenarios achieving **100% success rate**:
 ## 🔧 Installation & Setup
 
 ### Prerequisites
-- Python 3.8+
-- R 4.0+ (automatically configured)
+- **Python 3.8+**
+- **R 4.0+** with required packages (see below)
+
+#### R Package Requirements
+
+RMCP requires the following R packages. Install all at once with:
+
+```r
+# Install all required packages (recommended)
+install.packages(c(
+  # Core statistical packages
+  "jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr",
+  # Time series analysis
+  "forecast", "vars", "urca", "tseries", 
+  # Statistical testing
+  "nortest", "car",
+  # Machine learning
+  "rpart", "randomForest",
+  # Data visualization  
+  "ggplot2", "gridExtra", "tidyr", "rlang"
+), repos = "https://cran.rstudio.com/")
+```
+
+**Minimum Core Packages** (basic functionality only):
+```r
+install.packages(c("jsonlite", "plm", "lmtest", "sandwich", "AER"))
+```
+
+**Feature-Specific Packages:**
+- **Time Series Analysis**: `forecast`, `vars`, `urca`, `tseries`
+- **Machine Learning**: `rpart`, `randomForest` 
+- **Data Visualization**: `ggplot2`, `gridExtra`, `tidyr`, `rlang`
+- **Statistical Testing**: `nortest`, `car`
+- **Data Manipulation**: `dplyr`
+
+💡 **Tip**: Install all packages first to avoid errors. Missing packages will cause specific tools to fail with clear error messages.
 
 ### Install via pip
 ```bash
@@ -442,10 +479,29 @@ sudo apt-get install r-base
 ```
 
 **Missing R packages:**
+
+First, check which packages are missing:
+```bash
+rmcp check-r-packages
+```
+
+Then install missing packages in R:
 ```r
-# In R console, install required packages
+# Install all RMCP packages (recommended)
+install.packages(c(
+  "jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr",
+  "forecast", "vars", "urca", "tseries", "nortest", "car",
+  "rpart", "randomForest", "ggplot2", "gridExtra", "tidyr", "rlang"
+), repos = "https://cran.rstudio.com/")
+
+# Or install just core packages (limited functionality)
 install.packages(c("jsonlite", "plm", "lmtest", "sandwich", "AER"))
 ```
+
+**Package installation fails:**
+- On Ubuntu/Debian: `sudo apt-get install r-base-dev libcurl4-openssl-dev libssl-dev libxml2-dev`
+- On macOS with Homebrew: `brew install r`
+- On Windows: Download from [CRAN](https://cran.r-project.org/bin/windows/base/)
 
 **MCP connection issues:**
 ```bash

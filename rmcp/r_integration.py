@@ -163,12 +163,59 @@ write_json(result, "{result_path}", auto_unbox = TRUE)
             )
             
             if process.returncode != 0:
+                # Enhanced error handling for missing packages
                 error_msg = f"R script failed with return code {process.returncode}"
-                logger.error(f"{error_msg}\\nStderr: {process.stderr}")
+                stderr = process.stderr or ""
+                
+                # Check for common R package errors
+                if "there is no package called" in stderr:
+                    # Extract package name from error
+                    import re
+                    match = re.search(r"there is no package called '([^']+)'", stderr)
+                    if match:
+                        missing_pkg = match.group(1)
+                        # Map package to feature category
+                        pkg_features = {
+                            "plm": "Panel Data Analysis", "lmtest": "Statistical Testing",
+                            "sandwich": "Robust Standard Errors", "AER": "Applied Econometrics",
+                            "jsonlite": "Data Exchange", "forecast": "Time Series Forecasting",
+                            "vars": "Vector Autoregression", "urca": "Unit Root Testing",
+                            "tseries": "Time Series Analysis", "nortest": "Normality Testing",
+                            "car": "Regression Diagnostics", "rpart": "Decision Trees",
+                            "randomForest": "Random Forest", "ggplot2": "Data Visualization",
+                            "gridExtra": "Plot Layouts", "tidyr": "Data Tidying",
+                            "rlang": "Programming Tools", "dplyr": "Data Manipulation"
+                        }
+                        
+                        feature = pkg_features.get(missing_pkg, "Statistical Analysis")
+                        error_msg = f"""❌ Missing R Package: '{missing_pkg}'
+
+🔍 This package is required for: {feature}
+
+📦 Install with:
+   install.packages("{missing_pkg}")
+
+🚀 Or install all RMCP packages:
+   install.packages(c("jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr", "forecast", "vars", "urca", "tseries", "nortest", "car", "rpart", "randomForest", "ggplot2", "gridExtra", "tidyr", "rlang"))
+
+💡 Check package status: rmcp check-r-packages"""
+                
+                elif "could not find function" in stderr:
+                    error_msg = f"""❌ R Function Error
+
+The R script failed because a required function is missing. This usually means:
+1. A required package is not loaded
+2. A package is installed but not the right version
+
+💡 Try: rmcp check-r-packages
+
+Original error: {stderr.strip()}"""
+                
+                logger.error(f"{error_msg}\\nOriginal stderr: {stderr}")
                 raise RExecutionError(
                     error_msg,
                     stdout=process.stdout,
-                    stderr=process.stderr,
+                    stderr=stderr,
                     returncode=process.returncode
                 )
             

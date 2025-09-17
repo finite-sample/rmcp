@@ -239,6 +239,86 @@ def validate_config():
     # TODO: Add config validation
 
 
+@cli.command("check-r-packages")
+def check_r_packages():
+    """Check R package installation status."""
+    import subprocess
+    import json
+    
+    # Define all required packages with their categories
+    packages = {
+        "Core Statistical": ["jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr"],
+        "Time Series": ["forecast", "vars", "urca", "tseries"],
+        "Statistical Testing": ["nortest", "car"],  
+        "Machine Learning": ["rpart", "randomForest"],
+        "Data Visualization": ["ggplot2", "gridExtra", "tidyr", "rlang"]
+    }
+    
+    click.echo("🔍 Checking R Package Installation Status")
+    click.echo("=" * 50)
+    
+    # Check if R is available
+    try:
+        result = subprocess.run(['R', '--version'], capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            click.echo("❌ R not found. Please install R first.")
+            return
+        version_line = result.stdout.split('\n')[0]
+        click.echo(f"✅ R is available: {version_line}")
+    except Exception as e:
+        click.echo(f"❌ R check failed: {e}")
+        return
+    
+    click.echo()
+    
+    # Check each package category
+    all_packages = []
+    missing_packages = []
+    
+    for category, pkg_list in packages.items():
+        click.echo(f"📦 {category} Packages:")
+        for pkg in pkg_list:
+            all_packages.append(pkg)
+            try:
+                # Check if package is installed
+                r_cmd = f'if (require("{pkg}", quietly=TRUE)) cat("INSTALLED") else cat("MISSING")'
+                result = subprocess.run(['R', '--slave', '-e', r_cmd], 
+                                      capture_output=True, text=True, timeout=10)
+                if "INSTALLED" in result.stdout:
+                    click.echo(f"   ✅ {pkg}")
+                else:
+                    click.echo(f"   ❌ {pkg}")
+                    missing_packages.append(pkg)
+            except Exception:
+                click.echo(f"   ❓ {pkg} (check failed)")
+                missing_packages.append(pkg)
+        click.echo()
+    
+    # Summary
+    installed_count = len(all_packages) - len(missing_packages)
+    click.echo(f"📊 Summary: {installed_count}/{len(all_packages)} packages installed")
+    
+    if missing_packages:
+        click.echo()
+        click.echo("❌ Missing Packages:")
+        for pkg in missing_packages:
+            click.echo(f"   - {pkg}")
+        
+        click.echo()
+        click.echo("💡 To install missing packages, run in R:")
+        missing_str = '", "'.join(missing_packages)
+        click.echo(f'   install.packages(c("{missing_str}"))')
+        
+        click.echo()
+        click.echo("🚀 Or install all RMCP packages at once:")
+        all_str = '", "'.join(all_packages)
+        click.echo(f'   install.packages(c("{all_str}"), repos="https://cran.rstudio.com/")')
+    else:
+        click.echo()
+        click.echo("🎉 All required R packages are installed!")
+        click.echo("✅ RMCP is ready to use!")
+
+
 def _load_config(config_file: str) -> dict:
     """Load configuration from file."""
     import json
