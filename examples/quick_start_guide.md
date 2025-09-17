@@ -117,19 +117,42 @@ GBR,2021,2.0,17.8,5.1
 ### Data Arrays
 > "I have these two datasets: sales = [100, 120, 115, 140] and advertising = [5, 8, 6, 10]. What's the relationship?"
 
+### Natural Language Formulas  
+> "I want to predict customer satisfaction from service quality and response time. Can you build the formula?"
+
+### Excel Files with Error Recovery
+> "I have an Excel file 'Q4_results.xlsx' but I'm getting package errors. Can you help?"
+
 ## What Makes RMCP Special
 
 ✅ **Natural Language Interface**: Ask questions in plain English
 ✅ **Professional Statistics**: Real R-powered analysis, not simplified approximations  
 ✅ **AI-Assisted Interpretation**: Get business insights, not just numbers
-✅ **File Integration**: Works with your existing data files
+✅ **Enhanced File Support**: CSV, Excel, JSON, plus URL loading
+✅ **Formula Building**: Convert natural language to statistical formulas
+✅ **Error Recovery**: Intelligent diagnosis and fix suggestions
 ✅ **Research-Grade**: Suitable for academic and professional analysis
 
 ## Currently Available (100% Working)
 
+### Core Analysis
 - **Linear Regression**: Relationships between variables, predictions, R²
 - **Correlation Analysis**: Strength and direction of relationships  
 - **Logistic Regression**: Binary prediction (churn, success/failure, yes/no)
+- **Time Series Analysis**: ARIMA modeling, forecasting, decomposition
+- **Statistical Testing**: t-tests, ANOVA, chi-square, normality tests
+- **Machine Learning**: K-means clustering, decision trees, random forests
+
+### Enhanced File Support  
+- **Excel Files**: Read .xlsx/.xls with sheet selection
+- **JSON Data**: Convert JSON to tabular format
+- **URL Support**: Load CSV/JSON directly from web URLs
+
+### Natural Language Features
+- **Formula Builder**: "predict sales from marketing" → `sales ~ marketing`
+- **Error Recovery**: Intelligent diagnosis of R package and data issues
+- **Data Validation**: Pre-analysis quality checks and suggestions
+- **Example Datasets**: Built-in realistic datasets for learning
 
 ## Testing Your Setup
 

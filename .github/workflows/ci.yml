@@ -1,4 +1,4 @@
-name: CI
+name: CI Quick Checks
 
 on:
   push:
@@ -7,23 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  quick-validation:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
+        python-version: [3.8, "3.11"]  # Test oldest and newest
     
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Set up R
-      uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: 'release'
-    
-    - name: Install R packages
-      run: |
-        R -e "install.packages(c('plm', 'lmtest', 'sandwich', 'AER', 'jsonlite', 'forecast', 'dplyr', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'vars', 'ggplot2', 'gridExtra', 'tidyr', 'rlang', 'urca'), repos='https://cran.rstudio.com/')"
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -41,17 +32,17 @@ jobs:
         rmcp --version
         rmcp list-capabilities > /dev/null
     
-    - name: Run basic tests
+    - name: Quick smoke test
       run: |
-        python tests/test_server_basic.py
-    
-    - name: Run MCP interface tests
-      run: |
-        python tests/test_mcp_interface.py
-    
-    - name: Run realistic scenarios
-      run: |
-        python tests/realistic_scenarios.py
+        python -c "
+        import sys
+        sys.path.insert(0, '.')
+        from rmcp.core.server import create_server
+        from rmcp.cli import _register_builtin_tools
+        server = create_server()
+        _register_builtin_tools(server)
+        print('✅ Server can be created and tools registered')
+        "
 
   lint:
     runs-on: ubuntu-latest

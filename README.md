@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-**Version 0.3.2** - A comprehensive Model Context Protocol (MCP) server with 33 statistical analysis tools across 8 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
+**Version 0.3.6** - A comprehensive Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
 
-**🎉 Now with 33 statistical tools across 8 categories!**
+**🎉 Now with 40 statistical tools across 9 categories including natural language formula building and intelligent error recovery!**
 
 ## 🚀 Quick Start
 
@@ -16,6 +16,9 @@ pip install rmcp
 ```
 
 ```bash
+# Check R packages are installed
+rmcp check-r-packages
+
 # Start the MCP server
 rmcp start
 ```
@@ -26,7 +29,7 @@ That's it! RMCP is now ready to handle statistical analysis requests via the Mod
 
 ## ✨ Features
 
-### 📊 Comprehensive Statistical Analysis (33 Tools)
+### 📊 Comprehensive Statistical Analysis (40 Tools)
 
 #### **Regression & Correlation** ✅
 - **Linear Regression** (`linear_model`): OLS with robust standard errors, R², p-values
@@ -74,10 +77,19 @@ That's it! RMCP is now ready to handle statistical analysis requests via the Mod
 - **Regression Diagnostics** (`regression_plot`): Model validation plots
 
 #### **File Operations** ✅
-- **CSV Import** (`read_csv`): Flexible data loading with parsing options
+- **CSV Import** (`read_csv`): Flexible data loading with parsing options and URL support
+- **Excel Import** (`read_excel`): Read .xlsx/.xls files with sheet and range selection
+- **JSON Import** (`read_json`): Convert JSON to tabular format with flattening
 - **CSV Export** (`write_csv`): Data export with formatting control
 - **Dataset Information** (`data_info`): Comprehensive data structure analysis
 - **Data Filtering** (`filter_data`): Complex conditional data selection
+
+#### **Natural Language & User Experience** ✅
+- **Formula Builder** (`build_formula`): Convert natural language to R formulas
+- **Formula Validation** (`validate_formula`): Check formula syntax against data
+- **Error Recovery** (`suggest_fix`): Intelligent error diagnosis and solutions
+- **Data Validation** (`validate_data`): Pre-analysis data quality checks
+- **Example Datasets** (`load_example`): Built-in datasets for learning and testing
 
 ### Production Ready
 - **MCP Protocol**: Full JSON-RPC 2.0 compliance
@@ -110,6 +122,20 @@ RMCP works through natural conversation with AI assistants. Here's how users act
 **Claude responds:**
 > *"I've built a logistic regression model that achieves 100% accuracy. Longer tenure significantly reduces churn risk (11.3% less likely per month), while higher charges increase churn risk (3% more likely per dollar)."*
 
+### Natural Language Formula Building
+**You ask Claude:**
+> *"I want to predict sales from marketing spend and customer satisfaction scores. Can you help me build the right formula?"*
+
+**Claude responds:**
+> *"I'll help you build that formula. Using the natural language formula builder, I converted your description to: `sales ~ marketing_spend + customer_satisfaction`. This creates a multiple regression model with sales as the outcome and both marketing spend and satisfaction as predictors. I can also suggest alternatives like interaction terms if needed."*
+
+### Intelligent Error Recovery
+**You ask Claude:**
+> *"I'm getting an error about missing R packages when I try to run my analysis."*
+
+**Claude responds:**
+> *"I can help diagnose that error. The issue is that the 'forecast' package is missing, which is required for Time Series Forecasting. You can fix this by running: `install.packages(\"forecast\")`. I can also check all your R packages and install everything RMCP needs at once."*
+
 ## 📊 Validated User Scenarios
 
 RMCP has been tested with real-world scenarios achieving **100% success rate**:
@@ -122,8 +148,42 @@ RMCP has been tested with real-world scenarios achieving **100% success rate**:
 ## 🔧 Installation & Setup
 
 ### Prerequisites
-- Python 3.8+
-- R 4.0+ (automatically configured)
+- **Python 3.8+**
+- **R 4.0+** with required packages (see below)
+
+#### R Package Requirements
+
+RMCP requires the following R packages. Install all at once with:
+
+```r
+# Install all required packages (recommended)
+install.packages(c(
+  # Core statistical packages
+  "jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr",
+  # Time series analysis
+  "forecast", "vars", "urca", "tseries", 
+  # Statistical testing
+  "nortest", "car",
+  # Machine learning
+  "rpart", "randomForest",
+  # Data visualization  
+  "ggplot2", "gridExtra", "tidyr", "rlang"
+), repos = "https://cran.rstudio.com/")
+```
+
+**Minimum Core Packages** (basic functionality only):
+```r
+install.packages(c("jsonlite", "plm", "lmtest", "sandwich", "AER"))
+```
+
+**Feature-Specific Packages:**
+- **Time Series Analysis**: `forecast`, `vars`, `urca`, `tseries`
+- **Machine Learning**: `rpart`, `randomForest` 
+- **Data Visualization**: `ggplot2`, `gridExtra`, `tidyr`, `rlang`
+- **Statistical Testing**: `nortest`, `car`
+- **Data Manipulation**: `dplyr`
+
+💡 **Tip**: Install all packages first to avoid errors. Missing packages will cause specific tools to fail with clear error messages.
 
 ### Install via pip
 ```bash
@@ -416,9 +476,20 @@ pre-commit install
 ```
 
 ### Running Tests
+
+RMCP includes comprehensive organized testing:
+
 ```bash
-python tests/realistic_scenarios.py  # User scenarios
-pytest tests/                        # Unit tests (if any)
+# Run all tests in logical order
+python run_tests.py
+
+# Run specific test categories
+python tests/unit/test_new_tools.py                    # Unit tests
+python tests/integration/test_mcp_interface.py         # Integration tests  
+python tests/e2e/test_claude_desktop_scenarios.py      # End-to-end tests
+
+# Run pytest (if available)
+pytest tests/unit/ -v                                  # Unit tests only
 ```
 
 ## 📄 License
@@ -442,10 +513,29 @@ sudo apt-get install r-base
 ```
 
 **Missing R packages:**
+
+First, check which packages are missing:
+```bash
+rmcp check-r-packages
+```
+
+Then install missing packages in R:
 ```r
-# In R console, install required packages
+# Install all RMCP packages (recommended)
+install.packages(c(
+  "jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr",
+  "forecast", "vars", "urca", "tseries", "nortest", "car",
+  "rpart", "randomForest", "ggplot2", "gridExtra", "tidyr", "rlang"
+), repos = "https://cran.rstudio.com/")
+
+# Or install just core packages (limited functionality)
 install.packages(c("jsonlite", "plm", "lmtest", "sandwich", "AER"))
 ```
+
+**Package installation fails:**
+- On Ubuntu/Debian: `sudo apt-get install r-base-dev libcurl4-openssl-dev libssl-dev libxml2-dev`
+- On macOS with Homebrew: `brew install r`
+- On Windows: Download from [CRAN](https://cran.r-project.org/bin/windows/base/)
 
 **MCP connection issues:**
 ```bash

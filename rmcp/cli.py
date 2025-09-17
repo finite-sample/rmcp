@@ -29,9 +29,9 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-@click.version_option(version="0.3.4")
+@click.version_option(version="0.3.6")
 def cli():
-    """RMCP MCP Server - Comprehensive statistical analysis with 33 tools across 8 categories."""
+    """RMCP MCP Server - Comprehensive statistical analysis with 40 tools across 9 categories."""
     pass
 
 
@@ -239,6 +239,86 @@ def validate_config():
     # TODO: Add config validation
 
 
+@cli.command("check-r-packages")
+def check_r_packages():
+    """Check R package installation status."""
+    import subprocess
+    import json
+    
+    # Define all required packages with their categories
+    packages = {
+        "Core Statistical": ["jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr"],
+        "Time Series": ["forecast", "vars", "urca", "tseries"],
+        "Statistical Testing": ["nortest", "car"],  
+        "Machine Learning": ["rpart", "randomForest"],
+        "Data Visualization": ["ggplot2", "gridExtra", "tidyr", "rlang"]
+    }
+    
+    click.echo("🔍 Checking R Package Installation Status")
+    click.echo("=" * 50)
+    
+    # Check if R is available
+    try:
+        result = subprocess.run(['R', '--version'], capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            click.echo("❌ R not found. Please install R first.")
+            return
+        version_line = result.stdout.split('\n')[0]
+        click.echo(f"✅ R is available: {version_line}")
+    except Exception as e:
+        click.echo(f"❌ R check failed: {e}")
+        return
+    
+    click.echo()
+    
+    # Check each package category
+    all_packages = []
+    missing_packages = []
+    
+    for category, pkg_list in packages.items():
+        click.echo(f"📦 {category} Packages:")
+        for pkg in pkg_list:
+            all_packages.append(pkg)
+            try:
+                # Check if package is installed
+                r_cmd = f'if (require("{pkg}", quietly=TRUE)) cat("INSTALLED") else cat("MISSING")'
+                result = subprocess.run(['R', '--slave', '-e', r_cmd], 
+                                      capture_output=True, text=True, timeout=10)
+                if "INSTALLED" in result.stdout:
+                    click.echo(f"   ✅ {pkg}")
+                else:
+                    click.echo(f"   ❌ {pkg}")
+                    missing_packages.append(pkg)
+            except Exception:
+                click.echo(f"   ❓ {pkg} (check failed)")
+                missing_packages.append(pkg)
+        click.echo()
+    
+    # Summary
+    installed_count = len(all_packages) - len(missing_packages)
+    click.echo(f"📊 Summary: {installed_count}/{len(all_packages)} packages installed")
+    
+    if missing_packages:
+        click.echo()
+        click.echo("❌ Missing Packages:")
+        for pkg in missing_packages:
+            click.echo(f"   - {pkg}")
+        
+        click.echo()
+        click.echo("💡 To install missing packages, run in R:")
+        missing_str = '", "'.join(missing_packages)
+        click.echo(f'   install.packages(c("{missing_str}"))')
+        
+        click.echo()
+        click.echo("🚀 Or install all RMCP packages at once:")
+        all_str = '", "'.join(all_packages)
+        click.echo(f'   install.packages(c("{all_str}"), repos="https://cran.rstudio.com/")')
+    else:
+        click.echo()
+        click.echo("🎉 All required R packages are installed!")
+        click.echo("✅ RMCP is ready to use!")
+
+
 def _load_config(config_file: str) -> dict:
     """Load configuration from file."""
     import json
@@ -258,10 +338,12 @@ def _register_builtin_tools(server):
     from .tools.transforms import lag_lead, winsorize, difference, standardize
     from .tools.statistical_tests import t_test, anova, chi_square_test, normality_test
     from .tools.descriptive import summary_stats, outlier_detection, frequency_table
-    from .tools.fileops import read_csv, write_csv, data_info, filter_data
+    from .tools.fileops import read_csv, write_csv, data_info, filter_data, read_excel, read_json
     from .tools.econometrics import panel_regression, instrumental_variables, var_model
     from .tools.machine_learning import kmeans_clustering, decision_tree, random_forest
     from .tools.visualization import scatter_plot, histogram, boxplot, time_series_plot, correlation_heatmap, regression_plot
+    from .tools.formula_builder import build_formula, validate_formula
+    from .tools.helpers import suggest_fix, validate_data, load_example
     
     # Register all statistical tools
     register_tool_functions(
@@ -293,6 +375,8 @@ def _register_builtin_tools(server):
         write_csv,
         data_info,
         filter_data,
+        read_excel,
+        read_json,
         # Econometrics
         panel_regression,
         instrumental_variables,
@@ -307,10 +391,17 @@ def _register_builtin_tools(server):
         boxplot,
         time_series_plot,
         correlation_heatmap,
-        regression_plot
+        regression_plot,
+        # Natural language tools
+        build_formula,
+        validate_formula,
+        # Helper tools
+        suggest_fix,
+        validate_data,
+        load_example
     )
     
-    logger.info("Registered comprehensive statistical analysis tools (30 total)")
+    logger.info("Registered comprehensive statistical analysis tools (40 total)")
 
 
 if __name__ == "__main__":

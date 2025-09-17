@@ -1,0 +1,35 @@
+# Include the README and other documentation
+include README.md
+include LICENSE
+include CITATION.cff
+include CONTRIBUTING.md
+
+# Include configuration files
+include pyproject.toml
+include requirements.txt
+
+# Include all Python files in the package
+recursive-include rmcp *.py
+
+# Include test files for development installations
+recursive-include tests *.py
+
+# Include example data and documentation
+recursive-include examples *.md *.json *.csv
+recursive-include docs *.md *.rst
+
+# Include GitHub workflows and configuration
+recursive-include .github *.yml *.yaml
+
+# Exclude common build artifacts and cache files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude .DS_Store
+global-exclude *.egg-info
+global-exclude build
+global-exclude dist
+global-exclude .git
+global-exclude .pytest_cache
+global-exclude .coverage
+global-exclude htmlcov

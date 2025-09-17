@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "R Econometrics MCP Server"
-version: "0.1.0"
-date-released: "2025-04-10"
+title: "RMCP: R Model Context Protocol Server"
+version: "0.3.6"
+date-released: "2025-01-17"
 authors:
   - given-names: "Gaurav"
     family-names: "Sood"
