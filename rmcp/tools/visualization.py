@@ -22,18 +22,18 @@ from ..r_integration import execute_r_script
             "title": {"type": "string"},
             "file_path": {"type": "string"},
             "width": {"type": "integer", "minimum": 100, "default": 800},
-            "height": {"type": "integer", "minimum": 100, "default": 600}
+            "height": {"type": "integer", "minimum": 100, "default": 600},
         },
-        "required": ["data", "x", "y", "file_path"]
+        "required": ["data", "x", "y", "file_path"],
     },
-    description="Create scatter plot with optional grouping and trend lines"
+    description="Create scatter plot with optional grouping and trend lines",
 )
 async def scatter_plot(context, params):
     """Create scatter plot."""
-    
+
     await context.info("Creating scatter plot")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
@@ -77,13 +77,13 @@ async def scatter_plot(context, params):
         n_points = sum(!is.na(data[[x_var]]) & !is.na(data[[y_var]])),
         plot_saved = file.exists(file_path)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Scatter plot created successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Scatter plot creation failed", error=str(e))
         raise
@@ -101,18 +101,18 @@ async def scatter_plot(context, params):
             "title": {"type": "string"},
             "file_path": {"type": "string"},
             "width": {"type": "integer", "minimum": 100, "default": 800},
-            "height": {"type": "integer", "minimum": 100, "default": 600}
+            "height": {"type": "integer", "minimum": 100, "default": 600},
         },
-        "required": ["data", "variable", "file_path"]
+        "required": ["data", "variable", "file_path"],
     },
-    description="Create histogram with optional grouping and density overlay"
+    description="Create histogram with optional grouping and density overlay",
 )
 async def histogram(context, params):
     """Create histogram."""
-    
+
     await context.info("Creating histogram")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
@@ -163,13 +163,13 @@ async def histogram(context, params):
         n_obs = length(values),
         plot_saved = file.exists(file_path)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Histogram created successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Histogram creation failed", error=str(e))
         raise
@@ -186,18 +186,18 @@ async def histogram(context, params):
             "title": {"type": "string"},
             "file_path": {"type": "string"},
             "width": {"type": "integer", "minimum": 100, "default": 800},
-            "height": {"type": "integer", "minimum": 100, "default": 600}
+            "height": {"type": "integer", "minimum": 100, "default": 600},
         },
-        "required": ["data", "variable", "file_path"]
+        "required": ["data", "variable", "file_path"],
     },
-    description="Create box plot with optional grouping"
+    description="Create box plot with optional grouping",
 )
 async def boxplot(context, params):
     """Create box plot."""
-    
+
     await context.info("Creating box plot")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
@@ -264,13 +264,13 @@ async def boxplot(context, params):
         title = title,
         plot_saved = file.exists(file_path)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Box plot created successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Box plot creation failed", error=str(e))
         raise
@@ -285,26 +285,26 @@ async def boxplot(context, params):
                 "type": "object",
                 "properties": {
                     "values": {"type": "array", "items": {"type": "number"}},
-                    "dates": {"type": "array", "items": {"type": "string"}}
+                    "dates": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["values"]
+                "required": ["values"],
             },
             "title": {"type": "string"},
             "file_path": {"type": "string"},
             "show_trend": {"type": "boolean", "default": True},
             "width": {"type": "integer", "minimum": 100, "default": 1000},
-            "height": {"type": "integer", "minimum": 100, "default": 600}
+            "height": {"type": "integer", "minimum": 100, "default": 600},
         },
-        "required": ["data", "file_path"]
+        "required": ["data", "file_path"],
     },
-    description="Create time series plot with optional trend line"
+    description="Create time series plot with optional trend line",
 )
 async def time_series_plot(context, params):
     """Create time series plot."""
-    
+
     await context.info("Creating time series plot")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
@@ -365,13 +365,13 @@ async def time_series_plot(context, params):
         show_trend = show_trend,
         plot_saved = file.exists(file_path)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Time series plot created successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Time series plot creation failed", error=str(e))
         raise
@@ -384,22 +384,26 @@ async def time_series_plot(context, params):
         "properties": {
             "data": table_schema(),
             "variables": {"type": "array", "items": {"type": "string"}},
-            "method": {"type": "string", "enum": ["pearson", "spearman", "kendall"], "default": "pearson"},
+            "method": {
+                "type": "string",
+                "enum": ["pearson", "spearman", "kendall"],
+                "default": "pearson",
+            },
             "title": {"type": "string"},
             "file_path": {"type": "string"},
             "width": {"type": "integer", "minimum": 100, "default": 800},
-            "height": {"type": "integer", "minimum": 100, "default": 800}
+            "height": {"type": "integer", "minimum": 100, "default": 800},
         },
-        "required": ["data", "file_path"]
+        "required": ["data", "file_path"],
     },
-    description="Create correlation heatmap matrix"
+    description="Create correlation heatmap matrix",
 )
 async def correlation_heatmap(context, params):
     """Create correlation heatmap."""
-    
+
     await context.info("Creating correlation heatmap")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
     if (!require(reshape2)) install.packages("reshape2", quietly = TRUE)
     library(ggplot2)
@@ -455,13 +459,13 @@ async def correlation_heatmap(context, params):
         n_variables = length(variables),
         plot_saved = file.exists(file_path)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Correlation heatmap created successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Correlation heatmap creation failed", error=str(e))
         raise
@@ -478,18 +482,18 @@ async def correlation_heatmap(context, params):
             "file_path": {"type": "string"},
             "residual_plots": {"type": "boolean", "default": True},
             "width": {"type": "integer", "minimum": 100, "default": 1200},
-            "height": {"type": "integer", "minimum": 100, "default": 800}
+            "height": {"type": "integer", "minimum": 100, "default": 800},
         },
-        "required": ["data", "formula", "file_path"]
+        "required": ["data", "formula", "file_path"],
     },
-    description="Create regression diagnostic plots (fitted vs residuals, Q-Q plot, etc.)"
+    description="Create regression diagnostic plots (fitted vs residuals, Q-Q plot, etc.)",
 )
 async def regression_plot(context, params):
     """Create regression diagnostic plots."""
-    
+
     await context.info("Creating regression plots")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
     if (!require(gridExtra)) install.packages("gridExtra", quietly = TRUE)
     library(ggplot2)
@@ -578,13 +582,13 @@ async def regression_plot(context, params):
         n_obs = nobs(model),
         plot_saved = file.exists(file_path)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Regression plots created successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Regression plot creation failed", error=str(e))
         raise

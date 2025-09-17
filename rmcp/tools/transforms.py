@@ -18,18 +18,18 @@ from ..r_integration import execute_r_script
             "data": table_schema(),
             "variables": {"type": "array", "items": {"type": "string"}},
             "lags": {"type": "array", "items": {"type": "integer"}},
-            "leads": {"type": "array", "items": {"type": "integer"}}
+            "leads": {"type": "array", "items": {"type": "integer"}},
         },
-        "required": ["data", "variables"]
+        "required": ["data", "variables"],
     },
-    description="Create lagged and lead variables for time series analysis"
+    description="Create lagged and lead variables for time series analysis",
 )
 async def lag_lead(context, params):
     """Create lagged and lead variables."""
-    
+
     await context.info("Creating lag/lead variables")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     variables <- args$variables
     lags <- args$lags %||% c(1)
@@ -59,13 +59,13 @@ async def lag_lead(context, params):
         n_obs = nrow(result_data),
         operation = "lag_lead"
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Lag/lead variables created successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Lag/lead creation failed", error=str(e))
         raise
@@ -83,19 +83,19 @@ async def lag_lead(context, params):
                 "items": {"type": "number", "minimum": 0, "maximum": 0.5},
                 "minItems": 2,
                 "maxItems": 2,
-                "default": [0.01, 0.99]
-            }
+                "default": [0.01, 0.99],
+            },
         },
-        "required": ["data", "variables"]
+        "required": ["data", "variables"],
     },
-    description="Winsorize variables to handle outliers"
+    description="Winsorize variables to handle outliers",
 )
 async def winsorize(context, params):
     """Winsorize variables to handle outliers."""
-    
+
     await context.info("Winsorizing variables")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     variables <- args$variables
     percentiles <- args$percentiles %||% c(0.01, 0.99)
@@ -134,13 +134,13 @@ async def winsorize(context, params):
         variables_winsorized = variables,
         n_obs = nrow(result_data)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Variables winsorized successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Winsorization failed", error=str(e))
         raise
@@ -154,18 +154,18 @@ async def winsorize(context, params):
             "data": table_schema(),
             "variables": {"type": "array", "items": {"type": "string"}},
             "order": {"type": "integer", "minimum": 1, "maximum": 3, "default": 1},
-            "log_transform": {"type": "boolean", "default": False}
+            "log_transform": {"type": "boolean", "default": False},
         },
-        "required": ["data", "variables"]
+        "required": ["data", "variables"],
     },
-    description="Compute differences of variables (for stationarity)"
+    description="Compute differences of variables (for stationarity)",
 )
 async def difference(context, params):
     """Compute differences of variables."""
-    
+
     await context.info("Computing variable differences")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     variables <- args$variables
     diff_order <- args$order %||% 1
@@ -210,13 +210,13 @@ async def difference(context, params):
         log_transformed = log_transform,
         n_obs = nrow(result_data)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Variable differences computed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Differencing failed", error=str(e))
         raise
@@ -229,18 +229,22 @@ async def difference(context, params):
         "properties": {
             "data": table_schema(),
             "variables": {"type": "array", "items": {"type": "string"}},
-            "method": {"type": "string", "enum": ["z_score", "min_max", "robust"], "default": "z_score"}
+            "method": {
+                "type": "string",
+                "enum": ["z_score", "min_max", "robust"],
+                "default": "z_score",
+            },
         },
-        "required": ["data", "variables"]
+        "required": ["data", "variables"],
     },
-    description="Standardize variables using z-score, min-max, or robust scaling"
+    description="Standardize variables using z-score, min-max, or robust scaling",
 )
 async def standardize(context, params):
     """Standardize variables."""
-    
+
     await context.info("Standardizing variables")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     variables <- args$variables
     method <- args$method %||% "z_score"
@@ -281,13 +285,13 @@ async def standardize(context, params):
         variables_scaled = variables,
         n_obs = nrow(result_data)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Variables standardized successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Standardization failed", error=str(e))
         raise

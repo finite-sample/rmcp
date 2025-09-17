@@ -21,11 +21,11 @@ __email__ = "gsood07@gmail.com"
 
 __all__ = [
     "Context",
-    "create_server", 
+    "create_server",
     "ToolsRegistry",
-    "ResourcesRegistry", 
+    "ResourcesRegistry",
     "PromptsRegistry",
     "tool",
-    "resource", 
+    "resource",
     "prompt",
 ]

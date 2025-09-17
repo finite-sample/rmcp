@@ -18,20 +18,24 @@ from ..r_integration import execute_r_script
             "file_path": {"type": "string"},
             "header": {"type": "boolean", "default": True},
             "sep": {"type": "string", "default": ","},
-            "na_strings": {"type": "array", "items": {"type": "string"}, "default": ["", "NA", "NULL"]},
+            "na_strings": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": ["", "NA", "NULL"],
+            },
             "skip_rows": {"type": "integer", "minimum": 0, "default": 0},
-            "max_rows": {"type": "integer", "minimum": 1}
+            "max_rows": {"type": "integer", "minimum": 1},
         },
-        "required": ["file_path"]
+        "required": ["file_path"],
     },
-    description="Read CSV files with flexible parsing options"
+    description="Read CSV files with flexible parsing options",
 )
 async def read_csv(context, params):
     """Read CSV file and return data."""
-    
+
     await context.info("Reading CSV file", file_path=params.get("file_path"))
-    
-    r_script = '''
+
+    r_script = """
     file_path <- args$file_path
     header <- args$header %||% TRUE
     sep <- args$sep %||% ","
@@ -110,22 +114,24 @@ async def read_csv(context, params):
             sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
         )
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
-        await context.info("CSV file read successfully",
-                          rows=result["file_info"]["n_rows"],
-                          cols=result["file_info"]["n_cols"])
+        await context.info(
+            "CSV file read successfully",
+            rows=result["file_info"]["n_rows"],
+            cols=result["file_info"]["n_cols"],
+        )
         return result
-        
+
     except Exception as e:
         await context.error("CSV reading failed", error=str(e))
         raise
 
 
 @tool(
-    name="write_csv", 
+    name="write_csv",
     input_schema={
         "type": "object",
         "properties": {
@@ -133,18 +139,18 @@ async def read_csv(context, params):
             "file_path": {"type": "string"},
             "include_rownames": {"type": "boolean", "default": False},
             "na_string": {"type": "string", "default": ""},
-            "append": {"type": "boolean", "default": False}
+            "append": {"type": "boolean", "default": False},
         },
-        "required": ["data", "file_path"]
+        "required": ["data", "file_path"],
     },
-    description="Write data to CSV file with formatting options"
+    description="Write data to CSV file with formatting options",
 )
 async def write_csv(context, params):
     """Write data to CSV file."""
-    
+
     await context.info("Writing CSV file", file_path=params.get("file_path"))
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     file_path <- args$file_path
     include_rownames <- args$include_rownames %||% FALSE
@@ -169,13 +175,13 @@ async def write_csv(context, params):
         success = TRUE,
         timestamp = as.character(Sys.time())
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("CSV file written successfully")
         return result
-        
+
     except Exception as e:
         await context.error("CSV writing failed", error=str(e))
         raise
@@ -184,22 +190,27 @@ async def write_csv(context, params):
 @tool(
     name="data_info",
     input_schema={
-        "type": "object", 
+        "type": "object",
         "properties": {
             "data": table_schema(),
             "include_sample": {"type": "boolean", "default": True},
-            "sample_size": {"type": "integer", "minimum": 1, "maximum": 100, "default": 5}
+            "sample_size": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 5,
+            },
         },
-        "required": ["data"]
+        "required": ["data"],
     },
-    description="Get comprehensive information about a dataset"
+    description="Get comprehensive information about a dataset",
 )
 async def data_info(context, params):
     """Get comprehensive dataset information."""
-    
+
     await context.info("Analyzing dataset structure")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     include_sample <- args$include_sample %||% TRUE
     sample_size <- args$sample_size %||% 5
@@ -249,13 +260,13 @@ async def data_info(context, params):
         sample_rows <- min(sample_size, n_rows)
         result$sample_data <- head(data, sample_rows)
     }
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Dataset analysis completed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Dataset analysis failed", error=str(e))
         raise
@@ -273,24 +284,27 @@ async def data_info(context, params):
                     "type": "object",
                     "properties": {
                         "variable": {"type": "string"},
-                        "operator": {"type": "string", "enum": ["==", "!=", ">", "<", ">=", "<=", "%in%", "!%in%"]},
-                        "value": {}
+                        "operator": {
+                            "type": "string",
+                            "enum": ["==", "!=", ">", "<", ">=", "<=", "%in%", "!%in%"],
+                        },
+                        "value": {},
                     },
-                    "required": ["variable", "operator", "value"]
-                }
+                    "required": ["variable", "operator", "value"],
+                },
             },
-            "logic": {"type": "string", "enum": ["AND", "OR"], "default": "AND"}
+            "logic": {"type": "string", "enum": ["AND", "OR"], "default": "AND"},
         },
-        "required": ["data", "conditions"]
+        "required": ["data", "conditions"],
     },
-    description="Filter data based on multiple conditions"
+    description="Filter data based on multiple conditions",
 )
 async def filter_data(context, params):
     """Filter data based on conditions."""
-    
+
     await context.info("Filtering data")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(dplyr)) install.packages("dplyr", quietly = TRUE)
     library(dplyr)
     
@@ -337,13 +351,13 @@ async def filter_data(context, params):
         rows_removed = nrow(data) - nrow(filtered_data),
         removal_percentage = (nrow(data) - nrow(filtered_data)) / nrow(data) * 100
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Data filtered successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Data filtering failed", error=str(e))
         raise
@@ -355,23 +369,33 @@ async def filter_data(context, params):
         "type": "object",
         "properties": {
             "file_path": {"type": "string"},
-            "sheet_name": {"type": "string", "description": "Sheet name or index (default: first sheet)"},
+            "sheet_name": {
+                "type": "string",
+                "description": "Sheet name or index (default: first sheet)",
+            },
             "header": {"type": "boolean", "default": True},
             "skip_rows": {"type": "integer", "minimum": 0, "default": 0},
             "max_rows": {"type": "integer", "minimum": 1},
-            "cell_range": {"type": "string", "description": "Excel range like 'A1:D100'"},
-            "na_strings": {"type": "array", "items": {"type": "string"}, "default": ["", "NA", "NULL"]}
+            "cell_range": {
+                "type": "string",
+                "description": "Excel range like 'A1:D100'",
+            },
+            "na_strings": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": ["", "NA", "NULL"],
+            },
         },
-        "required": ["file_path"]
+        "required": ["file_path"],
     },
-    description="Read Excel files (.xlsx, .xls) with flexible sheet and range selection"
+    description="Read Excel files (.xlsx, .xls) with flexible sheet and range selection",
 )
 async def read_excel(context, params):
     """Read Excel file and return data."""
-    
+
     await context.info("Reading Excel file", file_path=params.get("file_path"))
-    
-    r_script = '''
+
+    r_script = """
     library(readxl)
     
     file_path <- args$file_path
@@ -461,15 +485,17 @@ async def read_excel(context, params):
             sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
         )
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
-        await context.info("Excel file read successfully", 
-                          rows=result["file_info"]["rows"],
-                          columns=result["file_info"]["columns"])
+        await context.info(
+            "Excel file read successfully",
+            rows=result["file_info"]["rows"],
+            columns=result["file_info"]["columns"],
+        )
         return result
-        
+
     except Exception as e:
         await context.error("Excel file reading failed", error=str(e))
         raise
@@ -481,20 +507,33 @@ async def read_excel(context, params):
         "type": "object",
         "properties": {
             "file_path": {"type": "string"},
-            "flatten": {"type": "boolean", "default": True, "description": "Flatten nested JSON to tabular format"},
-            "max_depth": {"type": "integer", "minimum": 1, "default": 3, "description": "Maximum nesting depth to flatten"},
-            "array_to_rows": {"type": "boolean", "default": True, "description": "Convert JSON arrays to separate rows"}
+            "flatten": {
+                "type": "boolean",
+                "default": True,
+                "description": "Flatten nested JSON to tabular format",
+            },
+            "max_depth": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 3,
+                "description": "Maximum nesting depth to flatten",
+            },
+            "array_to_rows": {
+                "type": "boolean",
+                "default": True,
+                "description": "Convert JSON arrays to separate rows",
+            },
         },
-        "required": ["file_path"]
+        "required": ["file_path"],
     },
-    description="Read JSON files and convert to tabular format"
+    description="Read JSON files and convert to tabular format",
 )
 async def read_json(context, params):
     """Read JSON file and return data."""
-    
+
     await context.info("Reading JSON file", file_path=params.get("file_path"))
-    
-    r_script = '''
+
+    r_script = """
     library(jsonlite)
     library(dplyr)
     
@@ -564,15 +603,17 @@ async def read_json(context, params):
             sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
         )
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
-        await context.info("JSON file read successfully", 
-                          rows=result["file_info"]["rows"],
-                          columns=result["file_info"]["columns"])
+        await context.info(
+            "JSON file read successfully",
+            rows=result["file_info"]["rows"],
+            columns=result["file_info"]["columns"],
+        )
         return result
-        
+
     except Exception as e:
         await context.error("JSON file reading failed", error=str(e))
         raise

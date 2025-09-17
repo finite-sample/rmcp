@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PromptDefinition:
     """Prompt template metadata and content."""
-    
+
     name: str
     title: str
     description: str
@@ -33,10 +33,10 @@ class PromptDefinition:
 
 class PromptsRegistry:
     """Registry for MCP prompts with templating support."""
-    
+
     def __init__(self):
         self._prompts: Dict[str, PromptDefinition] = {}
-    
+
     def register(
         self,
         name: str,
@@ -47,10 +47,10 @@ class PromptsRegistry:
         annotations: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Register a prompt template."""
-        
+
         if name in self._prompts:
             logger.warning(f"Prompt '{name}' already registered, overwriting")
-        
+
         self._prompts[name] = PromptDefinition(
             name=name,
             title=title,
@@ -59,12 +59,12 @@ class PromptsRegistry:
             arguments_schema=arguments_schema,
             annotations=annotations or {},
         )
-        
+
         logger.debug(f"Registered prompt: {name}")
-    
+
     async def list_prompts(self, context: Context) -> Dict[str, Any]:
         """List available prompts for MCP prompts/list."""
-        
+
         prompts = []
         for prompt_def in self._prompts.values():
             prompt_info = {
@@ -72,70 +72,62 @@ class PromptsRegistry:
                 "title": prompt_def.title,
                 "description": prompt_def.description,
             }
-            
+
             if prompt_def.arguments_schema:
                 prompt_info["argumentsSchema"] = prompt_def.arguments_schema
-            
+
             if prompt_def.annotations:
                 prompt_info["annotations"] = prompt_def.annotations
-            
+
             prompts.append(prompt_info)
-        
+
         await context.info(f"Listed {len(prompts)} available prompts")
-        
+
         return {"prompts": prompts}
-    
+
     async def get_prompt(
-        self, 
-        context: Context, 
-        name: str, 
-        arguments: Optional[Dict[str, Any]] = None
+        self, context: Context, name: str, arguments: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Get a rendered prompt for MCP prompts/get."""
-        
+
         if name not in self._prompts:
             raise ValueError(f"Unknown prompt: {name}")
-        
+
         prompt_def = self._prompts[name]
         arguments = arguments or {}
-        
+
         try:
             # Validate arguments if schema provided
             if prompt_def.arguments_schema:
                 validate_schema(
-                    arguments, 
-                    prompt_def.arguments_schema, 
-                    f"prompt '{name}' arguments"
+                    arguments, prompt_def.arguments_schema, f"prompt '{name}' arguments"
                 )
-            
+
             # Render template
             rendered_content = self._render_template(prompt_def.template, arguments)
-            
+
             await context.info(f"Rendered prompt: {name}", arguments=arguments)
-            
+
             return {
                 "messages": [
                     {
                         "role": "user",
-                        "content": {
-                            "type": "text", 
-                            "text": rendered_content
-                        }
+                        "content": {"type": "text", "text": rendered_content},
                     }
                 ]
             }
-        
+
         except SchemaError as e:
             await context.error(f"Schema validation failed for prompt '{name}': {e}")
             raise
-        
+
         except Exception as e:
             await context.error(f"Failed to render prompt '{name}': {e}")
             raise
-    
+
     def _render_template(self, template: str, arguments: Dict[str, Any]) -> str:
         """Render template with arguments using simple string formatting."""
-        
+
         try:
             # Use simple string formatting for now
             # Could be enhanced with Jinja2 or similar
@@ -155,10 +147,10 @@ def prompt(
 ):
     """
     Decorator to register a prompt template.
-    
+
     Usage:
         @prompt(
-            name="analyze_workflow", 
+            name="analyze_workflow",
             title="Statistical Analysis Workflow",
             description="Guide for comprehensive statistical analysis",
             arguments_schema={
@@ -173,16 +165,16 @@ def prompt(
         def analyze_workflow():
             return '''
             I'll help you analyze the {dataset_name} dataset using {analysis_type} methods.
-            
+
             Let me start by examining the data structure and then proceed with the analysis.
             '''
     """
-    
+
     def decorator(func: Callable[[], str]):
-        
+
         # Extract template content from function
         template_content = func()
-        
+
         # Store prompt metadata on function
         func._mcp_prompt_name = name
         func._mcp_prompt_title = title
@@ -190,17 +182,17 @@ def prompt(
         func._mcp_prompt_template = template_content
         func._mcp_prompt_arguments_schema = arguments_schema
         func._mcp_prompt_annotations = annotations
-        
+
         return func
-    
+
     return decorator
 
 
 def register_prompt_functions(registry: PromptsRegistry, *functions) -> None:
     """Register multiple functions decorated with @prompt."""
-    
+
     for func in functions:
-        if hasattr(func, '_mcp_prompt_name'):
+        if hasattr(func, "_mcp_prompt_name"):
             registry.register(
                 name=func._mcp_prompt_name,
                 title=func._mcp_prompt_title,
@@ -210,14 +202,17 @@ def register_prompt_functions(registry: PromptsRegistry, *functions) -> None:
                 annotations=func._mcp_prompt_annotations,
             )
         else:
-            logger.warning(f"Function {func.__name__} not decorated with @prompt, skipping")
+            logger.warning(
+                f"Function {func.__name__} not decorated with @prompt, skipping"
+            )
 
 
 # Built-in statistical analysis workflow prompts
 
+
 @prompt(
     name="statistical_workflow",
-    title="Statistical Analysis Workflow", 
+    title="Statistical Analysis Workflow",
     description="Comprehensive workflow for statistical data analysis",
     arguments_schema={
         "type": "object",
@@ -226,8 +221,8 @@ def register_prompt_functions(registry: PromptsRegistry, *functions) -> None:
             "analysis_goals": {"type": "string"},
             "variables_of_interest": {"type": "array", "items": {"type": "string"}},
         },
-        "required": ["dataset_name", "analysis_goals"]
-    }
+        "required": ["dataset_name", "analysis_goals"],
+    },
 )
 def statistical_workflow_prompt():
     return """I'll help you conduct a comprehensive statistical analysis of the {dataset_name} dataset.
@@ -268,13 +263,16 @@ Let's begin by examining your dataset. Please provide the data or specify how to
     title="Model Diagnostics Workflow",
     description="Systematic model validation and diagnostics",
     arguments_schema={
-        "type": "object", 
+        "type": "object",
         "properties": {
-            "model_type": {"type": "string", "enum": ["linear", "logistic", "time_series", "ml"]},
+            "model_type": {
+                "type": "string",
+                "enum": ["linear", "logistic", "time_series", "ml"],
+            },
             "focus_areas": {"type": "array", "items": {"type": "string"}},
         },
-        "required": ["model_type"]
-    }
+        "required": ["model_type"],
+    },
 )
 def model_diagnostic_prompt():
     return """I'll help you conduct thorough diagnostics for your {model_type} model.

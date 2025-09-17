@@ -18,18 +18,22 @@ from ..r_integration import execute_r_script
             "data": table_schema(),
             "variables": {"type": "array", "items": {"type": "string"}},
             "group_by": {"type": "string"},
-            "percentiles": {"type": "array", "items": {"type": "number"}, "default": [0.25, 0.5, 0.75]}
+            "percentiles": {
+                "type": "array",
+                "items": {"type": "number"},
+                "default": [0.25, 0.5, 0.75],
+            },
         },
-        "required": ["data"]
+        "required": ["data"],
     },
-    description="Comprehensive descriptive statistics with optional grouping"
+    description="Comprehensive descriptive statistics with optional grouping",
 )
 async def summary_stats(context, params):
     """Compute comprehensive descriptive statistics."""
-    
+
     await context.info("Computing summary statistics")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(dplyr)) install.packages("dplyr", quietly = TRUE)
     library(dplyr)
     
@@ -117,13 +121,13 @@ async def summary_stats(context, params):
             grouped = TRUE
         )
     }
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Summary statistics computed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Summary statistics failed", error=str(e))
         raise
@@ -136,19 +140,23 @@ async def summary_stats(context, params):
         "properties": {
             "data": table_schema(),
             "variable": {"type": "string"},
-            "method": {"type": "string", "enum": ["iqr", "z_score", "modified_z"], "default": "iqr"},
-            "threshold": {"type": "number", "minimum": 0, "default": 3.0}
+            "method": {
+                "type": "string",
+                "enum": ["iqr", "z_score", "modified_z"],
+                "default": "iqr",
+            },
+            "threshold": {"type": "number", "minimum": 0, "default": 3.0},
         },
-        "required": ["data", "variable"]
+        "required": ["data", "variable"],
     },
-    description="Detect outliers using IQR, Z-score, or Modified Z-score methods"
+    description="Detect outliers using IQR, Z-score, or Modified Z-score methods",
 )
 async def outlier_detection(context, params):
     """Detect outliers in data."""
-    
+
     await context.info("Detecting outliers")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     variable <- args$variable
     method <- args$method %||% "iqr"
@@ -194,13 +202,13 @@ async def outlier_detection(context, params):
         bounds = bounds,
         variable = variable
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Outlier detection completed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Outlier detection failed", error=str(e))
         raise
@@ -214,18 +222,22 @@ async def outlier_detection(context, params):
             "data": table_schema(),
             "variables": {"type": "array", "items": {"type": "string"}},
             "include_percentages": {"type": "boolean", "default": True},
-            "sort_by": {"type": "string", "enum": ["frequency", "value"], "default": "frequency"}
+            "sort_by": {
+                "type": "string",
+                "enum": ["frequency", "value"],
+                "default": "frequency",
+            },
         },
-        "required": ["data", "variables"]
+        "required": ["data", "variables"],
     },
-    description="Generate frequency tables with counts and percentages"
+    description="Generate frequency tables with counts and percentages",
 )
 async def frequency_table(context, params):
     """Generate frequency tables."""
-    
+
     await context.info("Creating frequency tables")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     variables <- args$variables
     include_percentages <- args$include_percentages %||% TRUE
@@ -267,13 +279,13 @@ async def frequency_table(context, params):
         variables = variables,
         total_observations = nrow(data)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Frequency tables created successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Frequency table creation failed", error=str(e))
         raise

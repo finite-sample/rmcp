@@ -19,36 +19,41 @@ from ..r_integration import execute_r_script
                 "type": "object",
                 "properties": {
                     "values": {"type": "array", "items": {"type": "number"}},
-                    "dates": {"type": "array", "items": {"type": "string"}}
+                    "dates": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["values"]
+                "required": ["values"],
             },
             "order": {
                 "type": "array",
                 "items": {"type": "integer"},
                 "minItems": 3,
                 "maxItems": 3,
-                "description": "ARIMA order (p, d, q)"
+                "description": "ARIMA order (p, d, q)",
             },
             "seasonal": {
-                "type": "array", 
+                "type": "array",
                 "items": {"type": "integer"},
                 "minItems": 4,
                 "maxItems": 4,
-                "description": "Seasonal ARIMA order (P, D, Q, s)"
+                "description": "Seasonal ARIMA order (P, D, Q, s)",
             },
-            "forecast_periods": {"type": "integer", "minimum": 1, "maximum": 100, "default": 12}
+            "forecast_periods": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 12,
+            },
         },
-        "required": ["data"]
+        "required": ["data"],
     },
-    description="Fit ARIMA time series model with forecasting"
+    description="Fit ARIMA time series model with forecasting",
 )
 async def arima_model(context, params):
     """Fit ARIMA model and generate forecasts."""
-    
+
     await context.info("Fitting ARIMA time series model")
-    
-    r_script = '''
+
+    r_script = """
     # Install required packages
     if (!require(forecast)) install.packages("forecast", quietly = TRUE)
     library(forecast)
@@ -97,22 +102,24 @@ async def arima_model(context, params):
         accuracy = accuracy(model),
         n_obs = length(values)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
-        await context.info("ARIMA model fitted successfully", 
-                          aic=result.get("aic"),
-                          n_obs=result.get("n_obs"))
+        await context.info(
+            "ARIMA model fitted successfully",
+            aic=result.get("aic"),
+            n_obs=result.get("n_obs"),
+        )
         return result
-        
+
     except Exception as e:
         await context.error("ARIMA model fitting failed", error=str(e))
         raise
 
 
 @tool(
-    name="decompose_timeseries", 
+    name="decompose_timeseries",
     input_schema={
         "type": "object",
         "properties": {
@@ -120,23 +127,27 @@ async def arima_model(context, params):
                 "type": "object",
                 "properties": {
                     "values": {"type": "array", "items": {"type": "number"}},
-                    "dates": {"type": "array", "items": {"type": "string"}}
+                    "dates": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["values"]
+                "required": ["values"],
             },
             "frequency": {"type": "integer", "minimum": 1, "default": 12},
-            "type": {"type": "string", "enum": ["additive", "multiplicative"], "default": "additive"}
+            "type": {
+                "type": "string",
+                "enum": ["additive", "multiplicative"],
+                "default": "additive",
+            },
         },
-        "required": ["data"]
+        "required": ["data"],
     },
-    description="Decompose time series into trend, seasonal, and remainder components"
+    description="Decompose time series into trend, seasonal, and remainder components",
 )
 async def decompose_timeseries(context, params):
     """Decompose time series into components."""
-    
+
     await context.info("Decomposing time series")
-    
-    r_script = '''
+
+    r_script = """
     values <- args$data$values
     frequency <- args$frequency %||% 12
     decomp_type <- args$type %||% "additive"
@@ -160,13 +171,13 @@ async def decompose_timeseries(context, params):
         frequency = frequency,
         n_obs = length(values)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Time series decomposed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Time series decomposition failed", error=str(e))
         raise
@@ -175,27 +186,27 @@ async def decompose_timeseries(context, params):
 @tool(
     name="stationarity_test",
     input_schema={
-        "type": "object", 
+        "type": "object",
         "properties": {
             "data": {
                 "type": "object",
                 "properties": {
                     "values": {"type": "array", "items": {"type": "number"}}
                 },
-                "required": ["values"]
+                "required": ["values"],
             },
-            "test": {"type": "string", "enum": ["adf", "kpss", "pp"], "default": "adf"}
+            "test": {"type": "string", "enum": ["adf", "kpss", "pp"], "default": "adf"},
         },
-        "required": ["data"]
+        "required": ["data"],
     },
-    description="Test time series for stationarity (ADF, KPSS, Phillips-Perron)"
+    description="Test time series for stationarity (ADF, KPSS, Phillips-Perron)",
 )
 async def stationarity_test(context, params):
     """Test time series stationarity."""
-    
+
     await context.info("Testing time series stationarity")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(tseries)) install.packages("tseries", quietly = TRUE)
     library(tseries)
     
@@ -225,15 +236,17 @@ async def stationarity_test(context, params):
         is_stationary = if (test_type == "kpss") test_result$p.value > 0.05 else test_result$p.value < 0.05,
         n_obs = length(values)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
-        await context.info("Stationarity test completed",
-                          test=result.get("test_name"),
-                          p_value=result.get("p_value"))
+        await context.info(
+            "Stationarity test completed",
+            test=result.get("test_name"),
+            p_value=result.get("p_value"),
+        )
         return result
-        
+
     except Exception as e:
         await context.error("Stationarity test failed", error=str(e))
         raise

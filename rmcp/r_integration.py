@@ -36,16 +36,16 @@ logger = logging.getLogger(__name__)
 class RExecutionError(Exception):
     """
     Exception raised when R script execution fails.
-    
+
     This exception provides detailed information about R execution failures,
     including stdout/stderr output and process return codes for debugging.
-    
+
     Attributes:
         message: Human-readable error description
         stdout: Standard output from R process (if any)
-        stderr: Standard error from R process (if any) 
+        stderr: Standard error from R process (if any)
         returncode: Process exit code (if available)
-        
+
     Example:
         >>> try:
         ...     execute_r_script("invalid R code", {})
@@ -53,11 +53,13 @@ class RExecutionError(Exception):
         ...     print(f"R failed: {e}")
         ...     print(f"Error details: {e.stderr}")
     """
-    
-    def __init__(self, message: str, stdout: str = "", stderr: str = "", returncode: int = None):
+
+    def __init__(
+        self, message: str, stdout: str = "", stderr: str = "", returncode: int = None
+    ):
         """
         Initialize R execution error.
-        
+
         Args:
             message: Primary error message
             stdout: R process standard output
@@ -66,14 +68,14 @@ class RExecutionError(Exception):
         """
         super().__init__(message)
         self.stdout = stdout
-        self.stderr = stderr  
+        self.stderr = stderr
         self.returncode = returncode
 
 
 def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
     """
     Execute an R script with arguments and return JSON results.
-    
+
     This function creates a complete R execution environment by:
     1. Writing arguments to a temporary JSON file
     2. Creating an R script that loads jsonlite and reads the arguments
@@ -81,21 +83,21 @@ def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
     4. Writing results to a JSON output file
     5. Executing R and parsing the results
     6. Cleaning up all temporary files
-    
+
     Args:
         script: R code to execute. Must set a 'result' variable with output.
             The script has access to an 'args' variable containing the arguments.
         args: Dictionary of arguments available to R script as 'args' variable.
             All values must be JSON-serializable.
-        
+
     Returns:
         Dictionary containing the R script results (contents of 'result' variable).
-        
+
     Raises:
         RExecutionError: If R script execution fails, with detailed error info
         FileNotFoundError: If R is not installed or not in PATH
         json.JSONDecodeError: If R script produces invalid JSON output
-        
+
     Example:
         >>> # Calculate statistics on a dataset
         >>> r_code = '''
@@ -108,7 +110,7 @@ def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
         >>> args = {"values": [1, 2, 3, 4, 5]}
         >>> stats = execute_r_script(r_code, args)
         >>> print(stats["mean"])  # 3.0
-        
+
         >>> # Linear regression example
         >>> r_code = '''
         ... df <- data.frame(args$data)
@@ -121,21 +123,25 @@ def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
         >>> data = {"data": {"x": [1,2,3,4], "y": [2,4,6,8]}}
         >>> reg_result = execute_r_script(r_code, data)
     """
-    with tempfile.NamedTemporaryFile(suffix='.R', delete=False, mode='w') as script_file, \
-         tempfile.NamedTemporaryFile(suffix='.json', delete=False, mode='w') as args_file, \
-         tempfile.NamedTemporaryFile(suffix='.json', delete=False) as result_file:
-        
+    with tempfile.NamedTemporaryFile(
+        suffix=".R", delete=False, mode="w"
+    ) as script_file, tempfile.NamedTemporaryFile(
+        suffix=".json", delete=False, mode="w"
+    ) as args_file, tempfile.NamedTemporaryFile(
+        suffix=".json", delete=False
+    ) as result_file:
+
         script_path = script_file.name
         args_path = args_file.name
         result_path = result_file.name
-        
+
         try:
             # Write arguments to JSON file
             json.dump(args, args_file, default=str)
             args_file.flush()
-            
+
             # Create complete R script
-            full_script = f'''
+            full_script = f"""
 # Load required libraries
 library(jsonlite)
 
@@ -147,46 +153,56 @@ args <- fromJSON("{args_path}")
 
 # Write result
 write_json(result, "{result_path}", auto_unbox = TRUE)
-'''
-            
+"""
+
             script_file.write(full_script)
             script_file.flush()
-            
+
             logger.debug(f"Executing R script with args: {args}")
-            
+
             # Execute R script
             process = subprocess.run(
-                ['R', '--slave', '--no-restore', '--file=' + script_path],
+                ["R", "--slave", "--no-restore", "--file=" + script_path],
                 capture_output=True,
                 text=True,
-                timeout=120
+                timeout=120,
             )
-            
+
             if process.returncode != 0:
                 # Enhanced error handling for missing packages
                 error_msg = f"R script failed with return code {process.returncode}"
                 stderr = process.stderr or ""
-                
+
                 # Check for common R package errors
                 if "there is no package called" in stderr:
                     # Extract package name from error
                     import re
+
                     match = re.search(r"there is no package called '([^']+)'", stderr)
                     if match:
                         missing_pkg = match.group(1)
                         # Map package to feature category
                         pkg_features = {
-                            "plm": "Panel Data Analysis", "lmtest": "Statistical Testing",
-                            "sandwich": "Robust Standard Errors", "AER": "Applied Econometrics",
-                            "jsonlite": "Data Exchange", "forecast": "Time Series Forecasting",
-                            "vars": "Vector Autoregression", "urca": "Unit Root Testing",
-                            "tseries": "Time Series Analysis", "nortest": "Normality Testing",
-                            "car": "Regression Diagnostics", "rpart": "Decision Trees",
-                            "randomForest": "Random Forest", "ggplot2": "Data Visualization",
-                            "gridExtra": "Plot Layouts", "tidyr": "Data Tidying",
-                            "rlang": "Programming Tools", "dplyr": "Data Manipulation"
+                            "plm": "Panel Data Analysis",
+                            "lmtest": "Statistical Testing",
+                            "sandwich": "Robust Standard Errors",
+                            "AER": "Applied Econometrics",
+                            "jsonlite": "Data Exchange",
+                            "forecast": "Time Series Forecasting",
+                            "vars": "Vector Autoregression",
+                            "urca": "Unit Root Testing",
+                            "tseries": "Time Series Analysis",
+                            "nortest": "Normality Testing",
+                            "car": "Regression Diagnostics",
+                            "rpart": "Decision Trees",
+                            "randomForest": "Random Forest",
+                            "ggplot2": "Data Visualization",
+                            "gridExtra": "Plot Layouts",
+                            "tidyr": "Data Tidying",
+                            "rlang": "Programming Tools",
+                            "dplyr": "Data Manipulation",
                         }
-                        
+
                         feature = pkg_features.get(missing_pkg, "Statistical Analysis")
                         error_msg = f"""❌ Missing R Package: '{missing_pkg}'
 
@@ -199,7 +215,7 @@ write_json(result, "{result_path}", auto_unbox = TRUE)
    install.packages(c("jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr", "forecast", "vars", "urca", "tseries", "nortest", "car", "rpart", "randomForest", "ggplot2", "gridExtra", "tidyr", "rlang"))
 
 💡 Check package status: rmcp check-r-packages"""
-                
+
                 elif "could not find function" in stderr:
                     error_msg = f"""❌ R Function Error
 
@@ -210,18 +226,18 @@ The R script failed because a required function is missing. This usually means:
 💡 Try: rmcp check-r-packages
 
 Original error: {stderr.strip()}"""
-                
+
                 logger.error(f"{error_msg}\\nOriginal stderr: {stderr}")
                 raise RExecutionError(
                     error_msg,
                     stdout=process.stdout,
                     stderr=stderr,
-                    returncode=process.returncode
+                    returncode=process.returncode,
                 )
-            
+
             # Read results
             try:
-                with open(result_path, 'r') as f:
+                with open(result_path, "r") as f:
                     result = json.load(f)
                 logger.debug(f"R script executed successfully, result: {result}")
                 return result
@@ -229,7 +245,7 @@ Original error: {stderr.strip()}"""
                 raise RExecutionError("R script did not produce output file")
             except json.JSONDecodeError as e:
                 raise RExecutionError(f"R script produced invalid JSON: {e}")
-        
+
         finally:
             # Cleanup temporary files
             for temp_path in [script_path, args_path, result_path]:

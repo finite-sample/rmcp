@@ -19,19 +19,23 @@ from ..r_integration import execute_r_script
             "formula": formula_schema(),
             "id_variable": {"type": "string"},
             "time_variable": {"type": "string"},
-            "model": {"type": "string", "enum": ["pooling", "within", "between", "random"], "default": "within"},
-            "robust": {"type": "boolean", "default": True}
+            "model": {
+                "type": "string",
+                "enum": ["pooling", "within", "between", "random"],
+                "default": "within",
+            },
+            "robust": {"type": "boolean", "default": True},
         },
-        "required": ["data", "formula", "id_variable", "time_variable"]
+        "required": ["data", "formula", "id_variable", "time_variable"],
     },
-    description="Panel data regression with fixed/random effects"
+    description="Panel data regression with fixed/random effects",
 )
 async def panel_regression(context, params):
     """Perform panel data regression."""
-    
+
     await context.info("Fitting panel data regression")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(plm)) install.packages("plm", quietly = TRUE)
     library(plm)
     
@@ -82,13 +86,13 @@ async def panel_regression(context, params):
         id_variable = id_var,
         time_variable = time_var
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Panel regression completed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Panel regression failed", error=str(e))
         raise
@@ -100,19 +104,22 @@ async def panel_regression(context, params):
         "type": "object",
         "properties": {
             "data": table_schema(),
-            "formula": {"type": "string", "description": "Format: 'y ~ x1 + x2 | z1 + z2' where | separates instruments"},
-            "robust": {"type": "boolean", "default": True}
+            "formula": {
+                "type": "string",
+                "description": "Format: 'y ~ x1 + x2 | z1 + z2' where | separates instruments",
+            },
+            "robust": {"type": "boolean", "default": True},
         },
-        "required": ["data", "formula"]
+        "required": ["data", "formula"],
     },
-    description="Two-stage least squares (2SLS) instrumental variables regression"
+    description="Two-stage least squares (2SLS) instrumental variables regression",
 )
 async def instrumental_variables(context, params):
     """Perform instrumental variables regression."""
-    
+
     await context.info("Fitting instrumental variables model")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(AER)) install.packages("AER", quietly = TRUE)
     library(AER)
     
@@ -160,13 +167,13 @@ async def instrumental_variables(context, params):
         formula = formula_str,
         n_obs = nobs(iv_model)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Instrumental variables model fitted successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Instrumental variables fitting failed", error=str(e))
         raise
@@ -180,18 +187,22 @@ async def instrumental_variables(context, params):
             "data": table_schema(),
             "variables": {"type": "array", "items": {"type": "string"}},
             "lags": {"type": "integer", "minimum": 1, "maximum": 10, "default": 2},
-            "type": {"type": "string", "enum": ["const", "trend", "both", "none"], "default": "const"}
+            "type": {
+                "type": "string",
+                "enum": ["const", "trend", "both", "none"],
+                "default": "const",
+            },
         },
-        "required": ["data", "variables"]
+        "required": ["data", "variables"],
     },
-    description="Vector Autoregression (VAR) model for multivariate time series"
+    description="Vector Autoregression (VAR) model for multivariate time series",
 )
 async def var_model(context, params):
     """Fit Vector Autoregression model."""
-    
+
     await context.info("Fitting VAR model")
-    
-    r_script = '''
+
+    r_script = """
     if (!require(vars)) install.packages("vars", quietly = TRUE)
     library(vars)
     
@@ -238,13 +249,13 @@ async def var_model(context, params):
         bic = BIC(var_model),
         residual_covariance = as.matrix(var_summary$covres)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("VAR model fitted successfully")
         return result
-        
+
     except Exception as e:
         await context.error("VAR model fitting failed", error=str(e))
         raise

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2025-09-17
+
+### Added
+- **PyPI Distribution**: Package now available via `pip install rmcp`
+- **Enhanced Error Handling**: Comprehensive error handling test suite with 9 scenarios
+- **Contributing Guidelines**: Professional `CONTRIBUTING.md` with development workflow
+- **Natural Language Features**: Formula builder converts descriptions to R formulas
+- **Error Recovery System**: Intelligent error diagnosis with automated suggestions
+- **Example Datasets**: Built-in datasets for learning and testing (sales, economics, etc.)
+
+### Fixed
+- **Package Structure**: Added missing `rmcp/tools/__init__.py` for proper imports
+- **Version Consistency**: All files synchronized to v0.3.6 (CLI, README, CITATION.cff)
+- **Dependency Issues**: Removed problematic `subprocess32` dependency for Python 3.8+ compatibility
+- **Cross-Platform Support**: Fixed hardcoded Python commands in test runner
+- **Tool Count Accuracy**: Updated from 39 to 40 tools across all documentation
+
+### Changed
+- **Tool Expansion**: Now includes 40 statistical analysis tools across 9 categories
+- **Test Organization**: Restructured tests into unit → integration → e2e hierarchy
+- **Distribution Ready**: Added `MANIFEST.in` for proper package distribution
+- **Documentation Update**: Enhanced CLAUDE.md with current architecture and features
+
+### Security
+- **R Script Safety**: Enhanced validation and error handling for R execution
+- **Input Sanitization**: Comprehensive input validation across all tools
+
 ## [0.3.5] - 2025-09-17
 
 ### Fixed

@@ -2,7 +2,7 @@
 Transport layer for MCP server.
 
 Implements transport-agnostic message handling:
-- stdio transport (JSON-RPC over stdin/stdout) 
+- stdio transport (JSON-RPC over stdin/stdout)
 - Optional HTTP transport with streaming support
 - Clean separation from business logic
 

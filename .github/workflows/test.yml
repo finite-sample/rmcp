@@ -253,6 +253,6 @@ jobs:
     
     - name: Check version consistency
       run: |
-        grep -q "Version 0.3.5" README.md || (echo "❌ README version not updated" && exit 1)
-        grep -q "version.*0.3.5" pyproject.toml || (echo "❌ pyproject.toml version not updated" && exit 1)
+        grep -q "Version 0.3.6" README.md || (echo "❌ README version not updated" && exit 1)
+        grep -q "version.*0.3.6" pyproject.toml || (echo "❌ pyproject.toml version not updated" && exit 1)
         echo "✅ Version consistency check passed"

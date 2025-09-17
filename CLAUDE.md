@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RMCP is a Model Context Protocol (MCP) server that provides advanced econometric modeling and data analysis capabilities through R. It enables AI assistants to perform sophisticated econometric and statistical analyses by bridging Python MCP protocols with R statistical computing.
+RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.6** includes 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## Key Architecture Components
 
@@ -13,37 +13,47 @@ RMCP is a Model Context Protocol (MCP) server that provides advanced econometric
 - **STDIO Interface**: Located in `rmcp/server/stdio.py`, manages standard input/output communication with MCP clients
 - **CLI Interface**: `rmcp/cli.py` provides command-line interface with `start`, `version` commands
 
-### Tool System
-The server implements comprehensive econometric and statistical tools as Python functions that execute R scripts:
+### Tool System (40 Tools Across 9 Categories)
+The server implements comprehensive statistical analysis tools as Python functions that execute R scripts:
 
-#### Core Econometric Tools
-- **Regression Tools** (`rmcp/tools/regression.py`): Linear models, panel data analysis, IV regression
-- **Diagnostics** (`rmcp/tools/diagnostics.py`): Model diagnostic tests (heteroskedasticity, autocorrelation, etc.)
-- **Correlation Analysis** (`rmcp/tools/correlation.py`): Pearson/Spearman correlations
-- **Descriptive Statistics** (`rmcp/tools/descriptive.py`): Summary statistics
-- **Groupby Operations** (`rmcp/tools/groupby.py`): Data aggregation using dplyr
-- **File Analysis** (`rmcp/tools/file_analysis.py`): CSV file processing
+#### Regression & Correlation Tools
+- **Regression Tools** (`rmcp/tools/regression.py`): Linear regression, logistic regression, correlation analysis
+- **Econometrics** (`rmcp/tools/econometrics.py`): Panel regression, instrumental variables, VAR models
 
-#### Advanced Statistical Tools (NEW)
-- **Data Transformations** (`rmcp/tools/transformations.py`): 
+#### Time Series Analysis
+- **Time Series Tools** (`rmcp/tools/timeseries.py`):
+  - ARIMA modeling with automatic order selection
+  - Time series decomposition (trend, seasonal, remainder)
+  - Stationarity testing (ADF, KPSS, Phillips-Perron)
+
+#### Statistical Testing
+- **Statistical Tests** (`rmcp/tools/statistical_tests.py`): t-tests, ANOVA, chi-square tests, normality tests
+
+#### Data Analysis & Transformation
+- **Descriptive Statistics** (`rmcp/tools/descriptive.py`): Summary statistics, outlier detection, frequency tables
+- **Data Transformations** (`rmcp/tools/transforms.py`): 
   - Lag/lead variables for time series
-  - Differencing and growth rates (log transforms)
+  - Differencing and growth rates
   - Winsorization for outlier treatment
   - Standardization (z-score, min-max, robust)
 
-- **Time Series Analysis** (`rmcp/tools/timeseries.py`):
-  - ARIMA modeling with automatic order selection
-  - VAR (Vector Autoregression) for multivariate series  
-  - Forecasting with confidence intervals
-  - Unit root tests (ADF, Phillips-Perron, KPSS)
-  - Cointegration testing (Johansen, Engle-Granger)
+#### Machine Learning
+- **Machine Learning** (`rmcp/tools/machine_learning.py`): K-means clustering, decision trees, random forest
 
+#### Data Visualization
 - **Professional Visualizations** (`rmcp/tools/visualization.py`):
   - Scatter plots with trend lines and grouping
   - Time series plots for single/multiple variables
   - Histograms with density overlays
   - Correlation heatmaps
   - Comprehensive residual diagnostic plots
+
+#### File Operations
+- **File Operations** (`rmcp/tools/fileops.py`): CSV, Excel, JSON import/export, data filtering, data info
+
+#### Natural Language & User Experience (NEW)
+- **Formula Builder** (`rmcp/tools/formula_builder.py`): Convert natural language to R formulas, validate formulas
+- **Error Recovery** (`rmcp/tools/helpers.py`): Intelligent error diagnosis, data validation, example datasets
 
 ### R Integration
 - **Common Utilities** (`rmcp/tools/common.py`): Contains `execute_r_script()` function that creates temporary files, executes R code, and parses JSON results
@@ -72,14 +82,17 @@ poetry shell
 
 ### CLI Commands
 ```bash
-# Check version
-poetry run rmcp version
+# Check version (should show 0.3.6)
+rmcp --version
 
 # Start server (auto-detects MCP protocol vs legacy JSON)
-poetry run rmcp start
+rmcp start
 
-# Run development server
-poetry run rmcp dev [optional_dev_server_file]
+# List available tools (should show 40 tools)
+rmcp list-capabilities
+
+# Start with debug logging
+rmcp start --log-level DEBUG
 ```
 
 ### Development Scripts (via Poetry)
@@ -94,22 +107,19 @@ poetry run lint
 poetry run test
 ```
 
-### Testing
+### Testing (Comprehensive Test Suite)
 ```bash
-# Run comprehensive tool testing
-./tests/test_all_tools.sh
+# Run all tests in organized sequence (unit → integration → e2e)
+python run_tests.py
 
-# Run basic stdio tests  
-./tests/run_tests.sh
+# Run specific test categories
+python tests/unit/test_new_tools.py                    # Unit tests
+python tests/unit/test_error_handling.py               # Error handling tests
+python tests/integration/test_mcp_interface.py         # Integration tests  
+python tests/e2e/test_claude_desktop_scenarios.py      # End-to-end tests
 
-# Run CLI tests
-./tests/run_cli_tests.sh
-
-# Run MCP interface tests
-poetry run python tests/test_mcp_interface.py
-
-# Run realistic scenarios
-poetry run python tests/realistic_scenarios.py
+# Run pytest (if available)
+pytest tests/unit/ -v                                  # Unit tests only
 ```
 
 ### Running the Server
@@ -144,14 +154,23 @@ docker run -i r-econometrics-mcp
 
 ## Tool Registration Pattern
 
-Tools are registered in `rmcp/tools/__init__.py` and `rmcp/tools/mcp_instance.py`:
+Tools are registered in `rmcp/cli.py` using the `_register_builtin_tools` function. All 40 tools are imported and registered automatically:
 
 ```python
-# Import tool functions
-from .regression import linear_model, panel_model
+# Tools are imported and registered in rmcp/cli.py
+from rmcp.registries.tools import register_tool_functions
+from rmcp.tools.regression import linear_model, correlation_analysis, logistic_regression
+from rmcp.tools.helpers import suggest_fix, validate_data, load_example
+# ... all other tools ...
 
-# Register with MCP instance
-mcp.register_tool(name="linear_model", func=linear_model)
+def _register_builtin_tools(server):
+    register_tool_functions(
+        server.tools,
+        linear_model,
+        correlation_analysis,
+        # ... all 40 tools ...
+    )
+    logger.info("Registered comprehensive statistical analysis tools (40 total)")
 ```
 
 ## R Script Execution Flow
@@ -169,32 +188,36 @@ mcp.register_tool(name="linear_model", func=linear_model)
 - **Error Handling**: R script failures are captured and returned as JSON error responses
 - **Data Validation**: Input schemas defined for each tool to validate parameters
 
-## Recent Improvements (v0.1.1)
+## Recent Improvements (v0.3.6)
 
-### Dual Protocol Support
-- **Legacy JSON Mode**: Accepts simple JSON format `{"tool": "tool_name", "args": {...}}`
-- **MCP Protocol Mode**: Full Model Context Protocol support with JSON-RPC messaging
-- **Auto-detection**: Server automatically detects input format and switches modes
+### Package Release Readiness
+- **Version Consistency**: All files updated to v0.3.6 (pyproject.toml, CLI, README, CITATION.cff)
+- **Package Structure**: Added missing `rmcp/tools/__init__.py` for proper imports
+- **Dependency Cleanup**: Removed problematic `subprocess32` dependency (Python 3.8+ compatibility)
+- **Distribution Ready**: Added `MANIFEST.in` for proper package distribution
 
-### Enhanced CLI
-- **Version Consistency**: Fixed version mismatch between CLI (0.1.1) and internal components
-- **Dev Command**: Added `rmcp dev` command for development server testing
-- **Improved Error Handling**: Better error messages and crash recovery
+### Enhanced Tool Ecosystem
+- **40 Statistical Tools**: Expanded from 39 to 40 tools across 9 categories
+- **Natural Language Features**: Formula builder converts natural language to R formulas
+- **Error Recovery System**: Intelligent error diagnosis and automated suggestions
+- **Example Datasets**: Built-in datasets for learning and testing
 
-### Tool Registration Fixes
-- **Circular Import Resolution**: Fixed circular imports between MCP instance and tool modules
-- **Decorator Registration**: Tools now properly register via `@mcp.tool` decorators
-- **Clean Architecture**: Separated MCP instance creation from tool imports
+### Testing & Quality Assurance
+- **Comprehensive Error Handling**: Added `test_error_handling.py` with 9 error scenarios
+- **Organized Test Structure**: Unit → Integration → E2E test organization
+- **Cross-Platform Support**: Fixed hardcoded Python commands for compatibility
+- **Production Testing**: 100% success rate for realistic user scenarios
 
-### Testing Infrastructure
-- **Comprehensive Test Suite**: `./tests/test_all_tools.sh` tests all major tools
-- **Multiple Test Formats**: Support for both legacy JSON and MCP protocol testing
-- **Improved Test Scripts**: Updated all test scripts to use new CLI commands
+### Documentation & Contributing
+- **Professional Documentation**: Created comprehensive `CONTRIBUTING.md`
+- **Development Guidelines**: Code style, testing procedures, tool development guide
+- **Security Considerations**: Safe R script execution guidelines
+- **PyPI Distribution**: Package now available via `pip install rmcp`
 
-### R Integration Improvements
-- **Error Handling**: Better R script error capture and reporting
-- **Dependencies**: All required R packages (plm, lmtest, sandwich, AER, jsonlite) verified
-- **Null Coalescing**: Proper `%||%` operator definition for R script compatibility
+### GitHub Integration
+- **Automated Workflows**: CI/CD pipeline with comprehensive testing
+- **Version Verification**: Automated checks for tool count and version consistency
+- **Multi-Python Testing**: Support for Python 3.8-3.11
 
 ## Configuration Files
 

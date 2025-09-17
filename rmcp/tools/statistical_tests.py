@@ -19,20 +19,24 @@ from ..r_integration import execute_r_script
             "variable": {"type": "string"},
             "group": {"type": "string"},
             "mu": {"type": "number", "default": 0},
-            "alternative": {"type": "string", "enum": ["two.sided", "less", "greater"], "default": "two.sided"},
+            "alternative": {
+                "type": "string",
+                "enum": ["two.sided", "less", "greater"],
+                "default": "two.sided",
+            },
             "paired": {"type": "boolean", "default": False},
-            "var_equal": {"type": "boolean", "default": True}
+            "var_equal": {"type": "boolean", "default": True},
         },
-        "required": ["data", "variable"]
+        "required": ["data", "variable"],
     },
-    description="Perform t-tests (one-sample, two-sample, paired)"
+    description="Perform t-tests (one-sample, two-sample, paired)",
 )
 async def t_test(context, params):
     """Perform t-test analysis."""
-    
+
     await context.info("Performing t-test")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     variable <- args$variable
     group <- args$group
@@ -89,13 +93,13 @@ async def t_test(context, params):
             n_obs_y = length(y[!is.na(y)])
         )
     }
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("T-test completed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("T-test failed", error=str(e))
         raise
@@ -108,18 +112,18 @@ async def t_test(context, params):
         "properties": {
             "data": table_schema(),
             "formula": {"type": "string"},
-            "type": {"type": "string", "enum": ["I", "II", "III"], "default": "I"}
+            "type": {"type": "string", "enum": ["I", "II", "III"], "default": "I"},
         },
-        "required": ["data", "formula"]
+        "required": ["data", "formula"],
     },
-    description="Analysis of Variance (ANOVA) with multiple types"
+    description="Analysis of Variance (ANOVA) with multiple types",
 )
 async def anova(context, params):
     """Perform ANOVA analysis."""
-    
+
     await context.info("Performing ANOVA")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
     anova_type <- args$type %||% "I"
@@ -157,13 +161,13 @@ async def anova(context, params):
         formula = deparse(formula),
         anova_type = paste("Type", anova_type)
     )
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("ANOVA completed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("ANOVA failed", error=str(e))
         raise
@@ -177,19 +181,23 @@ async def anova(context, params):
             "data": table_schema(),
             "x": {"type": "string"},
             "y": {"type": "string"},
-            "test_type": {"type": "string", "enum": ["independence", "goodness_of_fit"], "default": "independence"},
-            "expected": {"type": "array", "items": {"type": "number"}}
+            "test_type": {
+                "type": "string",
+                "enum": ["independence", "goodness_of_fit"],
+                "default": "independence",
+            },
+            "expected": {"type": "array", "items": {"type": "number"}},
         },
-        "required": ["data"]
+        "required": ["data"],
     },
-    description="Chi-square tests for independence and goodness of fit"
+    description="Chi-square tests for independence and goodness of fit",
 )
 async def chi_square_test(context, params):
     """Perform chi-square tests."""
-    
+
     await context.info("Performing chi-square test")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     x_var <- args$x
     y_var <- args$y
@@ -243,13 +251,13 @@ async def chi_square_test(context, params):
             categories = names(observed)
         )
     }
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Chi-square test completed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Chi-square test failed", error=str(e))
         raise
@@ -262,18 +270,22 @@ async def chi_square_test(context, params):
         "properties": {
             "data": table_schema(),
             "variable": {"type": "string"},
-            "test": {"type": "string", "enum": ["shapiro", "jarque_bera", "anderson"], "default": "shapiro"}
+            "test": {
+                "type": "string",
+                "enum": ["shapiro", "jarque_bera", "anderson"],
+                "default": "shapiro",
+            },
         },
-        "required": ["data", "variable"]
+        "required": ["data", "variable"],
     },
-    description="Test variables for normality (Shapiro-Wilk, Jarque-Bera, Anderson-Darling)"
+    description="Test variables for normality (Shapiro-Wilk, Jarque-Bera, Anderson-Darling)",
 )
 async def normality_test(context, params):
     """Test for normality."""
-    
+
     await context.info("Testing for normality")
-    
-    r_script = '''
+
+    r_script = """
     data <- as.data.frame(args$data)
     variable <- args$variable
     test_type <- args$test %||% "shapiro"
@@ -320,13 +332,13 @@ async def normality_test(context, params):
     result$sd <- sd(values)
     result$skewness <- (sum((values - mean(values))^3) / length(values)) / (sd(values)^3)
     result$kurtosis <- (sum((values - mean(values))^4) / length(values)) / (sd(values)^4) - 3
-    '''
-    
+    """
+
     try:
         result = execute_r_script(r_script, params)
         await context.info("Normality test completed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Normality test failed", error=str(e))
         raise
