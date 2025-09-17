@@ -15,6 +15,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from rmcp.core.server import create_server
@@ -25,6 +27,7 @@ from rmcp.tools.helpers import suggest_fix, validate_data
 from rmcp.tools.regression import linear_model
 
 
+@pytest.mark.asyncio
 async def test_missing_required_parameters():
     """Test tools handle missing required parameters gracefully."""
     print("🧪 Testing missing required parameters...")
@@ -68,6 +71,7 @@ async def test_missing_required_parameters():
         return False
 
 
+@pytest.mark.asyncio
 async def test_invalid_data_types():
     """Test tools handle invalid data types."""
     print("🧪 Testing invalid data types...")
@@ -106,6 +110,7 @@ async def test_invalid_data_types():
         return False
 
 
+@pytest.mark.asyncio
 async def test_empty_data():
     """Test tools handle empty datasets."""
     print("🧪 Testing empty data handling...")
@@ -144,6 +149,7 @@ async def test_empty_data():
         return False
 
 
+@pytest.mark.asyncio
 async def test_malformed_json_in_tools():
     """Test tools handle malformed data gracefully."""
     print("🧪 Testing malformed data handling...")
@@ -188,6 +194,7 @@ async def test_malformed_json_in_tools():
         return False
 
 
+@pytest.mark.asyncio
 async def test_invalid_formulas():
     """Test formula validation handles invalid formulas."""
     print("🧪 Testing invalid formula handling...")
@@ -229,6 +236,7 @@ async def test_invalid_formulas():
         return False
 
 
+@pytest.mark.asyncio
 async def test_nonexistent_file_handling():
     """Test file operations handle missing files."""
     print("🧪 Testing nonexistent file handling...")
@@ -267,6 +275,7 @@ async def test_nonexistent_file_handling():
         return False
 
 
+@pytest.mark.asyncio
 async def test_error_recovery_tool():
     """Test the error recovery tool handles various error types."""
     print("🧪 Testing error recovery tool...")
@@ -307,6 +316,7 @@ async def test_error_recovery_tool():
         return False
 
 
+@pytest.mark.asyncio
 async def test_data_validation_edge_cases():
     """Test data validation with edge cases."""
     print("🧪 Testing data validation edge cases...")
@@ -350,6 +360,7 @@ async def test_data_validation_edge_cases():
         return False
 
 
+@pytest.mark.asyncio
 async def test_natural_language_formula_errors():
     """Test formula builder with ambiguous/invalid descriptions."""
     print("🧪 Testing natural language formula error handling...")
