@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2025-09-17
+
+### Fixed
+- **Claude Desktop Compatibility**: Fixed MCP protocol version mismatch
+  - Updated protocol version from `2024-11-05` to `2025-06-18` to match Claude Desktop expectations
+  - Verified end-to-end integration with Claude Desktop works perfectly
+  - All 33 statistical tools now accessible through natural conversation
+
+### Added
+- **End-to-End Testing**: Comprehensive verification of Claude Desktop integration
+  - Confirmed RMCP server starts and loads all 30+ tools successfully
+  - Verified R packages installation and functionality
+  - Tested actual tool calls from Claude Desktop to RMCP
+  - Added working examples for users to test the integration
+
+### Changed
+- **Project Structure Cleanup**: Removed unnecessary complexity
+  - Eliminated redundant `scripts/` folder - use standard tools directly
+  - Converted project to use Poetry for better dependency management
+  - Added GitHub Actions CI/CD workflow for automated testing
+  - Cleaned up test directory structure and fixed import paths
+
 ## [0.3.4] - 2025-09-16
 
 ### Changed
