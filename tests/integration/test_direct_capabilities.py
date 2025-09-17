@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 # Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from rmcp.core.server import create_server
 from rmcp.core.context import Context, LifespanState
@@ -22,10 +22,12 @@ from rmcp.tools.timeseries import arima_model, decompose_timeseries, stationarit
 from rmcp.tools.transforms import lag_lead, winsorize, difference, standardize
 from rmcp.tools.statistical_tests import t_test, anova, chi_square_test, normality_test
 from rmcp.tools.descriptive import summary_stats, outlier_detection, frequency_table
-from rmcp.tools.fileops import read_csv, write_csv, data_info, filter_data
+from rmcp.tools.fileops import read_csv, write_csv, data_info, filter_data, read_excel, read_json
 from rmcp.tools.econometrics import panel_regression, instrumental_variables, var_model
 from rmcp.tools.machine_learning import kmeans_clustering, decision_tree, random_forest
 from rmcp.tools.visualization import scatter_plot, histogram, boxplot, time_series_plot, correlation_heatmap, regression_plot
+from rmcp.tools.formula_builder import build_formula, validate_formula
+from rmcp.tools.helpers import suggest_fix, validate_data, load_example
 
 # Test data
 SAMPLE_DATA = {
@@ -59,13 +61,15 @@ async def create_test_server():
         # Descriptive statistics
         summary_stats, outlier_detection, frequency_table,
         # File operations
-        read_csv, write_csv, data_info, filter_data,
+        read_csv, write_csv, data_info, filter_data, read_excel, read_json,
         # Econometrics
         panel_regression, instrumental_variables, var_model,
         # Machine learning
         kmeans_clustering, decision_tree, random_forest,
         # Visualization
-        scatter_plot, histogram, boxplot, time_series_plot, correlation_heatmap, regression_plot
+        scatter_plot, histogram, boxplot, time_series_plot, correlation_heatmap, regression_plot,
+        # Natural language and helpers
+        build_formula, validate_formula, suggest_fix, validate_data, load_example
     )
     
     return server

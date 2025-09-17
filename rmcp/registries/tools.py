@@ -15,6 +15,7 @@ from functools import wraps
 from dataclasses import dataclass
 import inspect
 import logging
+import json
 
 from ..core.context import Context
 from ..core.schemas import validate_schema, SchemaError, statistical_result_schema
@@ -127,7 +128,7 @@ class ToolsRegistry:
                 "content": [
                     {
                         "type": "text",
-                        "text": str(result)
+                        "text": json.dumps(result, default=str)
                     }
                 ]
             }

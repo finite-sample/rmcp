@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-**Version 0.3.2** - A comprehensive Model Context Protocol (MCP) server with 33 statistical analysis tools across 8 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
+**Version 0.3.5** - A comprehensive Model Context Protocol (MCP) server with 39 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
 
-**🎉 Now with 33 statistical tools across 8 categories!**
+**🎉 Now with 39 statistical tools across 9 categories including natural language formula building and intelligent error recovery!**
 
 ## 🚀 Quick Start
 
@@ -29,7 +29,7 @@ That's it! RMCP is now ready to handle statistical analysis requests via the Mod
 
 ## ✨ Features
 
-### 📊 Comprehensive Statistical Analysis (33 Tools)
+### 📊 Comprehensive Statistical Analysis (39 Tools)
 
 #### **Regression & Correlation** ✅
 - **Linear Regression** (`linear_model`): OLS with robust standard errors, R², p-values
@@ -77,10 +77,19 @@ That's it! RMCP is now ready to handle statistical analysis requests via the Mod
 - **Regression Diagnostics** (`regression_plot`): Model validation plots
 
 #### **File Operations** ✅
-- **CSV Import** (`read_csv`): Flexible data loading with parsing options
+- **CSV Import** (`read_csv`): Flexible data loading with parsing options and URL support
+- **Excel Import** (`read_excel`): Read .xlsx/.xls files with sheet and range selection
+- **JSON Import** (`read_json`): Convert JSON to tabular format with flattening
 - **CSV Export** (`write_csv`): Data export with formatting control
 - **Dataset Information** (`data_info`): Comprehensive data structure analysis
 - **Data Filtering** (`filter_data`): Complex conditional data selection
+
+#### **Natural Language & User Experience** ✅
+- **Formula Builder** (`build_formula`): Convert natural language to R formulas
+- **Formula Validation** (`validate_formula`): Check formula syntax against data
+- **Error Recovery** (`suggest_fix`): Intelligent error diagnosis and solutions
+- **Data Validation** (`validate_data`): Pre-analysis data quality checks
+- **Example Datasets** (`load_example`): Built-in datasets for learning and testing
 
 ### Production Ready
 - **MCP Protocol**: Full JSON-RPC 2.0 compliance
@@ -112,6 +121,20 @@ RMCP works through natural conversation with AI assistants. Here's how users act
 
 **Claude responds:**
 > *"I've built a logistic regression model that achieves 100% accuracy. Longer tenure significantly reduces churn risk (11.3% less likely per month), while higher charges increase churn risk (3% more likely per dollar)."*
+
+### Natural Language Formula Building
+**You ask Claude:**
+> *"I want to predict sales from marketing spend and customer satisfaction scores. Can you help me build the right formula?"*
+
+**Claude responds:**
+> *"I'll help you build that formula. Using the natural language formula builder, I converted your description to: `sales ~ marketing_spend + customer_satisfaction`. This creates a multiple regression model with sales as the outcome and both marketing spend and satisfaction as predictors. I can also suggest alternatives like interaction terms if needed."*
+
+### Intelligent Error Recovery
+**You ask Claude:**
+> *"I'm getting an error about missing R packages when I try to run my analysis."*
+
+**Claude responds:**
+> *"I can help diagnose that error. The issue is that the 'forecast' package is missing, which is required for Time Series Forecasting. You can fix this by running: `install.packages(\"forecast\")`. I can also check all your R packages and install everything RMCP needs at once."*
 
 ## 📊 Validated User Scenarios
 
@@ -453,9 +476,20 @@ pre-commit install
 ```
 
 ### Running Tests
+
+RMCP includes comprehensive organized testing:
+
 ```bash
-python tests/realistic_scenarios.py  # User scenarios
-pytest tests/                        # Unit tests (if any)
+# Run all tests in logical order
+python run_tests.py
+
+# Run specific test categories
+python tests/unit/test_new_tools.py                    # Unit tests
+python tests/integration/test_mcp_interface.py         # Integration tests  
+python tests/e2e/test_claude_desktop_scenarios.py      # End-to-end tests
+
+# Run pytest (if available)
+pytest tests/unit/ -v                                  # Unit tests only
 ```
 
 ## 📄 License

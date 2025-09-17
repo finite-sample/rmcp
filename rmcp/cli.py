@@ -338,10 +338,12 @@ def _register_builtin_tools(server):
     from .tools.transforms import lag_lead, winsorize, difference, standardize
     from .tools.statistical_tests import t_test, anova, chi_square_test, normality_test
     from .tools.descriptive import summary_stats, outlier_detection, frequency_table
-    from .tools.fileops import read_csv, write_csv, data_info, filter_data
+    from .tools.fileops import read_csv, write_csv, data_info, filter_data, read_excel, read_json
     from .tools.econometrics import panel_regression, instrumental_variables, var_model
     from .tools.machine_learning import kmeans_clustering, decision_tree, random_forest
     from .tools.visualization import scatter_plot, histogram, boxplot, time_series_plot, correlation_heatmap, regression_plot
+    from .tools.formula_builder import build_formula, validate_formula
+    from .tools.helpers import suggest_fix, validate_data, load_example
     
     # Register all statistical tools
     register_tool_functions(
@@ -373,6 +375,8 @@ def _register_builtin_tools(server):
         write_csv,
         data_info,
         filter_data,
+        read_excel,
+        read_json,
         # Econometrics
         panel_regression,
         instrumental_variables,
@@ -387,10 +391,17 @@ def _register_builtin_tools(server):
         boxplot,
         time_series_plot,
         correlation_heatmap,
-        regression_plot
+        regression_plot,
+        # Natural language tools
+        build_formula,
+        validate_formula,
+        # Helper tools
+        suggest_fix,
+        validate_data,
+        load_example
     )
     
-    logger.info("Registered comprehensive statistical analysis tools (30 total)")
+    logger.info("Registered comprehensive statistical analysis tools (39 total)")
 
 
 if __name__ == "__main__":

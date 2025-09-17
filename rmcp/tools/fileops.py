@@ -39,18 +39,32 @@ async def read_csv(context, params):
     skip_rows <- args$skip_rows %||% 0
     max_rows <- args$max_rows
     
-    # Check if file exists
-    if (!file.exists(file_path)) {
-        stop(paste("File not found:", file_path))
-    }
+    # Check if it's a URL or local file
+    is_url <- grepl("^https?://", file_path)
     
-    # Read CSV
-    if (!is.null(max_rows)) {
-        data <- read.csv(file_path, header = header, sep = sep, 
-                        na.strings = na_strings, skip = skip_rows, nrows = max_rows)
+    if (is_url) {
+        # Read from URL
+        if (!is.null(max_rows)) {
+            data <- read.csv(url(file_path), header = header, sep = sep, 
+                            na.strings = na_strings, skip = skip_rows, nrows = max_rows)
+        } else {
+            data <- read.csv(url(file_path), header = header, sep = sep,
+                            na.strings = na_strings, skip = skip_rows)
+        }
     } else {
-        data <- read.csv(file_path, header = header, sep = sep,
-                        na.strings = na_strings, skip = skip_rows)
+        # Check if local file exists
+        if (!file.exists(file_path)) {
+            stop(paste("File not found:", file_path))
+        }
+        
+        # Read local CSV
+        if (!is.null(max_rows)) {
+            data <- read.csv(file_path, header = header, sep = sep, 
+                            na.strings = na_strings, skip = skip_rows, nrows = max_rows)
+        } else {
+            data <- read.csv(file_path, header = header, sep = sep,
+                            na.strings = na_strings, skip = skip_rows)
+        }
     }
     
     # Data summary
@@ -58,22 +72,42 @@ async def read_csv(context, params):
     character_vars <- names(data)[sapply(data, is.character)]
     factor_vars <- names(data)[sapply(data, is.factor)]
     
+    # Get file info if it's a local file
+    if (!is_url) {
+        file_info_obj <- file.info(file_path)
+        file_size <- file_info_obj$size
+        modified_date <- as.character(file_info_obj$mtime)
+    } else {
+        file_size <- NA
+        modified_date <- NA
+    }
+    
     result <- list(
         data = data,
         file_info = list(
             file_path = file_path,
+            is_url = is_url,
             n_rows = nrow(data),
             n_cols = ncol(data),
             column_names = names(data),
             numeric_variables = numeric_vars,
             character_variables = character_vars,
-            factor_variables = factor_vars
+            factor_variables = factor_vars,
+            file_size_bytes = file_size,
+            modified_date = modified_date
         ),
         parsing_info = list(
             header = header,
             separator = sep,
             na_strings = na_strings,
             rows_skipped = skip_rows
+        ),
+        summary = list(
+            rows_read = nrow(data),
+            columns_read = ncol(data),
+            column_types = sapply(data, class),
+            missing_values = sapply(data, function(x) sum(is.na(x))),
+            sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
         )
     )
     '''
@@ -312,4 +346,233 @@ async def filter_data(context, params):
         
     except Exception as e:
         await context.error("Data filtering failed", error=str(e))
+        raise
+
+
+@tool(
+    name="read_excel",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "file_path": {"type": "string"},
+            "sheet_name": {"type": "string", "description": "Sheet name or index (default: first sheet)"},
+            "header": {"type": "boolean", "default": True},
+            "skip_rows": {"type": "integer", "minimum": 0, "default": 0},
+            "max_rows": {"type": "integer", "minimum": 1},
+            "cell_range": {"type": "string", "description": "Excel range like 'A1:D100'"},
+            "na_strings": {"type": "array", "items": {"type": "string"}, "default": ["", "NA", "NULL"]}
+        },
+        "required": ["file_path"]
+    },
+    description="Read Excel files (.xlsx, .xls) with flexible sheet and range selection"
+)
+async def read_excel(context, params):
+    """Read Excel file and return data."""
+    
+    await context.info("Reading Excel file", file_path=params.get("file_path"))
+    
+    r_script = '''
+    library(readxl)
+    
+    file_path <- args$file_path
+    sheet_name <- args$sheet_name
+    header <- args$header %||% TRUE
+    skip_rows <- args$skip_rows %||% 0
+    max_rows <- args$max_rows
+    cell_range <- args$cell_range
+    na_strings <- args$na_strings %||% c("", "NA", "NULL")
+    
+    # Check if file exists
+    if (!file.exists(file_path)) {
+        stop(paste("File not found:", file_path))
+    }
+    
+    # Check file extension
+    file_ext <- tolower(tools::file_ext(file_path))
+    if (!file_ext %in% c("xlsx", "xls")) {
+        stop("File must be .xlsx or .xls format")
+    }
+    
+    # Get sheet information
+    sheet_names <- excel_sheets(file_path)
+    
+    # Determine which sheet to read
+    if (is.null(sheet_name)) {
+        sheet_to_read <- 1  # Default to first sheet
+        actual_sheet_name <- sheet_names[1]
+    } else {
+        if (is.numeric(sheet_name)) {
+            sheet_to_read <- as.integer(sheet_name)
+            actual_sheet_name <- sheet_names[sheet_to_read]
+        } else {
+            if (sheet_name %in% sheet_names) {
+                sheet_to_read <- sheet_name
+                actual_sheet_name <- sheet_name
+            } else {
+                stop(paste("Sheet not found:", sheet_name, ". Available sheets:", paste(sheet_names, collapse=", ")))
+            }
+        }
+    }
+    
+    # Read Excel file with parameters
+    read_args <- list(
+        path = file_path,
+        sheet = sheet_to_read,
+        col_names = header,
+        skip = skip_rows,
+        na = na_strings
+    )
+    
+    # Add optional parameters
+    if (!is.null(max_rows)) {
+        read_args$n_max <- max_rows
+    }
+    
+    if (!is.null(cell_range)) {
+        read_args$range <- cell_range
+    }
+    
+    # Read the data
+    data <- do.call(read_excel, read_args)
+    
+    # Convert to data frame
+    data <- as.data.frame(data)
+    
+    # Get file info
+    file_info <- file.info(file_path)
+    
+    result <- list(
+        data = data,
+        file_info = list(
+            file_path = file_path,
+            sheet_name = actual_sheet_name,
+            available_sheets = sheet_names,
+            rows = nrow(data),
+            columns = ncol(data),
+            column_names = colnames(data),
+            file_size_bytes = file_info$size,
+            modified_date = as.character(file_info$mtime)
+        ),
+        summary = list(
+            rows_read = nrow(data),
+            columns_read = ncol(data),
+            column_types = sapply(data, class),
+            missing_values = sapply(data, function(x) sum(is.na(x))),
+            sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
+        )
+    )
+    '''
+    
+    try:
+        result = execute_r_script(r_script, params)
+        await context.info("Excel file read successfully", 
+                          rows=result["file_info"]["rows"],
+                          columns=result["file_info"]["columns"])
+        return result
+        
+    except Exception as e:
+        await context.error("Excel file reading failed", error=str(e))
+        raise
+
+
+@tool(
+    name="read_json",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "file_path": {"type": "string"},
+            "flatten": {"type": "boolean", "default": True, "description": "Flatten nested JSON to tabular format"},
+            "max_depth": {"type": "integer", "minimum": 1, "default": 3, "description": "Maximum nesting depth to flatten"},
+            "array_to_rows": {"type": "boolean", "default": True, "description": "Convert JSON arrays to separate rows"}
+        },
+        "required": ["file_path"]
+    },
+    description="Read JSON files and convert to tabular format"
+)
+async def read_json(context, params):
+    """Read JSON file and return data."""
+    
+    await context.info("Reading JSON file", file_path=params.get("file_path"))
+    
+    r_script = '''
+    library(jsonlite)
+    library(dplyr)
+    
+    file_path <- args$file_path
+    flatten_data <- args$flatten %||% TRUE
+    max_depth <- args$max_depth %||% 3
+    array_to_rows <- args$array_to_rows %||% TRUE
+    
+    # Check if file exists
+    if (!file.exists(file_path)) {
+        stop(paste("File not found:", file_path))
+    }
+    
+    # Check if it's a URL
+    if (grepl("^https?://", file_path)) {
+        # Read from URL
+        json_data <- fromJSON(file_path, flatten = flatten_data)
+    } else {
+        # Read from local file
+        json_data <- fromJSON(file_path, flatten = flatten_data)
+    }
+    
+    # Convert to data frame if possible
+    if (is.list(json_data) && !is.data.frame(json_data)) {
+        # Try to convert list to data frame
+        if (all(sapply(json_data, length) == length(json_data[[1]]))) {
+            # All elements same length - can convert directly
+            data <- as.data.frame(json_data, stringsAsFactors = FALSE)
+        } else {
+            # Unequal lengths - need to flatten differently
+            data <- json_data %>% 
+                   as.data.frame(stringsAsFactors = FALSE)
+        }
+    } else if (is.data.frame(json_data)) {
+        data <- json_data
+    } else {
+        # Create single-column data frame
+        data <- data.frame(value = json_data, stringsAsFactors = FALSE)
+    }
+    
+    # Get file info
+    if (!grepl("^https?://", file_path)) {
+        file_info <- file.info(file_path)
+        file_size <- file_info$size
+        modified_date <- as.character(file_info$mtime)
+    } else {
+        file_size <- NA
+        modified_date <- NA
+    }
+    
+    result <- list(
+        data = data,
+        file_info = list(
+            file_path = file_path,
+            rows = nrow(data),
+            columns = ncol(data),
+            column_names = colnames(data),
+            file_size_bytes = file_size,
+            modified_date = modified_date,
+            is_url = grepl("^https?://", file_path)
+        ),
+        summary = list(
+            rows_read = nrow(data),
+            columns_read = ncol(data),
+            column_types = sapply(data, class),
+            missing_values = sapply(data, function(x) sum(is.na(x))),
+            sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
+        )
+    )
+    '''
+    
+    try:
+        result = execute_r_script(r_script, params)
+        await context.info("JSON file read successfully", 
+                          rows=result["file_info"]["rows"],
+                          columns=result["file_info"]["columns"])
+        return result
+        
+    except Exception as e:
+        await context.error("JSON file reading failed", error=str(e))
         raise

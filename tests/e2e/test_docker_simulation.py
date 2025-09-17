@@ -69,7 +69,7 @@ def test_python_dependencies():
 def test_package_structure():
     """Test package structure matches Dockerfile expectations."""
     required_files = [
-        'src/rmcp',
+        'rmcp',
         'pyproject.toml', 
         'requirements.txt'
     ]
@@ -86,11 +86,11 @@ def test_rmcp_functionality():
     """Test RMCP actually works."""
     try:
         result = subprocess.run([
-            'python', '-m', 'src.rmcp.cli', '--version'
+            'python', '-m', 'rmcp.cli', '--version'
         ], capture_output=True, text=True, timeout=10)
         
-        if result.returncode == 0 and "0.3.0" in result.stdout:
-            print("✅ RMCP CLI works and shows v0.3.0")
+        if result.returncode == 0 and "0.3.5" in result.stdout:
+            print("✅ RMCP CLI works and shows v0.3.5")
             return True
         else:
             print(f"❌ RMCP CLI issue: {result}")
@@ -120,7 +120,7 @@ def estimate_docker_image_size():
 
 def main():
     """Run Docker simulation tests."""
-    print("🐳 Docker Build Simulation for RMCP v0.3.0")
+    print("🐳 Docker Build Simulation for RMCP v0.3.5")
     print("=" * 50)
     
     tests = [
