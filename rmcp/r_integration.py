@@ -123,13 +123,13 @@ def execute_r_script(script: str, args: Dict[str, Any]) -> Dict[str, Any]:
         >>> data = {"data": {"x": [1,2,3,4], "y": [2,4,6,8]}}
         >>> reg_result = execute_r_script(r_code, data)
     """
-    with tempfile.NamedTemporaryFile(
-        suffix=".R", delete=False, mode="w"
-    ) as script_file, tempfile.NamedTemporaryFile(
-        suffix=".json", delete=False, mode="w"
-    ) as args_file, tempfile.NamedTemporaryFile(
-        suffix=".json", delete=False
-    ) as result_file:
+    with (
+        tempfile.NamedTemporaryFile(suffix=".R", delete=False, mode="w") as script_file,
+        tempfile.NamedTemporaryFile(
+            suffix=".json", delete=False, mode="w"
+        ) as args_file,
+        tempfile.NamedTemporaryFile(suffix=".json", delete=False) as result_file,
+    ):
 
         script_path = script_file.name
         args_path = args_file.name
