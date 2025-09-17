@@ -1,4 +1,4 @@
-name: CI Quick Checks
+name: CI
 
 on:
   push:
@@ -7,44 +7,9 @@ on:
     branches: [ main ]
 
 jobs:
-  quick-validation:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.9, "3.11"]  # Test oldest and newest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install click jsonschema
-        pip install -e .
-    
-    - name: Test CLI works
-      run: |
-        rmcp --version
-        rmcp list-capabilities > /dev/null
-    
-    - name: Quick smoke test
-      run: |
-        python -c "
-        import sys
-        sys.path.insert(0, '.')
-        from rmcp.core.server import create_server
-        from rmcp.cli import _register_builtin_tools
-        server = create_server()
-        _register_builtin_tools(server)
-        print('✅ Server can be created and tools registered')
-        "
-
-  lint:
+  # Fast checks that don't need R
+  lint-and-smoke:
+    name: Lint & Smoke Tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -54,17 +19,174 @@ jobs:
       with:
         python-version: "3.11"
     
-    - name: Install linting tools
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install black isort flake8 click jsonschema
+        pip install black isort flake8 click jsonschema pytest pytest-asyncio
         pip install -e .
     
-    - name: Run black
-      run: black --check rmcp tests streamlit
+    - name: Run linting
+      run: |
+        black --check rmcp tests streamlit
+        isort --check-only rmcp tests streamlit
+        flake8 rmcp tests streamlit
     
-    - name: Run isort
-      run: isort --check-only rmcp tests streamlit
+    - name: Quick smoke tests
+      run: |
+        # Test CLI works
+        rmcp --version
+        rmcp list-capabilities > /dev/null
+        
+        # Test server can be created
+        python -c "
+        import sys
+        sys.path.insert(0, '.')
+        from rmcp.core.server import create_server
+        from rmcp.cli import _register_builtin_tools
+        server = create_server()
+        _register_builtin_tools(server)
+        print('✅ Server creation works')
+        "
+        
+        # Test non-R dependent unit tests
+        python -m pytest tests/unit/test_server_basic.py -v
+
+  # Full tests that need R (only run if lint passes)
+  full-tests:
+    name: Full Test Suite
+    runs-on: ubuntu-latest
+    needs: lint-and-smoke
+    strategy:
+      matrix:
+        python-version: [3.9, "3.10", "3.11"]
     
-    - name: Run flake8
-      run: flake8 rmcp tests streamlit
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Set up R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: release
+    
+    - name: Install R packages
+      run: |
+        R -e "install.packages(c('jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', 'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', 'rlang', 'readxl'), repos='https://cran.rstudio.com/')"
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install click jsonschema pytest pytest-asyncio
+    
+    - name: Run all unit tests
+      run: |
+        python -m pytest tests/unit/ -v
+    
+    - name: Run integration tests
+      run: |
+        python tests/integration/test_mcp_interface.py
+        python tests/integration/test_direct_capabilities.py
+        python tests/integration/test_new_features_integration.py
+    
+    - name: Run end-to-end tests
+      run: |
+        python tests/e2e/realistic_scenarios.py
+        python tests/e2e/test_claude_desktop_scenarios.py
+
+  # Feature verification (runs on Python 3.10 only to save resources)
+  feature-verification:
+    name: Feature Verification
+    runs-on: ubuntu-latest
+    needs: lint-and-smoke
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    
+    - name: Set up R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: release
+    
+    - name: Install R packages
+      run: |
+        R -e "install.packages(c('jsonlite', 'dplyr'), repos='https://cran.rstudio.com/')"
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install click jsonschema
+    
+    - name: Verify tool count
+      run: |
+        python -c "
+        import sys, asyncio
+        sys.path.insert(0, '.')
+        from rmcp.core.server import create_server
+        from rmcp.cli import _register_builtin_tools
+        server = create_server()
+        _register_builtin_tools(server)
+        async def count():
+            ctx = server.create_context('test', 'tools/list')
+            result = await server.tools.list_tools(ctx)
+            count = len(result['tools'])
+            print(f'Registered tools: {count}')
+            assert count >= 40, f'Expected at least 40 tools, got {count}'
+            print('✅ Tool count verification passed')
+        asyncio.run(count())
+        "
+    
+    - name: Test new features
+      run: |
+        python -c "
+        import sys, asyncio, json
+        sys.path.insert(0, '.')
+        from rmcp.core.server import create_server
+        from rmcp.registries.tools import register_tool_functions
+        from rmcp.tools.formula_builder import build_formula
+        from rmcp.tools.helpers import suggest_fix, load_example
+        
+        async def test():
+            server = create_server()
+            register_tool_functions(server.tools, build_formula, suggest_fix, load_example)
+            
+            # Test formula building
+            req = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': 'build_formula', 'arguments': {'description': 'predict sales from marketing'}}}
+            resp = await server.handle_request(req)
+            result = json.loads(resp['result']['content'][0]['text'])
+            assert 'formula' in result
+            print(f'✅ Formula builder: {result[\"formula\"]}')
+            
+            # Test error recovery
+            req = {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {'name': 'suggest_fix', 'arguments': {'error_message': 'there is no package called \"forecast\"'}}}
+            resp = await server.handle_request(req)
+            result = json.loads(resp['result']['content'][0]['text'])
+            assert result['error_type'] == 'missing_package'
+            print(f'✅ Error recovery: {result[\"error_type\"]}')
+            
+            # Test example datasets
+            req = {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call', 'params': {'name': 'load_example', 'arguments': {'dataset_name': 'sales', 'size': 'small'}}}
+            resp = await server.handle_request(req)
+            result = json.loads(resp['result']['content'][0]['text'])
+            assert 'data' in result
+            print(f'✅ Example datasets: {result[\"metadata\"][\"rows\"]} rows loaded')
+            
+            print('🎊 All new features working!')
+        
+        asyncio.run(test())
+        "
+    
+    - name: Check documentation
+      run: |
+        grep -q "40 statistical tools" README.md || (echo "❌ README doesn't mention 40 tools" && exit 1)
+        grep -q "Version 0.3.6" README.md || (echo "❌ README version not updated" && exit 1)
+        grep -q "version.*0.3.6" pyproject.toml || (echo "❌ pyproject.toml version not updated" && exit 1)
+        echo "✅ Documentation check passed"
