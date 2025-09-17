@@ -55,16 +55,43 @@ The server implements comprehensive econometric and statistical tools as Python 
 
 ## Development Commands
 
+### Setup with Poetry
+```bash
+# Install dependencies
+poetry install
+
+# Install with all optional groups
+poetry install --all-extras
+
+# Install development dependencies
+poetry install --with dev
+
+# Activate virtual environment
+poetry shell
+```
+
 ### CLI Commands
 ```bash
 # Check version
-rmcp version
+poetry run rmcp version
 
 # Start server (auto-detects MCP protocol vs legacy JSON)
-rmcp start
+poetry run rmcp start
 
 # Run development server
-rmcp dev [optional_dev_server_file]
+poetry run rmcp dev [optional_dev_server_file]
+```
+
+### Development Scripts (via Poetry)
+```bash
+# Format code (black + isort)
+poetry run format
+
+# Run linting and type checking
+poetry run lint
+
+# Run test suite
+poetry run test
 ```
 
 ### Testing
@@ -78,26 +105,29 @@ rmcp dev [optional_dev_server_file]
 # Run CLI tests
 ./tests/run_cli_tests.sh
 
-# Run pytest tests (if available)
-pytest
+# Run MCP interface tests
+poetry run python tests/test_mcp_interface.py
+
+# Run realistic scenarios
+poetry run python tests/realistic_scenarios.py
 ```
 
 ### Running the Server
 ```bash
-# Install in development mode
-pip install -e .
+# Install in development mode with Poetry
+poetry install
 
 # Start MCP server via CLI (supports both MCP protocol and legacy JSON)
-rmcp start
+poetry run rmcp start
 
 # Direct Python execution
-python -m rmcp
+poetry run python -m rmcp
 
 # Test with legacy JSON format
-cat tests/test_request.json | rmcp start
+cat tests/test_request.json | poetry run rmcp start
 
 # Test with MCP protocol format
-cat tests/test_mcp_protocol.json | rmcp start
+cat tests/test_mcp_protocol.json | poetry run rmcp start
 ```
 
 ### Docker Development

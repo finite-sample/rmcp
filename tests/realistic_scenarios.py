@@ -14,8 +14,8 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# Add rmcp to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from rmcp.tools.regression import linear_model, correlation_analysis, logistic_regression
 from rmcp.core.context import Context, LifespanState
