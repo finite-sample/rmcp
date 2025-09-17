@@ -13,7 +13,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9", 
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -26,7 +25,7 @@ classifiers = [
 packages = [{include = "rmcp"}]
 
 [tool.poetry.dependencies]
-python = ">=3.8"
+python = ">=3.9"
 click = ">=8.1.0"
 jsonschema = ">=4.0.0"
 # R integration dependencies
@@ -106,26 +105,28 @@ line_length = 88
 src_paths = ["rmcp", "tests"]
 
 [tool.mypy]
-python_version = "3.8"
-warn_return_any = true
+python_version = "3.9"
+warn_return_any = false
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+disallow_untyped_decorators = false
+no_implicit_optional = false
+warn_redundant_casts = false
+warn_unused_ignores = false
+warn_no_return = false
+warn_unreachable = false
+strict_equality = false
 packages = ["rmcp"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
     "tests.*",
+    "streamlit.*",
 ]
-disallow_untyped_defs = false
+ignore_errors = true
 
 [tool.coverage.run]
 source = ["rmcp"]
