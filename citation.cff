@@ -1,12 +1,22 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
+type: software
 title: "RMCP: R Model Context Protocol Server"
 version: "0.3.7"
 date-released: "2024-12-17"
-authors:
-  - given-names: "Gaurav"
-    family-names: "Sood"
-abstract: "A Model Context Protocol (MCP) server for R-based econometric analysis that provides tools, resources, and prompts to facilitate advanced econometric modeling with R."
-license: "MIT"
-repository-code: "https://github.com/finite-sample/rmcp"
 url: "https://github.com/finite-sample/rmcp"
+repository-code: "https://github.com/finite-sample/rmcp"
+abstract: "A Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. Features 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation."
+keywords:
+  - "model context protocol"
+  - "statistical analysis"
+  - "R programming"
+  - "econometrics"
+  - "time series"
+  - "machine learning"
+  - "data science"
+  - "AI assistant"
+license: "MIT"
+authors:
+  - family-names: "Sood"
+    given-names: "Gaurav"
