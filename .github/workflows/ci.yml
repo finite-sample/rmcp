@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/rmcp-ci
+
 jobs:
   # Fast checks that don't need R
   lint-and-smoke:
@@ -51,16 +55,78 @@ jobs:
         # Test non-R dependent unit tests
         python -m pytest tests/unit/test_server_basic.py -v
 
-  # Full tests that need R (using pre-built Docker image for speed)
+  # Build Docker image with all R packages for faster testing
+  docker-build:
+    name: Build CI Docker Image
+    runs-on: ubuntu-latest
+    needs: lint-and-smoke
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.ci
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Generate artifact attestation
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        subject-digest: ${{ steps.build.outputs.digest }}
+        push-to-registry: true
+    
+    - name: Output image reference
+      id: image
+      run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+
+  # Full tests that need R (using freshly built Docker image)
   full-tests:
     name: Full Test Suite
     runs-on: ubuntu-latest
-    needs: lint-and-smoke
+    needs: [lint-and-smoke, docker-build]
     container:
-      image: ghcr.io/finite-sample/rmcp/rmcp-ci:latest
+      image: ${{ needs.docker-build.outputs.image }}
       credentials:
         username: ${{ github.actor }}
-        password: ${{ secrets.github_token }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         python-version: [3.9, "3.10", "3.11"]
@@ -91,16 +157,16 @@ jobs:
         python tests/e2e/realistic_scenarios.py
         python tests/e2e/test_claude_desktop_scenarios.py
 
-  # Feature verification (using pre-built Docker image for speed)
+  # Feature verification (using freshly built Docker image)
   feature-verification:
     name: Feature Verification
     runs-on: ubuntu-latest
-    needs: lint-and-smoke
+    needs: [lint-and-smoke, docker-build]
     container:
-      image: ghcr.io/finite-sample/rmcp/rmcp-ci:latest
+      image: ${{ needs.docker-build.outputs.image }}
       credentials:
         username: ${{ github.actor }}
-        password: ${{ secrets.github_token }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     
     steps:
     - uses: actions/checkout@v4
