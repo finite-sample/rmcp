@@ -7,6 +7,7 @@ Natural language to R formula conversion and validation.
 import re
 from typing import Any, Dict, List
 
+from ..core.schemas import table_schema
 from ..r_integration import execute_r_script
 from ..registries.tools import tool
 
@@ -411,7 +412,7 @@ def _get_formula_examples(analysis_type: str) -> List[Dict[str, str]]:
         "type": "object",
         "properties": {
             "formula": {"type": "string", "description": "R formula to validate"},
-            "data": {"type": "object", "description": "Data to validate against"},
+            "data": table_schema(),
             "analysis_type": {
                 "type": "string",
                 "enum": ["regression", "anova", "correlation"],
