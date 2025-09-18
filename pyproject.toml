@@ -47,6 +47,13 @@ fastapi = ">=0.100.0"
 uvicorn = ">=0.20.0"
 sse-starlette = ">=1.6.0"
 
+[tool.poetry.group.docs.dependencies]
+sphinx = ">=7.0.0"
+sphinx-rtd-theme = ">=2.0.0"
+sphinx-autodoc-typehints = ">=1.24.0"
+myst-parser = ">=2.0.0"
+sphinx-copybutton = ">=0.5.0"
+
 [tool.poetry.scripts]
 rmcp = "rmcp.cli:cli"
 
