@@ -66,7 +66,7 @@ async def suggest_fix(context, params):
             ]
 
     # Data format errors
-    elif "object not found" in error_message.lower():
+    elif "object" in error_message.lower() and "not found" in error_message.lower():
         error_type = "missing_variable"
         suggestions = [
             "Check that all variable names in your formula exist in the data",
