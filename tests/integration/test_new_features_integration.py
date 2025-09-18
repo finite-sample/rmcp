@@ -66,11 +66,11 @@ async def test_formula_to_analysis_workflow():
     assert "result" in response
     assert "content" in response["result"]
     assert len(response["result"]["content"]) > 0
-    
+
     content_text = response["result"]["content"][0]["text"]
     if not content_text or content_text.strip() == "":
         raise ValueError("Empty response from formula builder")
-    
+
     formula_result = json.loads(content_text)
     formula = formula_result["formula"]
     print(f"   ✅ Formula built: {formula}")
@@ -90,11 +90,11 @@ async def test_formula_to_analysis_workflow():
     assert "result" in response
     assert "content" in response["result"]
     assert len(response["result"]["content"]) > 0
-    
+
     content_text = response["result"]["content"][0]["text"]
     if not content_text or content_text.strip() == "":
         raise ValueError("Empty response from load_example")
-    
+
     data_result = json.loads(content_text)
     dataset = data_result["data"]
     print(f"   ✅ Dataset loaded: {data_result['metadata']['rows']} rows")
@@ -117,11 +117,11 @@ async def test_formula_to_analysis_workflow():
     assert "result" in response
     assert "content" in response["result"]
     assert len(response["result"]["content"]) > 0
-    
+
     content_text = response["result"]["content"][0]["text"]
     if not content_text or content_text.strip() == "":
         raise ValueError("Empty response from validate_formula")
-    
+
     validation_result = json.loads(content_text)
     print(f"   ✅ Formula validated: {'✓' if validation_result['is_valid'] else '✗'}")
 
@@ -140,11 +140,11 @@ async def test_formula_to_analysis_workflow():
     assert "result" in response
     assert "content" in response["result"]
     assert len(response["result"]["content"]) > 0
-    
+
     content_text = response["result"]["content"][0]["text"]
     if not content_text or content_text.strip() == "":
         raise ValueError("Empty response from correlation_analysis")
-    
+
     analysis_result = json.loads(content_text)
     print(
         f"   ✅ Analysis completed: {len(analysis_result.get('correlation_matrix', {}))} correlations"
@@ -197,11 +197,11 @@ async def test_error_recovery_workflow():
         assert "result" in response
         assert "content" in response["result"]
         assert len(response["result"]["content"]) > 0
-        
+
         content_text = response["result"]["content"][0]["text"]
         if not content_text or content_text.strip() == "":
             raise ValueError(f"Empty response from suggest_fix for scenario {i}")
-        
+
         result = json.loads(content_text)
         assert result["error_type"] == scenario["expected_type"]
         print(f"   ✅ Error {i} diagnosed: {result['error_type']}")
@@ -236,11 +236,11 @@ async def test_data_validation_integration():
         assert "result" in response
         assert "content" in response["result"]
         assert len(response["result"]["content"]) > 0
-        
+
         content_text = response["result"]["content"][0]["text"]
         if not content_text or content_text.strip() == "":
             raise ValueError(f"Empty response from load_example for {dataset_name}")
-        
+
         data_result = json.loads(content_text)
         dataset = data_result["data"]
 
@@ -259,11 +259,11 @@ async def test_data_validation_integration():
         assert "result" in response
         assert "content" in response["result"]
         assert len(response["result"]["content"]) > 0
-        
+
         content_text = response["result"]["content"][0]["text"]
         if not content_text or content_text.strip() == "":
             raise ValueError(f"Empty response from validate_data for {dataset_name}")
-        
+
         validation_result = json.loads(content_text)
         print(
             f"   ✅ {dataset_name} validated for {analysis_type}: {'✓' if validation_result['is_valid'] else '⚠'}"

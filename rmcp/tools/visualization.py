@@ -21,8 +21,15 @@ from ..registries.tools import tool
             "y": {"type": "string"},
             "group": {"type": "string"},
             "title": {"type": "string"},
-            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
-            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
+            "file_path": {
+                "type": "string",
+                "description": "Optional: Save plot to this file",
+            },
+            "return_image": {
+                "type": "boolean",
+                "default": True,
+                "description": "Return image data for inline display",
+            },
             "width": {"type": "integer", "minimum": 100, "default": 800},
             "height": {"type": "integer", "minimum": 100, "default": 600},
         },
@@ -108,15 +115,15 @@ async def scatter_plot(context, params):
         return_image = params.get("return_image", True)
         width = params.get("width", 800)
         height = params.get("height", 600)
-        
+
         result = execute_r_script_with_image(
-            r_script, 
-            params, 
+            r_script,
+            params,
             include_image=return_image,
             image_width=width,
-            image_height=height
+            image_height=height,
         )
-        
+
         await context.info("Scatter plot created successfully")
         return result
 
@@ -135,8 +142,15 @@ async def scatter_plot(context, params):
             "group": {"type": "string"},
             "bins": {"type": "integer", "minimum": 5, "maximum": 100, "default": 30},
             "title": {"type": "string"},
-            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
-            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
+            "file_path": {
+                "type": "string",
+                "description": "Optional: Save plot to this file",
+            },
+            "return_image": {
+                "type": "boolean",
+                "default": True,
+                "description": "Return image data for inline display",
+            },
             "width": {"type": "integer", "minimum": 100, "default": 800},
             "height": {"type": "integer", "minimum": 100, "default": 600},
         },
@@ -229,15 +243,15 @@ async def histogram(context, params):
         return_image = params.get("return_image", True)
         width = params.get("width", 800)
         height = params.get("height", 600)
-        
+
         result = execute_r_script_with_image(
-            r_script, 
-            params, 
+            r_script,
+            params,
             include_image=return_image,
             image_width=width,
-            image_height=height
+            image_height=height,
         )
-        
+
         await context.info("Histogram created successfully")
         return result
 
@@ -255,8 +269,15 @@ async def histogram(context, params):
             "variable": {"type": "string"},
             "group": {"type": "string"},
             "title": {"type": "string"},
-            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
-            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
+            "file_path": {
+                "type": "string",
+                "description": "Optional: Save plot to this file",
+            },
+            "return_image": {
+                "type": "boolean",
+                "default": True,
+                "description": "Return image data for inline display",
+            },
             "width": {"type": "integer", "minimum": 100, "default": 800},
             "height": {"type": "integer", "minimum": 100, "default": 600},
         },
@@ -365,15 +386,15 @@ async def boxplot(context, params):
         return_image = params.get("return_image", True)
         width = params.get("width", 800)
         height = params.get("height", 600)
-        
+
         result = execute_r_script_with_image(
-            r_script, 
-            params, 
+            r_script,
+            params,
             include_image=return_image,
             image_width=width,
-            image_height=height
+            image_height=height,
         )
-        
+
         await context.info("Box plot created successfully")
         return result
 
@@ -396,8 +417,15 @@ async def boxplot(context, params):
                 "required": ["values"],
             },
             "title": {"type": "string"},
-            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
-            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
+            "file_path": {
+                "type": "string",
+                "description": "Optional: Save plot to this file",
+            },
+            "return_image": {
+                "type": "boolean",
+                "default": True,
+                "description": "Return image data for inline display",
+            },
             "show_trend": {"type": "boolean", "default": True},
             "width": {"type": "integer", "minimum": 100, "default": 1000},
             "height": {"type": "integer", "minimum": 100, "default": 600},
@@ -501,15 +529,15 @@ async def time_series_plot(context, params):
         return_image = params.get("return_image", True)
         width = params.get("width", 1000)
         height = params.get("height", 600)
-        
+
         result = execute_r_script_with_image(
-            r_script, 
-            params, 
+            r_script,
+            params,
             include_image=return_image,
             image_width=width,
-            image_height=height
+            image_height=height,
         )
-        
+
         await context.info("Time series plot created successfully")
         return result
 
@@ -531,8 +559,15 @@ async def time_series_plot(context, params):
                 "default": "pearson",
             },
             "title": {"type": "string"},
-            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
-            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
+            "file_path": {
+                "type": "string",
+                "description": "Optional: Save plot to this file",
+            },
+            "return_image": {
+                "type": "boolean",
+                "default": True,
+                "description": "Return image data for inline display",
+            },
             "width": {"type": "integer", "minimum": 100, "default": 800},
             "height": {"type": "integer", "minimum": 100, "default": 800},
         },
@@ -630,15 +665,15 @@ async def correlation_heatmap(context, params):
         return_image = params.get("return_image", True)
         width = params.get("width", 800)
         height = params.get("height", 800)
-        
+
         result = execute_r_script_with_image(
-            r_script, 
-            params, 
+            r_script,
+            params,
             include_image=return_image,
             image_width=width,
-            image_height=height
+            image_height=height,
         )
-        
+
         await context.info("Correlation heatmap created successfully")
         return result
 
@@ -655,8 +690,15 @@ async def correlation_heatmap(context, params):
             "data": table_schema(),
             "formula": formula_schema(),
             "title": {"type": "string"},
-            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
-            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
+            "file_path": {
+                "type": "string",
+                "description": "Optional: Save plot to this file",
+            },
+            "return_image": {
+                "type": "boolean",
+                "default": True,
+                "description": "Return image data for inline display",
+            },
             "residual_plots": {"type": "boolean", "default": True},
             "width": {"type": "integer", "minimum": 100, "default": 1200},
             "height": {"type": "integer", "minimum": 100, "default": 800},
@@ -800,15 +842,15 @@ async def regression_plot(context, params):
         return_image = params.get("return_image", True)
         width = params.get("width", 1200)
         height = params.get("height", 800)
-        
+
         result = execute_r_script_with_image(
-            r_script, 
-            params, 
+            r_script,
+            params,
             include_image=return_image,
             image_width=width,
-            image_height=height
+            image_height=height,
         )
-        
+
         await context.info("Regression plots created successfully")
         return result
 

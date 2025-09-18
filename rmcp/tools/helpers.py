@@ -924,7 +924,7 @@ async def load_example(context, params):
                 "name": dataset_name,
                 "rows": 0,
                 "columns": 0,
-                "description": "Failed to load"
+                "description": "Failed to load",
             },
-            "suggested_analyses": []
+            "suggested_analyses": [],
         }
