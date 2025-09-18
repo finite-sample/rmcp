@@ -105,6 +105,46 @@ def choice_schema(choices: List[str]) -> Dict[str, Any]:
     return {"type": "string", "enum": choices}
 
 
+def image_content_schema() -> Dict[str, Any]:
+    """Schema for image content in MCP responses."""
+    return {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string", "const": "image"},
+            "data": {"type": "string", "description": "Base64 encoded image"},
+            "mimeType": {"type": "string", "enum": ["image/png", "image/jpeg", "image/svg+xml"]},
+            "alt": {"type": "string", "description": "Alternative text description"}
+        },
+        "required": ["type", "data", "mimeType"]
+    }
+
+
+def text_content_schema() -> Dict[str, Any]:
+    """Schema for text content in MCP responses.""" 
+    return {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string", "const": "text"},
+            "text": {"type": "string", "description": "Text content"}
+        },
+        "required": ["type", "text"]
+    }
+
+
+def mcp_content_schema() -> Dict[str, Any]:
+    """Schema for MCP content arrays (text and/or images)."""
+    return {
+        "type": "array",
+        "items": {
+            "anyOf": [
+                text_content_schema(),
+                image_content_schema()
+            ]
+        },
+        "minItems": 1
+    }
+
+
 # Tool result schemas
 
 

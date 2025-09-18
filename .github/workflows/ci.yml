@@ -80,7 +80,7 @@ jobs:
     
     - name: Install R packages
       run: |
-        R -e "install.packages(c('jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', 'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', 'rlang', 'readxl'), repos='https://cran.rstudio.com/')"
+        R -e "install.packages(c('jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', 'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', 'rlang', 'readxl', 'base64enc', 'reshape2'), repos='https://cran.rstudio.com/')"
     
     - name: Install Python dependencies
       run: |
@@ -128,7 +128,7 @@ jobs:
     
     - name: Install R packages
       run: |
-        R -e "install.packages(c('jsonlite', 'dplyr'), repos='https://cran.rstudio.com/')"
+        R -e "install.packages(c('jsonlite', 'dplyr', 'base64enc'), repos='https://cran.rstudio.com/')"
     
     - name: Install Python dependencies
       run: |
@@ -197,6 +197,6 @@ jobs:
     - name: Check documentation
       run: |
         grep -q "40 statistical tools" README.md || (echo "❌ README doesn't mention 40 tools" && exit 1)
-        grep -q "Version 0.3.6" README.md || (echo "❌ README version not updated" && exit 1)
-        grep -q "version.*0.3.6" pyproject.toml || (echo "❌ pyproject.toml version not updated" && exit 1)
+        grep -q "Version 0.3.7" README.md || (echo "❌ README version not updated" && exit 1)
+        grep -q "version.*0.3.7" pyproject.toml || (echo "❌ pyproject.toml version not updated" && exit 1)
         echo "✅ Documentation check passed"

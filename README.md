@@ -4,9 +4,9 @@
 [![PyPI version](https://img.shields.io/pypi/v/rmcp.svg)](https://pypi.org/project/rmcp/)
 [![Downloads](https://pepy.tech/badge/rmcp)](https://pepy.tech/project/rmcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
-**Version 0.3.6** - A comprehensive Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
+**Version 0.3.7** - A comprehensive Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
 
 **🎉 Now with 40 statistical tools across 9 categories including natural language formula building and intelligent error recovery!**
 
@@ -137,6 +137,33 @@ RMCP works through natural conversation with AI assistants. Here's how users act
 **Claude responds:**
 > *"I can help diagnose that error. The issue is that the 'forecast' package is missing, which is required for Time Series Forecasting. You can fix this by running: `install.packages(\"forecast\")`. I can also check all your R packages and install everything RMCP needs at once."*
 
+### 📈 Visual Analytics - See Plots Directly in Claude
+
+**New in v0.3.7**: All visualization tools now display plots **directly in your Claude conversation** - no more file management!
+
+**You ask Claude:**
+> *"Create a correlation heatmap of my sales, marketing, and customer satisfaction data"*
+
+**Claude responds with:**
+- 📊 **Interactive heatmap displayed inline** showing correlation strengths with color coding
+- 📋 **Statistical analysis**: correlation matrix with exact values and significance tests
+- 💡 **Insights**: "Strong positive correlation (r=0.89) between marketing and sales suggests effective targeting"
+
+**Supported Visual Tools:**
+- 🔥 **Correlation Heatmaps**: Color-coded correlation matrices with statistical values
+- 📈 **Scatter Plots**: Trend lines, grouping, and regression analysis  
+- 📊 **Histograms**: Distribution analysis with density overlays
+- 📦 **Box Plots**: Outlier detection and quartile analysis
+- ⏱️ **Time Series**: Trend analysis with forecasting
+- 🔍 **Regression Diagnostics**: 4-panel diagnostic plots for model validation
+
+**Key Benefits:**
+- ✅ **Immediate visual feedback** - see results instantly
+- ✅ **No file management** - plots appear in conversation  
+- ✅ **Combined analysis** - statistics + visualizations together
+- ✅ **Professional quality** - publication-ready plots with ggplot2
+- ✅ **Optional saving** - can still export to files when needed
+
 ## 📊 Validated User Scenarios
 
 RMCP has been tested with real-world scenarios achieving **100% success rate**:
@@ -149,7 +176,7 @@ RMCP has been tested with real-world scenarios achieving **100% success rate**:
 ## 🔧 Installation & Setup
 
 ### Prerequisites
-- **Python 3.8+**
+- **Python 3.9+**
 - **R 4.0+** with required packages (see below)
 
 #### R Package Requirements
@@ -193,7 +220,7 @@ pip install rmcp
 
 ### Development Installation
 ```bash
-git clone https://github.com/gojiplus/rmcp.git
+git clone https://github.com/finite-sample/rmcp.git
 cd rmcp
 pip install -e ".[dev]"
 ```
@@ -470,7 +497,7 @@ We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.
 
 ### Development Setup
 ```bash
-git clone https://github.com/gojiplus/rmcp.git
+git clone https://github.com/finite-sample/rmcp.git
 cd rmcp
 pip install -e ".[dev]"
 pre-commit install
@@ -553,8 +580,8 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start
 
 - 📖 **Documentation**: See [Quick Start Guide](examples/quick_start_guide.md) for working examples
 - 🔧 **Troubleshooting**: [Comprehensive troubleshooting guide](docs/troubleshooting.md)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/gojiplus/rmcp/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/gojiplus/rmcp/discussions)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/finite-sample/rmcp/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/finite-sample/rmcp/discussions)
 
 ## 🎉 Acknowledgments
 

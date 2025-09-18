@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-@click.version_option(version="0.3.6")
+@click.version_option(version="0.3.7")
 def cli():
     """RMCP MCP Server - Comprehensive statistical analysis with 40 tools across 9 categories."""
     pass

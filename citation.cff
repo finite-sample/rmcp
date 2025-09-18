@@ -1,12 +1,12 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "RMCP: R Model Context Protocol Server"
-version: "0.3.6"
-date-released: "2025-01-17"
+version: "0.3.7"
+date-released: "2024-12-17"
 authors:
   - given-names: "Gaurav"
     family-names: "Sood"
 abstract: "A Model Context Protocol (MCP) server for R-based econometric analysis that provides tools, resources, and prompts to facilitate advanced econometric modeling with R."
 license: "MIT"
-repository-code: "https://github.com/gojiplus/rmcp"
-url: "https://github.com/gojiplus/rmcp"
+repository-code: "https://github.com/finite-sample/rmcp"
+url: "https://github.com/finite-sample/rmcp"

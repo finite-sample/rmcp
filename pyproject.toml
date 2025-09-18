@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rmcp"
-version = "0.3.6"
+version = "0.3.7"
 description = "Comprehensive Model Context Protocol server with 40 statistical analysis tools across 9 categories"
 authors = ["Gaurav Sood <gsood07@gmail.com>"]
 license = "MIT"
@@ -23,6 +23,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 packages = [{include = "rmcp"}]
+include = ["CITATION.cff"]
 
 [tool.poetry.dependencies]
 python = ">=3.9"
@@ -40,7 +41,6 @@ black = ">=23.0.0"
 isort = ">=5.12.0"
 flake8 = ">=6.0.0"
 mypy = ">=1.5.0"
-pre-commit = ">=3.0.0"
 
 [tool.poetry.group.http.dependencies]
 fastapi = ">=0.100.0"
@@ -51,10 +51,10 @@ sse-starlette = ">=1.6.0"
 rmcp = "rmcp.cli:cli"
 
 [tool.poetry.urls]
-Homepage = "https://github.com/gojiplus/rmcp"
-Repository = "https://github.com/gojiplus/rmcp"
-Documentation = "https://github.com/gojiplus/rmcp#readme"
-Issues = "https://github.com/gojiplus/rmcp/issues"
+Homepage = "https://github.com/finite-sample/rmcp"
+Repository = "https://github.com/finite-sample/rmcp"
+Documentation = "https://github.com/finite-sample/rmcp#readme"
+Issues = "https://github.com/finite-sample/rmcp/issues"
 
 [build-system]
 requires = ["poetry-core"]

@@ -508,7 +508,7 @@ When reporting issues, include:
 
 ### Community Resources
 
-- GitHub Issues: [RMCP Issues](https://github.com/gojiplus/rmcp/issues)
+- GitHub Issues: [RMCP Issues](https://github.com/finite-sample/rmcp/issues)
 - R Help: [R-help mailing list](https://stat.ethz.ch/mailman/listinfo/r-help)
 - Stack Overflow: Tag questions with `r` and `mcp`
 

@@ -917,4 +917,14 @@ async def load_example(context, params):
 
     except Exception as e:
         await context.error("Failed to load example dataset", error=str(e))
-        raise
+        return {
+            "error": f"Failed to load example dataset: {str(e)}",
+            "data": {},
+            "metadata": {
+                "name": dataset_name,
+                "rows": 0,
+                "columns": 0,
+                "description": "Failed to load"
+            },
+            "suggested_analyses": []
+        }

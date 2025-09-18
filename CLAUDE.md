@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.6** includes 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.7** includes 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## Key Architecture Components
 
@@ -82,7 +82,7 @@ poetry shell
 
 ### CLI Commands
 ```bash
-# Check version (should show 0.3.6)
+# Check version (should show 0.3.7)
 rmcp --version
 
 # Start server (auto-detects MCP protocol vs legacy JSON)
@@ -188,36 +188,43 @@ def _register_builtin_tools(server):
 - **Error Handling**: R script failures are captured and returned as JSON error responses
 - **Data Validation**: Input schemas defined for each tool to validate parameters
 
-## Recent Improvements (v0.3.6)
+## Recent Improvements (v0.3.7)
 
-### Package Release Readiness
-- **Version Consistency**: All files updated to v0.3.6 (pyproject.toml, CLI, README, CITATION.cff)
-- **Package Structure**: Added missing `rmcp/tools/__init__.py` for proper imports
-- **Dependency Cleanup**: Removed problematic `subprocess32` dependency (Python 3.8+ compatibility)
-- **Distribution Ready**: Added `MANIFEST.in` for proper package distribution
+### 📈 Visual Analytics Revolution
+- **Inline Image Display**: All 6 visualization tools now display plots directly in Claude conversations
+- **Base64 Encoding**: Professional-quality PNG images appear instantly without file management
+- **Multi-content MCP Responses**: Support for text + image content in single responses
+- **Publication Quality**: ggplot2-styled visualizations ready for presentations
+- **Configurable Settings**: Width, height, and quality parameters for all plots
+- **Backward Compatibility**: Optional file saving maintained with `file_path` parameter
 
-### Enhanced Tool Ecosystem
-- **40 Statistical Tools**: Expanded from 39 to 40 tools across 9 categories
-- **Natural Language Features**: Formula builder converts natural language to R formulas
-- **Error Recovery System**: Intelligent error diagnosis and automated suggestions
-- **Example Datasets**: Built-in datasets for learning and testing
+### Enhanced Visualization Tools
+- **🔥 correlation_heatmap**: Color-coded matrices with inline statistical analysis
+- **📈 scatter_plot**: Trend lines and grouping with immediate visual feedback  
+- **📊 histogram**: Distribution analysis with density overlays displayed inline
+- **📦 boxplot**: Quartile analysis and outlier detection with visual confirmation
+- **⏱️ time_series_plot**: Trend analysis with forecasting visualized instantly
+- **🔍 regression_plot**: 4-panel diagnostic plots for model validation
 
-### Testing & Quality Assurance
-- **Comprehensive Error Handling**: Added `test_error_handling.py` with 9 error scenarios
-- **Organized Test Structure**: Unit → Integration → E2E test organization
-- **Cross-Platform Support**: Fixed hardcoded Python commands for compatibility
-- **Production Testing**: 100% success rate for realistic user scenarios
+### Package Modernization
+- **Simplified Packaging**: Removed redundant MANIFEST.in, using modern pyproject.toml-only approach
+- **GitHub URL Consistency**: Standardized all URLs to finite-sample/rmcp repository
+- **Version 0.3.7**: All files synchronized with new release version
+- **Python 3.9+ Requirement**: Aligned all documentation with actual requirements
+- **CI/CD Quality Assurance**: Comprehensive testing without pre-commit complexity
 
-### Documentation & Contributing
-- **Professional Documentation**: Created comprehensive `CONTRIBUTING.md`
-- **Development Guidelines**: Code style, testing procedures, tool development guide
-- **Security Considerations**: Safe R script execution guidelines
-- **PyPI Distribution**: Package now available via `pip install rmcp`
+### Integration Test Fixes
+- **Robust Error Handling**: Fixed JSON parsing errors in test suite
+- **Empty Result Handling**: Tools now return valid responses for all scenarios
+- **Defensive JSON Parsing**: Improved test reliability and error reporting
+- **Helper Tool Reliability**: Enhanced suggest_fix, validate_data, load_example functions
 
-### GitHub Integration
-- **Automated Workflows**: CI/CD pipeline with comprehensive testing
-- **Version Verification**: Automated checks for tool count and version consistency
-- **Multi-Python Testing**: Support for Python 3.8-3.11
+### Previous Improvements (v0.3.6)
+- **40 Statistical Tools**: Complete ecosystem across 9 categories
+- **Natural Language Features**: Formula builder and intelligent error recovery
+- **PyPI Distribution**: Professional package available via `pip install rmcp`
+- **Comprehensive Testing**: Unit → Integration → E2E test organization
+- **Documentation Excellence**: Professional CONTRIBUTING.md and examples
 
 ## Configuration Files
 

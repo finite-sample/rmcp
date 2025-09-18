@@ -7,7 +7,7 @@ Statistical plotting and data visualization capabilities.
 from typing import Any, Dict
 
 from ..core.schemas import formula_schema, table_schema
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script, execute_r_script_with_image
 from ..registries.tools import tool
 
 
@@ -21,11 +21,12 @@ from ..registries.tools import tool
             "y": {"type": "string"},
             "group": {"type": "string"},
             "title": {"type": "string"},
-            "file_path": {"type": "string"},
+            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
+            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
             "width": {"type": "integer", "minimum": 100, "default": 800},
             "height": {"type": "integer", "minimum": 100, "default": 600},
         },
-        "required": ["data", "x", "y", "file_path"],
+        "required": ["data", "x", "y"],
     },
     description="Create scatter plot with optional grouping and trend lines",
 )
@@ -35,7 +36,10 @@ async def scatter_plot(context, params):
     await context.info("Creating scatter plot")
 
     r_script = """
-    if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
+    # Set CRAN mirror
+    options(repos = c(CRAN = "https://cloud.r-project.org/"))
+    
+    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
     data <- as.data.frame(args$data)
@@ -44,6 +48,7 @@ async def scatter_plot(context, params):
     group_var <- args$group
     title <- args$title %||% paste("Scatter plot:", y_var, "vs", x_var)
     file_path <- args$file_path
+    return_image <- args$return_image %||% TRUE
     width <- args$width %||% 800
     height <- args$height %||% 600
     
@@ -62,26 +67,56 @@ async def scatter_plot(context, params):
          theme_minimal() +
          theme(plot.title = element_text(hjust = 0.5))
     
-    # Save plot
-    ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+    # Save to file if path provided
+    if (!is.null(file_path)) {
+        ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+        plot_saved <- file.exists(file_path)
+    } else {
+        plot_saved <- FALSE
+    }
     
     # Basic correlation
     correlation <- cor(data[[x_var]], data[[y_var]], use = "complete.obs")
     
+    # Prepare result
     result <- list(
-        file_path = file_path,
         x_variable = x_var,
         y_variable = y_var,
         group_variable = group_var,
         correlation = correlation,
         title = title,
         n_points = sum(!is.na(data[[x_var]]) & !is.na(data[[y_var]])),
-        plot_saved = file.exists(file_path)
+        plot_saved = plot_saved
     )
+    
+    # Add file path if provided
+    if (!is.null(file_path)) {
+        result$file_path <- file_path
+    }
+    
+    # Generate base64 image if requested
+    if (return_image) {
+        image_data <- safe_encode_plot(p, width, height)
+        if (!is.null(image_data)) {
+            result$image_data <- image_data
+        }
+    }
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        # Use the new image-enabled function
+        return_image = params.get("return_image", True)
+        width = params.get("width", 800)
+        height = params.get("height", 600)
+        
+        result = execute_r_script_with_image(
+            r_script, 
+            params, 
+            include_image=return_image,
+            image_width=width,
+            image_height=height
+        )
+        
         await context.info("Scatter plot created successfully")
         return result
 
@@ -100,11 +135,12 @@ async def scatter_plot(context, params):
             "group": {"type": "string"},
             "bins": {"type": "integer", "minimum": 5, "maximum": 100, "default": 30},
             "title": {"type": "string"},
-            "file_path": {"type": "string"},
+            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
+            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
             "width": {"type": "integer", "minimum": 100, "default": 800},
             "height": {"type": "integer", "minimum": 100, "default": 600},
         },
-        "required": ["data", "variable", "file_path"],
+        "required": ["data", "variable"],
     },
     description="Create histogram with optional grouping and density overlay",
 )
@@ -114,7 +150,10 @@ async def histogram(context, params):
     await context.info("Creating histogram")
 
     r_script = """
-    if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
+    # Set CRAN mirror
+    options(repos = c(CRAN = "https://cloud.r-project.org/"))
+    
+    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
     data <- as.data.frame(args$data)
@@ -123,6 +162,7 @@ async def histogram(context, params):
     bins <- args$bins %||% 30
     title <- args$title %||% paste("Histogram of", variable)
     file_path <- args$file_path
+    return_image <- args$return_image %||% TRUE
     width <- args$width %||% 800
     height <- args$height %||% 600
     
@@ -141,8 +181,13 @@ async def histogram(context, params):
          theme_minimal() +
          theme(plot.title = element_text(hjust = 0.5))
     
-    # Save plot
-    ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+    # Save to file if path provided
+    if (!is.null(file_path)) {
+        ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+        plot_saved <- file.exists(file_path)
+    } else {
+        plot_saved <- FALSE
+    }
     
     # Basic statistics
     values <- data[[variable]][!is.na(data[[variable]])]
@@ -154,20 +199,45 @@ async def histogram(context, params):
         kurtosis = (sum((values - mean(values))^4) / length(values)) / (sd(values)^4) - 3
     )
     
+    # Prepare result
     result <- list(
-        file_path = file_path,
         variable = variable,
         group_variable = group_var,
         bins = bins,
         statistics = stats,
         title = title,
         n_obs = length(values),
-        plot_saved = file.exists(file_path)
+        plot_saved = plot_saved
     )
+    
+    # Add file path if provided
+    if (!is.null(file_path)) {
+        result$file_path <- file_path
+    }
+    
+    # Generate base64 image if requested
+    if (return_image) {
+        image_data <- safe_encode_plot(p, width, height)
+        if (!is.null(image_data)) {
+            result$image_data <- image_data
+        }
+    }
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        # Use the new image-enabled function
+        return_image = params.get("return_image", True)
+        width = params.get("width", 800)
+        height = params.get("height", 600)
+        
+        result = execute_r_script_with_image(
+            r_script, 
+            params, 
+            include_image=return_image,
+            image_width=width,
+            image_height=height
+        )
+        
         await context.info("Histogram created successfully")
         return result
 
@@ -185,11 +255,12 @@ async def histogram(context, params):
             "variable": {"type": "string"},
             "group": {"type": "string"},
             "title": {"type": "string"},
-            "file_path": {"type": "string"},
+            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
+            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
             "width": {"type": "integer", "minimum": 100, "default": 800},
             "height": {"type": "integer", "minimum": 100, "default": 600},
         },
-        "required": ["data", "variable", "file_path"],
+        "required": ["data", "variable"],
     },
     description="Create box plot with optional grouping",
 )
@@ -199,7 +270,10 @@ async def boxplot(context, params):
     await context.info("Creating box plot")
 
     r_script = """
-    if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
+    # Set CRAN mirror
+    options(repos = c(CRAN = "https://cloud.r-project.org/"))
+    
+    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
     data <- as.data.frame(args$data)
@@ -207,6 +281,7 @@ async def boxplot(context, params):
     group_var <- args$group
     title <- args$title %||% paste("Box plot of", variable)
     file_path <- args$file_path
+    return_image <- args$return_image %||% TRUE
     width <- args$width %||% 800
     height <- args$height %||% 600
     
@@ -226,8 +301,13 @@ async def boxplot(context, params):
     p <- p + theme_minimal() +
          theme(plot.title = element_text(hjust = 0.5))
     
-    # Save plot
-    ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+    # Save to file if path provided
+    if (!is.null(file_path)) {
+        ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+        plot_saved <- file.exists(file_path)
+    } else {
+        plot_saved <- FALSE
+    }
     
     # Summary statistics
     if (!is.null(group_var)) {
@@ -257,18 +337,43 @@ async def boxplot(context, params):
         )
     }
     
+    # Prepare result
     result <- list(
-        file_path = file_path,
         variable = variable,
         group_variable = group_var,
         summary_statistics = summary_stats,
         title = title,
-        plot_saved = file.exists(file_path)
+        plot_saved = plot_saved
     )
+    
+    # Add file path if provided
+    if (!is.null(file_path)) {
+        result$file_path <- file_path
+    }
+    
+    # Generate base64 image if requested
+    if (return_image) {
+        image_data <- safe_encode_plot(p, width, height)
+        if (!is.null(image_data)) {
+            result$image_data <- image_data
+        }
+    }
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        # Use the new image-enabled function
+        return_image = params.get("return_image", True)
+        width = params.get("width", 800)
+        height = params.get("height", 600)
+        
+        result = execute_r_script_with_image(
+            r_script, 
+            params, 
+            include_image=return_image,
+            image_width=width,
+            image_height=height
+        )
+        
         await context.info("Box plot created successfully")
         return result
 
@@ -291,12 +396,13 @@ async def boxplot(context, params):
                 "required": ["values"],
             },
             "title": {"type": "string"},
-            "file_path": {"type": "string"},
+            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
+            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
             "show_trend": {"type": "boolean", "default": True},
             "width": {"type": "integer", "minimum": 100, "default": 1000},
             "height": {"type": "integer", "minimum": 100, "default": 600},
         },
-        "required": ["data", "file_path"],
+        "required": ["data"],
     },
     description="Create time series plot with optional trend line",
 )
@@ -306,13 +412,17 @@ async def time_series_plot(context, params):
     await context.info("Creating time series plot")
 
     r_script = """
-    if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
+    # Set CRAN mirror
+    options(repos = c(CRAN = "https://cloud.r-project.org/"))
+    
+    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
     values <- args$data$values
     dates <- args$data$dates
     title <- args$title %||% "Time Series Plot"
     file_path <- args$file_path
+    return_image <- args$return_image %||% TRUE
     show_trend <- args$show_trend %||% TRUE
     width <- args$width %||% 1000
     height <- args$height %||% 600
@@ -345,8 +455,13 @@ async def time_series_plot(context, params):
          theme_minimal() +
          theme(plot.title = element_text(hjust = 0.5))
     
-    # Save plot
-    ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+    # Save to file if path provided
+    if (!is.null(file_path)) {
+        ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+        plot_saved <- file.exists(file_path)
+    } else {
+        plot_saved <- FALSE
+    }
     
     # Basic time series statistics
     ts_stats <- list(
@@ -358,18 +473,43 @@ async def time_series_plot(context, params):
         range = max(values, na.rm = TRUE) - min(values, na.rm = TRUE)
     )
     
+    # Prepare result
     result <- list(
-        file_path = file_path,
         title = title,
         statistics = ts_stats,
         has_dates = !is.null(dates),
         show_trend = show_trend,
-        plot_saved = file.exists(file_path)
+        plot_saved = plot_saved
     )
+    
+    # Add file path if provided
+    if (!is.null(file_path)) {
+        result$file_path <- file_path
+    }
+    
+    # Generate base64 image if requested
+    if (return_image) {
+        image_data <- safe_encode_plot(p, width, height)
+        if (!is.null(image_data)) {
+            result$image_data <- image_data
+        }
+    }
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        # Use the new image-enabled function
+        return_image = params.get("return_image", True)
+        width = params.get("width", 1000)
+        height = params.get("height", 600)
+        
+        result = execute_r_script_with_image(
+            r_script, 
+            params, 
+            include_image=return_image,
+            image_width=width,
+            image_height=height
+        )
+        
         await context.info("Time series plot created successfully")
         return result
 
@@ -391,11 +531,12 @@ async def time_series_plot(context, params):
                 "default": "pearson",
             },
             "title": {"type": "string"},
-            "file_path": {"type": "string"},
+            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
+            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
             "width": {"type": "integer", "minimum": 100, "default": 800},
             "height": {"type": "integer", "minimum": 100, "default": 800},
         },
-        "required": ["data", "file_path"],
+        "required": ["data"],
     },
     description="Create correlation heatmap matrix",
 )
@@ -405,8 +546,11 @@ async def correlation_heatmap(context, params):
     await context.info("Creating correlation heatmap")
 
     r_script = """
-    if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
-    if (!require(reshape2)) install.packages("reshape2", quietly = TRUE)
+    # Set CRAN mirror
+    options(repos = c(CRAN = "https://cloud.r-project.org/"))
+    
+    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
+    if (!require(reshape2, quietly = TRUE)) install.packages("reshape2", quietly = TRUE)
     library(ggplot2)
     library(reshape2)
     
@@ -415,6 +559,7 @@ async def correlation_heatmap(context, params):
     method <- args$method %||% "pearson"
     title <- args$title %||% paste("Correlation Heatmap (", method, ")")
     file_path <- args$file_path
+    return_image <- args$return_image %||% TRUE
     width <- args$width %||% 800
     height <- args$height %||% 800
     
@@ -448,22 +593,52 @@ async def correlation_heatmap(context, params):
          labs(title = title, x = "", y = "") +
          geom_text(aes(label = round(value, 2)), color = "black", size = 3)
     
-    # Save plot
-    ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+    # Save to file if path provided
+    if (!is.null(file_path)) {
+        ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+        plot_saved <- file.exists(file_path)
+    } else {
+        plot_saved <- FALSE
+    }
     
+    # Prepare result
     result <- list(
-        file_path = file_path,
         correlation_matrix = as.matrix(cor_matrix),
         variables = variables,
         method = method,
         title = title,
         n_variables = length(variables),
-        plot_saved = file.exists(file_path)
+        plot_saved = plot_saved
     )
+    
+    # Add file path if provided
+    if (!is.null(file_path)) {
+        result$file_path <- file_path
+    }
+    
+    # Generate base64 image if requested
+    if (return_image) {
+        image_data <- safe_encode_plot(p, width, height)
+        if (!is.null(image_data)) {
+            result$image_data <- image_data
+        }
+    }
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        # Use the new image-enabled function
+        return_image = params.get("return_image", True)
+        width = params.get("width", 800)
+        height = params.get("height", 800)
+        
+        result = execute_r_script_with_image(
+            r_script, 
+            params, 
+            include_image=return_image,
+            image_width=width,
+            image_height=height
+        )
+        
         await context.info("Correlation heatmap created successfully")
         return result
 
@@ -480,12 +655,13 @@ async def correlation_heatmap(context, params):
             "data": table_schema(),
             "formula": formula_schema(),
             "title": {"type": "string"},
-            "file_path": {"type": "string"},
+            "file_path": {"type": "string", "description": "Optional: Save plot to this file"},
+            "return_image": {"type": "boolean", "default": True, "description": "Return image data for inline display"},
             "residual_plots": {"type": "boolean", "default": True},
             "width": {"type": "integer", "minimum": 100, "default": 1200},
             "height": {"type": "integer", "minimum": 100, "default": 800},
         },
-        "required": ["data", "formula", "file_path"],
+        "required": ["data", "formula"],
     },
     description="Create regression diagnostic plots (fitted vs residuals, Q-Q plot, etc.)",
 )
@@ -495,8 +671,11 @@ async def regression_plot(context, params):
     await context.info("Creating regression plots")
 
     r_script = """
-    if (!require(ggplot2)) install.packages("ggplot2", quietly = TRUE)
-    if (!require(gridExtra)) install.packages("gridExtra", quietly = TRUE)
+    # Set CRAN mirror
+    options(repos = c(CRAN = "https://cloud.r-project.org/"))
+    
+    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
+    if (!require(gridExtra, quietly = TRUE)) install.packages("gridExtra", quietly = TRUE)
     library(ggplot2)
     library(gridExtra)
     
@@ -504,6 +683,7 @@ async def regression_plot(context, params):
     formula <- as.formula(args$formula)
     title <- args$title %||% "Regression Diagnostics"
     file_path <- args$file_path
+    return_image <- args$return_image %||% TRUE
     residual_plots <- args$residual_plots %||% TRUE
     width <- args$width %||% 1200
     height <- args$height %||% 800
@@ -550,8 +730,16 @@ async def regression_plot(context, params):
         combined_plot <- grid.arrange(p1, p2, p3, p4, ncol = 2, 
                                      top = textGrob(title, gp = gpar(fontsize = 16, font = 2)))
         
-        # Save combined plot
-        ggsave(file_path, plot = combined_plot, width = width/100, height = height/100, dpi = 100)
+        # Save to file if path provided
+        if (!is.null(file_path)) {
+            ggsave(file_path, plot = combined_plot, width = width/100, height = height/100, dpi = 100)
+            plot_saved <- file.exists(file_path)
+        } else {
+            plot_saved <- FALSE
+        }
+        
+        # For image encoding, use the combined plot
+        main_plot <- combined_plot
         
     } else {
         # Simple fitted vs actual plot
@@ -566,14 +754,23 @@ async def regression_plot(context, params):
              theme_minimal() +
              theme(plot.title = element_text(hjust = 0.5))
         
-        ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+        # Save to file if path provided
+        if (!is.null(file_path)) {
+            ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
+            plot_saved <- file.exists(file_path)
+        } else {
+            plot_saved <- FALSE
+        }
+        
+        # For image encoding, use the simple plot
+        main_plot <- p
     }
     
     # Model summary
     model_summary <- summary(model)
     
+    # Prepare result
     result <- list(
-        file_path = file_path,
         title = title,
         r_squared = model_summary$r.squared,
         adj_r_squared = model_summary$adj.r.squared,
@@ -581,12 +778,37 @@ async def regression_plot(context, params):
         formula = deparse(formula),
         residual_plots = residual_plots,
         n_obs = nobs(model),
-        plot_saved = file.exists(file_path)
+        plot_saved = plot_saved
     )
+    
+    # Add file path if provided
+    if (!is.null(file_path)) {
+        result$file_path <- file_path
+    }
+    
+    # Generate base64 image if requested
+    if (return_image) {
+        image_data <- safe_encode_plot(main_plot, width, height)
+        if (!is.null(image_data)) {
+            result$image_data <- image_data
+        }
+    }
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        # Use the new image-enabled function
+        return_image = params.get("return_image", True)
+        width = params.get("width", 1200)
+        height = params.get("height", 800)
+        
+        result = execute_r_script_with_image(
+            r_script, 
+            params, 
+            include_image=return_image,
+            image_width=width,
+            image_height=height
+        )
+        
         await context.info("Regression plots created successfully")
         return result
 

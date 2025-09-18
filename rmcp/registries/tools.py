@@ -117,15 +117,59 @@ class ToolsRegistry:
             # Execute tool handler
             result = await tool_def.handler(context, arguments)
 
+            # Handle None or empty results
+            if result is None:
+                result = {}
+            elif not isinstance(result, (dict, list, str, int, float, bool)):
+                result = {"error": "Tool returned invalid result type"}
+
             # Validate output schema if provided
             if tool_def.output_schema:
                 validate_schema(result, tool_def.output_schema, f"tool '{name}' output")
 
             await context.info(f"Tool completed: {name}")
 
-            return {
-                "content": [{"type": "text", "text": json.dumps(result, default=str)}]
-            }
+            # Handle multiple content types (text + optional image)
+            if isinstance(result, dict) and 'image_data' in result:
+                # Create content array with both text and image
+                content = []
+                
+                # Text content (exclude image-specific fields)
+                text_result = {k: v for k, v in result.items() 
+                              if k not in ['image_data', 'image_mime_type']}
+                
+                # Ensure we have valid text content
+                if not text_result:
+                    text_result = {"status": "completed"}
+                    
+                content.append({
+                    "type": "text", 
+                    "text": json.dumps(text_result, default=str)
+                })
+                
+                # Image content
+                image_data = result.get('image_data')
+                mime_type = result.get('image_mime_type', 'image/png')
+                
+                if image_data:
+                    content.append({
+                        "type": "image",
+                        "data": image_data,
+                        "mimeType": mime_type
+                    })
+                
+                return {"content": content}
+            else:
+                # Standard text-only response
+                # Ensure we always have valid JSON content
+                if isinstance(result, str) and result.strip() == "":
+                    result = {"status": "completed"}
+                elif not result and not isinstance(result, (list, dict)):
+                    result = {"status": "completed"}
+                
+                return {
+                    "content": [{"type": "text", "text": json.dumps(result, default=str)}]
+                }
 
         except SchemaError as e:
             await context.error(f"Schema validation failed for tool '{name}': {e}")

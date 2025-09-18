@@ -5,7 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.6] - 2025-09-17
+## [0.3.7] - 2024-12-17
+
+### Added
+- **📈 Visual Analytics**: All 6 visualization tools now display plots directly in Claude conversations
+- **🖼️ Inline Image Display**: Base64-encoded PNG images appear instantly without file management
+- **🎨 Professional Visualizations**: Publication-quality plots with ggplot2 styling
+- **⚙️ Configurable Image Settings**: Width, height, and quality parameters for all plots
+- **💾 Optional File Saving**: Backward-compatible file export with new `file_path` parameter
+
+### Enhanced
+- **🔥 Correlation Heatmaps**: Color-coded matrices with inline statistical analysis
+- **📈 Scatter Plots**: Trend lines and grouping with immediate visual feedback  
+- **📊 Histograms**: Distribution analysis with density overlays displayed inline
+- **📦 Box Plots**: Quartile analysis and outlier detection with visual confirmation
+- **⏱️ Time Series Plots**: Trend analysis with forecasting visualized instantly
+- **🔍 Regression Diagnostics**: 4-panel diagnostic plots for model validation
+
+### Fixed
+- **🛠️ Integration Test Failures**: Resolved JSON parsing errors in test suite
+- **📝 Empty Result Handling**: Tools now return valid responses for all scenarios
+- **🔗 URL Consistency**: Standardized GitHub repository URLs across all files
+- **📅 Metadata Accuracy**: Fixed citation dates and version consistency
+
+### Technical
+- **🎯 Multi-content MCP Responses**: Support for text + image content types
+- **🔐 Safe Image Encoding**: Robust base64 encoding with error fallbacks
+- **⚡ Enhanced Error Recovery**: Better handling of tool execution failures
+- **🧪 Defensive JSON Parsing**: Improved test reliability and error reporting
+- **📦 Simplified Packaging**: Removed redundant MANIFEST.in, using modern pyproject.toml-only approach
+
+## [0.3.6] - 2024-12-15
 
 ### Added
 - **PyPI Distribution**: Package now available via `pip install rmcp`
