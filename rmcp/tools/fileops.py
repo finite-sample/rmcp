@@ -586,7 +586,7 @@ async def read_json(context, params):
     }
     
     result <- list(
-        data = data,
+        data = as.list(data),  # Convert to column-wise format for schema compatibility
         file_info = list(
             file_path = file_path,
             rows = nrow(data),
