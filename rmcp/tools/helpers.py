@@ -852,7 +852,7 @@ async def load_example(context, params):
     }}
     
     result <- list(
-        data = data,
+        data = as.list(data),  # Convert to column-wise format for schema compatibility
         metadata = list(
             name = dataset_name,
             description = description,
