@@ -127,20 +127,13 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    strategy:
-      matrix:
-        python-version: [3.9, "3.10", "3.11"]
-    
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    
     # All R packages and Python dependencies are already installed in the Docker image
-    # Skip installation steps - this saves 3-5 minutes per job!
+    # Just install RMCP in development mode to make it importable
+    - name: Install RMCP in development mode
+      run: pip install -e .
     
     - name: Run all unit tests
       run: |
@@ -171,7 +164,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    # All dependencies pre-installed in Docker image - skip installation steps!
+    # All dependencies pre-installed in Docker image - just install RMCP in development mode
+    - name: Install RMCP in development mode
+      run: pip install -e .
     
     - name: Verify tool count
       run: |
