@@ -5,7 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/rmcp.svg)](https://pypi.org/project/rmcp/)
 [![Downloads](https://pepy.tech/badge/rmcp)](https://pepy.tech/project/rmcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/dynamic/toml?url=https://raw.githubusercontent.com/finite-sample/rmcp/main/pyproject.toml&query=$.tool.poetry.dependencies.python&label=Python)](https://www.python.org/downloads/)
 
 **Version 0.3.7** - A comprehensive Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
 
