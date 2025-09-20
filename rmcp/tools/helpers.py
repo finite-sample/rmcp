@@ -5,9 +5,9 @@ Intelligent error diagnosis, data validation, and recovery suggestions.
 """
 
 import re
-from typing import Any, Dict, List
+from typing import Any
 
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
@@ -37,7 +37,7 @@ from ..registries.tools import tool
     },
     description="Analyze errors and suggest fixes with actionable solutions",
 )
-async def suggest_fix(context, params):
+async def suggest_fix(context, params) -> dict[str, Any]:
     """Analyze error and provide actionable solutions."""
 
     error_message = params["error_message"]
@@ -164,7 +164,7 @@ async def suggest_fix(context, params):
     return result
 
 
-def _get_tool_specific_suggestions(tool_name: str, error_message: str) -> List[str]:
+def _get_tool_specific_suggestions(tool_name: str, error_message: str) -> list[str]:
     """Get suggestions specific to the tool that failed."""
 
     tool_suggestions = {
@@ -198,7 +198,7 @@ def _get_tool_specific_suggestions(tool_name: str, error_message: str) -> List[s
     return tool_suggestions.get(tool_name, [])
 
 
-def _get_next_steps(error_type: str, tool_name: str) -> List[str]:
+def _get_next_steps(error_type: str, tool_name: str) -> list[str]:
     """Get recommended next steps based on error type."""
 
     next_steps_map = {
@@ -239,7 +239,7 @@ def _get_next_steps(error_type: str, tool_name: str) -> List[str]:
     )
 
 
-def _get_documentation_links(tool_name: str, error_type: str) -> List[str]:
+def _get_documentation_links(tool_name: str, error_type: str) -> list[str]:
     """Get relevant documentation links."""
 
     base_docs = [
@@ -257,7 +257,7 @@ def _get_documentation_links(tool_name: str, error_type: str) -> List[str]:
     return base_docs
 
 
-def _get_quick_fixes(error_type: str) -> List[str]:
+def _get_quick_fixes(error_type: str) -> list[str]:
     """Get quick fix commands for common errors."""
 
     quick_fixes = {
@@ -282,7 +282,7 @@ def _get_quick_fixes(error_type: str) -> List[str]:
     return quick_fixes.get(error_type, [])
 
 
-async def _analyze_data_for_errors(context, data: Dict) -> Dict:
+async def _analyze_data_for_errors(context, data: dict) -> dict[str, Any]:
     """Analyze data to identify potential issues."""
 
     r_script = """
@@ -346,7 +346,7 @@ async def _analyze_data_for_errors(context, data: Dict) -> Dict:
     """
 
     try:
-        analysis = execute_r_script(r_script, {"data": data})
+        analysis = await execute_r_script_async(r_script, {"data": data})
         return analysis
     except Exception:
         return {"issues": [], "suggestions": []}
@@ -379,7 +379,7 @@ async def _analyze_data_for_errors(context, data: Dict) -> Dict:
     },
     description="Validate data quality and identify potential issues before analysis",
 )
-async def validate_data(context, params):
+async def validate_data(context, params) -> dict[str, Any]:
     """Validate data for analysis and identify potential issues."""
 
     data = params["data"]
@@ -580,7 +580,7 @@ async def validate_data(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, {"data": data})
+        result = await execute_r_script_async(r_script, {"data": data})
 
         # Add analysis-specific recommendations
         recommendations = _get_analysis_recommendations(analysis_type, result)
@@ -607,8 +607,8 @@ async def validate_data(context, params):
 
 
 def _get_analysis_recommendations(
-    analysis_type: str, validation_result: Dict
-) -> List[str]:
+    analysis_type: str, validation_result: dict
+) -> list[str]:
     """Get analysis-specific recommendations based on validation results."""
 
     recommendations = []
@@ -680,7 +680,7 @@ def _get_analysis_recommendations(
     },
     description="Load example datasets for testing and learning",
 )
-async def load_example(context, params):
+async def load_example(context, params) -> dict[str, Any]:
     """Load example datasets for analysis and testing."""
 
     dataset_name = params["dataset_name"]
@@ -907,7 +907,7 @@ async def load_example(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info(
             "Example dataset loaded successfully",
             rows=result["metadata"]["rows"],

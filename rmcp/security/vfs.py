@@ -58,6 +58,12 @@ class VFS:
             "text/tab-separated-values",
             "application/vnd.ms-excel",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            # Image types for visualization output
+            "image/png",
+            "image/jpeg",
+            "image/jpg",
+            "image/svg+xml",
+            "image/pdf",
         ]
 
         logger.info(

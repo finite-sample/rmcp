@@ -8,7 +8,7 @@ Provides utilities for:
 """
 
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import jsonschema
 from jsonschema import ValidationError as JsonSchemaValidationError
@@ -18,13 +18,13 @@ from jsonschema import validate
 class SchemaError(Exception):
     """Schema validation error with MCP error code."""
 
-    def __init__(self, message: str, field: Optional[str] = None):
+    def __init__(self, message: str, field: str | None = None):
         super().__init__(message)
         self.field = field
         self.code = -32602  # JSON-RPC invalid params error
 
 
-def validate_schema(data: Any, schema: Dict[str, Any], context: str = "") -> None:
+def validate_schema(data: Any, schema: dict[str, Any], context: str = "") -> None:
     """
     Validate data against JSON schema.
 
@@ -48,7 +48,7 @@ def validate_schema(data: Any, schema: Dict[str, Any], context: str = "") -> Non
 # Common schema patterns for statistical tools
 
 
-def table_schema(required_columns: Optional[List[str]] = None) -> Dict[str, Any]:
+def table_schema(required_columns: list[str] | None = None) -> dict[str, Any]:
     """Schema for tabular data (dict with column arrays)."""
     schema = {
         "type": "object",
@@ -70,7 +70,7 @@ def table_schema(required_columns: Optional[List[str]] = None) -> Dict[str, Any]
     return schema
 
 
-def formula_schema() -> Dict[str, Any]:
+def formula_schema() -> dict[str, Any]:
     """Schema for R formula strings."""
     return {
         "type": "string",
@@ -79,17 +79,17 @@ def formula_schema() -> Dict[str, Any]:
     }
 
 
-def numeric_array_schema(min_length: int = 1) -> Dict[str, Any]:
+def numeric_array_schema(min_length: int = 1) -> dict[str, Any]:
     """Schema for numeric arrays."""
     return {"type": "array", "items": {"type": "number"}, "minItems": min_length}
 
 
-def positive_number_schema() -> Dict[str, Any]:
+def positive_number_schema() -> dict[str, Any]:
     """Schema for positive numbers."""
     return {"type": "number", "minimum": 0, "exclusiveMinimum": True}
 
 
-def confidence_level_schema() -> Dict[str, Any]:
+def confidence_level_schema() -> dict[str, Any]:
     """Schema for confidence levels (0-1)."""
     return {
         "type": "number",
@@ -100,12 +100,12 @@ def confidence_level_schema() -> Dict[str, Any]:
     }
 
 
-def choice_schema(choices: List[str]) -> Dict[str, Any]:
+def choice_schema(choices: list[str]) -> dict[str, Any]:
     """Schema for enumerated choices."""
     return {"type": "string", "enum": choices}
 
 
-def image_content_schema() -> Dict[str, Any]:
+def image_content_schema() -> dict[str, Any]:
     """Schema for image content in MCP responses."""
     return {
         "type": "object",
@@ -122,7 +122,7 @@ def image_content_schema() -> Dict[str, Any]:
     }
 
 
-def text_content_schema() -> Dict[str, Any]:
+def text_content_schema() -> dict[str, Any]:
     """Schema for text content in MCP responses."""
     return {
         "type": "object",
@@ -134,7 +134,7 @@ def text_content_schema() -> Dict[str, Any]:
     }
 
 
-def mcp_content_schema() -> Dict[str, Any]:
+def mcp_content_schema() -> dict[str, Any]:
     """Schema for MCP content arrays (text and/or images)."""
     return {
         "type": "array",
@@ -146,7 +146,7 @@ def mcp_content_schema() -> Dict[str, Any]:
 # Tool result schemas
 
 
-def statistical_result_schema() -> Dict[str, Any]:
+def statistical_result_schema() -> dict[str, Any]:
     """Base schema for statistical analysis results."""
     return {
         "type": "object",
@@ -167,7 +167,7 @@ def statistical_result_schema() -> Dict[str, Any]:
     }
 
 
-def error_result_schema() -> Dict[str, Any]:
+def error_result_schema() -> dict[str, Any]:
     """Schema for error results."""
     return {
         "type": "object",

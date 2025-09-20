@@ -4,10 +4,10 @@ Time series analysis tools for RMCP.
 Comprehensive time series modeling and forecasting capabilities.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.schemas import table_schema
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
@@ -49,14 +49,13 @@ from ..registries.tools import tool
     },
     description="Fit ARIMA time series model with forecasting",
 )
-async def arima_model(context, params):
+async def arima_model(context, params) -> dict[str, Any]:
     """Fit ARIMA model and generate forecasts."""
 
     await context.info("Fitting ARIMA time series model")
 
     r_script = """
     # Install required packages
-    if (!require(forecast)) install.packages("forecast", quietly = TRUE)
     library(forecast)
     
     # Prepare data
@@ -106,7 +105,7 @@ async def arima_model(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info(
             "ARIMA model fitted successfully",
             aic=result.get("aic"),
@@ -143,12 +142,13 @@ async def arima_model(context, params):
     },
     description="Decompose time series into trend, seasonal, and remainder components",
 )
-async def decompose_timeseries(context, params):
+async def decompose_timeseries(context, params) -> dict[str, Any]:
     """Decompose time series into components."""
 
     await context.info("Decomposing time series")
 
     r_script = """
+    
     values <- args$data$values
     frequency <- args$frequency %||% 12
     decomp_type <- args$type %||% "additive"
@@ -175,7 +175,7 @@ async def decompose_timeseries(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Time series decomposed successfully")
         return result
 
@@ -202,13 +202,12 @@ async def decompose_timeseries(context, params):
     },
     description="Test time series for stationarity (ADF, KPSS, Phillips-Perron)",
 )
-async def stationarity_test(context, params):
+async def stationarity_test(context, params) -> dict[str, Any]:
     """Test time series stationarity."""
 
     await context.info("Testing time series stationarity")
 
     r_script = """
-    if (!require(tseries)) install.packages("tseries", quietly = TRUE)
     library(tseries)
     
     values <- args$data$values
@@ -240,7 +239,7 @@ async def stationarity_test(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info(
             "Stationarity test completed",
             test=result.get("test_name"),

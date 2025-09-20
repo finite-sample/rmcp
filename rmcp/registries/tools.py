@@ -15,7 +15,7 @@ import json
 import logging
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
+from typing import Any, Awaitable, Callable
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, statistical_result_schema, validate_schema
@@ -28,29 +28,29 @@ class ToolDefinition:
     """Tool metadata and handler."""
 
     name: str
-    handler: Callable[[Context, Dict[str, Any]], Awaitable[Dict[str, Any]]]
-    input_schema: Dict[str, Any]
-    output_schema: Optional[Dict[str, Any]] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    annotations: Optional[Dict[str, Any]] = None
+    handler: Callable[[Context, dict[str, Any]], Awaitable[dict[str, Any]]]
+    input_schema: dict[str, Any]
+    output_schema: dict[str, Any] | None = None
+    title: str | None = None
+    description: str | None = None
+    annotations: dict[str, Any] | None = None
 
 
 class ToolsRegistry:
     """Registry for MCP tools with schema validation."""
 
     def __init__(self):
-        self._tools: Dict[str, ToolDefinition] = {}
+        self._tools: dict[str, ToolDefinition] = {}
 
     def register(
         self,
         name: str,
-        handler: Callable[[Context, Dict[str, Any]], Awaitable[Dict[str, Any]]],
-        input_schema: Dict[str, Any],
-        output_schema: Optional[Dict[str, Any]] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        annotations: Optional[Dict[str, Any]] = None,
+        handler: Callable[[Context, dict[str, Any]], Awaitable[dict[str, Any]]],
+        input_schema: dict[str, Any],
+        output_schema: dict[str, Any] | None = None,
+        title: str | None = None,
+        description: str | None = None,
+        annotations: dict[str, Any] | None = None,
     ) -> None:
         """Register a tool with the registry."""
 
@@ -69,7 +69,7 @@ class ToolsRegistry:
 
         logger.debug(f"Registered tool: {name}")
 
-    async def list_tools(self, context: Context) -> Dict[str, Any]:
+    async def list_tools(self, context: Context) -> dict[str, Any]:
         """List available tools for MCP tools/list."""
 
         tools = []
@@ -94,8 +94,8 @@ class ToolsRegistry:
         return {"tools": tools}
 
     async def call_tool(
-        self, context: Context, name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, context: Context, name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any]:
         """Call a tool with validation."""
 
         if name not in self._tools:
@@ -190,11 +190,11 @@ class ToolsRegistry:
 
 def tool(
     name: str,
-    input_schema: Dict[str, Any],
-    output_schema: Optional[Dict[str, Any]] = None,
-    title: Optional[str] = None,
-    description: Optional[str] = None,
-    annotations: Optional[Dict[str, Any]] = None,
+    input_schema: dict[str, Any],
+    output_schema: dict[str, Any] | None = None,
+    title: str | None = None,
+    description: str | None = None,
+    annotations: dict[str, Any] | None = None,
 ):
     """
     Decorator to register a function as an MCP tool.
@@ -212,12 +212,12 @@ def tool(
             },
             description="Analyze dataset with specified method"
         )
-        async def analyze_data(context: Context, params: Dict[str, Any]) -> Dict[str, Any]:
+        async def analyze_data(context: Context, params: dict[str, Any]) -> dict[str, Any]:
             # Tool implementation
             return {"result": "analysis complete"}
     """
 
-    def decorator(func: Callable[[Context, Dict[str, Any]], Awaitable[Dict[str, Any]]]):
+    def decorator(func: Callable[[Context, dict[str, Any]], Awaitable[dict[str, Any]]]):
 
         # Ensure function is async
         if not inspect.iscoroutinefunction(func):

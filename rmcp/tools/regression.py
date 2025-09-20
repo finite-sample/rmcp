@@ -20,10 +20,10 @@ Example Usage:
     >>> print(f"R-squared: {result['r_squared']}")
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.schemas import formula_schema, table_schema
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
@@ -44,7 +44,7 @@ from ..registries.tools import tool
     },
     description="Fit linear regression model with comprehensive diagnostics",
 )
-async def linear_model(context, params):
+async def linear_model(context, params) -> dict[str, Any]:
     """
     Fit ordinary least squares (OLS) linear regression model.
 
@@ -142,7 +142,7 @@ async def linear_model(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info(
             "Linear model fitted successfully",
             r_squared=result.get("r_squared"),
@@ -187,7 +187,7 @@ async def linear_model(context, params):
     },
     description="Comprehensive correlation analysis with significance tests",
 )
-async def correlation_analysis(context, params):
+async def correlation_analysis(context, params) -> dict[str, Any]:
     """
     Compute correlation matrix with significance testing.
 
@@ -270,8 +270,11 @@ async def correlation_analysis(context, params):
             var1 <- names(numeric_data)[i]
             var2 <- names(numeric_data)[j]
             
-            test_result <- cor.test(numeric_data[,i], numeric_data[,j], 
-                                  method = method, use = use)
+            # Filter complete cases for cor.test (cor.test doesn't accept 'use' parameter)
+            x <- numeric_data[,i]
+            y <- numeric_data[,j]
+            complete_cases <- !is.na(x) & !is.na(y)
+            test_result <- cor.test(x[complete_cases], y[complete_cases], method = method)
             
             cor_test_results[[paste(var1, var2, sep = "_")]] <- list(
                 correlation = test_result$estimate,
@@ -292,7 +295,7 @@ async def correlation_analysis(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info(
             "Correlation analysis completed",
             n_variables=len(result.get("variables", [])),
@@ -327,7 +330,7 @@ async def correlation_analysis(context, params):
     },
     description="Fit generalized linear model (logistic regression)",
 )
-async def logistic_regression(context, params):
+async def logistic_regression(context, params) -> dict[str, Any]:
     """Fit logistic regression model."""
 
     await context.info("Fitting logistic regression model")
@@ -403,7 +406,7 @@ async def logistic_regression(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info(
             "Logistic regression fitted successfully",
             aic=result.get("aic"),

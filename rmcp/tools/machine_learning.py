@@ -4,10 +4,10 @@ Machine learning tools for RMCP.
 Clustering, classification trees, and ML capabilities.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.schemas import formula_schema, table_schema
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
@@ -26,12 +26,13 @@ from ..registries.tools import tool
     },
     description="K-means clustering analysis with cluster validation",
 )
-async def kmeans_clustering(context, params):
+async def kmeans_clustering(context, params) -> dict[str, Any]:
     """Perform K-means clustering."""
 
     await context.info("Performing K-means clustering")
 
     r_script = """
+    
     data <- as.data.frame(args$data)
     variables <- args$variables
     k <- args$k
@@ -62,13 +63,10 @@ async def kmeans_clustering(context, params):
     # Cluster sizes
     cluster_sizes <- table(cluster_assignments)
     
-    # Silhouette analysis (if package available)
-    silhouette_score <- NA
-    if (require(cluster, quietly = TRUE)) {
-        library(cluster)
-        sil <- silhouette(cluster_assignments, dist(scaled_data))
-        silhouette_score <- mean(sil[, 3])
-    }
+    # Silhouette analysis 
+    library(cluster)
+    sil <- silhouette(cluster_assignments, dist(scaled_data))
+    silhouette_score <- mean(sil[, 3])
     
     result <- list(
         cluster_assignments = cluster_assignments,
@@ -88,7 +86,7 @@ async def kmeans_clustering(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("K-means clustering completed successfully")
         return result
 
@@ -116,13 +114,12 @@ async def kmeans_clustering(context, params):
     },
     description="Decision tree classification and regression",
 )
-async def decision_tree(context, params):
+async def decision_tree(context, params) -> dict[str, Any]:
     """Build decision tree model."""
 
     await context.info("Building decision tree")
 
     r_script = """
-    if (!require(rpart)) install.packages("rpart", quietly = TRUE)
     library(rpart)
     
     data <- as.data.frame(args$data)
@@ -188,7 +185,7 @@ async def decision_tree(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Decision tree built successfully")
         return result
 
@@ -217,13 +214,12 @@ async def decision_tree(context, params):
     },
     description="Random Forest ensemble model for classification and regression",
 )
-async def random_forest(context, params):
+async def random_forest(context, params) -> dict[str, Any]:
     """Build Random Forest model."""
 
     await context.info("Building Random Forest model")
 
     r_script = """
-    if (!require(randomForest)) install.packages("randomForest", quietly = TRUE)
     library(randomForest)
     
     data <- as.data.frame(args$data)
@@ -300,7 +296,7 @@ async def random_forest(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Random Forest model built successfully")
         return result
 

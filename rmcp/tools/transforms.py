@@ -4,10 +4,10 @@ Data transformation tools for RMCP.
 Essential data manipulation and cleaning capabilities.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.schemas import table_schema
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
@@ -25,12 +25,13 @@ from ..registries.tools import tool
     },
     description="Create lagged and lead variables for time series analysis",
 )
-async def lag_lead(context, params):
+async def lag_lead(context, params) -> dict[str, Any]:
     """Create lagged and lead variables."""
 
     await context.info("Creating lag/lead variables")
 
     r_script = """
+    
     data <- as.data.frame(args$data)
     variables <- args$variables
     lags <- args$lags %||% c(1)
@@ -63,7 +64,7 @@ async def lag_lead(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Lag/lead variables created successfully")
         return result
 
@@ -91,12 +92,13 @@ async def lag_lead(context, params):
     },
     description="Winsorize variables to handle outliers",
 )
-async def winsorize(context, params):
+async def winsorize(context, params) -> dict[str, Any]:
     """Winsorize variables to handle outliers."""
 
     await context.info("Winsorizing variables")
 
     r_script = """
+    
     data <- as.data.frame(args$data)
     variables <- args$variables
     percentiles <- args$percentiles %||% c(0.01, 0.99)
@@ -138,7 +140,7 @@ async def winsorize(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Variables winsorized successfully")
         return result
 
@@ -161,12 +163,13 @@ async def winsorize(context, params):
     },
     description="Compute differences of variables (for stationarity)",
 )
-async def difference(context, params):
+async def difference(context, params) -> dict[str, Any]:
     """Compute differences of variables."""
 
     await context.info("Computing variable differences")
 
     r_script = """
+    
     data <- as.data.frame(args$data)
     variables <- args$variables
     diff_order <- args$order %||% 1
@@ -214,7 +217,7 @@ async def difference(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Variable differences computed successfully")
         return result
 
@@ -240,12 +243,13 @@ async def difference(context, params):
     },
     description="Standardize variables using z-score, min-max, or robust scaling",
 )
-async def standardize(context, params):
+async def standardize(context, params) -> dict[str, Any]:
     """Standardize variables."""
 
     await context.info("Standardizing variables")
 
     r_script = """
+    
     data <- as.data.frame(args$data)
     variables <- args$variables
     method <- args$method %||% "z_score"
@@ -289,7 +293,7 @@ async def standardize(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Variables standardized successfully")
         return result
 

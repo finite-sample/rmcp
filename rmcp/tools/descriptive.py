@@ -4,10 +4,10 @@ Descriptive statistics tools for RMCP.
 Comprehensive data exploration and summary capabilities.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.schemas import table_schema
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
@@ -29,13 +29,12 @@ from ..registries.tools import tool
     },
     description="Comprehensive descriptive statistics with optional grouping",
 )
-async def summary_stats(context, params):
+async def summary_stats(context, params) -> dict[str, Any]:
     """Compute comprehensive descriptive statistics."""
 
     await context.info("Computing summary statistics")
 
     r_script = """
-    if (!require(dplyr)) install.packages("dplyr", quietly = TRUE)
     library(dplyr)
     
     data <- as.data.frame(args$data)
@@ -125,7 +124,7 @@ async def summary_stats(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Summary statistics computed successfully")
         return result
 
@@ -152,12 +151,13 @@ async def summary_stats(context, params):
     },
     description="Detect outliers using IQR, Z-score, or Modified Z-score methods",
 )
-async def outlier_detection(context, params):
+async def outlier_detection(context, params) -> dict[str, Any]:
     """Detect outliers in data."""
 
     await context.info("Detecting outliers")
 
     r_script = """
+    
     data <- as.data.frame(args$data)
     variable <- args$variable
     method <- args$method %||% "iqr"
@@ -206,7 +206,7 @@ async def outlier_detection(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Outlier detection completed successfully")
         return result
 
@@ -233,12 +233,13 @@ async def outlier_detection(context, params):
     },
     description="Generate frequency tables with counts and percentages",
 )
-async def frequency_table(context, params):
+async def frequency_table(context, params) -> dict[str, Any]:
     """Generate frequency tables."""
 
     await context.info("Creating frequency tables")
 
     r_script = """
+    
     data <- as.data.frame(args$data)
     variables <- args$variables
     include_percentages <- args$include_percentages %||% TRUE
@@ -283,7 +284,7 @@ async def frequency_table(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Frequency tables created successfully")
         return result
 

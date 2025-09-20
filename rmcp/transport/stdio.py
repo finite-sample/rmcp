@@ -13,7 +13,7 @@ Following mature MCP patterns: "stdio servers never print to stdout."
 import asyncio
 import logging
 import sys
-from typing import Any, AsyncIterator, Dict
+from typing import Any, AsyncIterator
 
 from ..transport.base import Transport
 from ..transport.jsonrpc import JSONRPCEnvelope, JSONRPCError, JSONRPCMessage
@@ -73,7 +73,7 @@ class StdioTransport(Transport):
         self._shutdown_event.set()
         logger.info("Stdio transport shutdown complete")
 
-    async def receive_messages(self) -> AsyncIterator[Dict[str, Any]]:
+    async def receive_messages(self) -> AsyncIterator[dict[str, Any]]:
         """
         Read JSON-RPC messages from stdin.
 
@@ -149,7 +149,7 @@ class StdioTransport(Transport):
         finally:
             logger.info("Stopped reading messages")
 
-    async def send_message(self, message: Dict[str, Any]) -> None:
+    async def send_message(self, message: dict[str, Any]) -> None:
         """
         Send JSON-RPC message to stdout.
 

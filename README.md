@@ -95,7 +95,7 @@ That's it! RMCP is now ready to handle statistical analysis requests via the Mod
 
 ### Production Ready
 - **MCP Protocol**: Full JSON-RPC 2.0 compliance
-- **Transport Agnostic**: stdio, HTTP, WebSocket support
+- **Transport Agnostic**: stdio transport (HTTP and WebSocket coming soon)
 - **Error Handling**: Comprehensive error reporting and validation
 - **Security**: Safe R execution with controlled environment
 
@@ -478,7 +478,7 @@ RMCP is built with production best practices:
 
 - **Clean Architecture**: Modular design with clear separation of concerns
 - **MCP Compliance**: Full Model Context Protocol specification support
-- **Transport Layer**: Pluggable transports (stdio, HTTP, WebSocket)
+- **Transport Layer**: stdio transport (HTTP and WebSocket planned)
 - **R Integration**: Safe subprocess execution with JSON serialization
 - **Error Handling**: Comprehensive error reporting and recovery
 - **Security**: Controlled R execution environment

@@ -5,10 +5,10 @@ Natural language to R formula conversion and validation.
 """
 
 import re
-from typing import Any, Dict, List
+from typing import Any, List
 
 from ..core.schemas import table_schema
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
@@ -42,7 +42,7 @@ from ..registries.tools import tool
     },
     description="Convert natural language descriptions to R formulas",
 )
-async def build_formula(context, params):
+async def build_formula(context, params) -> dict[str, Any]:
     """Convert natural language to R formula."""
 
     description = params["description"].lower()
@@ -182,7 +182,7 @@ def _generate_formula_alternatives(base_formula: str, analysis_type: str) -> Lis
     return list(set(alternatives))  # Remove duplicates
 
 
-async def _validate_formula(context, formula: str, data: Dict) -> Dict:
+async def _validate_formula(context, formula: str, data: dict) -> dict[str, Any]:
     """Validate formula against provided data."""
 
     r_script = f"""
@@ -241,7 +241,7 @@ async def _validate_formula(context, formula: str, data: Dict) -> Dict:
     """
 
     try:
-        validation = execute_r_script(r_script, {"data": data})
+        validation = await execute_r_script_async(r_script, {"data": data})
         return validation
     except Exception as e:
         return {"is_valid": False, "error": str(e), "formula_parsed": False}
@@ -315,7 +315,7 @@ def _get_improvement_suggestions(description: str, formula: str) -> List[str]:
     return suggestions
 
 
-def _get_formula_examples(analysis_type: str) -> List[Dict[str, str]]:
+def _get_formula_examples(analysis_type: str) -> List[dict[str, str]]:
     """Get example formulas for different analysis types."""
     examples = {
         "regression": [
@@ -423,7 +423,7 @@ def _get_formula_examples(analysis_type: str) -> List[Dict[str, str]]:
     },
     description="Validate R formula syntax and check against data",
 )
-async def validate_formula(context, params):
+async def validate_formula(context, params) -> dict[str, Any]:
     """Validate R formula against data."""
 
     formula = params["formula"]

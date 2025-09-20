@@ -4,10 +4,10 @@ Econometric analysis tools for RMCP.
 Advanced econometric modeling for panel data, instrumental variables, etc.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.schemas import formula_schema, table_schema
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
@@ -31,13 +31,12 @@ from ..registries.tools import tool
     },
     description="Panel data regression with fixed/random effects",
 )
-async def panel_regression(context, params):
+async def panel_regression(context, params) -> dict[str, Any]:
     """Perform panel data regression."""
 
     await context.info("Fitting panel data regression")
 
     r_script = """
-    if (!require(plm)) install.packages("plm", quietly = TRUE)
     library(plm)
     
     data <- as.data.frame(args$data)
@@ -63,7 +62,6 @@ async def panel_regression(context, params):
     
     # Get robust standard errors if requested
     if (robust) {
-        if (!require(lmtest)) install.packages("lmtest", quietly = TRUE)
         library(lmtest)
         robust_se <- coeftest(model, vcov = vcovHC(model, type = "HC1"))
         coef_table <- robust_se
@@ -90,7 +88,7 @@ async def panel_regression(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Panel regression completed successfully")
         return result
 
@@ -115,13 +113,12 @@ async def panel_regression(context, params):
     },
     description="Two-stage least squares (2SLS) instrumental variables regression",
 )
-async def instrumental_variables(context, params):
+async def instrumental_variables(context, params) -> dict[str, Any]:
     """Perform instrumental variables regression."""
 
     await context.info("Fitting instrumental variables model")
 
     r_script = """
-    if (!require(AER)) install.packages("AER", quietly = TRUE)
     library(AER)
     
     data <- as.data.frame(args$data)
@@ -171,7 +168,7 @@ async def instrumental_variables(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Instrumental variables model fitted successfully")
         return result
 
@@ -198,13 +195,12 @@ async def instrumental_variables(context, params):
     },
     description="Vector Autoregression (VAR) model for multivariate time series",
 )
-async def var_model(context, params):
+async def var_model(context, params) -> dict[str, Any]:
     """Fit Vector Autoregression model."""
 
     await context.info("Fitting VAR model")
 
     r_script = """
-    if (!require(vars)) install.packages("vars", quietly = TRUE)
     library(vars)
     
     data <- as.data.frame(args$data)
@@ -253,7 +249,7 @@ async def var_model(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("VAR model fitted successfully")
         return result
 

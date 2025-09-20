@@ -51,6 +51,9 @@ class LifespanState:
 
     # Resources
     resource_mounts: Dict[str, Path] = field(default_factory=dict)
+    
+    # Virtual File System (for security isolation)
+    vfs: Optional[Any] = None
 
 
 @dataclass

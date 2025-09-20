@@ -4,10 +4,10 @@ Visualization tools for RMCP.
 Statistical plotting and data visualization capabilities.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.schemas import formula_schema, table_schema
-from ..r_integration import execute_r_script, execute_r_script_with_image
+from ..r_integration import execute_r_script_with_image_async
 from ..registries.tools import tool
 
 
@@ -37,7 +37,7 @@ from ..registries.tools import tool
     },
     description="Create scatter plot with optional grouping and trend lines",
 )
-async def scatter_plot(context, params):
+async def scatter_plot(context, params) -> dict[str, Any]:
     """Create scatter plot."""
 
     await context.info("Creating scatter plot")
@@ -46,7 +46,6 @@ async def scatter_plot(context, params):
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
     
-    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
     data <- as.data.frame(args$data)
@@ -116,7 +115,7 @@ async def scatter_plot(context, params):
         width = params.get("width", 800)
         height = params.get("height", 600)
 
-        result = execute_r_script_with_image(
+        result = await execute_r_script_with_image_async(
             r_script,
             params,
             include_image=return_image,
@@ -158,7 +157,7 @@ async def scatter_plot(context, params):
     },
     description="Create histogram with optional grouping and density overlay",
 )
-async def histogram(context, params):
+async def histogram(context, params) -> dict[str, Any]:
     """Create histogram."""
 
     await context.info("Creating histogram")
@@ -167,7 +166,6 @@ async def histogram(context, params):
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
     
-    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
     data <- as.data.frame(args$data)
@@ -244,7 +242,7 @@ async def histogram(context, params):
         width = params.get("width", 800)
         height = params.get("height", 600)
 
-        result = execute_r_script_with_image(
+        result = await execute_r_script_with_image_async(
             r_script,
             params,
             include_image=return_image,
@@ -285,7 +283,7 @@ async def histogram(context, params):
     },
     description="Create box plot with optional grouping",
 )
-async def boxplot(context, params):
+async def boxplot(context, params) -> dict[str, Any]:
     """Create box plot."""
 
     await context.info("Creating box plot")
@@ -294,7 +292,6 @@ async def boxplot(context, params):
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
     
-    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
     data <- as.data.frame(args$data)
@@ -387,7 +384,7 @@ async def boxplot(context, params):
         width = params.get("width", 800)
         height = params.get("height", 600)
 
-        result = execute_r_script_with_image(
+        result = await execute_r_script_with_image_async(
             r_script,
             params,
             include_image=return_image,
@@ -434,7 +431,7 @@ async def boxplot(context, params):
     },
     description="Create time series plot with optional trend line",
 )
-async def time_series_plot(context, params):
+async def time_series_plot(context, params) -> dict[str, Any]:
     """Create time series plot."""
 
     await context.info("Creating time series plot")
@@ -443,7 +440,6 @@ async def time_series_plot(context, params):
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
     
-    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
     library(ggplot2)
     
     values <- args$data$values
@@ -530,7 +526,7 @@ async def time_series_plot(context, params):
         width = params.get("width", 1000)
         height = params.get("height", 600)
 
-        result = execute_r_script_with_image(
+        result = await execute_r_script_with_image_async(
             r_script,
             params,
             include_image=return_image,
@@ -575,7 +571,7 @@ async def time_series_plot(context, params):
     },
     description="Create correlation heatmap matrix",
 )
-async def correlation_heatmap(context, params):
+async def correlation_heatmap(context, params) -> dict[str, Any]:
     """Create correlation heatmap."""
 
     await context.info("Creating correlation heatmap")
@@ -584,8 +580,6 @@ async def correlation_heatmap(context, params):
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
     
-    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
-    if (!require(reshape2, quietly = TRUE)) install.packages("reshape2", quietly = TRUE)
     library(ggplot2)
     library(reshape2)
     
@@ -666,7 +660,7 @@ async def correlation_heatmap(context, params):
         width = params.get("width", 800)
         height = params.get("height", 800)
 
-        result = execute_r_script_with_image(
+        result = await execute_r_script_with_image_async(
             r_script,
             params,
             include_image=return_image,
@@ -707,7 +701,7 @@ async def correlation_heatmap(context, params):
     },
     description="Create regression diagnostic plots (fitted vs residuals, Q-Q plot, etc.)",
 )
-async def regression_plot(context, params):
+async def regression_plot(context, params) -> dict[str, Any]:
     """Create regression diagnostic plots."""
 
     await context.info("Creating regression plots")
@@ -716,8 +710,6 @@ async def regression_plot(context, params):
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
     
-    if (!require(ggplot2, quietly = TRUE)) install.packages("ggplot2", quietly = TRUE)
-    if (!require(gridExtra, quietly = TRUE)) install.packages("gridExtra", quietly = TRUE)
     library(ggplot2)
     library(gridExtra)
     
@@ -843,7 +835,7 @@ async def regression_plot(context, params):
         width = params.get("width", 1200)
         height = params.get("height", 800)
 
-        result = execute_r_script_with_image(
+        result = await execute_r_script_with_image_async(
             r_script,
             params,
             include_image=return_image,

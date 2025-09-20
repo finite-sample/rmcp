@@ -4,10 +4,10 @@ File operations tools for RMCP.
 Data import, export, and file manipulation capabilities.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.schemas import table_schema
-from ..r_integration import execute_r_script
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
@@ -31,12 +31,13 @@ from ..registries.tools import tool
     },
     description="Read CSV files with flexible parsing options",
 )
-async def read_csv(context, params):
+async def read_csv(context, params) -> dict[str, Any]:
     """Read CSV file and return data."""
 
     await context.info("Reading CSV file", file_path=params.get("file_path"))
 
     r_script = """
+    
     file_path <- args$file_path
     header <- args$header %||% TRUE
     sep <- args$sep %||% ","
@@ -118,7 +119,7 @@ async def read_csv(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info(
             "CSV file read successfully",
             rows=result["file_info"]["n_rows"],
@@ -146,7 +147,7 @@ async def read_csv(context, params):
     },
     description="Write data to CSV file with formatting options",
 )
-async def write_csv(context, params):
+async def write_csv(context, params) -> dict[str, Any]:
     """Write data to CSV file."""
 
     await context.info("Writing CSV file", file_path=params.get("file_path"))
@@ -179,7 +180,7 @@ async def write_csv(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("CSV file written successfully")
         return result
 
@@ -206,7 +207,7 @@ async def write_csv(context, params):
     },
     description="Get comprehensive information about a dataset",
 )
-async def data_info(context, params):
+async def data_info(context, params) -> dict[str, Any]:
     """Get comprehensive dataset information."""
 
     await context.info("Analyzing dataset structure")
@@ -264,7 +265,7 @@ async def data_info(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Dataset analysis completed successfully")
         return result
 
@@ -300,13 +301,12 @@ async def data_info(context, params):
     },
     description="Filter data based on multiple conditions",
 )
-async def filter_data(context, params):
+async def filter_data(context, params) -> dict[str, Any]:
     """Filter data based on conditions."""
 
     await context.info("Filtering data")
 
     r_script = """
-    if (!require(dplyr)) install.packages("dplyr", quietly = TRUE)
     library(dplyr)
     
     data <- as.data.frame(args$data)
@@ -355,7 +355,7 @@ async def filter_data(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Data filtered successfully")
         return result
 
@@ -391,7 +391,7 @@ async def filter_data(context, params):
     },
     description="Read Excel files (.xlsx, .xls) with flexible sheet and range selection",
 )
-async def read_excel(context, params):
+async def read_excel(context, params) -> dict[str, Any]:
     """Read Excel file and return data."""
 
     await context.info("Reading Excel file", file_path=params.get("file_path"))
@@ -489,7 +489,7 @@ async def read_excel(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info(
             "Excel file read successfully",
             rows=result["file_info"]["rows"],
@@ -529,7 +529,7 @@ async def read_excel(context, params):
     },
     description="Read JSON files and convert to tabular format",
 )
-async def read_json(context, params):
+async def read_json(context, params) -> dict[str, Any]:
     """Read JSON file and return data."""
 
     await context.info("Reading JSON file", file_path=params.get("file_path"))
@@ -607,7 +607,7 @@ async def read_json(context, params):
     """
 
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info(
             "JSON file read successfully",
             rows=result["file_info"]["rows"],

@@ -1,37 +1,46 @@
-# Use lightweight Python base with R
+# CI/CD optimized Docker image for RMCP
+# Pre-installs all R packages and Python dependencies for faster CI runs
 FROM python:3.11-slim
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install minimal R and only essential system dependencies
+# Install R and required system dependencies
 RUN apt-get update && apt-get install -y \
     r-base \
     libcurl4-openssl-dev \
     libssl-dev \
+    libxml2-dev \
+    git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install essential R packages to avoid CI/CD timeouts
-RUN R -e "install.packages(c('jsonlite', 'dplyr', 'tseries'), repos='https://cloud.r-project.org/', quiet=TRUE)"
+# Install all required R packages for RMCP (22 packages)
+# This is the time-consuming step that we want to cache
+RUN R -e "install.packages(c(\
+    'jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', \
+    'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', \
+    'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', \
+    'rlang', 'readxl', 'base64enc', 'reshape2'\
+    ), repos='https://cran.rstudio.com/', quiet=TRUE)"
 
-# Set the working directory
-WORKDIR /app
+# Install Python dependencies needed for CI
+RUN pip install --no-cache-dir \
+    black==25.1.0 \
+    isort==6.0.1 \
+    flake8==6.0.0 \
+    pytest==8.0.0 \
+    pytest-asyncio==0.21.0 \
+    click>=8.1.0 \
+    jsonschema>=4.0.0
 
-# Copy the project files to the container.
-# (Assumes your package files and pyproject.toml are in the repository root)
-COPY pyproject.toml .
-COPY requirements.txt .
-COPY src/rmcp ./src/rmcp
+# Set working directory for CI
+WORKDIR /workspace
 
-# Upgrade pip, install Python dependencies from requirements.txt, 
-# and then install your package using pyproject.toml configuration.
-# We add --break-system-packages to avoid PEP 668 issues.
-RUN pip3 install --upgrade pip --break-system-packages && \
-    pip3 install --no-cache-dir -r requirements.txt --break-system-packages && \
-    pip3 install --no-cache-dir . --break-system-packages
-
-# Ensure stdout is unbuffered.
+# Ensure stdout is unbuffered for CI logs
 ENV PYTHONUNBUFFERED=1
 
-# Run the server using the CLI entry point defined in your pyproject.toml
-CMD ["rmcp", "start"]
+# Set Python path to workspace for package installation
+ENV PYTHONPATH=/workspace
+
+# Default command for CI (will be overridden in workflows)
+CMD ["bash"]

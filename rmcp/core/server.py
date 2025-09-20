@@ -14,8 +14,9 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable
 
+# Import version from __init__ at runtime to avoid circular imports
 from ..registries.prompts import PromptsRegistry
 from ..registries.resources import ResourcesRegistry
 from ..registries.tools import ToolsRegistry
@@ -54,7 +55,7 @@ class MCPServer:
     def __init__(
         self,
         name: str = "RMCP MCP Server",
-        version: str = "0.3.3",
+        version: str = None,
         description: str = "R-based statistical analysis MCP server",
     ):
         """
@@ -65,6 +66,11 @@ class MCPServer:
             version: Semantic version string
             description: Brief description of server capabilities
         """
+        # Get version dynamically to avoid circular imports
+        if version is None:
+            from .. import __version__
+            version = __version__
+            
         self.name = name
         self.version = version
         self.description = description
@@ -78,19 +84,19 @@ class MCPServer:
         self.prompts = PromptsRegistry()
 
         # Security
-        self.vfs: Optional[VFS] = None
+        self.vfs: VFS | None = None
 
         # Callbacks
-        self._startup_callbacks: List[Callable[[], Awaitable[None]]] = []
-        self._shutdown_callbacks: List[Callable[[], Awaitable[None]]] = []
+        self._startup_callbacks: list[Callable[[], Awaitable[None]]] = []
+        self._shutdown_callbacks: list[Callable[[], Awaitable[None]]] = []
 
         # Request tracking for cancellation
-        self._active_requests: Dict[str, RequestState] = {}
+        self._active_requests: dict[str, RequestState] = {}
 
     def configure(
         self,
-        allowed_paths: Optional[List[str]] = None,
-        cache_root: Optional[str] = None,
+        allowed_paths: list[str] | None = None,
+        cache_root: str | None = None,
         read_only: bool = True,
         **settings: Any,
     ) -> "MCPServer":
@@ -132,6 +138,8 @@ class MCPServer:
         self.vfs = VFS(
             allowed_roots=self.lifespan_state.allowed_paths, read_only=read_only
         )
+        # Wire VFS into lifespan state so tools can access it via context.lifespan.vfs
+        self.lifespan_state.vfs = self.vfs
 
         return self
 
@@ -225,7 +233,7 @@ class MCPServer:
         self,
         request_id: str,
         method: str,
-        progress_token: Optional[str] = None,
+        progress_token: str | None = None,
     ) -> Context:
         """
         Create execution context for a request.
@@ -243,7 +251,7 @@ class MCPServer:
             # TODO: Send MCP progress notification
             logger.info(f"Progress {request_id}: {message} ({current}/{total})")
 
-        async def log_callback(level: str, message: str, data: Dict[str, Any]) -> None:
+        async def log_callback(level: str, message: str, data: dict[str, Any]) -> None:
             # TODO: Send MCP log notification
             log_level = getattr(logging, level.upper(), logging.INFO)
             logger.log(log_level, f"{request_id}: {message} {data}")
@@ -287,7 +295,7 @@ class MCPServer:
             self._active_requests[request_id].cancel()
             logger.info(f"Cancelled request {request_id}")
 
-    async def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_initialize(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         Handle MCP initialize request.
 
@@ -315,7 +323,7 @@ class MCPServer:
             "serverInfo": {"name": self.name, "version": self.version},
         }
 
-    async def handle_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
         """
         Handle incoming MCP request and route to appropriate handler.
 
@@ -389,7 +397,7 @@ class MCPServer:
             if request_id:
                 self.finish_request(request_id)
 
-    async def _handle_notification(self, method: str, params: Dict[str, Any]) -> None:
+    async def _handle_notification(self, method: str, params: dict[str, Any]) -> None:
         """
         Handle MCP notification messages (no response expected).
 
@@ -419,7 +427,7 @@ class MCPServer:
 
 def create_server(
     name: str = "RMCP MCP Server",
-    version: str = "0.3.3",
+    version: str = None,
     description: str = "R-based statistical analysis MCP server",
 ) -> MCPServer:
     """

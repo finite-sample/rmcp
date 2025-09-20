@@ -9,10 +9,11 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import List, Optional
+# Modern Python 3.10+ syntax for type hints
 
 import click
 
+from . import __version__
 from .core.server import create_server
 from .registries.prompts import (
     model_diagnostic_prompt,
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-@click.version_option(version="0.3.7")
+@click.version_option(version=__version__)
 def cli():
     """RMCP MCP Server - Comprehensive statistical analysis with 40 tools across 9 categories."""
     pass
@@ -107,11 +108,11 @@ def start(log_level: str):
     "--config-file", type=click.Path(exists=True), help="Configuration file path"
 )
 def serve(
-    allowed_paths: List[str],
-    cache_root: Optional[str],
+    allowed_paths: list[str],
+    cache_root: str | None,
     read_only: bool,
     log_level: str,
-    config_file: Optional[str],
+    config_file: str | None,
 ):
     """Run MCP server with advanced configuration options."""
 
@@ -182,7 +183,7 @@ def serve_http(host: str, port: int):
 @cli.command()
 @click.option("--allowed-paths", multiple=True, help="Allowed file system paths")
 @click.option("--output", type=click.Path(), help="Output file for capabilities")
-def list_capabilities(allowed_paths: List[str], output: Optional[str]):
+def list_capabilities(allowed_paths: list[str], output: str | None):
     """List server capabilities (tools, resources, prompts)."""
 
     # Create server to inspect capabilities
