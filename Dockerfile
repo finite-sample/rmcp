@@ -25,11 +25,11 @@ RUN R -e "install.packages(c(\
 
 # Install Python dependencies needed for CI
 RUN pip install --no-cache-dir \
-    black==25.1.0 \
-    isort==6.0.1 \
-    flake8==6.0.0 \
-    pytest==8.0.0 \
-    pytest-asyncio==0.21.0 \
+    black>=23.0.0 \
+    isort>=5.12.0 \
+    flake8>=6.0.0 \
+    pytest>=8.0.0 \
+    pytest-asyncio>=0.21.0 \
     click>=8.1.0 \
     jsonschema>=4.0.0
 

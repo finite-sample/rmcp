@@ -1,12 +1,10 @@
 """
 JSON-RPC 2.0 envelope handling.
-
 Implements proper JSON-RPC 2.0 specification:
 - Request/response/notification parsing
 - Error code handling per spec
 - Message validation
 - Single-line encoding for stdio transport
-
 Following the principle: "No hand-rolled JSON-RPC, no 'close enough' message shapes."
 """
 
@@ -40,12 +38,9 @@ class JSONRPCError(Exception):
     def to_dict(self) -> Dict[str, Any]:
         """Convert to JSON-RPC error response format."""
         error_obj = {"code": self.code, "message": self.message}
-
         if self.data is not None:
             error_obj["data"] = self.data
-
         response = {"jsonrpc": "2.0", "id": self.request_id, "error": error_obj}
-
         return response
 
 
@@ -85,20 +80,16 @@ class JSONRPCEnvelope:
     def encode(message: Dict[str, Any]) -> str:
         """
         Encode message to single-line JSON for stdio transport.
-
         Following the principle: "One JSON-RPC message per line."
         """
         try:
             # Ensure no embedded newlines in the JSON
             json_str = json.dumps(message, separators=(",", ":"), ensure_ascii=False)
-
             # Validate it's actually single line
             if "\n" in json_str or "\r" in json_str:
                 # This should not happen with separators, but be safe
                 json_str = json_str.replace("\n", "\\n").replace("\r", "\\r")
-
             return json_str
-
         except (TypeError, ValueError) as e:
             raise JSONRPCError(
                 JSONRPCError.INTERNAL_ERROR,
@@ -110,30 +101,25 @@ class JSONRPCEnvelope:
     def decode(line: str) -> JSONRPCMessage:
         """
         Decode single line of JSON to JSON-RPC message.
-
         Validates JSON-RPC 2.0 specification compliance.
         """
         if not line.strip():
             raise JSONRPCError(JSONRPCError.INVALID_REQUEST, "Empty message")
-
         try:
             data = json.loads(line.strip())
         except json.JSONDecodeError as e:
             raise JSONRPCError(JSONRPCError.PARSE_ERROR, f"Invalid JSON: {e}") from e
-
         # Validate JSON-RPC 2.0 structure
         if not isinstance(data, dict):
             raise JSONRPCError(
                 JSONRPCError.INVALID_REQUEST, "JSON-RPC message must be an object"
             )
-
         jsonrpc_version = data.get("jsonrpc")
         if jsonrpc_version != "2.0":
             raise JSONRPCError(
                 JSONRPCError.INVALID_REQUEST,
                 f"Invalid JSON-RPC version: {jsonrpc_version}. Must be '2.0'",
             )
-
         # Extract message components
         message = JSONRPCMessage(
             jsonrpc=jsonrpc_version,
@@ -143,7 +129,6 @@ class JSONRPCEnvelope:
             result=data.get("result"),
             error=data.get("error"),
         )
-
         # Validate message type
         if message.is_request or message.is_notification:
             if not isinstance(message.method, str):
@@ -152,7 +137,6 @@ class JSONRPCEnvelope:
                     "Method must be a string",
                     request_id=message.id,
                 )
-
             # Params are optional, but if present must be object or array
             if message.params is not None:
                 if not isinstance(message.params, (dict, list)):
@@ -161,33 +145,28 @@ class JSONRPCEnvelope:
                         "Params must be object or array",
                         request_id=message.id,
                     )
-
         elif message.is_response:
             # Response must have either result or error, not both
             has_result = message.result is not None
             has_error = message.error is not None
-
             if has_result and has_error:
                 raise JSONRPCError(
                     JSONRPCError.INVALID_REQUEST,
                     "Response cannot have both result and error",
                     request_id=message.id,
                 )
-
             if not has_result and not has_error:
                 raise JSONRPCError(
                     JSONRPCError.INVALID_REQUEST,
                     "Response must have either result or error",
                     request_id=message.id,
                 )
-
         else:
             raise JSONRPCError(
                 JSONRPCError.INVALID_REQUEST,
                 "Invalid message type",
                 request_id=data.get("id"),
             )
-
         return message
 
     @staticmethod
@@ -198,10 +177,8 @@ class JSONRPCEnvelope:
     ) -> Dict[str, Any]:
         """Create a JSON-RPC 2.0 request."""
         request = {"jsonrpc": "2.0", "method": method, "id": request_id}
-
         if params is not None:
             request["params"] = params
-
         return request
 
     @staticmethod
@@ -210,10 +187,8 @@ class JSONRPCEnvelope:
     ) -> Dict[str, Any]:
         """Create a JSON-RPC 2.0 notification."""
         notification = {"jsonrpc": "2.0", "method": method}
-
         if params is not None:
             notification["params"] = params
-
         return notification
 
     @staticmethod

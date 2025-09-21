@@ -13,11 +13,14 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from shutil import which
 
 import pytest
 
+pytestmark = pytest.mark.skipif(
+    which("R") is None, reason="R binary is required for new tools tests"
+)
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.tools.fileops import read_excel, read_json
 from rmcp.tools.formula_builder import build_formula, validate_formula
@@ -38,14 +41,11 @@ class TestFormulaBuilder:
     async def test_basic_formula_building(self):
         """Test basic formula building from natural language."""
         context = await create_test_context()
-
         params = {
             "description": "predict sales from marketing spend",
             "analysis_type": "regression",
         }
-
         result = await build_formula(context, params)
-
         assert "formula" in result
         assert "sales" in result["formula"]
         assert "marketing" in result["formula"]
@@ -55,13 +55,10 @@ class TestFormulaBuilder:
     async def test_multiple_predictors(self):
         """Test formula with multiple predictors."""
         context = await create_test_context()
-
         params = {
             "description": "customer satisfaction depends on service quality and response time"
         }
-
         result = await build_formula(context, params)
-
         assert "formula" in result
         assert "satisfaction" in result["formula"]
         assert "+" in result["formula"] or "and" in result["formula"]
@@ -70,14 +67,10 @@ class TestFormulaBuilder:
     async def test_formula_validation(self):
         """Test formula validation against sample data."""
         context = await create_test_context()
-
         # Simple test data
         test_data = {"sales": [100, 200, 300, 400], "marketing": [10, 20, 30, 40]}
-
         params = {"formula": "sales ~ marketing", "data": test_data}
-
         result = await validate_formula(context, params)
-
         assert "is_valid" in result
         assert result["is_valid"] == True
 
@@ -89,14 +82,11 @@ class TestErrorRecovery:
     async def test_package_error_diagnosis(self):
         """Test R package error diagnosis."""
         context = await create_test_context()
-
         params = {
             "error_message": "there is no package called 'forecast'",
             "tool_name": "arima_model",
         }
-
         result = await suggest_fix(context, params)
-
         assert "error_type" in result
         assert result["error_type"] == "missing_package"
         assert "suggestions" in result
@@ -107,14 +97,11 @@ class TestErrorRecovery:
     async def test_formula_error_diagnosis(self):
         """Test formula syntax error diagnosis."""
         context = await create_test_context()
-
         params = {
             "error_message": "invalid formula syntax",
             "tool_name": "linear_model",
         }
-
         result = await suggest_fix(context, params)
-
         assert "error_type" in result
         assert result["error_type"] == "formula_syntax"
         assert "suggestions" in result
@@ -123,18 +110,14 @@ class TestErrorRecovery:
     async def test_data_validation(self):
         """Test data quality validation."""
         context = await create_test_context()
-
         # Problematic data
         test_data = {
             "sales": [100, 200, None, 400],  # Missing value
             "marketing": [10, 20, 30, 40],
             "constant": [1, 1, 1, 1],  # Constant variable
         }
-
         params = {"data": test_data, "analysis_type": "regression"}
-
         result = await validate_data(context, params)
-
         assert "is_valid" in result
         assert "warnings" in result
         assert "data_quality" in result
@@ -147,11 +130,8 @@ class TestExampleDatasets:
     async def test_load_sales_dataset(self):
         """Test loading sales example dataset."""
         context = await create_test_context()
-
         params = {"dataset_name": "sales", "size": "small"}
-
         result = await load_example(context, params)
-
         assert "data" in result
         assert "metadata" in result
         assert result["metadata"]["name"] == "sales"
@@ -162,11 +142,8 @@ class TestExampleDatasets:
     async def test_load_customer_dataset(self):
         """Test loading customer example dataset."""
         context = await create_test_context()
-
         params = {"dataset_name": "customers", "size": "small"}
-
         result = await load_example(context, params)
-
         assert "data" in result
         assert "churned" in str(result["data"])  # Should contain churn data
         assert result["metadata"]["name"] == "customers"
@@ -179,7 +156,6 @@ class TestEnhancedFileOps:
     async def test_json_file_reading(self):
         """Test JSON file reading with flattening."""
         context = await create_test_context()
-
         # Create test JSON file
         test_data = {
             "results": [
@@ -187,20 +163,15 @@ class TestEnhancedFileOps:
                 {"quarter": "Q2", "revenue": 1200, "profit": 150},
             ]
         }
-
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(test_data, f)
             json_file = f.name
-
         try:
             params = {"file_path": json_file, "flatten": True}
-
             result = await read_json(context, params)
-
             assert "data" in result
             assert "file_info" in result
             assert result["file_info"]["rows"] == 2
-
         finally:
             os.unlink(json_file)
 

@@ -1,454 +1,200 @@
-#!/usr/bin/env python3
-"""
-Comprehensive error handling tests for RMCP.
+"""Unit tests for common error scenarios exposed through the MCP server."""
 
-Tests various error scenarios to ensure robust error handling:
-- Invalid input data
-- Missing parameters
-- R execution errors
-- Network/resource issues
-- Edge cases
-"""
+from __future__ import annotations
 
-import asyncio
-import json
 import sys
+from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.fileops import read_csv
 from rmcp.tools.formula_builder import build_formula
 from rmcp.tools.helpers import suggest_fix, validate_data
 from rmcp.tools.regression import linear_model
+from tests.utils import extract_json_content, extract_text_summary
 
 
-@pytest.mark.asyncio
-async def test_missing_required_parameters():
-    """Test tools handle missing required parameters gracefully."""
-    print("🧪 Testing missing required parameters...")
-
+async def _call_tool(
+    tool: Callable[..., Awaitable[dict[str, Any]]],
+    arguments: dict[str, Any],
+    *extra_tools: Callable[..., Awaitable[dict[str, Any]]],
+) -> dict[str, Any]:
+    """Invoke ``tool`` through the MCP server and return the JSON-RPC response."""
     server = create_server()
-    register_tool_functions(server.tools, linear_model)
-
-    # Test missing data parameter
+    register_tool_functions(server.tools, tool, *extra_tools)
+    tool_name = getattr(tool, "_mcp_tool_name")
     request = {
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
-        "params": {
-            "name": "linear_model",
-            "arguments": {
-                "formula": "y ~ x"
-                # Missing "data" parameter
-            },
-        },
+        "params": {"name": tool_name, "arguments": arguments},
     }
+    return await server.handle_request(request)
 
-    try:
-        response = await server.handle_request(request)
 
-        # Should not crash, but should return error
-        if "error" in response:
-            print("✅ Missing parameters handled gracefully")
-            return True
-        else:
-            # Check if result contains error info
-            result = json.loads(response["result"]["content"][0]["text"])
-            if "error" in str(result).lower():
-                print("✅ Missing parameters detected and reported")
-                return True
-            else:
-                print("❌ Missing parameters not properly handled")
-                return False
-
-    except Exception as e:
-        print(f"❌ Unhandled exception for missing parameters: {e}")
-        return False
+def _extract_text_content(response: dict[str, Any]) -> str:
+    """Return the concatenated human-readable text payload for a tool response."""
+    text = extract_text_summary(response)
+    assert text, "tool response must include human-readable text"
+    return text
 
 
 @pytest.mark.asyncio
-async def test_invalid_data_types():
-    """Test tools handle invalid data types."""
-    print("🧪 Testing invalid data types...")
+async def test_missing_required_parameters_returns_schema_error():
+    response = await _call_tool(linear_model, {"formula": "y ~ x"})
+    assert response["result"]["isError"] is True
+    text = _extract_text_content(response)
+    assert "'data' is a required property" in text
 
-    server = create_server()
-    register_tool_functions(server.tools, linear_model)
 
-    # Test with invalid data (string instead of dict)
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "linear_model",
-            "arguments": {"data": "this_should_be_a_dict", "formula": "y ~ x"},
+@pytest.mark.asyncio
+async def test_invalid_data_types_are_rejected():
+    response = await _call_tool(
+        linear_model,
+        {"data": "this_should_be_a_dict", "formula": "y ~ x"},
+    )
+    assert response["result"]["isError"] is True
+    text = _extract_text_content(response)
+    assert "is not of type 'object'" in text
+
+
+@pytest.mark.asyncio
+async def test_empty_data_produces_tool_execution_error(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    async def fake_execute_r_script_async(script: str, params: dict[str, Any]):
+        raise RuntimeError("dataset is empty")
+
+    monkeypatch.setattr(
+        "rmcp.tools.regression.execute_r_script_async",
+        fake_execute_r_script_async,
+    )
+    response = await _call_tool(linear_model, {"data": {}, "formula": "y ~ x"})
+    assert response["result"]["isError"] is True
+    assert "Tool execution error: dataset is empty" in _extract_text_content(response)
+
+
+@pytest.mark.asyncio
+async def test_malformed_data_surfaces_execution_error(monkeypatch: pytest.MonkeyPatch):
+    async def fake_execute_r_script_async(script: str, params: dict[str, Any]):
+        raise ValueError("non-numeric value encountered in column 'x'")
+
+    monkeypatch.setattr(
+        "rmcp.tools.regression.execute_r_script_async",
+        fake_execute_r_script_async,
+    )
+    response = await _call_tool(
+        linear_model,
+        {
+            "data": {"x": [1, 2, "not_a_number", 4], "y": [1, 2, 3, 4]},
+            "formula": "y ~ x",
         },
-    }
-
-    try:
-        response = await server.handle_request(request)
-
-        if "error" in response:
-            print("✅ Invalid data types handled gracefully")
-            return True
-        else:
-            result = json.loads(response["result"]["content"][0]["text"])
-            if "error" in str(result).lower():
-                print("✅ Invalid data types detected and reported")
-                return True
-            else:
-                print("❌ Invalid data types not properly handled")
-                return False
-
-    except Exception as e:
-        print(f"❌ Unhandled exception for invalid data types: {e}")
-        return False
+    )
+    assert response["result"]["isError"] is True
+    assert "non-numeric value encountered" in _extract_text_content(response)
 
 
 @pytest.mark.asyncio
-async def test_empty_data():
-    """Test tools handle empty datasets."""
-    print("🧪 Testing empty data handling...")
-
-    server = create_server()
-    register_tool_functions(server.tools, linear_model)
-
-    # Test with empty data
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "linear_model",
-            "arguments": {"data": {}, "formula": "y ~ x"},
+async def test_invalid_formulas_fail_schema_validation():
+    response = await _call_tool(
+        linear_model,
+        {
+            "data": {"x": [1, 2, 3, 4], "y": [2, 4, 6, 8]},
+            "formula": "invalid ~ ~ syntax error",
         },
-    }
-
-    try:
-        response = await server.handle_request(request)
-
-        if "error" in response:
-            print("✅ Empty data handled gracefully")
-            return True
-        else:
-            result = json.loads(response["result"]["content"][0]["text"])
-            if "error" in str(result).lower() or "empty" in str(result).lower():
-                print("✅ Empty data detected and reported")
-                return True
-            else:
-                print("❌ Empty data not properly handled")
-                return False
-
-    except Exception as e:
-        print(f"❌ Unhandled exception for empty data: {e}")
-        return False
+    )
+    assert response["result"]["isError"] is True
+    text = _extract_text_content(response)
+    assert "does not match" in text
+    assert "formula" in text
 
 
 @pytest.mark.asyncio
-async def test_malformed_json_in_tools():
-    """Test tools handle malformed data gracefully."""
-    print("🧪 Testing malformed data handling...")
+async def test_nonexistent_file_errors_are_reported(monkeypatch: pytest.MonkeyPatch):
+    async def fake_execute_r_script_async(script: str, params: dict[str, Any]):
+        raise FileNotFoundError(f"File not found: {params['file_path']}")
 
-    server = create_server()
-    register_tool_functions(server.tools, linear_model)
+    monkeypatch.setattr(
+        "rmcp.tools.fileops.execute_r_script_async",
+        fake_execute_r_script_async,
+    )
+    response = await _call_tool(read_csv, {"file_path": "/missing/data.csv"})
+    assert response["result"]["isError"] is True
+    text = _extract_text_content(response)
+    assert "Tool execution error" in text
+    assert "/missing/data.csv" in text
 
-    # Test with malformed data structure
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "linear_model",
-            "arguments": {
-                "data": {
-                    "x": [1, 2, "not_a_number", 4],
-                    "y": [1, 2, 3],  # Different length
+
+@pytest.mark.asyncio
+async def test_suggest_fix_returns_structured_analysis():
+    response = await _call_tool(
+        suggest_fix,
+        {"error_message": "there is no package called 'nonexistent'"},
+    )
+    assert "isError" not in response["result"]
+    payload = extract_json_content(response)
+    assert payload["error_type"] == "missing_package"
+    assert any("install" in suggestion.lower() for suggestion in payload["suggestions"])
+
+
+@pytest.mark.asyncio
+async def test_data_validation_edge_cases_surface_warnings(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    async def fake_execute_r_script_async(script: str, params: dict[str, Any]):
+        return {
+            "is_valid": False,
+            "warnings": ["High missing values in: x"],
+            "errors": ["Dataset is empty (no rows)"],
+            "suggestions": ["Provide at least one observation"],
+            "data_quality": {
+                "dimensions": {"rows": 3, "columns": 2},
+                "variable_types": {
+                    "numeric": 1,
+                    "character": 0,
+                    "factor": 0,
+                    "logical": 0,
                 },
-                "formula": "y ~ x",
+                "missing_values": {
+                    "total_missing_cells": 3,
+                    "variables_with_missing": 1,
+                    "max_missing_percentage": 100.0,
+                },
+                "data_issues": {
+                    "constant_variables": 0,
+                    "high_outlier_variables": 0,
+                    "duplicate_rows": 0,
+                },
             },
-        },
-    }
+        }
 
-    try:
-        response = await server.handle_request(request)
-
-        if "error" in response:
-            print("✅ Malformed data handled gracefully")
-            return True
-        else:
-            result = json.loads(response["result"]["content"][0]["text"])
-            if "error" in str(result).lower():
-                print("✅ Malformed data detected and reported")
-                return True
-            else:
-                print("❌ Malformed data not properly handled")
-                return False
-
-    except Exception as e:
-        print(f"❌ Unhandled exception for malformed data: {e}")
-        return False
+    monkeypatch.setattr(
+        "rmcp.tools.helpers.execute_r_script_async",
+        fake_execute_r_script_async,
+    )
+    response = await _call_tool(
+        validate_data,
+        {"data": {"x": [None, None, None], "y": [float("inf"), -float("inf"), 3]}},
+    )
+    assert "isError" not in response["result"]
+    payload = extract_json_content(response)
+    assert payload["is_valid"] is False
+    assert payload["errors"]
+    assert payload["warnings"]
 
 
 @pytest.mark.asyncio
-async def test_invalid_formulas():
-    """Test formula validation handles invalid formulas."""
-    print("🧪 Testing invalid formula handling...")
-
-    server = create_server()
-    register_tool_functions(server.tools, linear_model)
-
-    # Test with invalid R formula syntax
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "linear_model",
-            "arguments": {
-                "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
-                "formula": "invalid ~ ~ syntax error",
-            },
-        },
-    }
-
-    try:
-        response = await server.handle_request(request)
-
-        if "error" in response:
-            print("✅ Invalid formulas handled gracefully")
-            return True
-        else:
-            result = json.loads(response["result"]["content"][0]["text"])
-            if "error" in str(result).lower() or "formula" in str(result).lower():
-                print("✅ Invalid formulas detected and reported")
-                return True
-            else:
-                print("❌ Invalid formulas not properly handled")
-                return False
-
-    except Exception as e:
-        print(f"❌ Unhandled exception for invalid formulas: {e}")
-        return False
-
-
-@pytest.mark.asyncio
-async def test_nonexistent_file_handling():
-    """Test file operations handle missing files."""
-    print("🧪 Testing nonexistent file handling...")
-
-    server = create_server()
-    register_tool_functions(server.tools, read_csv)
-
-    # Test reading nonexistent file
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "read_csv",
-            "arguments": {"file_path": "/nonexistent/path/file.csv"},
-        },
-    }
-
-    try:
-        response = await server.handle_request(request)
-
-        if "error" in response:
-            print("✅ Nonexistent files handled gracefully")
-            return True
-        else:
-            result = json.loads(response["result"]["content"][0]["text"])
-            if "error" in str(result).lower() or "not found" in str(result).lower():
-                print("✅ Nonexistent files detected and reported")
-                return True
-            else:
-                print("❌ Nonexistent files not properly handled")
-                return False
-
-    except Exception as e:
-        print(f"❌ Unhandled exception for nonexistent files: {e}")
-        return False
-
-
-@pytest.mark.asyncio
-async def test_error_recovery_tool():
-    """Test the error recovery tool handles various error types."""
-    print("🧪 Testing error recovery tool...")
-
-    server = create_server()
-    register_tool_functions(server.tools, suggest_fix)
-
-    # Test with common R error
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "suggest_fix",
-            "arguments": {
-                "error_message": "there is no package called 'nonexistent_package'"
-            },
-        },
-    }
-
-    try:
-        response = await server.handle_request(request)
-
-        if "error" in response:
-            print("❌ Error recovery tool failed")
-            return False
-        else:
-            result = json.loads(response["result"]["content"][0]["text"])
-            if "error_type" in result and "suggestions" in result:
-                print("✅ Error recovery tool working properly")
-                return True
-            else:
-                print("❌ Error recovery tool not providing proper analysis")
-                return False
-
-    except Exception as e:
-        print(f"❌ Unhandled exception in error recovery: {e}")
-        return False
-
-
-@pytest.mark.asyncio
-async def test_data_validation_edge_cases():
-    """Test data validation with edge cases."""
-    print("🧪 Testing data validation edge cases...")
-
-    server = create_server()
-    register_tool_functions(server.tools, validate_data)
-
-    # Test with edge case data (all missing values)
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "validate_data",
-            "arguments": {
-                "data": {
-                    "x": [None, None, None],
-                    "y": [float("inf"), -float("inf"), float("nan")],
-                }
-            },
-        },
-    }
-
-    try:
-        response = await server.handle_request(request)
-
-        if "error" in response:
-            print("✅ Edge case data handled gracefully")
-            return True
-        else:
-            result = json.loads(response["result"]["content"][0]["text"])
-            if "issues" in result or "warnings" in result:
-                print("✅ Edge case data issues detected")
-                return True
-            else:
-                print("❌ Edge case data issues not detected")
-                return False
-
-    except Exception as e:
-        print(f"❌ Unhandled exception in data validation: {e}")
-        return False
-
-
-@pytest.mark.asyncio
-async def test_natural_language_formula_errors():
-    """Test formula builder with ambiguous/invalid descriptions."""
-    print("🧪 Testing natural language formula error handling...")
-
-    server = create_server()
-    register_tool_functions(server.tools, build_formula)
-
-    # Test with very ambiguous description
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "build_formula",
-            "arguments": {"description": "something something random words"},
-        },
-    }
-
-    try:
-        response = await server.handle_request(request)
-
-        if "error" in response:
-            print("✅ Ambiguous descriptions handled gracefully")
-            return True
-        else:
-            result = json.loads(response["result"]["content"][0]["text"])
-            if "confidence" in result and result.get("confidence", 1.0) < 0.5:
-                print("✅ Low confidence formulas flagged")
-                return True
-            else:
-                print("⚠️  Ambiguous descriptions accepted (may be ok)")
-                return True  # This might be acceptable behavior
-
-    except Exception as e:
-        print(f"❌ Unhandled exception in formula building: {e}")
-        return False
-
-
-async def main():
-    """Run all error handling tests."""
-    print("🔥 RMCP Error Handling Test Suite")
-    print("=" * 50)
-
-    tests = [
-        ("Missing Required Parameters", test_missing_required_parameters),
-        ("Invalid Data Types", test_invalid_data_types),
-        ("Empty Data Handling", test_empty_data),
-        ("Malformed Data", test_malformed_json_in_tools),
-        ("Invalid Formulas", test_invalid_formulas),
-        ("Nonexistent File Handling", test_nonexistent_file_handling),
-        ("Error Recovery Tool", test_error_recovery_tool),
-        ("Data Validation Edge Cases", test_data_validation_edge_cases),
-        ("Natural Language Formula Errors", test_natural_language_formula_errors),
-    ]
-
-    passed = 0
-    total = len(tests)
-
-    for test_name, test_func in tests:
-        print(f"\n📋 {test_name}:")
-        print("-" * 40)
-        try:
-            if await test_func():
-                passed += 1
-        except Exception as e:
-            print(f"❌ Test failed with exception: {e}")
-
-    print(f"\n🎯 Error Handling Test Results:")
-    print("=" * 50)
-    print(f"✅ Passed: {passed}/{total} ({passed/total*100:.1f}%)")
-
-    if passed == total:
-        print("🎉 All error handling tests passed!")
-        print("🛡️  RMCP error handling is robust")
-    elif passed >= total * 0.8:
-        print("✨ Most error handling tests passed")
-        print(f"⚠️  {total - passed} test(s) need attention")
-    else:
-        print("⚠️  Multiple error handling failures")
-        print("🔧 Error handling needs improvement")
-
-    return passed == total
-
-
-if __name__ == "__main__":
-    try:
-        success = asyncio.run(main())
-        sys.exit(0 if success else 1)
-    except Exception as e:
-        print(f"\n💥 Test suite failed: {e}")
-        sys.exit(1)
+async def test_ambiguous_formula_description_still_produces_formula():
+    response = await _call_tool(
+        build_formula,
+        {"description": "something something random words"},
+    )
+    assert "isError" not in response["result"]
+    payload = extract_json_content(response)
+    assert payload["formula"].startswith("something ~")
+    assert payload["matched_pattern"] == "manual extraction"

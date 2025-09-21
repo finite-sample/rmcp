@@ -1,6 +1,5 @@
 """
 Base transport interface for MCP server.
-
 Defines the contract that all transports must implement,
 enabling clean composition at the server edge.
 """
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 class Transport(ABC):
     """
     Abstract base class for MCP transports.
-
     All transports must implement:
     - Message receiving (async iterator)
     - Message sending
@@ -52,7 +50,6 @@ class Transport(ABC):
     async def receive_messages(self) -> AsyncIterator[Dict[str, Any]]:
         """
         Async iterator that yields incoming messages.
-
         Messages are already parsed from transport format (JSON-RPC).
         """
         pass
@@ -61,7 +58,6 @@ class Transport(ABC):
     async def send_message(self, message: Dict[str, Any]) -> None:
         """
         Send a message via the transport.
-
         Message will be encoded to transport format (JSON-RPC).
         """
         pass
@@ -69,7 +65,6 @@ class Transport(ABC):
     async def run(self) -> None:
         """
         Run the transport event loop.
-
         This is the main entry point that:
         1. Starts the transport
         2. Processes incoming messages
@@ -78,22 +73,17 @@ class Transport(ABC):
         """
         if not self._message_handler:
             raise RuntimeError("Message handler not set")
-
         try:
             await self.startup()
-
             async for message in self.receive_messages():
                 try:
                     # Process message through handler
                     response = await self._message_handler(message)
-
                     # Send response if there is one
                     if response:
                         await self.send_message(response)
-
                 except Exception as e:
                     logger.error(f"Error processing message: {e}")
-
                     # Send error response if possible
                     error_response = self._create_error_response(message, e)
                     if error_response:
@@ -101,10 +91,8 @@ class Transport(ABC):
                             await self.send_message(error_response)
                         except Exception as send_error:
                             logger.error(f"Failed to send error response: {send_error}")
-
         except Exception as e:
             logger.error(f"Transport error: {e}")
-
         finally:
             await self.shutdown()
 
@@ -112,12 +100,10 @@ class Transport(ABC):
         self, request: Dict[str, Any], error: Exception
     ) -> Optional[Dict[str, Any]]:
         """Create an error response for a failed request."""
-
         request_id = request.get("id")
         if request_id is None:
             # No ID means no response expected (notification)
             return None
-
         return {
             "jsonrpc": "2.0",
             "id": request_id,

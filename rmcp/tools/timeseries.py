@@ -1,6 +1,5 @@
 """
 Time series analysis tools for RMCP.
-
 Comprehensive time series modeling and forecasting capabilities.
 """
 
@@ -47,20 +46,96 @@ from ..registries.tools import tool
         },
         "required": ["data"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "model_type": {
+                "type": "string",
+                "enum": ["ARIMA"],
+                "description": "Type of time series model",
+            },
+            "order": {
+                "type": "array",
+                "items": {"type": "integer"},
+                "description": "ARIMA order (p, d, q) and seasonal order if applicable",
+            },
+            "coefficients": {
+                "type": "object",
+                "description": "Model coefficients",
+                "additionalProperties": {"type": "number"},
+            },
+            "aic": {"type": "number", "description": "Akaike Information Criterion"},
+            "bic": {"type": "number", "description": "Bayesian Information Criterion"},
+            "loglik": {"type": "number", "description": "Log-likelihood value"},
+            "sigma2": {
+                "type": "number",
+                "description": "Estimated innovation variance",
+                "minimum": 0,
+            },
+            "fitted_values": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Fitted values from the model",
+            },
+            "residuals": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Model residuals",
+            },
+            "forecasts": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Point forecasts",
+            },
+            "forecast_lower": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Lower bounds of 95% prediction intervals",
+            },
+            "forecast_upper": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Upper bounds of 95% prediction intervals",
+            },
+            "accuracy": {
+                "type": "object",
+                "description": "Model accuracy metrics",
+                "additionalProperties": {"type": "number"},
+            },
+            "n_obs": {
+                "type": "integer",
+                "description": "Number of observations in training data",
+                "minimum": 1,
+            },
+        },
+        "required": [
+            "model_type",
+            "order",
+            "aic",
+            "bic",
+            "loglik",
+            "sigma2",
+            "fitted_values",
+            "residuals",
+            "forecasts",
+            "forecast_lower",
+            "forecast_upper",
+            "accuracy",
+            "n_obs",
+        ],
+        "additionalProperties": False,
+    },
     description="Fit ARIMA time series model with forecasting",
 )
 async def arima_model(context, params) -> dict[str, Any]:
     """Fit ARIMA model and generate forecasts."""
-
     await context.info("Fitting ARIMA time series model")
-
     r_script = """
     # Install required packages
     library(forecast)
-    
     # Prepare data
+    rmcp_progress("Preparing time series data")
     values <- args$data$values
-    
     # Convert to time series
     if (!is.null(args$data$dates)) {
         dates <- as.Date(args$data$dates)
@@ -68,8 +143,8 @@ async def arima_model(context, params) -> dict[str, Any]:
     } else {
         ts_data <- ts(values, frequency = 12)
     }
-    
-    # Fit ARIMA model
+    # Fit ARIMA model with progress reporting
+    rmcp_progress("Fitting ARIMA model", 20, 100)
     if (!is.null(args$order)) {
         if (!is.null(args$seasonal)) {
             model <- Arima(ts_data, order = args$order, seasonal = args$seasonal)
@@ -77,14 +152,16 @@ async def arima_model(context, params) -> dict[str, Any]:
             model <- Arima(ts_data, order = args$order)
         }
     } else {
-        # Auto ARIMA
+        # Auto ARIMA (can be slow for large datasets)
+        rmcp_progress("Running automatic ARIMA model selection", 30, 100)
         model <- auto.arima(ts_data)
     }
-    
+    rmcp_progress("ARIMA model fitted successfully", 70, 100)
     # Generate forecasts
+    rmcp_progress("Generating forecasts", 80, 100)
     forecast_periods <- args$forecast_periods %||% 12
     forecasts <- forecast(model, h = forecast_periods)
-    
+    rmcp_progress("Extracting model results", 95, 100)
     # Extract results
     result <- list(
         model_type = "ARIMA",
@@ -103,16 +180,14 @@ async def arima_model(context, params) -> dict[str, Any]:
         n_obs = length(values)
     )
     """
-
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info(
             "ARIMA model fitted successfully",
             aic=result.get("aic"),
             n_obs=result.get("n_obs"),
         )
         return result
-
     except Exception as e:
         await context.error("ARIMA model fitting failed", error=str(e))
         raise
@@ -140,45 +215,88 @@ async def arima_model(context, params) -> dict[str, Any]:
         },
         "required": ["data"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "original": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Original time series values",
+            },
+            "trend": {
+                "type": "array",
+                "items": {"type": ["number", "null"]},
+                "description": "Trend component (may contain null values at ends)",
+            },
+            "seasonal": {
+                "type": "array",
+                "items": {"type": ["number", "null"]},
+                "description": "Seasonal component",
+            },
+            "remainder": {
+                "type": "array",
+                "items": {"type": ["number", "null"]},
+                "description": "Remainder/irregular component",
+            },
+            "type": {
+                "type": "string",
+                "enum": ["additive", "multiplicative"],
+                "description": "Type of decomposition performed",
+            },
+            "frequency": {
+                "type": "integer",
+                "description": "Seasonal frequency used",
+                "minimum": 1,
+            },
+            "n_obs": {
+                "type": "integer",
+                "description": "Number of observations in time series",
+                "minimum": 1,
+            },
+        },
+        "required": [
+            "original",
+            "trend",
+            "seasonal",
+            "remainder",
+            "type",
+            "frequency",
+            "n_obs",
+        ],
+        "additionalProperties": False,
+    },
     description="Decompose time series into trend, seasonal, and remainder components",
 )
 async def decompose_timeseries(context, params) -> dict[str, Any]:
     """Decompose time series into components."""
-
     await context.info("Decomposing time series")
-
     r_script = """
-    
     values <- args$data$values
     frequency <- args$frequency %||% 12
     decomp_type <- args$type %||% "additive"
-    
     # Create time series
     ts_data <- ts(values, frequency = frequency)
-    
     # Decompose
     if (decomp_type == "multiplicative") {
         decomp <- decompose(ts_data, type = "multiplicative")
     } else {
         decomp <- decompose(ts_data, type = "additive")
     }
-    
+    # Handle NA values properly for JSON - use I() to preserve arrays
     result <- list(
-        original = as.numeric(decomp$x),
-        trend = as.numeric(decomp$trend),
-        seasonal = as.numeric(decomp$seasonal),  
-        remainder = as.numeric(decomp$random),
+        original = I(as.numeric(decomp$x)),
+        trend = I(as.numeric(decomp$trend)),
+        seasonal = I(as.numeric(decomp$seasonal)),
+        remainder = I(as.numeric(decomp$random)),
         type = decomp_type,
         frequency = frequency,
         n_obs = length(values)
     )
     """
-
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Time series decomposed successfully")
         return result
-
     except Exception as e:
         await context.error("Time series decomposition failed", error=str(e))
         raise
@@ -200,53 +318,100 @@ async def decompose_timeseries(context, params) -> dict[str, Any]:
         },
         "required": ["data"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "test_name": {
+                "type": "string",
+                "description": "Full name of the stationarity test",
+                "enum": ["Augmented Dickey-Fuller", "KPSS", "Phillips-Perron"],
+            },
+            "test_type": {
+                "type": "string",
+                "description": "Short test identifier",
+                "enum": ["adf", "kpss", "pp"],
+            },
+            "statistic": {"type": "number", "description": "Test statistic value"},
+            "p_value": {
+                "type": "number",
+                "description": "P-value of the test",
+                "minimum": 0,
+                "maximum": 1,
+            },
+            "critical_values": {
+                "type": "object",
+                "description": "Critical values at different significance levels",
+                "additionalProperties": {"type": "number"},
+            },
+            "alternative": {"type": "string", "description": "Alternative hypothesis"},
+            "is_stationary": {
+                "type": "boolean",
+                "description": "Whether time series appears to be stationary",
+            },
+            "n_obs": {
+                "type": "integer",
+                "description": "Number of observations in time series",
+                "minimum": 1,
+            },
+        },
+        "required": [
+            "test_name",
+            "test_type",
+            "statistic",
+            "p_value",
+            "critical_values",
+            "alternative",
+            "is_stationary",
+            "n_obs",
+        ],
+        "additionalProperties": False,
+    },
     description="Test time series for stationarity (ADF, KPSS, Phillips-Perron)",
 )
 async def stationarity_test(context, params) -> dict[str, Any]:
     """Test time series stationarity."""
-
     await context.info("Testing time series stationarity")
-
     r_script = """
     library(tseries)
-    
     values <- args$data$values
     test_type <- args$test %||% "adf"
-    
     ts_data <- ts(values)
-    
     if (test_type == "adf") {
         test_result <- adf.test(ts_data)
         test_name <- "Augmented Dickey-Fuller"
     } else if (test_type == "kpss") {
-        test_result <- kpss.test(ts_data) 
+        test_result <- kpss.test(ts_data)
         test_name <- "KPSS"
     } else if (test_type == "pp") {
         test_result <- pp.test(ts_data)
         test_name <- "Phillips-Perron"
     }
-    
+    # Handle critical values properly - some tests might not have them
+    critical_vals <- if (is.null(test_result$critical) || length(test_result$critical) == 0) {
+        # Return empty named list to ensure it's treated as object, not array
+        structure(list(), names = character(0))
+    } else {
+        as.list(test_result$critical)
+    }
     result <- list(
         test_name = test_name,
         test_type = test_type,
         statistic = as.numeric(test_result$statistic),
         p_value = test_result$p.value,
-        critical_values = as.list(test_result$critical),
+        critical_values = critical_vals,
         alternative = test_result$alternative,
         is_stationary = if (test_type == "kpss") test_result$p.value > 0.05 else test_result$p.value < 0.05,
         n_obs = length(values)
     )
     """
-
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info(
             "Stationarity test completed",
             test=result.get("test_name"),
             p_value=result.get("p_value"),
         )
         return result
-
     except Exception as e:
         await context.error("Stationarity test failed", error=str(e))
         raise

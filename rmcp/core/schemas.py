@@ -1,6 +1,5 @@
 """
 JSON Schema validation helpers.
-
 Provides utilities for:
 - Schema validation with proper MCP error codes (-32602)
 - Common schema patterns for statistical tools
@@ -27,7 +26,6 @@ class SchemaError(Exception):
 def validate_schema(data: Any, schema: dict[str, Any], context: str = "") -> None:
     """
     Validate data against JSON schema.
-
     Raises SchemaError with MCP-compatible error code on failure.
     """
     try:
@@ -36,7 +34,6 @@ def validate_schema(data: Any, schema: dict[str, Any], context: str = "") -> Non
         field_path = ".".join(str(p) for p in e.absolute_path)
         error_context = f" in {context}" if context else ""
         field_info = f" (field: {field_path})" if field_path else ""
-
         raise SchemaError(
             f"Schema validation failed{error_context}: {e.message}{field_info}",
             field=field_path,
@@ -46,8 +43,6 @@ def validate_schema(data: Any, schema: dict[str, Any], context: str = "") -> Non
 
 
 # Common schema patterns for statistical tools
-
-
 def table_schema(required_columns: list[str] | None = None) -> dict[str, Any]:
     """Schema for tabular data (dict with column arrays)."""
     schema = {
@@ -58,7 +53,6 @@ def table_schema(required_columns: list[str] | None = None) -> dict[str, Any]:
             "items": {"type": ["number", "string", "null"]},
         },
     }
-
     if required_columns:
         schema["required"] = required_columns
         for col in required_columns:
@@ -66,7 +60,6 @@ def table_schema(required_columns: list[str] | None = None) -> dict[str, Any]:
                 "type": "array",
                 "items": {"type": ["number", "string", "null"]},
             }
-
     return schema
 
 
@@ -144,8 +137,6 @@ def mcp_content_schema() -> dict[str, Any]:
 
 
 # Tool result schemas
-
-
 def statistical_result_schema() -> dict[str, Any]:
     """Base schema for statistical analysis results."""
     return {
