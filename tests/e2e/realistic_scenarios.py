@@ -143,8 +143,8 @@ async def test_economist_scenario():
         corr_matrix = corr_result["correlation_matrix"]
         # Okun's Law: GDP growth and unemployment should be negatively correlated
         gdp_unemp_corr = corr_matrix["gdp_growth"][
-            2
-        ]  # unemployment is 3rd variable (index 2)
+            "unemployment"
+        ]  # Access by variable name
         print(f"✅ Macroeconomic Correlations:")
         print(f"   📉 GDP-Unemployment: {gdp_unemp_corr:.3f} (Okun's Law)")
         print(f"   📊 Sample size: {corr_result['n_obs']} observations")
