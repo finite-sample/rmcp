@@ -282,17 +282,12 @@ async def decompose_timeseries(context, params) -> dict[str, Any]:
     } else {
         decomp <- decompose(ts_data, type = "additive")
     }
-    # Convert to numeric and handle NA values properly for JSON
-    convert_with_na <- function(x) {
-        result <- as.numeric(x)
-        result[is.na(result)] <- NULL
-        return(result)
-    }
+    # Handle NA values properly for JSON - use I() to preserve arrays
     result <- list(
-        original = convert_with_na(decomp$x),
-        trend = convert_with_na(decomp$trend),
-        seasonal = convert_with_na(decomp$seasonal),
-        remainder = convert_with_na(decomp$random),
+        original = I(as.numeric(decomp$x)),
+        trend = I(as.numeric(decomp$trend)),
+        seasonal = I(as.numeric(decomp$seasonal)),
+        remainder = I(as.numeric(decomp$random)),
         type = decomp_type,
         frequency = frequency,
         n_obs = length(values)

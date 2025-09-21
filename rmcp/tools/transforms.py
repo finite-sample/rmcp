@@ -199,7 +199,7 @@ async def winsorize(context, params) -> dict[str, Any]:
         data = as.list(result_data),
         outliers_summary = outliers_summary,
         percentiles = percentiles,
-        variables_winsorized = variables,
+        variables_winsorized = I(variables),
         n_obs = nrow(result_data)
     )
     """

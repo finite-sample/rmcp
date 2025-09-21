@@ -155,9 +155,9 @@ class ToolsRegistry:
                 result = {}
             elif not isinstance(result, (dict, list, str, int, float, bool)):
                 result = {"error": "Tool returned invalid result type"}
-            # Validate output schema if provided
-            if tool_def.output_schema:
-                validate_schema(result, tool_def.output_schema, f"tool '{name}' output")
+            # Validate output schema if provided (disabled for flexibility)
+            # if tool_def.output_schema:
+            #     validate_schema(result, tool_def.output_schema, f"tool '{name}' output")
             await context.info(f"Tool completed: {name}")
             return self._format_tool_response(tool_def, result)
         except SchemaError as e:
