@@ -15,10 +15,10 @@ from typing import Any, AsyncIterator, Dict
 from urllib.parse import urlparse
 
 try:
-    from fastapi import FastAPI, Request, HTTPException, Header
+    import uvicorn
+    from fastapi import FastAPI, Header, HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import Response, StreamingResponse
-    import uvicorn
     from sse_starlette import EventSourceResponse
 except ImportError as e:
     raise ImportError(

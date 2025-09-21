@@ -11,9 +11,9 @@ Following the principle: "Keeps data access explicit and auditable."
 """
 
 import base64
+import inspect
 import logging
 from pathlib import Path
-import inspect
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 from urllib.parse import urlparse
 

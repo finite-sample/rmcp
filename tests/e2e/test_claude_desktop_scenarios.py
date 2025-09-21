@@ -17,6 +17,8 @@ from shutil import which
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+import pytest
+
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.fileops import data_info, read_csv, read_excel, read_json
@@ -30,8 +32,6 @@ from rmcp.tools.regression import (
     logistic_regression,
 )
 from tests.utils import extract_json_content
-
-import pytest
 
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for Claude Desktop scenarios"
@@ -376,7 +376,7 @@ async def main():
     print("🎉 CLAUDE DESKTOP E2E TEST RESULTS")
     print("=" * 80)
     print(f"✅ Scenarios Passed: {passed}/{len(scenarios)}")
-    print(f"📊 Success Rate: {passed/len(scenarios)*100:.1f}%")
+    print(f"📊 Success Rate: {passed / len(scenarios) * 100:.1f}%")
 
     if passed == len(scenarios):
         print("\n🎊 ALL SCENARIOS PASSED!")

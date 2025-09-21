@@ -20,6 +20,7 @@ from typing import Any, Awaitable, Callable, Dict, Optional
 try:
     from mcp import LoggingLevel
     from mcp.types import (
+        LATEST_PROTOCOL_VERSION,
         CompletionCapability,
         Implementation,
         InitializeResult,
@@ -28,7 +29,6 @@ try:
         ResourcesCapability,
         ServerCapabilities,
         ToolsCapability,
-        LATEST_PROTOCOL_VERSION,
     )
 
     _MCP_TYPES_AVAILABLE = True

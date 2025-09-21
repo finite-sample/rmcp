@@ -641,14 +641,14 @@ async def run_comprehensive_integration_tests():
             if not success:
                 print(f"     ❌ {tool_name}: {error}")
 
-    print(f"\n📊 Overall Success Rate: {passed}/40 ({passed/40:.1%})")
+    print(f"\n📊 Overall Success Rate: {passed}/40 ({passed / 40:.1%})")
 
     if passed == 40:
         print("🎉 ALL INTEGRATION TESTS PASSED!")
         print("✅ Complete MCP protocol compatibility verified")
         print("🚀 All 40 tools working end-to-end")
     else:
-        print(f"⚠️  {40-passed} tools need attention")
+        print(f"⚠️  {40 - passed} tools need attention")
         print("🔧 Integration fixes required")
 
     return passed == 40

@@ -6,26 +6,26 @@ Tests input schema validation and output shape compliance without R execution.
 These tests ensure that tools correctly validate parameters and return expected structures.
 """
 
-import pytest
-import jsonschema
-from jsonschema import validate, ValidationError
-from typing import Any
-
 import sys
 from pathlib import Path
+from typing import Any
+
+import jsonschema
+import pytest
+from jsonschema import ValidationError, validate
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from rmcp.tools.statistical_tests import t_test, chi_square_test, anova, normality_test
+from rmcp.tools.descriptive import frequency_table, outlier_detection, summary_stats
+from rmcp.tools.fileops import data_info, filter_data, read_csv
+from rmcp.tools.helpers import load_example, validate_data
 from rmcp.tools.regression import (
-    linear_model,
     correlation_analysis,
+    linear_model,
     logistic_regression,
 )
-from rmcp.tools.descriptive import summary_stats, outlier_detection, frequency_table
-from rmcp.tools.visualization import scatter_plot, histogram, correlation_heatmap
-from rmcp.tools.fileops import read_csv, data_info, filter_data
-from rmcp.tools.helpers import validate_data, load_example
+from rmcp.tools.statistical_tests import anova, chi_square_test, normality_test, t_test
+from rmcp.tools.visualization import correlation_heatmap, histogram, scatter_plot
 
 
 class TestTTestSchemaValidation:

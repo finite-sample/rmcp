@@ -12,6 +12,8 @@ from shutil import which
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+import pytest
+
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
@@ -47,8 +49,6 @@ from rmcp.tools.visualization import (
     time_series_plot,
 )
 from tests.utils import extract_json_content
-
-import pytest
 
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for direct capability tests"
@@ -341,7 +341,7 @@ async def main():
     passed = sum(test_results)
     total = len(test_results)
 
-    print(f"\n🎯 Results: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
+    print(f"\n🎯 Results: {passed}/{total} tests passed ({passed / total * 100:.1f}%)")
 
     if passed == total:
         print("🎉 All expanded capabilities working perfectly!")

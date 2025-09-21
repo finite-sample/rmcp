@@ -423,9 +423,9 @@ async def run_all_tests():
 
         print(f"  Category result: {category_passed}/{len(tests)} passed")
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"🎯 FINAL RESULTS: {passed_tests}/{total_tests} tests passed")
-    print(f"📊 Success rate: {passed_tests/total_tests*100:.1f}%")
+    print(f"📊 Success rate: {passed_tests / total_tests * 100:.1f}%")
 
     if passed_tests == total_tests:
         print("🎉 ALL TESTS PASSED! RMCP is ready for deployment.")
@@ -577,7 +577,7 @@ async def main():
     results.append(("Tool Tests", tool_result))
 
     # Summary
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print("📋 TEST SUMMARY")
     print("=" * 50)
 

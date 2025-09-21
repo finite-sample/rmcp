@@ -6,12 +6,11 @@ and configurations, following the principle of "multiple deployment targets."
 """
 
 import asyncio
+import json
 import logging
 import os
 import sys
 from pathlib import Path
-
-# Modern Python 3.10+ syntax for type hints
 
 import click
 
@@ -27,6 +26,9 @@ from .registries.prompts import (
 )
 from .registries.tools import register_tool_functions
 from .transport.stdio import StdioTransport
+
+# Modern Python 3.10+ syntax for type hints
+
 
 # Configure logging to stderr only
 logging.basicConfig(
@@ -218,7 +220,7 @@ def serve_http(
 
     click.echo(f"🚀 RMCP HTTP server starting on http://{host}:{port}")
     click.echo(f"📊 Available tools: {len(server.tools._tools)}")
-    click.echo(f"🔗 Endpoints:")
+    click.echo("🔗 Endpoints:")
     click.echo(f"   • POST http://{host}:{port}/ (JSON-RPC requests)")
     click.echo(f"   • GET  http://{host}:{port}/sse (Server-Sent Events)")
     click.echo(f"   • GET  http://{host}:{port}/health (Health check)")

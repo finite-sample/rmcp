@@ -510,7 +510,7 @@ class ToolsRegistry:
                 if columns:
                     col_preview = ", ".join(columns[:5])
                     if len(columns) > 5:
-                        col_preview += f", ... ({len(columns)-5} more)"
+                        col_preview += f", ... ({len(columns) - 5} more)"
                     summary_parts.append(f"**Columns**: {col_preview}")
 
                 # Show preview of first few rows if available

@@ -418,7 +418,7 @@ async def run_all_scenarios():
         status = "✅ PASS" if success else "❌ FAIL"
         print(f"{status} {scenario_name}")
 
-    print(f"\n📊 Overall Success Rate: {passed}/{total} ({passed/total:.1%})")
+    print(f"\n📊 Overall Success Rate: {passed}/{total} ({passed / total:.1%})")
 
     if passed == total:
         print("🎉 ALL SCENARIOS PASSED!")

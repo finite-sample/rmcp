@@ -22,8 +22,8 @@ import pytest
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 uvicorn = pytest.importorskip("uvicorn", reason="uvicorn not available")
 
-from rmcp.transport.http import HTTPTransport
 from rmcp.core.server import create_server
+from rmcp.transport.http import HTTPTransport
 
 
 class TestHTTPTransportInitialization:

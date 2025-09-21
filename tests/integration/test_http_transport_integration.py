@@ -20,8 +20,8 @@ import pytest
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 httpx = pytest.importorskip("httpx", reason="httpx not available")
 
-from rmcp.transport.http import HTTPTransport
 from rmcp.core.server import create_server
+from rmcp.transport.http import HTTPTransport
 
 
 @pytest.fixture

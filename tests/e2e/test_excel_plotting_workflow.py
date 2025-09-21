@@ -5,12 +5,12 @@ This tests Excel file loading and scatter plot generation.
 """
 
 import asyncio
-import pandas as pd
 import sys
 import tempfile
 from pathlib import Path
 from shutil import which
 
+import pandas as pd
 import pytest
 
 # Add rmcp to path
@@ -144,9 +144,9 @@ async def test_other_problematic_tools():
     server.configure(allowed_paths=["/tmp"], read_only=False)
 
     # Import and register more tools
-    from rmcp.tools.fileops import read_csv, data_info
-    from rmcp.tools.regression import linear_model, correlation_analysis
     from rmcp.tools.descriptive import summary_stats
+    from rmcp.tools.fileops import data_info, read_csv
+    from rmcp.tools.regression import correlation_analysis, linear_model
     from rmcp.tools.statistical_tests import t_test
 
     register_tool_functions(
@@ -212,7 +212,7 @@ async def main():
     # Test 2: Other tools
     tools_success = await test_other_problematic_tools()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("📋 FINAL TEST RESULTS")
     print("=" * 60)
     print(
