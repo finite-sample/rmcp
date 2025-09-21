@@ -116,10 +116,20 @@ class MCPServer:
         # Lifespan state
         self.lifespan_state = LifespanState()
 
+        # Transport + notification state
+        self._transports: set[Transport] = set()
+        self._pending_notifications: list[dict[str, Any]] = []
+
         # Registries
-        self.tools = ToolsRegistry()
-        self.resources = ResourcesRegistry()
-        self.prompts = PromptsRegistry()
+        self.tools = ToolsRegistry(
+            on_list_changed=self._make_list_changed_callback("tools")
+        )
+        self.resources = ResourcesRegistry(
+            on_list_changed=self._make_list_changed_callback("resources")
+        )
+        self.prompts = PromptsRegistry(
+            on_list_changed=self._make_list_changed_callback("prompts")
+        )
 
         # Security
         self.vfs: VFS | None = None
@@ -436,9 +446,9 @@ class MCPServer:
 
         if _MCP_TYPES_AVAILABLE:
             capabilities = ServerCapabilities(
-                tools=ToolsCapability(listChanged=False),
-                resources=ResourcesCapability(subscribe=False, listChanged=False),
-                prompts=PromptsCapability(listChanged=False),
+                tools=ToolsCapability(listChanged=True),
+                resources=ResourcesCapability(subscribe=False, listChanged=True),
+                prompts=PromptsCapability(listChanged=True),
                 logging=LoggingCapability(levels=_SUPPORTED_LOG_LEVELS),
             )
 
@@ -452,9 +462,9 @@ class MCPServer:
             return initialize_result.model_dump(mode="json", exclude_none=True)
 
         capabilities = {
-            "tools": {"listChanged": False},
-            "resources": {"subscribe": False, "listChanged": False},
-            "prompts": {"listChanged": False},
+            "tools": {"listChanged": True},
+            "resources": {"subscribe": False, "listChanged": True},
+            "prompts": {"listChanged": True},
             "logging": {"levels": _SUPPORTED_LOG_LEVELS},
         }
 
@@ -528,18 +538,30 @@ class MCPServer:
             if method == "initialize":
                 result = await self._handle_initialize(params)
             elif method == "tools/list":
-                result = await self.tools.list_tools(context)
+                result = await self.tools.list_tools(
+                    context,
+                    cursor=params.get("cursor"),
+                    limit=params.get("limit"),
+                )
             elif method == "tools/call":
                 tool_name = params.get("name")
                 arguments = params.get("arguments", {})
                 result = await self.tools.call_tool(context, tool_name, arguments)
             elif method == "resources/list":
-                result = await self.resources.list_resources(context)
+                result = await self.resources.list_resources(
+                    context,
+                    cursor=params.get("cursor"),
+                    limit=params.get("limit"),
+                )
             elif method == "resources/read":
                 uri = params.get("uri")
                 result = await self.resources.read_resource(context, uri)
             elif method == "prompts/list":
-                result = await self.prompts.list_prompts(context)
+                result = await self.prompts.list_prompts(
+                    context,
+                    cursor=params.get("cursor"),
+                    limit=params.get("limit"),
+                )
             elif method == "prompts/get":
                 name = params.get("name")
                 arguments = params.get("arguments", {})
@@ -565,13 +587,82 @@ class MCPServer:
         """Bind a transport to the server handler so context can emit feedback."""
 
         async def handler(message: dict[str, Any]) -> dict[str, Any] | None:
+            self._transports.add(transport)
             token = _transport_context.set({"transport": transport})
             try:
+                await self._flush_pending_notifications()
                 return await self.handle_request(message)
             finally:
                 _transport_context.reset(token)
 
         return handler
+
+    def _make_list_changed_callback(
+        self, kind: str
+    ) -> Callable[[list[str] | None], None]:
+        """Create a callback that enqueues list changed notifications."""
+
+        def callback(item_ids: list[str] | None = None) -> None:
+            self._queue_list_changed_notification(kind, item_ids)
+
+        return callback
+
+    def _queue_list_changed_notification(
+        self, kind: str, item_ids: list[str] | None = None
+    ) -> None:
+        """Queue a list_changed notification for connected clients."""
+
+        params: dict[str, Any] = {"kind": kind}
+        if item_ids:
+            params["itemIds"] = item_ids
+
+        notification = {
+            "jsonrpc": "2.0",
+            "method": "notifications/list_changed",
+            "params": params,
+        }
+
+        self._queue_notification(notification)
+
+    def _queue_notification(self, notification: dict[str, Any]) -> None:
+        """Queue notification for broadcast when transports are available."""
+
+        if not self._transports:
+            self._pending_notifications.append(notification)
+            return
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._pending_notifications.append(notification)
+            return
+
+        loop.create_task(self._broadcast_notification(notification))
+
+    async def _broadcast_notification(self, notification: dict[str, Any]) -> None:
+        """Broadcast a notification to all registered transports."""
+
+        for transport in list(self._transports):
+            try:
+                await transport.send_message(dict(notification))
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.warning(
+                    "Failed to send notification via %s: %s",
+                    getattr(transport, "name", "transport"),
+                    exc,
+                )
+
+    async def _flush_pending_notifications(self) -> None:
+        """Send any notifications queued before transports were ready."""
+
+        if not self._pending_notifications or not self._transports:
+            return
+
+        pending = self._pending_notifications[:]
+        self._pending_notifications.clear()
+
+        for notification in pending:
+            await self._broadcast_notification(notification)
 
     def _register_builtin_resources(self) -> None:
         """Expose project documentation as static resources."""
