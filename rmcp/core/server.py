@@ -16,6 +16,36 @@ import sys
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
+try:
+    from mcp import LoggingLevel
+    from mcp.types import (
+        Implementation,
+        InitializeResult,
+        LoggingCapability,
+        PromptsCapability,
+        ResourcesCapability,
+        ServerCapabilities,
+        ToolsCapability,
+        LATEST_PROTOCOL_VERSION,
+    )
+
+    _MCP_TYPES_AVAILABLE = True
+    _PROTOCOL_VERSION = LATEST_PROTOCOL_VERSION
+    _SUPPORTED_LOG_LEVELS = list(LoggingLevel.__args__)
+except Exception:  # pragma: no cover - optional dependency
+    _MCP_TYPES_AVAILABLE = False
+    _PROTOCOL_VERSION = "2025-06-18"
+    _SUPPORTED_LOG_LEVELS = [
+        "debug",
+        "info",
+        "notice",
+        "warning",
+        "error",
+        "critical",
+        "alert",
+        "emergency",
+    ]
+
 # Import version from __init__ at runtime to avoid circular imports
 from ..registries.prompts import PromptsRegistry
 from ..registries.resources import ResourcesRegistry
@@ -313,16 +343,40 @@ class MCPServer:
             f"Initializing MCP connection with client: {client_info.get('name', 'unknown')}"
         )
 
-        return {
-            "protocolVersion": "2025-06-18",
-            "capabilities": {
-                "tools": {"listChanged": False},
-                "resources": {"subscribe": False, "listChanged": False},
-                "prompts": {"listChanged": False},
-                "logging": {"level": "info"},
-            },
+        if _MCP_TYPES_AVAILABLE:
+            capabilities = ServerCapabilities(
+                tools=ToolsCapability(listChanged=False),
+                resources=ResourcesCapability(subscribe=False, listChanged=False),
+                prompts=PromptsCapability(listChanged=False),
+                logging=LoggingCapability(levels=_SUPPORTED_LOG_LEVELS),
+            )
+
+            initialize_result = InitializeResult(
+                protocolVersion=_PROTOCOL_VERSION,
+                capabilities=capabilities,
+                serverInfo=Implementation(name=self.name, version=self.version),
+                instructions=self.description or None,
+            )
+
+            return initialize_result.model_dump(mode="json", exclude_none=True)
+
+        capabilities = {
+            "tools": {"listChanged": False},
+            "resources": {"subscribe": False, "listChanged": False},
+            "prompts": {"listChanged": False},
+            "logging": {"levels": _SUPPORTED_LOG_LEVELS},
+        }
+
+        result = {
+            "protocolVersion": _PROTOCOL_VERSION,
+            "capabilities": capabilities,
             "serverInfo": {"name": self.name, "version": self.version},
         }
+
+        if self.description:
+            result["instructions"] = self.description
+
+        return result
 
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
         """

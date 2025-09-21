@@ -38,6 +38,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _run_server_with_transport(server, transport) -> None:
+    """Run a transport while honoring server lifecycle hooks."""
+
+    started = False
+    try:
+        await server.startup()
+        started = True
+        await transport.run()
+    finally:
+        if started:
+            await server.shutdown()
+
+
 @click.group()
 @click.version_option(version=__version__)
 def cli():
@@ -83,8 +96,8 @@ def start(log_level: str):
         transport = StdioTransport()
         transport.set_message_handler(server.handle_request)
 
-        # Run the server
-        asyncio.run(transport.run())
+        # Run the server with lifecycle management
+        asyncio.run(_run_server_with_transport(server, transport))
 
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
@@ -166,8 +179,8 @@ def serve(
         transport = StdioTransport()
         transport.set_message_handler(server.handle_request)
 
-        # Run the server
-        asyncio.run(transport.run())
+        # Run the server with lifecycle management
+        asyncio.run(_run_server_with_transport(server, transport))
 
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
@@ -211,7 +224,7 @@ def serve_http(
     click.echo(f"   • GET  http://{host}:{port}/health (Health check)")
 
     try:
-        asyncio.run(transport.run())
+        asyncio.run(_run_server_with_transport(server, transport))
     except KeyboardInterrupt:
         click.echo("\n👋 Shutting down HTTP server")
     except Exception as e:
