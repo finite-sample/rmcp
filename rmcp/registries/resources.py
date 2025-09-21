@@ -37,7 +37,9 @@ class ResourcesRegistry:
         name: str,
         description: Optional[str] = None,
         mime_type: Optional[str] = None,
-        content_loader: Optional[Union[str, bytes, Callable[[], Any], Callable[[], Awaitable[Any]]]] = None,
+        content_loader: Optional[
+            Union[str, bytes, Callable[[], Any], Callable[[], Awaitable[Any]]]
+        ] = None,
     ) -> None:
         """Register a static resource."""
 

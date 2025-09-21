@@ -14,6 +14,8 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -32,6 +34,7 @@ async def create_test_context():
     return context
 
 
+@pytest.mark.asyncio
 async def test_business_analyst_scenario():
     """Business analyst wants to predict sales from marketing spend."""
 
@@ -112,6 +115,7 @@ async def test_business_analyst_scenario():
         return False
 
 
+@pytest.mark.asyncio
 async def test_economist_scenario():
     """Economist wants to analyze GDP, inflation, and unemployment relationships."""
 
@@ -189,6 +193,7 @@ async def test_economist_scenario():
         return False
 
 
+@pytest.mark.asyncio
 async def test_data_scientist_scenario():
     """Data scientist wants to predict customer churn."""
 
@@ -287,6 +292,7 @@ async def test_data_scientist_scenario():
         return False
 
 
+@pytest.mark.asyncio
 async def test_researcher_scenario():
     """Academic researcher wants to test treatment effects."""
 

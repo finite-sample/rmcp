@@ -311,6 +311,7 @@ async def run_all_tests():
                             "cat1": ["A", "B", "A", "B", "A"],
                             "cat2": ["X", "Y", "X", "Y", "X"],
                         },
+                        "test_type": "independence",
                         "x": "cat1",
                         "y": "cat2",
                     },
@@ -382,7 +383,7 @@ async def run_all_tests():
                     "filter_data",
                     {
                         "data": sample_data,
-                        "conditions": [{"column": "x", "operator": ">", "value": 2}],
+                        "conditions": [{"variable": "x", "operator": ">", "value": 2}],
                     },
                 ),
                 # Note: read_csv, read_excel, read_json, write_csv require actual files
@@ -400,7 +401,7 @@ async def run_all_tests():
                 ),
                 ("validate_formula", {"formula": "y ~ x", "data": sample_data}),
                 ("validate_data", {"data": sample_data}),
-                ("load_example", {"dataset": "economic_growth"}),
+                ("load_example", {"dataset_name": "economics"}),
             ],
         ),
     ]

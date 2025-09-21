@@ -26,7 +26,9 @@ def mcp_server(server_factory):
     return server_factory(linear_model, correlation_analysis, logistic_regression)
 
 
-def _tool_call_request(tool_name: str, arguments: Dict[str, Any], *, request_id: int) -> Dict[str, Any]:
+def _tool_call_request(
+    tool_name: str, arguments: Dict[str, Any], *, request_id: int
+) -> Dict[str, Any]:
     return {
         "jsonrpc": "2.0",
         "id": request_id,
@@ -69,7 +71,9 @@ def _assert_business_analysis(result: Dict[str, Any]) -> None:
 
 def _assert_economist_analysis(result: Dict[str, Any]) -> None:
     correlation = result["correlation_matrix"]["gdp_growth"][1]
-    assert correlation < 0, "GDP growth and unemployment should be negatively correlated"
+    assert (
+        correlation < 0
+    ), "GDP growth and unemployment should be negatively correlated"
     assert abs(correlation) > 0.5, "Correlation should be substantial"
 
 
@@ -127,7 +131,10 @@ def _assert_data_scientist_analysis(result: Dict[str, Any]) -> None:
     ],
 )
 async def test_mcp_tool_calls(
-    mcp_server, tool_name: str, arguments: Dict[str, Any], validator: Callable[[Dict[str, Any]], None]
+    mcp_server,
+    tool_name: str,
+    arguments: Dict[str, Any],
+    validator: Callable[[Dict[str, Any]], None],
 ):
     """Exercise representative MCP tool calls and validate the returned results."""
 

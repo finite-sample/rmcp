@@ -6,7 +6,6 @@ and configurations, following the principle of "multiple deployment targets."
 """
 
 import asyncio
-import json
 import logging
 import os
 import sys
@@ -262,14 +261,18 @@ def list_capabilities(allowed_paths: list[str], output: str | None):
         tools = await server.tools.list_tools(context)
         resources = await server.resources.list_resources(context)
         prompts = await server.prompts.list_prompts(context)
-        initialize = await server._handle_initialize({"clientInfo": {"name": "rmcp-cli"}})
+        initialize = await server._handle_initialize(
+            {"clientInfo": {"name": "rmcp-cli"}}
+        )
 
         capabilities = {
             "server": {
                 "name": server.name,
                 "version": server.version,
                 "description": server.description,
-                "allowedPaths": [str(path) for path in server.lifespan_state.allowed_paths],
+                "allowedPaths": [
+                    str(path) for path in server.lifespan_state.allowed_paths
+                ],
                 "resourceMounts": {
                     name: str(path)
                     for name, path in server.lifespan_state.resource_mounts.items()
@@ -305,7 +308,9 @@ def list_capabilities(allowed_paths: list[str], output: str | None):
 @click.option("--allowed-paths", multiple=True, help="Allowed file system paths")
 @click.option("--cache-root", type=click.Path(), help="Cache root directory")
 @click.option("--read-only/--read-write", default=True, help="File system access mode")
-def validate_config(allowed_paths: tuple[str, ...], cache_root: str | None, read_only: bool):
+def validate_config(
+    allowed_paths: tuple[str, ...], cache_root: str | None, read_only: bool
+):
     """Validate server configuration and highlight potential issues."""
 
     if not allowed_paths:

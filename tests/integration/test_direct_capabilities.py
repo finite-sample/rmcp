@@ -251,7 +251,7 @@ async def create_test_server():
     return server
 
 
-async def test_tool_call(server, tool_name, params):
+async def run_tool_call(server, tool_name, params):
     """Test a direct tool call through MCP protocol."""
 
     # Create MCP request
@@ -328,7 +328,7 @@ async def main():
 
     for tool_name, params in tests:
         print(f"Testing {tool_name}...", end=" ")
-        result = await test_tool_call(server, tool_name, params)
+        result = await run_tool_call(server, tool_name, params)
 
         if result:
             print("✅")

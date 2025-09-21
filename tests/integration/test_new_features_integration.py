@@ -36,7 +36,9 @@ def integration_server(server_factory):
     )
 
 
-def _tool_call_request(tool_name: str, arguments: Dict[str, Any], *, request_id: int) -> Dict[str, Any]:
+def _tool_call_request(
+    tool_name: str, arguments: Dict[str, Any], *, request_id: int
+) -> Dict[str, Any]:
     return {
         "jsonrpc": "2.0",
         "id": request_id,
@@ -52,8 +54,12 @@ def _parse_result(response: Dict[str, Any]) -> Dict[str, Any]:
     return extract_json_content(response)
 
 
-async def _call_tool(server: Any, name: str, arguments: Dict[str, Any], *, request_id: int) -> Dict[str, Any]:
-    response = await server.handle_request(_tool_call_request(name, arguments, request_id=request_id))
+async def _call_tool(
+    server: Any, name: str, arguments: Dict[str, Any], *, request_id: int
+) -> Dict[str, Any]:
+    response = await server.handle_request(
+        _tool_call_request(name, arguments, request_id=request_id)
+    )
     return _parse_result(response)
 
 

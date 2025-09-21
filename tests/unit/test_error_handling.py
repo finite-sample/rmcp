@@ -72,7 +72,9 @@ async def test_invalid_data_types_are_rejected():
 
 
 @pytest.mark.asyncio
-async def test_empty_data_produces_tool_execution_error(monkeypatch: pytest.MonkeyPatch):
+async def test_empty_data_produces_tool_execution_error(
+    monkeypatch: pytest.MonkeyPatch,
+):
     async def fake_execute_r_script_async(script: str, params: dict[str, Any]):
         raise RuntimeError("dataset is empty")
 

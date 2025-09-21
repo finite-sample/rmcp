@@ -398,7 +398,7 @@ async def create_test_server():
     return server
 
 
-async def test_tool_integration(server, tool_name, test_data):
+async def run_tool_integration_test(server, tool_name, test_data):
     """Test individual tool through full MCP integration."""
 
     # Create MCP request
@@ -598,7 +598,7 @@ async def run_comprehensive_integration_tests():
     for i, (tool_name, test_data) in enumerate(test_cases, 1):
         print(f"[{i:2d}/40] Testing {tool_name:<20}", end=" ")
 
-        success, result = await test_tool_integration(server, tool_name, test_data)
+        success, result = await run_tool_integration_test(server, tool_name, test_data)
 
         if success:
             print("✅")

@@ -127,7 +127,10 @@ class HTTPTransport(Transport):
                                 break
 
                         if not notifications_sent:
-                            yield {"event": "keepalive", "data": json.dumps({"status": "ok"})}
+                            yield {
+                                "event": "keepalive",
+                                "data": json.dumps({"status": "ok"}),
+                            }
 
                         # Small delay to prevent busy waiting
                         await asyncio.sleep(0.5)
@@ -243,4 +246,3 @@ class HTTPTransport(Transport):
             raise
         finally:
             await self.shutdown()
-

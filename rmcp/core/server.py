@@ -352,9 +352,7 @@ class MCPServer:
                         exc,
                     )
 
-            logger.info(
-                "Progress %s: %s (%s/%s)", request_id, message, current, total
-            )
+            logger.info("Progress %s: %s (%s/%s)", request_id, message, current, total)
 
         async def log_callback(level: str, message: str, data: dict[str, Any]) -> None:
             payload = {"requestId": request_id, **data}
@@ -561,7 +559,9 @@ class MCPServer:
             if request_id:
                 self.finish_request(request_id)
 
-    def create_message_handler(self, transport: Transport) -> Callable[[dict[str, Any]], Awaitable[dict[str, Any] | None]]:
+    def create_message_handler(
+        self, transport: Transport
+    ) -> Callable[[dict[str, Any]], Awaitable[dict[str, Any] | None]]:
         """Bind a transport to the server handler so context can emit feedback."""
 
         async def handler(message: dict[str, Any]) -> dict[str, Any] | None:
@@ -585,7 +585,9 @@ class MCPServer:
                 name="RMCP README",
                 description="Project overview and setup guidance",
                 mime_type="text/markdown",
-                content_loader=lambda path=readme_path: path.read_text(encoding="utf-8"),
+                content_loader=lambda path=readme_path: path.read_text(
+                    encoding="utf-8"
+                ),
             )
 
         examples_dir = project_root / "examples"
