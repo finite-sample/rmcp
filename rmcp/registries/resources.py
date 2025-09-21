@@ -13,6 +13,7 @@ Following the principle: "Keeps data access explicit and auditable."
 import base64
 import logging
 from pathlib import Path
+import inspect
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 from urllib.parse import parse_qs, urlparse
 
@@ -36,6 +37,7 @@ class ResourcesRegistry:
         name: str,
         description: Optional[str] = None,
         mime_type: Optional[str] = None,
+        content_loader: Optional[Union[str, bytes, Callable[[], Any], Callable[[], Awaitable[Any]]]] = None,
     ) -> None:
         """Register a static resource."""
 
@@ -44,6 +46,7 @@ class ResourcesRegistry:
             "name": name,
             "description": description or f"Resource: {name}",
             "mimeType": mime_type,
+            "loader": content_loader,
         }
 
         logger.debug(f"Registered static resource: {uri}")
@@ -233,14 +236,44 @@ class ResourcesRegistry:
 
         resource_info = self._static_resources[uri]
 
-        # Static resources would need their content defined somewhere
-        # For now, return placeholder
+        loader = resource_info.get("loader")
+        mime_type = resource_info.get("mimeType") or "text/plain"
+
+        content: Any
+        if loader is None:
+            content = resource_info.get(
+                "description", f"Static resource: {resource_info['name']}"
+            )
+        elif isinstance(loader, (str, bytes)):
+            content = loader
+        else:
+            result = loader()
+            if inspect.isawaitable(result):
+                content = await result
+            else:
+                content = result
+
+        if isinstance(content, bytes):
+            b64_content = base64.b64encode(content).decode("ascii")
+            return {
+                "contents": [
+                    {
+                        "uri": uri,
+                        "mimeType": mime_type,
+                        "blob": b64_content,
+                    }
+                ]
+            }
+
+        if not isinstance(content, str):
+            content = str(content)
+
         return {
             "contents": [
                 {
                     "uri": uri,
-                    "mimeType": resource_info.get("mimeType", "text/plain"),
-                    "text": f"Static resource: {resource_info['name']}",
+                    "mimeType": mime_type,
+                    "text": content,
                 }
             ]
         }

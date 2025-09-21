@@ -13,8 +13,9 @@ Following the principle: "A single shell centralizes initialization and teardown
 import asyncio
 import logging
 import sys
+from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Dict, Optional
 
 try:
     from mcp import LoggingLevel
@@ -51,6 +52,7 @@ from ..registries.prompts import PromptsRegistry
 from ..registries.resources import ResourcesRegistry
 from ..registries.tools import ToolsRegistry
 from ..security.vfs import VFS
+from ..transport.base import Transport
 from .context import Context, LifespanState, RequestState
 
 # Official MCP SDK imports (to be added when SDK is available)
@@ -59,6 +61,11 @@ from .context import Context, LifespanState, RequestState
 
 
 logger = logging.getLogger(__name__)
+
+
+_transport_context: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+    "rmcp_transport_context", default=None
+)
 
 
 class MCPServer:
@@ -124,6 +131,9 @@ class MCPServer:
         # Request tracking for cancellation
         self._active_requests: dict[str, RequestState] = {}
 
+        # Register built-in static resources for quick discovery
+        self._register_builtin_resources()
+
     def configure(
         self,
         allowed_paths: list[str] | None = None,
@@ -155,7 +165,19 @@ class MCPServer:
         """
 
         if allowed_paths:
-            self.lifespan_state.allowed_paths = [Path(p) for p in allowed_paths]
+            resolved_paths = []
+            for raw_path in allowed_paths:
+                path = Path(raw_path).expanduser()
+                try:
+                    resolved_paths.append(path.resolve())
+                except OSError:
+                    logger.warning(f"Unable to resolve allowed path: {raw_path}")
+                    resolved_paths.append(path)
+
+            self.lifespan_state.allowed_paths = resolved_paths
+        elif not self.lifespan_state.allowed_paths:
+            # Default to current working directory if nothing configured
+            self.lifespan_state.allowed_paths = [Path.cwd()]
 
         if cache_root:
             cache_path = Path(cache_root)
@@ -165,6 +187,11 @@ class MCPServer:
         self.lifespan_state.read_only = read_only
         self.lifespan_state.settings.update(settings)
 
+        # Build resource mounts for allowed paths so clients can browse them
+        self.lifespan_state.resource_mounts = self._build_resource_mounts(
+            self.lifespan_state.allowed_paths
+        )
+
         # Initialize VFS
         self.vfs = VFS(
             allowed_roots=self.lifespan_state.allowed_paths, read_only=read_only
@@ -173,6 +200,24 @@ class MCPServer:
         self.lifespan_state.vfs = self.vfs
 
         return self
+
+    def _build_resource_mounts(self, paths: list[Path]) -> dict[str, Path]:
+        """Create deterministic mount names for each allowed path."""
+
+        mounts: dict[str, Path] = {}
+
+        for index, path in enumerate(paths, start=1):
+            name = path.name or f"root-{index}"
+            candidate = name
+            suffix = 1
+
+            while candidate in mounts:
+                suffix += 1
+                candidate = f"{name}-{suffix}"
+
+            mounts[candidate] = path
+
+        return mounts
 
     def on_startup(
         self, func: Callable[[], Awaitable[None]]
@@ -265,6 +310,8 @@ class MCPServer:
         request_id: str,
         method: str,
         progress_token: str | None = None,
+        tool_invocation_id: str | None = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Context:
         """
         Create execution context for a request.
@@ -278,20 +325,64 @@ class MCPServer:
             Context object with progress/logging callbacks configured
         """
 
+        transport_info = _transport_context.get()
+        transport: Transport | None = None
+        if transport_info and isinstance(transport_info, dict):
+            transport = transport_info.get("transport")
+
+        progress_sender = None
+        log_sender = None
+
+        if transport:
+            progress_sender = getattr(transport, "send_progress_notification", None)
+            log_sender = getattr(transport, "send_log_notification", None)
+
         async def progress_callback(message: str, current: int, total: int) -> None:
-            # TODO: Send MCP progress notification
-            logger.info(f"Progress {request_id}: {message} ({current}/{total})")
+            if not progress_token:
+                return
+
+            if progress_sender:
+                try:
+                    await progress_sender(progress_token, current, total, message)
+                    return
+                except Exception as exc:  # pragma: no cover - defensive logging
+                    logger.warning(
+                        "Failed to send progress notification for %s: %s",
+                        request_id,
+                        exc,
+                    )
+
+            logger.info(
+                "Progress %s: %s (%s/%s)", request_id, message, current, total
+            )
 
         async def log_callback(level: str, message: str, data: dict[str, Any]) -> None:
-            # TODO: Send MCP log notification
+            payload = {"requestId": request_id, **data}
+            if tool_invocation_id:
+                payload.setdefault("toolInvocationId", tool_invocation_id)
+
             log_level = getattr(logging, level.upper(), logging.INFO)
-            logger.log(log_level, f"{request_id}: {message} {data}")
+
+            if log_sender:
+                try:
+                    await log_sender(level, message, payload)
+                    return
+                except Exception as exc:  # pragma: no cover - defensive logging
+                    logger.warning(
+                        "Failed to send log notification for %s: %s",
+                        request_id,
+                        exc,
+                    )
+
+            logger.log(log_level, f"{request_id}: {message} {payload}")
 
         context = Context.create(
             request_id=request_id,
             method=method,
             lifespan_state=self.lifespan_state,
             progress_token=progress_token,
+            tool_invocation_id=tool_invocation_id,
+            metadata=metadata,
             progress_callback=progress_callback,
             log_callback=log_callback,
         )
@@ -407,13 +498,31 @@ class MCPServer:
         request_id = request.get("id")
         params = request.get("params", {})
 
+        if not isinstance(params, dict):
+            params = {}
+
+        if method is None:
+            raise ValueError("Invalid JSON-RPC request: missing method")
+
         # Handle notifications (no response expected)
         if request_id is None:
             await self._handle_notification(method, params)
             return None
 
         try:
-            context = self.create_context(request_id, method)
+            progress_token = params.get("progressToken")
+            tool_invocation_id = params.get("toolInvocationId")
+            metadata = {}
+            if tool_invocation_id:
+                metadata["toolInvocationId"] = tool_invocation_id
+
+            context = self.create_context(
+                request_id,
+                method,
+                progress_token=progress_token,
+                tool_invocation_id=tool_invocation_id,
+                metadata=metadata,
+            )
 
             # Route to appropriate handler
             if method == "initialize":
@@ -451,6 +560,47 @@ class MCPServer:
         finally:
             if request_id:
                 self.finish_request(request_id)
+
+    def create_message_handler(self, transport: Transport) -> Callable[[dict[str, Any]], Awaitable[dict[str, Any] | None]]:
+        """Bind a transport to the server handler so context can emit feedback."""
+
+        async def handler(message: dict[str, Any]) -> dict[str, Any] | None:
+            token = _transport_context.set({"transport": transport})
+            try:
+                return await self.handle_request(message)
+            finally:
+                _transport_context.reset(token)
+
+        return handler
+
+    def _register_builtin_resources(self) -> None:
+        """Expose project documentation as static resources."""
+
+        project_root = Path(__file__).resolve().parents[2]
+
+        readme_path = project_root / "README.md"
+        if readme_path.exists():
+            self.resources.register_static_resource(
+                uri="rmcp://docs/readme",
+                name="RMCP README",
+                description="Project overview and setup guidance",
+                mime_type="text/markdown",
+                content_loader=lambda path=readme_path: path.read_text(encoding="utf-8"),
+            )
+
+        examples_dir = project_root / "examples"
+        if examples_dir.exists():
+            for example_path in examples_dir.glob("*.md"):
+                uri = f"rmcp://examples/{example_path.stem}"
+                self.resources.register_static_resource(
+                    uri=uri,
+                    name=f"Example: {example_path.stem.replace('_', ' ').title()}",
+                    description=f"Example workflow from {example_path.name}",
+                    mime_type="text/markdown",
+                    content_loader=(
+                        lambda path=example_path: path.read_text(encoding="utf-8")
+                    ),
+                )
 
     async def _handle_notification(self, method: str, params: dict[str, Any]) -> None:
         """

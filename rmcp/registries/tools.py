@@ -15,7 +15,7 @@ import json
 import logging
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Sequence
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, statistical_result_schema, validate_schema
@@ -129,49 +129,7 @@ class ToolsRegistry:
 
             await context.info(f"Tool completed: {name}")
 
-            # Handle multiple content types (text + optional image)
-            if isinstance(result, dict) and "image_data" in result:
-                # Create content array with both text and image
-                content = []
-
-                # Text content (exclude image-specific fields)
-                text_result = {
-                    k: v
-                    for k, v in result.items()
-                    if k not in ["image_data", "image_mime_type"]
-                }
-
-                # Ensure we have valid text content
-                if not text_result:
-                    text_result = {"status": "completed"}
-
-                content.append(
-                    {"type": "text", "text": json.dumps(text_result, default=str)}
-                )
-
-                # Image content
-                image_data = result.get("image_data")
-                mime_type = result.get("image_mime_type", "image/png")
-
-                if image_data:
-                    content.append(
-                        {"type": "image", "data": image_data, "mimeType": mime_type}
-                    )
-
-                return {"content": content}
-            else:
-                # Standard text-only response
-                # Ensure we always have valid JSON content
-                if isinstance(result, str) and result.strip() == "":
-                    result = {"status": "completed"}
-                elif not result and not isinstance(result, (list, dict)):
-                    result = {"status": "completed"}
-
-                return {
-                    "content": [
-                        {"type": "text", "text": json.dumps(result, default=str)}
-                    ]
-                }
+            return self._format_tool_response(tool_def, result)
 
         except SchemaError as e:
             await context.error(f"Schema validation failed for tool '{name}': {e}")
@@ -186,6 +144,121 @@ class ToolsRegistry:
                 "content": [{"type": "text", "text": f"Tool execution error: {e}"}],
                 "isError": True,
             }
+
+    def _format_tool_response(
+        self, tool_def: ToolDefinition, result: Any
+    ) -> dict[str, Any]:
+        """Convert tool output into rich MCP content."""
+
+        if (
+            isinstance(result, dict)
+            and "content" in result
+            and isinstance(result["content"], Sequence)
+        ):
+            return result
+
+        image_data = None
+        image_mime_type = "image/png"
+        base_payload: Any = result
+
+        if isinstance(result, dict) and "image_data" in result:
+            image_data = result.get("image_data")
+            image_mime_type = result.get("image_mime_type", "image/png")
+            base_payload = {
+                k: v
+                for k, v in result.items()
+                if k not in {"image_data", "image_mime_type"}
+            }
+
+        if isinstance(base_payload, str) and base_payload.strip() == "":
+            base_payload = {"status": "completed"}
+        elif not base_payload and not isinstance(base_payload, (list, dict)):
+            base_payload = {"status": "completed"}
+
+        summary = self._build_summary(tool_def, base_payload)
+        content: list[dict[str, Any]] = []
+
+        if summary:
+            content.append(
+                {
+                    "type": "text",
+                    "text": summary,
+                    "annotations": {"mimeType": "text/markdown"},
+                }
+            )
+
+        if isinstance(base_payload, (dict, list)):
+            content.append(
+                {
+                    "type": "text",
+                    "text": json.dumps(base_payload, indent=2, default=str),
+                    "annotations": {"mimeType": "application/json"},
+                }
+            )
+        elif isinstance(base_payload, str) and not summary:
+            content.append(
+                {
+                    "type": "text",
+                    "text": base_payload,
+                    "annotations": {"mimeType": "text/markdown"},
+                }
+            )
+        elif not summary:
+            content.append(
+                {
+                    "type": "text",
+                    "text": json.dumps(base_payload, default=str),
+                }
+            )
+
+        if image_data:
+            content.append(
+                {"type": "image", "data": image_data, "mimeType": image_mime_type}
+            )
+
+        return {"content": content}
+
+    def _build_summary(self, tool_def: ToolDefinition, payload: Any) -> str:
+        """Create a concise markdown summary for human readers."""
+
+        title = tool_def.title or tool_def.name
+
+        if isinstance(payload, str):
+            return payload
+
+        if isinstance(payload, list):
+            return (
+                f"**{title}** produced {len(payload)} "
+                f"item{'s' if len(payload) != 1 else ''}."
+            )
+
+        if isinstance(payload, dict):
+            bullets = []
+            for key, value in list(payload.items())[:8]:
+                if isinstance(value, (str, int, float)):
+                    bullets.append(f"- **{key}**: {value}")
+                elif isinstance(value, bool):
+                    bullets.append(f"- **{key}**: {'yes' if value else 'no'}")
+                elif value is None:
+                    bullets.append(f"- **{key}**: null")
+                elif isinstance(value, list):
+                    bullets.append(
+                        f"- **{key}**: {len(value)} item{'s' if len(value) != 1 else ''}"
+                    )
+                elif isinstance(value, dict):
+                    bullets.append(
+                        f"- **{key}**: {len(value)} field{'s' if len(value) != 1 else ''}"
+                    )
+                else:
+                    bullets.append(f"- **{key}**: {type(value).__name__}")
+
+            if not bullets:
+                return f"**{title}** completed without additional details."
+
+            bullet_text = "\n".join(bullets)
+            return f"**{title}** summary:\n{bullet_text}"
+
+        return f"**{title}** returned {payload}"
 
 
 def tool(

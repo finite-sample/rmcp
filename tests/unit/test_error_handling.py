@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import sys
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -18,6 +17,7 @@ from rmcp.tools.fileops import read_csv
 from rmcp.tools.formula_builder import build_formula
 from rmcp.tools.helpers import suggest_fix, validate_data
 from rmcp.tools.regression import linear_model
+from tests.utils import extract_json_content, extract_text_summary
 
 
 async def _call_tool(
@@ -43,12 +43,11 @@ async def _call_tool(
 
 
 def _extract_text_content(response: dict[str, Any]) -> str:
-    """Return the concatenated text payload for a tool response."""
+    """Return the concatenated human-readable text payload for a tool response."""
 
-    result = response["result"]
-    contents = [c for c in result["content"] if c["type"] == "text"]
-    assert contents, "tool response must include text content"
-    return "\n".join(content["text"] for content in contents)
+    text = extract_text_summary(response)
+    assert text, "tool response must include human-readable text"
+    return text
 
 
 @pytest.mark.asyncio
@@ -152,7 +151,7 @@ async def test_suggest_fix_returns_structured_analysis():
     )
 
     assert "isError" not in response["result"]
-    payload = json.loads(_extract_text_content(response))
+    payload = extract_json_content(response)
     assert payload["error_type"] == "missing_package"
     assert any("install" in suggestion.lower() for suggestion in payload["suggestions"])
 
@@ -180,7 +179,7 @@ async def test_data_validation_edge_cases_surface_warnings(
     )
 
     assert "isError" not in response["result"]
-    payload = json.loads(_extract_text_content(response))
+    payload = extract_json_content(response)
     assert payload["is_valid"] is False
     assert payload["errors"]
     assert payload["warnings"]
@@ -194,6 +193,6 @@ async def test_ambiguous_formula_description_still_produces_formula():
     )
 
     assert "isError" not in response["result"]
-    payload = json.loads(_extract_text_content(response))
+    payload = extract_json_content(response)
     assert payload["formula"].startswith("something ~")
     assert payload["matched_pattern"] == "manual extraction"

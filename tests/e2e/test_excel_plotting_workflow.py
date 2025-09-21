@@ -5,11 +5,13 @@ This tests Excel file loading and scatter plot generation.
 """
 
 import asyncio
-import json
 import pandas as pd
 import sys
 import tempfile
 from pathlib import Path
+from shutil import which
+
+import pytest
 
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -18,6 +20,11 @@ from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.fileops import read_excel
 from rmcp.tools.visualization import scatter_plot
+from tests.utils import extract_json_content
+
+pytestmark = pytest.mark.skipif(
+    which("R") is None, reason="R binary is required for Excel plotting workflow tests"
+)
 
 
 async def simulate_claude_desktop_workflow():
@@ -60,8 +67,7 @@ async def simulate_claude_desktop_workflow():
     try:
         response = await server.handle_request(read_request)
         if "result" in response and "content" in response["result"]:
-            content = response["result"]["content"][0]["text"]
-            excel_data = json.loads(content)
+            excel_data = extract_json_content(response)
             print("✅ Excel file read successfully!")
             file_info = excel_data.get("file_info", {})
             print(
@@ -128,6 +134,7 @@ async def simulate_claude_desktop_workflow():
     return True
 
 
+@pytest.mark.asyncio
 async def test_other_problematic_tools():
     """Test other tools that might have had similar issues."""
     print("\n🔧 Testing Other Previously Problematic Tools")

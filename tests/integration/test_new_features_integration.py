@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import json
 from shutil import which
 from typing import Any, Dict
 
@@ -13,6 +12,7 @@ from rmcp.tools.fileops import read_excel, read_json
 from rmcp.tools.formula_builder import build_formula, validate_formula
 from rmcp.tools.helpers import load_example, suggest_fix, validate_data
 from rmcp.tools.regression import correlation_analysis, linear_model
+from tests.utils import extract_json_content
 
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for integration tests"
@@ -49,14 +49,7 @@ def _parse_result(response: Dict[str, Any]) -> Dict[str, Any]:
     assert "result" in response, f"Response missing result payload: {response!r}"
     result = response["result"]
     assert not result.get("isError", False), f"Tool reported error: {result!r}"
-    content = result.get("content")
-    assert content, f"No content returned from tool: {result!r}"
-
-    payload = content[0]["text"]
-    try:
-        return json.loads(payload)
-    except json.JSONDecodeError:
-        return ast.literal_eval(payload)
+    return extract_json_content(response)
 
 
 async def _call_tool(server: Any, name: str, arguments: Dict[str, Any], *, request_id: int) -> Dict[str, Any]:

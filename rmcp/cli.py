@@ -6,7 +6,9 @@ and configurations, following the principle of "multiple deployment targets."
 """
 
 import asyncio
+import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -24,7 +26,6 @@ from .registries.prompts import (
     statistical_workflow_prompt,
     time_series_forecast_prompt,
 )
-from .registries.resources import ResourcesRegistry
 from .registries.tools import register_tool_functions
 from .transport.stdio import StdioTransport
 
@@ -94,7 +95,7 @@ def start(log_level: str):
 
         # Set up stdio transport
         transport = StdioTransport()
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Run the server with lifecycle management
         asyncio.run(_run_server_with_transport(server, transport))
@@ -177,7 +178,7 @@ def serve(
 
         # Set up stdio transport
         transport = StdioTransport()
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Run the server with lifecycle management
         asyncio.run(_run_server_with_transport(server, transport))
@@ -214,7 +215,7 @@ def serve_http(
 
     # Create HTTP transport
     transport = HTTPTransport(host=host, port=port)
-    transport.set_message_handler(server.handle_request)
+    transport.set_message_handler(server.create_message_handler(transport))
 
     click.echo(f"🚀 RMCP HTTP server starting on http://{host}:{port}")
     click.echo(f"📊 Available tools: {len(server.tools._tools)}")
@@ -254,27 +255,31 @@ def list_capabilities(allowed_paths: list[str], output: str | None):
     )
 
     async def _list():
-        from .core.context import Context, LifespanState
+        from .core.context import Context
 
-        context = Context.create("list", "list", server.lifespan_state)
+        context = Context.create("capabilities", "list", server.lifespan_state)
 
-        # Get capabilities
         tools = await server.tools.list_tools(context)
         resources = await server.resources.list_resources(context)
         prompts = await server.prompts.list_prompts(context)
+        initialize = await server._handle_initialize({"clientInfo": {"name": "rmcp-cli"}})
 
         capabilities = {
             "server": {
                 "name": server.name,
                 "version": server.version,
                 "description": server.description,
+                "allowedPaths": [str(path) for path in server.lifespan_state.allowed_paths],
+                "resourceMounts": {
+                    name: str(path)
+                    for name, path in server.lifespan_state.resource_mounts.items()
+                },
             },
-            "tools": tools,
-            "resources": resources,
-            "prompts": prompts,
+            "initialize": initialize,
+            "tools": tools["tools"],
+            "resources": resources["resources"],
+            "prompts": prompts["prompts"],
         }
-
-        import json
 
         json_output = json.dumps(capabilities, indent=2)
 
@@ -285,14 +290,104 @@ def list_capabilities(allowed_paths: list[str], output: str | None):
         else:
             click.echo(json_output)
 
-    asyncio.run(_list())
+        return capabilities
+
+    capabilities = asyncio.run(_list())
+
+    problems = _validate_allowed_paths(capabilities["server"]["allowedPaths"])
+    if problems:
+        click.echo("\n⚠️  Configuration issues detected:")
+        for problem in problems:
+            click.echo(f" - {problem}")
 
 
 @cli.command()
-def validate_config():
-    """Validate server configuration."""
-    click.echo("Configuration validation not yet implemented")
-    # TODO: Add config validation
+@click.option("--allowed-paths", multiple=True, help="Allowed file system paths")
+@click.option("--cache-root", type=click.Path(), help="Cache root directory")
+@click.option("--read-only/--read-write", default=True, help="File system access mode")
+def validate_config(allowed_paths: tuple[str, ...], cache_root: str | None, read_only: bool):
+    """Validate server configuration and highlight potential issues."""
+
+    if not allowed_paths:
+        allowed_paths = (str(Path.cwd()),)
+
+    problems = _validate_allowed_paths(list(allowed_paths))
+
+    if cache_root:
+        cache_path = Path(cache_root).expanduser()
+        if cache_path.exists() and not cache_path.is_dir():
+            problems.append(f"Cache root {cache_path} is not a directory")
+        elif not cache_path.exists():
+            parent = cache_path.parent
+            if not parent.exists():
+                problems.append(
+                    f"Parent directory for cache root {cache_path} does not exist"
+                )
+
+    click.echo("🔍 Configuration review")
+    click.echo("=" * 40)
+    click.echo(f"Allowed paths: {', '.join(str(Path(p)) for p in allowed_paths)}")
+    click.echo(f"Cache root: {cache_root or 'not configured'}")
+    click.echo(f"Access mode: {'read-only' if read_only else 'read-write'}")
+
+    if problems:
+        click.echo("\n⚠️  Issues detected:")
+        for problem in problems:
+            click.echo(f" - {problem}")
+        sys.exit(1)
+
+    click.echo("\n✅ Configuration looks good!")
+
+
+@cli.command()
+@click.option(
+    "--config-file",
+    type=click.Path(dir_okay=False, writable=True),
+    help="Optional path to write the generated configuration",
+)
+def setup(config_file: str | None):
+    """Interactively configure allowed paths and caching for the server."""
+
+    click.echo("🛠️  RMCP interactive setup")
+    click.echo("=" * 40)
+
+    allowed_paths: list[str] = []
+    while True:
+        default_path = str(Path.cwd()) if not allowed_paths else ""
+        path = click.prompt(
+            "Enter a directory to expose to the MCP client",
+            default=default_path,
+            show_default=bool(default_path),
+        ).strip()
+
+        if path:
+            allowed_paths.append(path)
+
+        if not click.confirm("Add another directory?", default=False):
+            break
+
+    read_only = click.confirm("Should file access be read-only?", default=True)
+    cache_root = click.prompt(
+        "Cache directory (leave blank to skip)", default="", show_default=False
+    ).strip()
+
+    config = {
+        "allowed_paths": allowed_paths or [str(Path.cwd())],
+        "read_only": read_only,
+    }
+
+    if cache_root:
+        config["cache_root"] = cache_root
+
+    click.echo("\nGenerated configuration:")
+    click.echo(json.dumps(config, indent=2))
+
+    if config_file:
+        with open(config_file, "w") as f:
+            json.dump(config, f, indent=2)
+        click.echo(f"Configuration written to {config_file}")
+    else:
+        click.echo("Use these values with `rmcp start` or `rmcp serve-http`.")
 
 
 @cli.command("check-r-packages")
@@ -393,6 +488,32 @@ def _load_config(config_file: str) -> dict:
     except Exception as e:
         logger.error(f"Failed to load config file {config_file}: {e}")
         return {}
+
+
+def _validate_allowed_paths(paths: list[str]) -> list[str]:
+    """Return a list of human-readable warnings for invalid paths."""
+
+    problems: list[str] = []
+    seen: set[str] = set()
+
+    for raw_path in paths:
+        normalized = str(Path(raw_path).expanduser())
+
+        if normalized in seen:
+            problems.append(f"Duplicate allowed path specified: {normalized}")
+            continue
+
+        seen.add(normalized)
+
+        path_obj = Path(normalized)
+        if not path_obj.exists():
+            problems.append(f"Allowed path does not exist: {normalized}")
+        elif not path_obj.is_dir():
+            problems.append(f"Allowed path is not a directory: {normalized}")
+        elif not os.access(path_obj, os.R_OK):
+            problems.append(f"Allowed path is not readable: {normalized}")
+
+    return problems
 
 
 def _register_builtin_tools(server):

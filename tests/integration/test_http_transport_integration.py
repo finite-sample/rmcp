@@ -37,7 +37,7 @@ async def http_server_with_tools():
     transport = HTTPTransport(
         host="127.0.0.1", port=0
     )  # Use port 0 for auto-assignment
-    transport.set_message_handler(server.handle_request)
+    transport.set_message_handler(server.create_message_handler(transport))
 
     # Start server in background
     server_task = None
@@ -82,7 +82,7 @@ class TestHTTPTransportMCPCompliance:
         """Test MCP initialize request over HTTP."""
         transport = HTTPTransport(host="127.0.0.1", port=8001)
         server = create_server()
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Start server in background for short test
         server_task = asyncio.create_task(transport.run())
@@ -134,7 +134,7 @@ class TestHTTPTransportMCPCompliance:
         from rmcp.cli import _register_builtin_tools
 
         _register_builtin_tools(server)
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Start server in background
         server_task = asyncio.create_task(transport.run())
@@ -197,7 +197,7 @@ class TestHTTPTransportMCPCompliance:
         from rmcp.cli import _register_builtin_tools
 
         _register_builtin_tools(server)
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Start server in background
         server_task = asyncio.create_task(transport.run())
@@ -260,7 +260,7 @@ class TestHTTPTransportErrorHandling:
         """Test handling of invalid JSON requests."""
         transport = HTTPTransport(host="127.0.0.1", port=8004)
         server = create_server()
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Start server in background
         server_task = asyncio.create_task(transport.run())
@@ -291,7 +291,7 @@ class TestHTTPTransportErrorHandling:
         """Test handling of malformed JSON-RPC requests."""
         transport = HTTPTransport(host="127.0.0.1", port=8005)
         server = create_server()
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Start server in background
         server_task = asyncio.create_task(transport.run())
@@ -328,7 +328,7 @@ class TestHTTPTransportSSE:
         """Test SSE endpoint connection."""
         transport = HTTPTransport(host="127.0.0.1", port=8006)
         server = create_server()
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Start server in background
         server_task = asyncio.create_task(transport.run())
@@ -364,7 +364,7 @@ class TestHTTPTransportSSE:
         """Test that notifications are delivered via SSE."""
         transport = HTTPTransport(host="127.0.0.1", port=8007)
         server = create_server()
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Start server in background
         server_task = asyncio.create_task(transport.run())
@@ -422,7 +422,7 @@ class TestHTTPTransportHealthCheck:
         """Test the health check endpoint."""
         transport = HTTPTransport(host="127.0.0.1", port=8008)
         server = create_server()
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Start server in background
         server_task = asyncio.create_task(transport.run())
@@ -455,7 +455,7 @@ class TestHTTPTransportCORS:
         """Test that CORS headers are properly set."""
         transport = HTTPTransport(host="127.0.0.1", port=8009)
         server = create_server()
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Start server in background
         server_task = asyncio.create_task(transport.run())

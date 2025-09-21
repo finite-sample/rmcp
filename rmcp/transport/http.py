@@ -15,7 +15,7 @@ from typing import Any, AsyncIterator
 try:
     from fastapi import FastAPI, Request, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import StreamingResponse
+    from fastapi.responses import Response, StreamingResponse
     import uvicorn
     from sse_starlette import EventSourceResponse
 except ImportError as e:
@@ -53,7 +53,7 @@ class HTTPTransport(Transport):
             CORSMiddleware,
             allow_origins=["*"],  # Configure appropriately for production
             allow_credentials=True,
-            allow_methods=["GET", "POST"],
+            allow_methods=["GET", "POST", "OPTIONS"],
             allow_headers=["*"],
         )
 
@@ -63,6 +63,7 @@ class HTTPTransport(Transport):
         @self.app.post("/")
         async def handle_jsonrpc(request: Request) -> dict[str, Any]:
             """Handle JSON-RPC requests via POST."""
+            message: dict[str, Any] | None = None
             try:
                 message = await request.json()
                 logger.debug(f"Received JSON-RPC request: {message}")
@@ -80,11 +81,29 @@ class HTTPTransport(Transport):
                 raise HTTPException(400, "Invalid JSON")
             except Exception as e:
                 logger.error(f"Error processing request: {e}")
-                # Return JSON-RPC error response
-                error_response = self._create_error_response(message, e)
-                if error_response:
-                    return error_response
-                raise HTTPException(500, str(e))
+                base_message = message or {}
+                error_response = self._create_error_response(base_message, e)
+                if not error_response:
+                    error_response = {
+                        "jsonrpc": "2.0",
+                        "id": base_message.get("id"),
+                        "error": {"code": -32600, "message": str(e)},
+                    }
+                return error_response
+
+        async def handle_options(_request: Request) -> Response:
+            """Handle CORS preflight requests for the root endpoint."""
+            return Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                    "Access-Control-Allow-Headers": "*",
+                    "Access-Control-Allow-Credentials": "true",
+                },
+            )
+
+        self.app.router.add_route("/", handle_options, methods=["OPTIONS"])
 
         @self.app.get("/sse")
         async def handle_sse() -> StreamingResponse:
@@ -94,6 +113,7 @@ class HTTPTransport(Transport):
                 """Generate SSE events from notification queue."""
                 while True:
                     try:
+                        notifications_sent = False
                         # Check for notifications (non-blocking)
                         while not self._notification_queue.empty():
                             try:
@@ -102,11 +122,15 @@ class HTTPTransport(Transport):
                                     "event": "notification",
                                     "data": json.dumps(notification),
                                 }
+                                notifications_sent = True
                             except queue.Empty:
                                 break
 
+                        if not notifications_sent:
+                            yield {"event": "keepalive", "data": json.dumps({"status": "ok"})}
+
                         # Small delay to prevent busy waiting
-                        await asyncio.sleep(0.1)
+                        await asyncio.sleep(0.5)
 
                     except asyncio.CancelledError:
                         logger.info("SSE stream cancelled")
@@ -156,6 +180,39 @@ class HTTPTransport(Transport):
             # Regular responses are handled by FastAPI return values
             logger.debug("HTTP response handled by FastAPI")
 
+    async def send_progress_notification(
+        self, token: str, value: int, total: int, message: str = ""
+    ) -> None:
+        """Send progress updates over the SSE channel."""
+
+        notification = {
+            "jsonrpc": "2.0",
+            "method": "notifications/progress",
+            "params": {
+                "progressToken": token,
+                "progress": value,
+                "total": total,
+                "message": message,
+            },
+        }
+        await self.send_message(notification)
+
+    async def send_log_notification(
+        self, level: str, message: str, data: Any = None
+    ) -> None:
+        """Send structured log messages via SSE."""
+
+        params = {"level": level, "message": message}
+        if data:
+            params["data"] = data
+
+        notification = {
+            "jsonrpc": "2.0",
+            "method": "notifications/message",
+            "params": params,
+        }
+        await self.send_message(notification)
+
     async def run(self) -> None:
         """
         Run the HTTP transport using uvicorn.
@@ -186,3 +243,4 @@ class HTTPTransport(Transport):
             raise
         finally:
             await self.shutdown()
+
