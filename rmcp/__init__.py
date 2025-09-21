@@ -1,6 +1,5 @@
 """
 RMCP MCP Server - A Model Context Protocol server for R-based statistical analysis.
-
 This package implements a production-ready MCP server following established patterns:
 - Spec correctness by construction using official SDK
 - Clean separation of concerns (protocol/registries/domain)
@@ -18,7 +17,6 @@ from .registries.tools import ToolsRegistry, tool
 __version__ = "0.3.8"
 __author__ = "Gaurav Sood"
 __email__ = "gsood07@gmail.com"
-
 __all__ = [
     "Context",
     "create_server",

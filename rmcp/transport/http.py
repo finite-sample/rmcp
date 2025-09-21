@@ -1,6 +1,5 @@
 """
 HTTP transport for MCP server using FastAPI.
-
 Provides HTTP transport following MCP specification:
 - POST / for JSON-RPC requests
 - GET /sse for Server-Sent Events (notifications)
@@ -24,7 +23,6 @@ except ImportError as e:
     raise ImportError(
         "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp[http]"
     ) from e
-
 from .base import Transport
 
 logger = logging.getLogger(__name__)
@@ -33,7 +31,6 @@ logger = logging.getLogger(__name__)
 class HTTPTransport(Transport):
     """
     HTTP transport implementation using FastAPI.
-
     Provides:
     - POST / endpoint for JSON-RPC requests
     - GET /sse endpoint for server-initiated notifications
@@ -44,14 +41,11 @@ class HTTPTransport(Transport):
         super().__init__("HTTP")
         self.host = host
         self.port = port
-
         # Session management
         self._sessions: Dict[str, Dict[str, Any]] = {}
         self._initialized_sessions: set[str] = set()
-
         # Security validation
         self._is_localhost = host in ("localhost", "127.0.0.1", "::1")
-
         # Issue security warning for remote binding
         if not self._is_localhost:
             logger.warning(
@@ -59,7 +53,6 @@ class HTTPTransport(Transport):
                 "This allows remote access! For production, implement proper authentication. "
                 "See https://spec.modelcontextprotocol.io/specification/server/transports/#security"
             )
-
         self.app = FastAPI(title="RMCP HTTP Transport", version="1.0.0")
         self._notification_queue: queue.Queue[dict[str, Any]] = queue.Queue()
         self._setup_routes()
@@ -73,7 +66,6 @@ class HTTPTransport(Transport):
             if self._is_localhost
             else ["*"]
         )  # Allow all for remote (with warning)
-
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=allowed_origins,
@@ -105,7 +97,6 @@ class HTTPTransport(Transport):
     def _get_or_create_session(self, request: Request) -> str:
         """Get or create session ID from headers."""
         session_id = request.headers.get("mcp-session-id")
-
         if not session_id:
             # Create new session for initialize
             session_id = str(uuid.uuid4())
@@ -114,7 +105,6 @@ class HTTPTransport(Transport):
                 "initialized": False,
             }
             logger.debug(f"Created new session: {session_id}")
-
         return session_id
 
     def _check_session_initialized(self, session_id: str, method: str) -> None:
@@ -132,36 +122,27 @@ class HTTPTransport(Transport):
             """Handle JSON-RPC requests via POST."""
             message: dict[str, Any] | None = None
             session_id: str | None = None
-
             try:
                 # Security validations
                 self._validate_origin(request)
                 self._validate_protocol_version(request)
-
                 # Parse request
                 message = await request.json()
                 logger.debug(f"Received JSON-RPC request: {message}")
-
                 if not self._message_handler:
                     raise HTTPException(500, "Message handler not configured")
-
                 # Session management
                 session_id = self._get_or_create_session(request)
                 method = message.get("method", "")
-
                 # Check initialization state
                 self._check_session_initialized(session_id, method)
-
                 # Track initialize completion
                 if method == "initialize":
                     self._initialized_sessions.add(session_id)
                     self._sessions[session_id]["initialized"] = True
-
                 # Process through message handler
                 response = await self._message_handler(message)
-
                 logger.debug(f"Sending JSON-RPC response: {response}")
-
                 # Add session ID to response headers
                 headers = {"Mcp-Session-Id": session_id}
                 return Response(
@@ -169,7 +150,6 @@ class HTTPTransport(Transport):
                     media_type="application/json",
                     headers=headers,
                 )
-
             except json.JSONDecodeError:
                 raise HTTPException(400, "Invalid JSON")
             except Exception as e:
@@ -182,12 +162,10 @@ class HTTPTransport(Transport):
                         "id": base_message.get("id"),
                         "error": {"code": -32600, "message": str(e)},
                     }
-
                 # Add session ID to error response if available
                 headers = {}
                 if session_id:
                     headers["Mcp-Session-Id"] = session_id
-
                 return Response(
                     content=json.dumps(error_response),
                     media_type="application/json",
@@ -241,16 +219,13 @@ class HTTPTransport(Transport):
                                 notifications_sent = True
                             except queue.Empty:
                                 break
-
                         if not notifications_sent:
                             yield {
                                 "event": "keepalive",
                                 "data": json.dumps({"status": "ok"}),
                             }
-
                         # Small delay to prevent busy waiting
                         await asyncio.sleep(0.5)
-
                     except asyncio.CancelledError:
                         logger.info("SSE stream cancelled")
                         break
@@ -297,7 +272,6 @@ class HTTPTransport(Transport):
     async def send_message(self, message: dict[str, Any]) -> None:
         """
         Send a message (notification) via SSE.
-
         For HTTP transport, responses are handled by the HTTP request cycle.
         This is only used for server-initiated notifications.
         """
@@ -312,7 +286,6 @@ class HTTPTransport(Transport):
         self, token: str, value: int, total: int, message: str = ""
     ) -> None:
         """Send progress updates over the SSE channel."""
-
         notification = {
             "jsonrpc": "2.0",
             "method": "notifications/progress",
@@ -329,11 +302,9 @@ class HTTPTransport(Transport):
         self, level: str, message: str, data: Any = None
     ) -> None:
         """Send structured log messages via SSE."""
-
         params = {"level": level, "message": message}
         if data:
             params["data"] = data
-
         notification = {
             "jsonrpc": "2.0",
             "method": "notifications/message",
@@ -344,15 +315,12 @@ class HTTPTransport(Transport):
     async def run(self) -> None:
         """
         Run the HTTP transport using uvicorn.
-
         This starts the FastAPI server and handles the HTTP event loop.
         """
         if not self._message_handler:
             raise RuntimeError("Message handler not set")
-
         try:
             await self.startup()
-
             # Configure uvicorn
             config = uvicorn.Config(
                 app=self.app,
@@ -361,11 +329,9 @@ class HTTPTransport(Transport):
                 log_level="info",
                 access_log=True,
             )
-
             server = uvicorn.Server(config)
             logger.info(f"Starting HTTP server on {self.host}:{self.port}")
             await server.serve()
-
         except Exception as e:
             logger.error(f"HTTP transport error: {e}")
             raise

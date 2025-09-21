@@ -1,11 +1,9 @@
 """
 Visualization tools for RMCP.
-
 Statistical plotting and data visualization capabilities.
 """
 
 from typing import Any
-
 from ..core.schemas import formula_schema, table_schema
 from ..r_integration import execute_r_script_with_image_async
 from ..registries.tools import tool
@@ -19,7 +17,7 @@ from ..registries.tools import tool
             "data": table_schema(),
             "x": {"type": "string"},
             "y": {"type": "string"},
-            "group": {"type": "string"},
+            "group": {"type": ["string", "null"], "default": None},
             "title": {"type": "string"},
             "file_path": {
                 "type": "string",
@@ -93,28 +91,22 @@ from ..registries.tools import tool
 )
 async def scatter_plot(context, params) -> dict[str, Any]:
     """Create scatter plot."""
-
     await context.info("Creating scatter plot")
-
     r_script = """
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
-    
     library(ggplot2)
-    
     data <- as.data.frame(args$data)
     x_var <- args$x
     y_var <- args$y
-    group_var <- args$group
+    group_var <- if (!is.null(args$group) && length(args$group) > 0 && args$group != "" && !identical(args$group, list())) args$group else NA
     title <- args$title %||% paste("Scatter plot:", y_var, "vs", x_var)
     file_path <- args$file_path
     return_image <- args$return_image %||% TRUE
     width <- args$width %||% 800
     height <- args$height %||% 600
-    
     # Create base plot
     p <- ggplot(data, aes_string(x = x_var, y = y_var))
-    
     if (!is.null(group_var)) {
         p <- p + geom_point(aes_string(color = group_var), alpha = 0.7) +
              geom_smooth(aes_string(color = group_var), method = "lm", se = TRUE)
@@ -122,11 +114,9 @@ async def scatter_plot(context, params) -> dict[str, Any]:
         p <- p + geom_point(alpha = 0.7) +
              geom_smooth(method = "lm", se = TRUE, color = "blue")
     }
-    
     p <- p + labs(title = title, x = x_var, y = y_var) +
          theme_minimal() +
          theme(plot.title = element_text(hjust = 0.5))
-    
     # Save to file if path provided
     if (!is.null(file_path)) {
         ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
@@ -134,10 +124,8 @@ async def scatter_plot(context, params) -> dict[str, Any]:
     } else {
         plot_saved <- FALSE
     }
-    
     # Basic correlation
     correlation <- cor(data[[x_var]], data[[y_var]], use = "complete.obs")
-    
     # Prepare result
     result <- list(
         plot_type = "scatter",
@@ -153,12 +141,10 @@ async def scatter_plot(context, params) -> dict[str, Any]:
         title = title,
         plot_saved = plot_saved
     )
-    
     # Add file path if provided
     if (!is.null(file_path)) {
         result$file_path <- file_path
     }
-    
     # Generate base64 image if requested
     if (return_image) {
         image_data <- safe_encode_plot(p, width, height)
@@ -166,16 +152,12 @@ async def scatter_plot(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
-    
-    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
-
     try:
         # Use the new image-enabled function
         return_image = params.get("return_image", True)
         width = params.get("width", 800)
         height = params.get("height", 600)
-
         result = await execute_r_script_with_image_async(
             r_script,
             params,
@@ -183,10 +165,8 @@ async def scatter_plot(context, params) -> dict[str, Any]:
             image_width=width,
             image_height=height,
         )
-
         await context.info("Scatter plot created successfully")
         return result
-
     except Exception as e:
         await context.error("Scatter plot creation failed", error=str(e))
         raise
@@ -199,7 +179,7 @@ async def scatter_plot(context, params) -> dict[str, Any]:
         "properties": {
             "data": table_schema(),
             "variable": {"type": "string"},
-            "group": {"type": "string"},
+            "group": {"type": ["string", "null"], "default": None},
             "bins": {"type": "integer", "minimum": 5, "maximum": 100, "default": 30},
             "title": {"type": "string"},
             "file_path": {
@@ -276,28 +256,22 @@ async def scatter_plot(context, params) -> dict[str, Any]:
 )
 async def histogram(context, params) -> dict[str, Any]:
     """Create histogram."""
-
     await context.info("Creating histogram")
-
     r_script = """
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
-    
     library(ggplot2)
-    
     data <- as.data.frame(args$data)
     variable <- args$variable
-    group_var <- args$group
+    group_var <- if (!is.null(args$group) && length(args$group) > 0 && args$group != "" && !identical(args$group, list())) args$group else NA
     bins <- args$bins %||% 30
     title <- args$title %||% paste("Histogram of", variable)
     file_path <- args$file_path
     return_image <- args$return_image %||% TRUE
     width <- args$width %||% 800
     height <- args$height %||% 600
-    
     # Create base plot
     p <- ggplot(data, aes_string(x = variable))
-    
     if (!is.null(group_var)) {
         p <- p + geom_histogram(aes_string(fill = group_var), bins = bins, alpha = 0.7, position = "identity") +
              geom_density(aes_string(color = group_var), alpha = 0.8)
@@ -305,11 +279,9 @@ async def histogram(context, params) -> dict[str, Any]:
         p <- p + geom_histogram(bins = bins, alpha = 0.7, fill = "steelblue") +
              geom_density(alpha = 0.8, color = "red")
     }
-    
     p <- p + labs(title = title, x = variable, y = "Frequency") +
          theme_minimal() +
          theme(plot.title = element_text(hjust = 0.5))
-    
     # Save to file if path provided
     if (!is.null(file_path)) {
         ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
@@ -317,7 +289,6 @@ async def histogram(context, params) -> dict[str, Any]:
     } else {
         plot_saved <- FALSE
     }
-    
     # Basic statistics
     values <- data[[variable]][!is.na(data[[variable]])]
     stats <- list(
@@ -327,7 +298,6 @@ async def histogram(context, params) -> dict[str, Any]:
         skewness = (sum((values - mean(values))^3) / length(values)) / (sd(values)^3),
         kurtosis = (sum((values - mean(values))^4) / length(values)) / (sd(values)^4) - 3
     )
-    
     # Prepare result
     result <- list(
         plot_type = "histogram",
@@ -339,12 +309,10 @@ async def histogram(context, params) -> dict[str, Any]:
         n_obs = length(values),
         plot_saved = plot_saved
     )
-    
     # Add file path if provided
     if (!is.null(file_path)) {
         result$file_path <- file_path
     }
-    
     # Generate base64 image if requested
     if (return_image) {
         image_data <- safe_encode_plot(p, width, height)
@@ -352,16 +320,12 @@ async def histogram(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
-    
-    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
-
     try:
         # Use the new image-enabled function
         return_image = params.get("return_image", True)
         width = params.get("width", 800)
         height = params.get("height", 600)
-
         result = await execute_r_script_with_image_async(
             r_script,
             params,
@@ -369,10 +333,8 @@ async def histogram(context, params) -> dict[str, Any]:
             image_width=width,
             image_height=height,
         )
-
         await context.info("Histogram created successfully")
         return result
-
     except Exception as e:
         await context.error("Histogram creation failed", error=str(e))
         raise
@@ -385,7 +347,7 @@ async def histogram(context, params) -> dict[str, Any]:
         "properties": {
             "data": table_schema(),
             "variable": {"type": "string"},
-            "group": {"type": "string"},
+            "group": {"type": ["string", "null"], "default": None},
             "title": {"type": "string"},
             "file_path": {
                 "type": "string",
@@ -456,24 +418,19 @@ async def histogram(context, params) -> dict[str, Any]:
 )
 async def boxplot(context, params) -> dict[str, Any]:
     """Create box plot."""
-
     await context.info("Creating box plot")
-
     r_script = """
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
-    
     library(ggplot2)
-    
     data <- as.data.frame(args$data)
     variable <- args$variable
-    group_var <- args$group
+    group_var <- if (!is.null(args$group) && length(args$group) > 0 && args$group != "" && !identical(args$group, list())) args$group else NA
     title <- args$title %||% paste("Box plot of", variable)
     file_path <- args$file_path
     return_image <- args$return_image %||% TRUE
     width <- args$width %||% 800
     height <- args$height %||% 600
-    
     # Create plot
     if (!is.null(group_var)) {
         p <- ggplot(data, aes_string(x = group_var, y = variable, fill = group_var)) +
@@ -486,10 +443,8 @@ async def boxplot(context, params) -> dict[str, Any]:
              geom_jitter(width = 0.1, alpha = 0.5) +
              labs(title = title, x = "", y = variable)
     }
-    
     p <- p + theme_minimal() +
          theme(plot.title = element_text(hjust = 0.5))
-    
     # Save to file if path provided
     if (!is.null(file_path)) {
         ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
@@ -497,7 +452,6 @@ async def boxplot(context, params) -> dict[str, Any]:
     } else {
         plot_saved <- FALSE
     }
-    
     # Summary statistics
     if (!is.null(group_var)) {
         stats <- by(data[[variable]], data[[group_var]], function(x) {
@@ -525,7 +479,6 @@ async def boxplot(context, params) -> dict[str, Any]:
             )
         )
     }
-    
     # Prepare result
     result <- list(
         plot_type = "boxplot",
@@ -535,12 +488,10 @@ async def boxplot(context, params) -> dict[str, Any]:
         title = title,
         plot_saved = plot_saved
     )
-    
     # Add file path if provided
     if (!is.null(file_path)) {
         result$file_path <- file_path
     }
-    
     # Generate base64 image if requested
     if (return_image) {
         image_data <- safe_encode_plot(p, width, height)
@@ -548,16 +499,12 @@ async def boxplot(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
-    
-    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
-
     try:
         # Use the new image-enabled function
         return_image = params.get("return_image", True)
         width = params.get("width", 800)
         height = params.get("height", 600)
-
         result = await execute_r_script_with_image_async(
             r_script,
             params,
@@ -565,10 +512,8 @@ async def boxplot(context, params) -> dict[str, Any]:
             image_width=width,
             image_height=height,
         )
-
         await context.info("Box plot created successfully")
         return result
-
     except Exception as e:
         await context.error("Box plot creation failed", error=str(e))
         raise
@@ -655,15 +600,11 @@ async def boxplot(context, params) -> dict[str, Any]:
 )
 async def time_series_plot(context, params) -> dict[str, Any]:
     """Create time series plot."""
-
     await context.info("Creating time series plot")
-
     r_script = """
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
-    
     library(ggplot2)
-    
     values <- args$data$values
     dates <- args$data$dates
     title <- args$title %||% "Time Series Plot"
@@ -672,7 +613,6 @@ async def time_series_plot(context, params) -> dict[str, Any]:
     show_trend <- args$show_trend %||% TRUE
     width <- args$width %||% 1000
     height <- args$height %||% 600
-    
     # Create time index if dates not provided
     if (is.null(dates)) {
         time_index <- 1:length(values)
@@ -681,26 +621,21 @@ async def time_series_plot(context, params) -> dict[str, Any]:
         time_index <- as.Date(dates)
         x_label <- "Date"
     }
-    
     # Create data frame
     ts_data <- data.frame(
         time = time_index,
         value = values
     )
-    
     # Create plot
     p <- ggplot(ts_data, aes(x = time, y = value)) +
          geom_line(color = "steelblue", size = 1) +
          geom_point(alpha = 0.6, size = 1.5)
-    
     if (show_trend) {
         p <- p + geom_smooth(method = "loess", se = TRUE, color = "red", alpha = 0.3)
     }
-    
     p <- p + labs(title = title, x = x_label, y = "Value") +
          theme_minimal() +
          theme(plot.title = element_text(hjust = 0.5))
-    
     # Save to file if path provided
     if (!is.null(file_path)) {
         ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
@@ -708,7 +643,6 @@ async def time_series_plot(context, params) -> dict[str, Any]:
     } else {
         plot_saved <- FALSE
     }
-    
     # Basic time series statistics
     ts_stats <- list(
         mean = mean(values, na.rm = TRUE),
@@ -718,7 +652,6 @@ async def time_series_plot(context, params) -> dict[str, Any]:
         n_obs = length(values[!is.na(values)]),
         range = max(values, na.rm = TRUE) - min(values, na.rm = TRUE)
     )
-    
     # Prepare result
     result <- list(
         plot_type = "time_series",
@@ -728,12 +661,10 @@ async def time_series_plot(context, params) -> dict[str, Any]:
         show_trend = show_trend,
         plot_saved = plot_saved
     )
-    
     # Add file path if provided
     if (!is.null(file_path)) {
         result$file_path <- file_path
     }
-    
     # Generate base64 image if requested
     if (return_image) {
         image_data <- safe_encode_plot(p, width, height)
@@ -741,16 +672,12 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
-    
-    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
-
     try:
         # Use the new image-enabled function
         return_image = params.get("return_image", True)
         width = params.get("width", 1000)
         height = params.get("height", 600)
-
         result = await execute_r_script_with_image_async(
             r_script,
             params,
@@ -758,10 +685,8 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             image_width=width,
             image_height=height,
         )
-
         await context.info("Time series plot created successfully")
         return result
-
     except Exception as e:
         await context.error("Time series plot creation failed", error=str(e))
         raise
@@ -852,16 +777,12 @@ async def time_series_plot(context, params) -> dict[str, Any]:
 )
 async def correlation_heatmap(context, params) -> dict[str, Any]:
     """Create correlation heatmap."""
-
     await context.info("Creating correlation heatmap")
-
     r_script = """
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
-    
     library(ggplot2)
     library(reshape2)
-    
     data <- as.data.frame(args$data)
     variables <- args$variables
     method <- args$method %||% "pearson"
@@ -870,7 +791,6 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
     return_image <- args$return_image %||% TRUE
     width <- args$width %||% 800
     height <- args$height %||% 800
-    
     # Select variables
     if (is.null(variables)) {
         numeric_vars <- names(data)[sapply(data, is.numeric)]
@@ -879,19 +799,16 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
         }
         variables <- numeric_vars
     }
-    
     # Calculate correlation matrix
     cor_data <- data[, variables, drop = FALSE]
     cor_matrix <- cor(cor_data, use = "complete.obs", method = method)
-    
     # Melt for ggplot
     cor_melted <- melt(cor_matrix)
     colnames(cor_melted) <- c("Var1", "Var2", "value")
-    
     # Create heatmap
     p <- ggplot(cor_melted, aes(Var1, Var2, fill = value)) +
          geom_tile(color = "white") +
-         scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+         scale_fill_gradient2(low = "blue", high = "red", mid = "white",
                              midpoint = 0, limit = c(-1, 1), space = "Lab",
                              name = "Correlation") +
          theme_minimal() +
@@ -900,7 +817,6 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
          coord_fixed() +
          labs(title = title, x = "", y = "") +
          geom_text(aes(label = round(value, 2)), color = "black", size = 3)
-    
     # Save to file if path provided
     if (!is.null(file_path)) {
         ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
@@ -908,7 +824,6 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
     } else {
         plot_saved <- FALSE
     }
-    
     # Prepare result - convert matrix to proper object format
     result <- list(
         plot_type = "heatmap",
@@ -919,12 +834,10 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
         n_variables = length(variables),
         plot_saved = plot_saved
     )
-    
     # Add file path if provided
     if (!is.null(file_path)) {
         result$file_path <- file_path
     }
-    
     # Generate base64 image if requested
     if (return_image) {
         image_data <- safe_encode_plot(p, width, height)
@@ -932,16 +845,12 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
-    
-    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
-
     try:
         # Use the new image-enabled function
         return_image = params.get("return_image", True)
         width = params.get("width", 800)
         height = params.get("height", 800)
-
         result = await execute_r_script_with_image_async(
             r_script,
             params,
@@ -949,10 +858,8 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             image_width=width,
             image_height=height,
         )
-
         await context.info("Correlation heatmap created successfully")
         return result
-
     except Exception as e:
         await context.error("Correlation heatmap creation failed", error=str(e))
         raise
@@ -1047,16 +954,12 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
 )
 async def regression_plot(context, params) -> dict[str, Any]:
     """Create regression diagnostic plots."""
-
     await context.info("Creating regression plots")
-
     r_script = """
     # Set CRAN mirror
     options(repos = c(CRAN = "https://cloud.r-project.org/"))
-    
     library(ggplot2)
     library(gridExtra)
-    
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
     title <- args$title %||% "Regression Diagnostics"
@@ -1065,49 +968,41 @@ async def regression_plot(context, params) -> dict[str, Any]:
     residual_plots <- args$residual_plots %||% TRUE
     width <- args$width %||% 1200
     height <- args$height %||% 800
-    
     # Fit model
     model <- lm(formula, data = data)
-    
     # Extract model data
     fitted_values <- fitted(model)
     residuals <- residuals(model)
     standardized_residuals <- rstandard(model)
-    
     if (residual_plots) {
         # Create diagnostic plots
-        p1 <- ggplot(data.frame(fitted = fitted_values, residuals = residuals), 
+        p1 <- ggplot(data.frame(fitted = fitted_values, residuals = residuals),
                      aes(x = fitted, y = residuals)) +
               geom_point(alpha = 0.6) +
               geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
               geom_smooth(se = FALSE, color = "blue") +
               labs(title = "Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
               theme_minimal()
-        
         p2 <- ggplot(data.frame(residuals = standardized_residuals), aes(sample = residuals)) +
               stat_qq() + stat_qq_line(color = "red") +
               labs(title = "Q-Q Plot", x = "Theoretical Quantiles", y = "Sample Quantiles") +
               theme_minimal()
-        
-        p3 <- ggplot(data.frame(fitted = fitted_values, sqrt_abs_residuals = sqrt(abs(standardized_residuals))), 
+        p3 <- ggplot(data.frame(fitted = fitted_values, sqrt_abs_residuals = sqrt(abs(standardized_residuals))),
                      aes(x = fitted, y = sqrt_abs_residuals)) +
               geom_point(alpha = 0.6) +
               geom_smooth(se = FALSE, color = "red") +
               labs(title = "Scale-Location", x = "Fitted Values", y = "√|Standardized Residuals|") +
               theme_minimal()
-        
-        p4 <- ggplot(data.frame(leverage = hatvalues(model), std_residuals = standardized_residuals), 
+        p4 <- ggplot(data.frame(leverage = hatvalues(model), std_residuals = standardized_residuals),
                      aes(x = leverage, y = std_residuals)) +
               geom_point(alpha = 0.6) +
               geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
               geom_smooth(se = FALSE, color = "blue") +
               labs(title = "Residuals vs Leverage", x = "Leverage", y = "Standardized Residuals") +
               theme_minimal()
-        
         # Combine plots
-        combined_plot <- grid.arrange(p1, p2, p3, p4, ncol = 2, 
+        combined_plot <- grid.arrange(p1, p2, p3, p4, ncol = 2,
                                      top = textGrob(title, gp = gpar(fontsize = 16, font = 2)))
-        
         # Save to file if path provided
         if (!is.null(file_path)) {
             ggsave(file_path, plot = combined_plot, width = width/100, height = height/100, dpi = 100)
@@ -1115,23 +1010,19 @@ async def regression_plot(context, params) -> dict[str, Any]:
         } else {
             plot_saved <- FALSE
         }
-        
         # For image encoding, use the combined plot
         main_plot <- combined_plot
-        
     } else {
         # Simple fitted vs actual plot
         response_var <- all.vars(formula)[1]
         actual_values <- data[[response_var]]
-        
-        p <- ggplot(data.frame(actual = actual_values, fitted = fitted_values), 
+        p <- ggplot(data.frame(actual = actual_values, fitted = fitted_values),
                    aes(x = actual, y = fitted)) +
              geom_point(alpha = 0.6) +
              geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
              labs(title = title, x = "Actual Values", y = "Fitted Values") +
              theme_minimal() +
              theme(plot.title = element_text(hjust = 0.5))
-        
         # Save to file if path provided
         if (!is.null(file_path)) {
             ggsave(file_path, plot = p, width = width/100, height = height/100, dpi = 100)
@@ -1139,14 +1030,11 @@ async def regression_plot(context, params) -> dict[str, Any]:
         } else {
             plot_saved <- FALSE
         }
-        
         # For image encoding, use the simple plot
         main_plot <- p
     }
-    
     # Model summary
     model_summary <- summary(model)
-    
     # Prepare result
     result <- list(
         plot_type = "regression_diagnostics",
@@ -1159,12 +1047,10 @@ async def regression_plot(context, params) -> dict[str, Any]:
         n_obs = nobs(model),
         plot_saved = plot_saved
     )
-    
     # Add file path if provided
     if (!is.null(file_path)) {
         result$file_path <- file_path
     }
-    
     # Generate base64 image if requested
     if (return_image) {
         image_data <- safe_encode_plot(main_plot, width, height)
@@ -1172,16 +1058,12 @@ async def regression_plot(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
-    
-    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
-
     try:
         # Use the new image-enabled function
         return_image = params.get("return_image", True)
         width = params.get("width", 1200)
         height = params.get("height", 800)
-
         result = await execute_r_script_with_image_async(
             r_script,
             params,
@@ -1189,10 +1071,8 @@ async def regression_plot(context, params) -> dict[str, Any]:
             image_width=width,
             image_height=height,
         )
-
         await context.info("Regression plots created successfully")
         return result
-
     except Exception as e:
         await context.error("Regression plot creation failed", error=str(e))
         raise

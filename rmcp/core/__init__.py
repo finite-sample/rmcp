@@ -1,6 +1,5 @@
 """
 Core MCP server components.
-
 This module contains the fundamental building blocks:
 - Context: Typed context for request + lifespan state
 - Server: MCP app shell with lifecycle hooks

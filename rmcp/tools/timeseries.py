@@ -1,11 +1,9 @@
 """
 Time series analysis tools for RMCP.
-
 Comprehensive time series modeling and forecasting capabilities.
 """
 
 from typing import Any
-
 from ..core.schemas import table_schema
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
@@ -130,17 +128,13 @@ from ..registries.tools import tool
 )
 async def arima_model(context, params) -> dict[str, Any]:
     """Fit ARIMA model and generate forecasts."""
-
     await context.info("Fitting ARIMA time series model")
-
     r_script = """
     # Install required packages
     library(forecast)
-    
     # Prepare data
     rmcp_progress("Preparing time series data")
     values <- args$data$values
-    
     # Convert to time series
     if (!is.null(args$data$dates)) {
         dates <- as.Date(args$data$dates)
@@ -148,7 +142,6 @@ async def arima_model(context, params) -> dict[str, Any]:
     } else {
         ts_data <- ts(values, frequency = 12)
     }
-    
     # Fit ARIMA model with progress reporting
     rmcp_progress("Fitting ARIMA model", 20, 100)
     if (!is.null(args$order)) {
@@ -163,13 +156,11 @@ async def arima_model(context, params) -> dict[str, Any]:
         model <- auto.arima(ts_data)
     }
     rmcp_progress("ARIMA model fitted successfully", 70, 100)
-    
     # Generate forecasts
     rmcp_progress("Generating forecasts", 80, 100)
     forecast_periods <- args$forecast_periods %||% 12
     forecasts <- forecast(model, h = forecast_periods)
     rmcp_progress("Extracting model results", 95, 100)
-    
     # Extract results
     result <- list(
         model_type = "ARIMA",
@@ -188,7 +179,6 @@ async def arima_model(context, params) -> dict[str, Any]:
         n_obs = length(values)
     )
     """
-
     try:
         result = await execute_r_script_async(r_script, params, context)
         await context.info(
@@ -197,7 +187,6 @@ async def arima_model(context, params) -> dict[str, Any]:
             n_obs=result.get("n_obs"),
         )
         return result
-
     except Exception as e:
         await context.error("ARIMA model fitting failed", error=str(e))
         raise
@@ -279,48 +268,39 @@ async def arima_model(context, params) -> dict[str, Any]:
 )
 async def decompose_timeseries(context, params) -> dict[str, Any]:
     """Decompose time series into components."""
-
     await context.info("Decomposing time series")
-
     r_script = """
-    
     values <- args$data$values
     frequency <- args$frequency %||% 12
     decomp_type <- args$type %||% "additive"
-    
     # Create time series
     ts_data <- ts(values, frequency = frequency)
-    
     # Decompose
     if (decomp_type == "multiplicative") {
         decomp <- decompose(ts_data, type = "multiplicative")
     } else {
         decomp <- decompose(ts_data, type = "additive")
     }
-    
     # Convert to numeric and handle NA values properly for JSON
     convert_with_na <- function(x) {
         result <- as.numeric(x)
         result[is.na(result)] <- NULL
         return(result)
     }
-    
     result <- list(
         original = convert_with_na(decomp$x),
         trend = convert_with_na(decomp$trend),
-        seasonal = convert_with_na(decomp$seasonal),  
+        seasonal = convert_with_na(decomp$seasonal),
         remainder = convert_with_na(decomp$random),
         type = decomp_type,
         frequency = frequency,
         n_obs = length(values)
     )
     """
-
     try:
         result = await execute_r_script_async(r_script, params, context)
         await context.info("Time series decomposed successfully")
         return result
-
     except Exception as e:
         await context.error("Time series decomposition failed", error=str(e))
         raise
@@ -394,28 +374,22 @@ async def decompose_timeseries(context, params) -> dict[str, Any]:
 )
 async def stationarity_test(context, params) -> dict[str, Any]:
     """Test time series stationarity."""
-
     await context.info("Testing time series stationarity")
-
     r_script = """
     library(tseries)
-    
     values <- args$data$values
     test_type <- args$test %||% "adf"
-    
     ts_data <- ts(values)
-    
     if (test_type == "adf") {
         test_result <- adf.test(ts_data)
         test_name <- "Augmented Dickey-Fuller"
     } else if (test_type == "kpss") {
-        test_result <- kpss.test(ts_data) 
+        test_result <- kpss.test(ts_data)
         test_name <- "KPSS"
     } else if (test_type == "pp") {
         test_result <- pp.test(ts_data)
         test_name <- "Phillips-Perron"
     }
-    
     # Handle critical values properly - some tests might not have them
     critical_vals <- if (is.null(test_result$critical) || length(test_result$critical) == 0) {
         # Return empty named list to ensure it's treated as object, not array
@@ -423,7 +397,6 @@ async def stationarity_test(context, params) -> dict[str, Any]:
     } else {
         as.list(test_result$critical)
     }
-    
     result <- list(
         test_name = test_name,
         test_type = test_type,
@@ -435,7 +408,6 @@ async def stationarity_test(context, params) -> dict[str, Any]:
         n_obs = length(values)
     )
     """
-
     try:
         result = await execute_r_script_async(r_script, params, context)
         await context.info(
@@ -444,7 +416,6 @@ async def stationarity_test(context, params) -> dict[str, Any]:
             p_value=result.get("p_value"),
         )
         return result
-
     except Exception as e:
         await context.error("Stationarity test failed", error=str(e))
         raise

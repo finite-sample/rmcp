@@ -1,6 +1,5 @@
 """
 Test expanded RMCP capabilities using direct server calls.
-
 Tests all new tool categories without CLI transport complexity.
 """
 
@@ -11,9 +10,7 @@ from shutil import which
 
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 import pytest
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
@@ -53,7 +50,6 @@ from tests.utils import extract_json_content
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for direct capability tests"
 )
-
 # Test data
 SAMPLE_DATA = {
     "mpg": [
@@ -146,7 +142,6 @@ SAMPLE_DATA = {
         "B",
     ],
 }
-
 TIME_SERIES_DATA = {
     "values": [
         100,
@@ -192,7 +187,6 @@ TIME_SERIES_DATA = {
 async def create_test_server():
     """Create server with all tools registered."""
     server = create_server()
-
     # Register all tools
     register_tool_functions(
         server.tools,
@@ -247,13 +241,11 @@ async def create_test_server():
         validate_data,
         load_example,
     )
-
     return server
 
 
 async def run_tool_call(server, tool_name, params):
     """Test a direct tool call through MCP protocol."""
-
     # Create MCP request
     request = {
         "jsonrpc": "2.0",
@@ -261,10 +253,8 @@ async def run_tool_call(server, tool_name, params):
         "method": "tools/call",
         "params": {"name": tool_name, "arguments": params},
     }
-
     try:
         response = await server.handle_request(request)
-
         if "result" in response and "content" in response["result"]:
             try:
                 return extract_json_content(response)
@@ -274,7 +264,6 @@ async def run_tool_call(server, tool_name, params):
         else:
             print(f"❌ Unexpected response format for {tool_name}: {response}")
             return None
-
     except Exception as e:
         print(f"❌ Tool {tool_name} failed: {e}")
         return None
@@ -284,16 +273,12 @@ async def main():
     """Run comprehensive capability tests."""
     print("🚀 Testing Radically Expanded RMCP Capabilities")
     print("=" * 60)
-
     server = await create_test_server()
-
     # List all tools
     context = Context.create("test", "test", server.lifespan_state)
     tools_list = await server.tools.list_tools(context)
     print(f"📊 Total tools registered: {len(tools_list['tools'])}")
-
     test_results = []
-
     # Test categories
     tests = [
         # Descriptive statistics
@@ -322,33 +307,26 @@ async def main():
         # File operations
         ("data_info", {"data": SAMPLE_DATA, "include_sample": True}),
     ]
-
     print("\n🧪 Testing Tool Categories:")
     print("-" * 40)
-
     for tool_name, params in tests:
         print(f"Testing {tool_name}...", end=" ")
         result = await run_tool_call(server, tool_name, params)
-
         if result:
             print("✅")
             test_results.append(True)
         else:
             print("❌")
             test_results.append(False)
-
     # Summary
     passed = sum(test_results)
     total = len(test_results)
-
     print(f"\n🎯 Results: {passed}/{total} tests passed ({passed / total * 100:.1f}%)")
-
     if passed == total:
         print("🎉 All expanded capabilities working perfectly!")
         print("📈 RMCP has been radically expanded from 3 to 33 tools!")
     else:
         print("⚠️ Some capabilities need attention")
-
     return passed == total
 
 

@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
 """
 Comprehensive smoke tests for all 40 RMCP tools.
-
 Tests complete integration flow for each tool with minimal viable datasets,
 ensuring all tool paths work end-to-end without requiring R environment.
 """
-
 import asyncio
 import sys
 from pathlib import Path
 from shutil import which
 from unittest.mock import AsyncMock, patch
-
 import pytest
 
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
@@ -59,23 +55,18 @@ from rmcp.tools.visualization import (
 
 # Test data sets - minimal viable data for each category
 BASIC_DATA = {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]}
-
 CATEGORICAL_DATA = {
     "category": ["A", "B", "A", "B", "A"],
     "value": [10, 20, 15, 25, 12],
 }
-
 TIME_SERIES_DATA = {"values": [100, 102, 98, 105, 108, 110, 95, 100, 103, 107]}
-
 PANEL_DATA = {
     "id": [1, 1, 2, 2, 3, 3],
     "time": [1, 2, 1, 2, 1, 2],
     "y": [10, 12, 15, 18, 20, 22],
     "x": [5, 6, 7, 8, 9, 10],
 }
-
 BINARY_DATA = {"outcome": [0, 1, 0, 1, 0], "predictor": [1, 3, 2, 4, 1]}
-
 # Mock R execution results for each tool category
 MOCK_RESPONSES = {
     # Regression tools
@@ -338,7 +329,6 @@ MOCK_RESPONSES = {
 async def create_test_server():
     """Create server with all 40 tools registered."""
     server = create_server()
-
     # Register all tools exactly as in CLI
     register_tool_functions(
         server.tools,
@@ -394,13 +384,11 @@ async def create_test_server():
         validate_data,
         load_example,
     )
-
     return server
 
 
 async def run_tool_integration_test(server, tool_name, test_data):
     """Test individual tool through full MCP integration."""
-
     # Create MCP request
     request = {
         "jsonrpc": "2.0",
@@ -408,11 +396,9 @@ async def run_tool_integration_test(server, tool_name, test_data):
         "method": "tools/call",
         "params": {"name": tool_name, "arguments": test_data},
     }
-
     try:
         # Mock R execution to return expected response
         mock_response = MOCK_RESPONSES.get(tool_name, {"status": "mocked"})
-
         with (
             patch(
                 "rmcp.r_integration.execute_r_script_async", return_value=mock_response
@@ -422,39 +408,29 @@ async def run_tool_integration_test(server, tool_name, test_data):
                 return_value=mock_response,
             ),
         ):
-
             response = await server.handle_request(request)
-
             # Validate response structure
             if "result" not in response:
                 return False, f"No result in response: {response}"
-
             if "content" not in response["result"]:
                 return False, f"No content in result: {response['result']}"
-
             content = response["result"]["content"]
             if not isinstance(content, list) or len(content) == 0:
                 return False, f"Invalid content format: {content}"
-
             image_content = None
-
             for item in content:
                 if item.get("type") == "image":
                     image_content = item.get("data")
-
             summary = extract_text_summary(response)
             if not summary.strip():
                 return False, "No human-readable summary returned"
-
             try:
                 parsed_result = extract_json_content(response)
             except AssertionError as exc:
                 return False, str(exc)
-
             # Verify result contains expected data
             if not isinstance(parsed_result, dict):
                 return False, f"Result is not a dictionary: {type(parsed_result)}"
-
             # For visualization tools, verify image content
             if tool_name in [
                 "scatter_plot",
@@ -466,30 +442,23 @@ async def run_tool_integration_test(server, tool_name, test_data):
             ]:
                 if image_content is None:
                     return False, "Visualization tool should return image content"
-
             return True, parsed_result
-
     except Exception as e:
         return False, f"Tool execution failed: {str(e)}"
 
 
 async def run_comprehensive_integration_tests():
     """Run integration tests for all 40 tools."""
-
     print("🚀 RMCP Comprehensive Integration Testing")
     print("=" * 55)
     print("Testing all 40 tools through complete MCP protocol\n")
-
     server = await create_test_server()
-
     # Get tool count from server
     context = Context.create("test", "test", server.lifespan_state)
     tools_list = await server.tools.list_tools(context)
     total_tools = len(tools_list["tools"])
-
     print(f"📊 Server registered {total_tools} tools")
     print("-" * 55)
-
     # Define test cases for all 40 tools
     test_cases = [
         # Regression (3 tools)
@@ -591,29 +560,22 @@ async def run_comprehensive_integration_tests():
         ),
         ("validate_formula", {"formula": "y ~ x", "data": BASIC_DATA}),
     ]
-
     # Run tests
     results = []
-
     for i, (tool_name, test_data) in enumerate(test_cases, 1):
         print(f"[{i:2d}/40] Testing {tool_name:<20}", end=" ")
-
         success, result = await run_tool_integration_test(server, tool_name, test_data)
-
         if success:
             print("✅")
             results.append((tool_name, True, None))
         else:
             print(f"❌ - {result}")
             results.append((tool_name, False, result))
-
     # Summary
     print("\n" + "=" * 55)
     print("🎯 COMPREHENSIVE INTEGRATION TEST RESULTS")
     print("=" * 55)
-
     passed = sum(1 for _, success, _ in results if success)
-
     # Show results by category
     categories = {
         "Regression": results[0:3],
@@ -628,21 +590,16 @@ async def run_comprehensive_integration_tests():
         "Helper Tools": results[35:38],
         "Formula Builder": results[38:40],
     }
-
     for category, category_results in categories.items():
         category_passed = sum(1 for _, success, _ in category_results if success)
         category_total = len(category_results)
         status = "✅" if category_passed == category_total else "❌"
-
         print(f"{status} {category:<18} {category_passed}/{category_total}")
-
         # Show failures
         for tool_name, success, error in category_results:
             if not success:
                 print(f"     ❌ {tool_name}: {error}")
-
     print(f"\n📊 Overall Success Rate: {passed}/40 ({passed / 40:.1%})")
-
     if passed == 40:
         print("🎉 ALL INTEGRATION TESTS PASSED!")
         print("✅ Complete MCP protocol compatibility verified")
@@ -650,7 +607,6 @@ async def run_comprehensive_integration_tests():
     else:
         print(f"⚠️  {40 - passed} tools need attention")
         print("🔧 Integration fixes required")
-
     return passed == 40
 
 

@@ -1,6 +1,5 @@
 """
 Integration tests for HTTP transport.
-
 Tests the complete HTTP transport functionality in a real server environment:
 - Actual HTTP server startup and requests
 - JSON-RPC protocol compliance
@@ -13,13 +12,11 @@ import asyncio
 import json
 import time
 from typing import AsyncGenerator
-
 import pytest
 
 # Skip tests if FastAPI not available
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 httpx = pytest.importorskip("httpx", reason="httpx not available")
-
 from rmcp.core.server import create_server
 from rmcp.transport.http import HTTPTransport
 
@@ -32,19 +29,16 @@ async def http_server_with_tools():
     # Create server and register tools
     server = create_server()
     _register_builtin_tools(server)
-
     # Create HTTP transport
     transport = HTTPTransport(
         host="127.0.0.1", port=0
     )  # Use port 0 for auto-assignment
     transport.set_message_handler(server.create_message_handler(transport))
-
     # Start server in background
     server_task = None
     try:
         # Start the server
         await transport.startup()
-
         # Get the actual port assigned
         import socket
 
@@ -52,18 +46,13 @@ async def http_server_with_tools():
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
         sock.close()
-
         # Update transport with actual port
         transport.port = port
-
         # Run server in background
         server_task = asyncio.create_task(transport.run())
-
         # Wait a bit for server to start
         await asyncio.sleep(0.1)
-
         yield transport
-
     finally:
         if server_task:
             server_task.cancel()
@@ -83,11 +72,9 @@ class TestHTTPTransportMCPCompliance:
         transport = HTTPTransport(host="127.0.0.1", port=8001)
         server = create_server()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background for short test
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)  # Let server start
-
         try:
             async with httpx.AsyncClient() as client:
                 # Send initialize request
@@ -101,16 +88,13 @@ class TestHTTPTransportMCPCompliance:
                         "clientInfo": {"name": "test-client", "version": "1.0.0"},
                     },
                 }
-
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/mcp",
                     json=initialize_request,
                     timeout=5.0,
                 )
-
                 assert response.status_code == 200
                 data = response.json()
-
                 # Verify MCP initialize response structure
                 assert data["jsonrpc"] == "2.0"
                 assert data["id"] == 1
@@ -118,7 +102,6 @@ class TestHTTPTransportMCPCompliance:
                 assert "protocolVersion" in data["result"]
                 assert "capabilities" in data["result"]
                 assert "serverInfo" in data["result"]
-
         finally:
             server_task.cancel()
             try:
@@ -135,11 +118,9 @@ class TestHTTPTransportMCPCompliance:
 
         _register_builtin_tools(server)
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             async with httpx.AsyncClient() as client:
                 # First initialize and capture session ID
@@ -153,12 +134,10 @@ class TestHTTPTransportMCPCompliance:
                         "clientInfo": {"name": "test-client", "version": "1.0.0"},
                     },
                 }
-
                 init_response = await client.post(
                     f"http://127.0.0.1:{transport.port}/mcp", json=initialize_request
                 )
                 session_id = init_response.headers.get("Mcp-Session-Id")
-
                 # Then list tools with session ID
                 tools_request = {
                     "jsonrpc": "2.0",
@@ -166,28 +145,23 @@ class TestHTTPTransportMCPCompliance:
                     "method": "tools/list",
                     "params": {},
                 }
-
                 headers = {}
                 if session_id:
                     headers["Mcp-Session-Id"] = session_id
-
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/mcp",
                     json=tools_request,
                     headers=headers,
                     timeout=5.0,
                 )
-
                 assert response.status_code == 200
                 data = response.json()
-
                 # Verify tools list response
                 assert data["jsonrpc"] == "2.0"
                 assert data["id"] == 2
                 assert "result" in data
                 assert "tools" in data["result"]
                 assert len(data["result"]["tools"]) > 0  # Should have tools
-
         finally:
             server_task.cancel()
             try:
@@ -204,11 +178,9 @@ class TestHTTPTransportMCPCompliance:
 
         _register_builtin_tools(server)
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 # Initialize and capture session ID
@@ -226,7 +198,6 @@ class TestHTTPTransportMCPCompliance:
                     f"http://127.0.0.1:{transport.port}/mcp", json=initialize_request
                 )
                 session_id = init_response.headers.get("Mcp-Session-Id")
-
                 # Call a simple tool with session ID
                 tool_call_request = {
                     "jsonrpc": "2.0",
@@ -237,26 +208,21 @@ class TestHTTPTransportMCPCompliance:
                         "arguments": {"dataset_name": "sales"},  # Fixed parameter name
                     },
                 }
-
                 headers = {}
                 if session_id:
                     headers["Mcp-Session-Id"] = session_id
-
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/mcp",
                     json=tool_call_request,
                     headers=headers,
                 )
-
                 assert response.status_code == 200
                 data = response.json()
-
                 # Verify tool call response
                 assert data["jsonrpc"] == "2.0"
                 assert data["id"] == 3
                 assert "result" in data
                 assert "content" in data["result"]
-
         finally:
             server_task.cancel()
             try:
@@ -274,11 +240,9 @@ class TestHTTPTransportErrorHandling:
         transport = HTTPTransport(host="127.0.0.1", port=8004)
         server = create_server()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             async with httpx.AsyncClient() as client:
                 # Send invalid JSON
@@ -288,10 +252,8 @@ class TestHTTPTransportErrorHandling:
                     headers={"Content-Type": "application/json"},
                     timeout=5.0,
                 )
-
                 assert response.status_code == 400
                 assert "Invalid JSON" in response.text
-
         finally:
             server_task.cancel()
             try:
@@ -305,26 +267,21 @@ class TestHTTPTransportErrorHandling:
         transport = HTTPTransport(host="127.0.0.1", port=8005)
         server = create_server()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             async with httpx.AsyncClient() as client:
                 # Send malformed JSON-RPC (missing required fields)
                 malformed_request = {"not_jsonrpc": "2.0", "invalid": "request"}
-
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/mcp",
                     json=malformed_request,
                     timeout=5.0,
                 )
-
                 assert response.status_code == 200  # Should return JSON-RPC error
                 data = response.json()
                 assert "error" in data
-
         finally:
             server_task.cancel()
             try:
@@ -342,11 +299,9 @@ class TestHTTPTransportSSE:
         transport = HTTPTransport(host="127.0.0.1", port=8006)
         server = create_server()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             async with httpx.AsyncClient() as client:
                 # Connect to SSE endpoint
@@ -357,14 +312,12 @@ class TestHTTPTransportSSE:
                     assert response.headers["content-type"].startswith(
                         "text/event-stream"
                     )
-
                     # Read a few events (should be empty initially)
                     events_received = 0
                     async for line in response.aiter_lines():
                         events_received += 1
                         if events_received > 2:  # Just check connection works
                             break
-
         finally:
             server_task.cancel()
             try:
@@ -378,11 +331,9 @@ class TestHTTPTransportSSE:
         transport = HTTPTransport(host="127.0.0.1", port=8007)
         server = create_server()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             # Queue a notification
             test_notification = {
@@ -391,20 +342,17 @@ class TestHTTPTransportSSE:
                 "params": {"message": "test notification"},
             }
             await transport.send_message(test_notification)
-
             # Connect to SSE and check for the notification
             async with httpx.AsyncClient() as client:
                 async with client.stream(
                     "GET", f"http://127.0.0.1:{transport.port}/mcp/sse"
                 ) as response:
                     assert response.status_code == 200
-
                     # Read events for a short time
                     timeout_time = time.time() + 2  # 2 second timeout
                     async for line in response.aiter_lines():
                         if time.time() > timeout_time:
                             break
-
                         if line.startswith("data: "):
                             event_data = line[6:]  # Remove "data: " prefix
                             try:
@@ -418,7 +366,6 @@ class TestHTTPTransportSSE:
                                     break
                             except json.JSONDecodeError:
                                 continue  # Skip malformed data
-
         finally:
             server_task.cancel()
             try:
@@ -436,22 +383,18 @@ class TestHTTPTransportHealthCheck:
         transport = HTTPTransport(host="127.0.0.1", port=8008)
         server = create_server()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"http://127.0.0.1:{transport.port}/health", timeout=5.0
                 )
-
                 assert response.status_code == 200
                 data = response.json()
                 assert data["status"] == "healthy"
                 assert data["transport"] == "HTTP"
-
         finally:
             server_task.cancel()
             try:
@@ -469,11 +412,9 @@ class TestHTTPTransportCORS:
         transport = HTTPTransport(host="127.0.0.1", port=8009)
         server = create_server()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             async with httpx.AsyncClient() as client:
                 # Send OPTIONS request to check CORS
@@ -482,11 +423,9 @@ class TestHTTPTransportCORS:
                     headers={"Origin": "http://localhost:3000"},
                     timeout=5.0,
                 )
-
                 assert response.status_code == 200
                 assert "access-control-allow-origin" in response.headers
                 assert "access-control-allow-methods" in response.headers
-
         finally:
             server_task.cancel()
             try:
@@ -504,11 +443,9 @@ class TestHTTPTransportBackwardCompatibility:
         transport = HTTPTransport(host="127.0.0.1", port=8010)
         server = create_server()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             async with httpx.AsyncClient() as client:
                 # Send initialize request to legacy endpoint
@@ -522,17 +459,14 @@ class TestHTTPTransportBackwardCompatibility:
                         "clientInfo": {"name": "test-client", "version": "1.0.0"},
                     },
                 }
-
                 # Test legacy root endpoint (should redirect to /mcp)
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/",
                     json=initialize_request,
                     timeout=5.0,
                 )
-
                 assert response.status_code == 200
                 data = response.json()
-
                 # Verify MCP initialize response structure
                 assert data["jsonrpc"] == "2.0"
                 assert data["id"] == 1
@@ -540,7 +474,6 @@ class TestHTTPTransportBackwardCompatibility:
                 assert "protocolVersion" in data["result"]
                 assert "capabilities" in data["result"]
                 assert "serverInfo" in data["result"]
-
         finally:
             server_task.cancel()
             try:
@@ -554,11 +487,9 @@ class TestHTTPTransportBackwardCompatibility:
         transport = HTTPTransport(host="127.0.0.1", port=8011)
         server = create_server()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Start server in background
         server_task = asyncio.create_task(transport.run())
         await asyncio.sleep(0.1)
-
         try:
             async with httpx.AsyncClient() as client:
                 # Connect to legacy SSE endpoint
@@ -569,14 +500,12 @@ class TestHTTPTransportBackwardCompatibility:
                     assert response.headers["content-type"].startswith(
                         "text/event-stream"
                     )
-
                     # Just verify connection works
                     events_received = 0
                     async for line in response.aiter_lines():
                         events_received += 1
                         if events_received > 1:  # Just check connection works
                             break
-
         finally:
             server_task.cancel()
             try:

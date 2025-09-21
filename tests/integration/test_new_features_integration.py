@@ -1,13 +1,10 @@
 """Integration tests for the feature set introduced in v0.3.6."""
 
 from __future__ import annotations
-
 import ast
 from shutil import which
 from typing import Any, Dict
-
 import pytest
-
 from rmcp.tools.fileops import read_excel, read_json
 from rmcp.tools.formula_builder import build_formula, validate_formula
 from rmcp.tools.helpers import load_example, suggest_fix, validate_data
@@ -22,7 +19,6 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def integration_server(server_factory):
     """Return a server with the toolchain required for the new feature flows."""
-
     return server_factory(
         build_formula,
         validate_formula,
@@ -66,7 +62,6 @@ async def _call_tool(
 @pytest.mark.asyncio
 async def test_formula_to_analysis_workflow(integration_server):
     """Validate the natural-language to analysis workflow end-to-end."""
-
     formula_result = await _call_tool(
         integration_server,
         "build_formula",
@@ -75,7 +70,6 @@ async def test_formula_to_analysis_workflow(integration_server):
     )
     formula = formula_result["formula"]
     assert formula
-
     dataset_result = await _call_tool(
         integration_server,
         "load_example",
@@ -85,7 +79,6 @@ async def test_formula_to_analysis_workflow(integration_server):
     dataset = dataset_result["data"]
     assert dataset
     assert dataset_result["metadata"]["rows"] > 0
-
     validation_result = await _call_tool(
         integration_server,
         "validate_formula",
@@ -93,7 +86,6 @@ async def test_formula_to_analysis_workflow(integration_server):
         request_id=3,
     )
     assert validation_result["is_valid"]
-
     analysis_result = await _call_tool(
         integration_server,
         "correlation_analysis",
@@ -126,7 +118,6 @@ async def test_formula_to_analysis_workflow(integration_server):
 )
 async def test_error_recovery_workflow(integration_server, scenario: Dict[str, Any]):
     """Ensure error diagnosis suggestions are returned for common failure modes."""
-
     result = await _call_tool(
         integration_server,
         "suggest_fix",
@@ -136,7 +127,6 @@ async def test_error_recovery_workflow(integration_server, scenario: Dict[str, A
         },
         request_id=10,
     )
-
     assert result["error_type"] == scenario["expected_type"]
 
 
@@ -153,7 +143,6 @@ async def test_data_validation_integration(
     integration_server, dataset_name: str, analysis_type: str
 ):
     """Datasets loaded via helpers should pass validation for the requested analysis types."""
-
     dataset_result = await _call_tool(
         integration_server,
         "load_example",
@@ -162,7 +151,6 @@ async def test_data_validation_integration(
     )
     dataset = dataset_result["data"]
     assert dataset
-
     validation_result = await _call_tool(
         integration_server,
         "validate_data",

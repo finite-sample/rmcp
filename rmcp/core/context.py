@@ -1,11 +1,9 @@
 """
 Typed context object for MCP requests.
-
 The Context object provides:
 - Per-request state (request ID, progress token, cancellation)
 - Lifespan state (settings, caches, resources)
 - Cross-cutting features (logging, progress, security)
-
 Following the principle: "Makes cross-cutting features universal without globals."
 """
 
@@ -41,21 +39,16 @@ class LifespanState:
 
     # Configuration
     settings: Dict[str, Any] = field(default_factory=dict)
-
     # Security
     allowed_paths: list[Path] = field(default_factory=list)
     read_only: bool = True
-
     # Caching
     cache_root: Optional[Path] = None
     content_cache: Dict[str, Any] = field(default_factory=dict)
-
     # Resources
     resource_mounts: Dict[str, Path] = field(default_factory=dict)
-
     # Virtual File System (for security isolation)
     vfs: Optional[Any] = None
-
     # Logging
     current_log_level: str = "info"
 
@@ -64,14 +57,12 @@ class LifespanState:
 class Context:
     """
     Typed context passed to all tool handlers.
-
     Provides both per-request state and shared lifespan state,
     plus helpers for logging, progress, and cancellation.
     """
 
     request: RequestState
     lifespan: LifespanState
-
     # Progress/logging callbacks
     _progress_callback: Optional[Callable[[str, int, int], Awaitable[None]]] = None
     _log_callback: Optional[Callable[[str, str, Dict[str, Any]], Awaitable[None]]] = (
@@ -100,7 +91,6 @@ class Context:
             tool_invocation_id=tool_invocation_id,
             metadata=metadata or {},
         )
-
         return cls(
             request=request_state,
             lifespan=lifespan_state,
@@ -109,7 +99,6 @@ class Context:
         )
 
     # Cross-cutting feature helpers
-
     async def progress(self, message: str, current: int, total: int) -> None:
         """Send progress notification if progress token is available."""
         if self.request.progress_token and self._progress_callback:
@@ -138,7 +127,6 @@ class Context:
             raise asyncio.CancelledError("Request was cancelled")
 
     # Security helpers
-
     def is_path_allowed(self, path: Path) -> bool:
         """Check if path access is allowed."""
         try:

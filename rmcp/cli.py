@@ -1,6 +1,5 @@
 """
 Command-line interface for RMCP MCP Server.
-
 Provides entry points for running the server with different transports
 and configurations, following the principle of "multiple deployment targets."
 """
@@ -11,9 +10,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-
 import click
-
 from . import __version__
 from .core.server import create_server
 from .registries.prompts import (
@@ -28,21 +25,17 @@ from .registries.tools import register_tool_functions
 from .transport.stdio import StdioTransport
 
 # Modern Python 3.10+ syntax for type hints
-
-
 # Configure logging to stderr only
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stderr,
 )
-
 logger = logging.getLogger(__name__)
 
 
 async def _run_server_with_transport(server, transport) -> None:
     """Run a transport while honoring server lifecycle hooks."""
-
     started = False
     try:
         await server.startup()
@@ -69,21 +62,16 @@ def cli():
 )
 def start(log_level: str):
     """Start RMCP MCP server (default stdio transport)."""
-
     # Set logging level
     logging.getLogger().setLevel(getattr(logging, log_level))
-
     logger.info("Starting RMCP MCP Server")
-
     try:
         # Create and configure server
         server = create_server()
         config = {"allowed_paths": [str(Path.cwd())], "read_only": True}
         server.configure(**config)
-
         # Register built-in statistical tools
         _register_builtin_tools(server)
-
         # Register built-in prompts
         register_prompt_functions(
             server.prompts,
@@ -93,14 +81,11 @@ def start(log_level: str):
             time_series_forecast_prompt,
             panel_regression_prompt,
         )
-
         # Set up stdio transport
         transport = StdioTransport()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Run the server with lifecycle management
         asyncio.run(_run_server_with_transport(server, transport))
-
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
     except Exception as e:
@@ -139,34 +124,26 @@ def serve(
     config_file: str | None,
 ):
     """Run MCP server with advanced configuration options."""
-
     # Set logging level
     logging.getLogger().setLevel(getattr(logging, log_level))
-
     logger.info("Starting RMCP MCP Server")
-
     try:
         # Load configuration
         config = _load_config(config_file) if config_file else {}
-
         # Override with CLI options
         if allowed_paths:
             config["allowed_paths"] = list(allowed_paths)
         if cache_root:
             config["cache_root"] = cache_root
         config["read_only"] = read_only
-
         # Set defaults if not specified
         if "allowed_paths" not in config:
             config["allowed_paths"] = [str(Path.cwd())]
-
         # Create and configure server
         server = create_server()
         server.configure(**config)
-
         # Register built-in statistical tools
         _register_builtin_tools(server)
-
         # Register built-in prompts
         register_prompt_functions(
             server.prompts,
@@ -176,14 +153,11 @@ def serve(
             time_series_forecast_prompt,
             panel_regression_prompt,
         )
-
         # Set up stdio transport
         transport = StdioTransport()
         transport.set_message_handler(server.create_message_handler(transport))
-
         # Run the server with lifecycle management
         asyncio.run(_run_server_with_transport(server, transport))
-
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
     except Exception as e:
@@ -207,24 +181,19 @@ def serve_http(
             "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp[http]"
         )
         sys.exit(1)
-
     logger.info(f"Starting HTTP transport on {host}:{port}")
-
     # Create and configure server
     server = create_server()
     _register_builtin_tools(server)
-
     # Create HTTP transport
     transport = HTTPTransport(host=host, port=port)
     transport.set_message_handler(server.create_message_handler(transport))
-
     click.echo(f"🚀 RMCP HTTP server starting on http://{host}:{port}")
     click.echo(f"📊 Available tools: {len(server.tools._tools)}")
     click.echo("🔗 Endpoints:")
     click.echo(f"   • POST http://{host}:{port}/ (JSON-RPC requests)")
     click.echo(f"   • GET  http://{host}:{port}/sse (Server-Sent Events)")
     click.echo(f"   • GET  http://{host}:{port}/health (Health check)")
-
     try:
         asyncio.run(_run_server_with_transport(server, transport))
     except KeyboardInterrupt:
@@ -239,12 +208,10 @@ def serve_http(
 @click.option("--output", type=click.Path(), help="Output file for capabilities")
 def list_capabilities(allowed_paths: list[str], output: str | None):
     """List server capabilities (tools, resources, prompts)."""
-
     # Create server to inspect capabilities
     server = create_server()
     if allowed_paths:
         server.configure(allowed_paths=list(allowed_paths))
-
     _register_builtin_tools(server)
     register_prompt_functions(
         server.prompts,
@@ -259,14 +226,12 @@ def list_capabilities(allowed_paths: list[str], output: str | None):
         from .core.context import Context
 
         context = Context.create("capabilities", "list", server.lifespan_state)
-
         tools = await server.tools.list_tools(context)
         resources = await server.resources.list_resources(context)
         prompts = await server.prompts.list_prompts(context)
         initialize = await server._handle_initialize(
             {"clientInfo": {"name": "rmcp-cli"}}
         )
-
         capabilities = {
             "server": {
                 "name": server.name,
@@ -285,20 +250,16 @@ def list_capabilities(allowed_paths: list[str], output: str | None):
             "resources": resources["resources"],
             "prompts": prompts["prompts"],
         }
-
         json_output = json.dumps(capabilities, indent=2)
-
         if output:
             with open(output, "w") as f:
                 f.write(json_output)
             click.echo(f"Capabilities written to {output}")
         else:
             click.echo(json_output)
-
         return capabilities
 
     capabilities = asyncio.run(_list())
-
     problems = _validate_allowed_paths(capabilities["server"]["allowedPaths"])
     if problems:
         click.echo("\n⚠️  Configuration issues detected:")
@@ -314,12 +275,9 @@ def validate_config(
     allowed_paths: tuple[str, ...], cache_root: str | None, read_only: bool
 ):
     """Validate server configuration and highlight potential issues."""
-
     if not allowed_paths:
         allowed_paths = (str(Path.cwd()),)
-
     problems = _validate_allowed_paths(list(allowed_paths))
-
     if cache_root:
         cache_path = Path(cache_root).expanduser()
         if cache_path.exists() and not cache_path.is_dir():
@@ -330,19 +288,16 @@ def validate_config(
                 problems.append(
                     f"Parent directory for cache root {cache_path} does not exist"
                 )
-
     click.echo("🔍 Configuration review")
     click.echo("=" * 40)
     click.echo(f"Allowed paths: {', '.join(str(Path(p)) for p in allowed_paths)}")
     click.echo(f"Cache root: {cache_root or 'not configured'}")
     click.echo(f"Access mode: {'read-only' if read_only else 'read-write'}")
-
     if problems:
         click.echo("\n⚠️  Issues detected:")
         for problem in problems:
             click.echo(f" - {problem}")
         sys.exit(1)
-
     click.echo("\n✅ Configuration looks good!")
 
 
@@ -354,10 +309,8 @@ def validate_config(
 )
 def setup(config_file: str | None):
     """Interactively configure allowed paths and caching for the server."""
-
     click.echo("🛠️  RMCP interactive setup")
     click.echo("=" * 40)
-
     allowed_paths: list[str] = []
     while True:
         default_path = str(Path.cwd()) if not allowed_paths else ""
@@ -366,29 +319,22 @@ def setup(config_file: str | None):
             default=default_path,
             show_default=bool(default_path),
         ).strip()
-
         if path:
             allowed_paths.append(path)
-
         if not click.confirm("Add another directory?", default=False):
             break
-
     read_only = click.confirm("Should file access be read-only?", default=True)
     cache_root = click.prompt(
         "Cache directory (leave blank to skip)", default="", show_default=False
     ).strip()
-
     config = {
         "allowed_paths": allowed_paths or [str(Path.cwd())],
         "read_only": read_only,
     }
-
     if cache_root:
         config["cache_root"] = cache_root
-
     click.echo("\nGenerated configuration:")
     click.echo(json.dumps(config, indent=2))
-
     if config_file:
         with open(config_file, "w") as f:
             json.dump(config, f, indent=2)
@@ -419,10 +365,8 @@ def check_r_packages():
         ],
         "File Operations": ["readxl"],
     }
-
     click.echo("🔍 Checking R Package Installation Status")
     click.echo("=" * 50)
-
     # Check if R is available
     try:
         result = subprocess.run(
@@ -436,13 +380,10 @@ def check_r_packages():
     except Exception as e:
         click.echo(f"❌ R check failed: {e}")
         return
-
     click.echo()
-
     # Check each package category
     all_packages = []
     missing_packages = []
-
     for category, pkg_list in packages.items():
         click.echo(f"📦 {category} Packages:")
         for pkg in pkg_list:
@@ -465,22 +406,18 @@ def check_r_packages():
                 click.echo(f"   ❓ {pkg} (check failed)")
                 missing_packages.append(pkg)
         click.echo()
-
     # Summary
     installed_count = len(all_packages) - len(missing_packages)
     click.echo(f"📊 Summary: {installed_count}/{len(all_packages)} packages installed")
-
     if missing_packages:
         click.echo()
         click.echo("❌ Missing Packages:")
         for pkg in missing_packages:
             click.echo(f"   - {pkg}")
-
         click.echo()
         click.echo("💡 To install missing packages, run in R:")
         missing_str = '", "'.join(missing_packages)
         click.echo(f'   install.packages(c("{missing_str}"))')
-
         click.echo()
         click.echo("🚀 Or install all RMCP packages at once:")
         all_str = '", "'.join(all_packages)
@@ -507,19 +444,14 @@ def _load_config(config_file: str) -> dict:
 
 def _validate_allowed_paths(paths: list[str]) -> list[str]:
     """Return a list of human-readable warnings for invalid paths."""
-
     problems: list[str] = []
     seen: set[str] = set()
-
     for raw_path in paths:
         normalized = str(Path(raw_path).expanduser())
-
         if normalized in seen:
             problems.append(f"Duplicate allowed path specified: {normalized}")
             continue
-
         seen.add(normalized)
-
         path_obj = Path(normalized)
         if not path_obj.exists():
             problems.append(f"Allowed path does not exist: {normalized}")
@@ -527,7 +459,6 @@ def _validate_allowed_paths(paths: list[str]) -> list[str]:
             problems.append(f"Allowed path is not a directory: {normalized}")
         elif not os.access(path_obj, os.R_OK):
             problems.append(f"Allowed path is not readable: {normalized}")
-
     return problems
 
 
@@ -618,7 +549,6 @@ def _register_builtin_tools(server):
         validate_data,
         load_example,
     )
-
     logger.info("Registered comprehensive statistical analysis tools (40 total)")
 
 

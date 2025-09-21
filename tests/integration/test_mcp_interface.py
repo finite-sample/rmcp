@@ -1,12 +1,9 @@
 """Integration tests that exercise the MCP protocol interface."""
 
 from __future__ import annotations
-
 from shutil import which
 from typing import Any, Callable, Dict
-
 import pytest
-
 from rmcp.tools.regression import (
     correlation_analysis,
     linear_model,
@@ -22,7 +19,6 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def mcp_server(server_factory):
     """Return a server preloaded with the regression tools used in the tests."""
-
     return server_factory(linear_model, correlation_analysis, logistic_regression)
 
 
@@ -47,10 +43,8 @@ def _parse_result(response: Dict[str, Any]) -> Dict[str, Any]:
 @pytest.mark.asyncio
 async def test_tool_discovery(mcp_server, context_factory):
     """Claude Desktop should be able to discover all registered tools."""
-
     context = context_factory(mcp_server, request_id="discover", method="tools/list")
     response = await mcp_server.tools.list_tools(context)
-
     tool_names = {tool["name"] for tool in response["tools"]}
     assert tool_names == {
         "linear_model",
@@ -63,7 +57,6 @@ def _assert_business_analysis(result: Dict[str, Any]) -> None:
     marketing_coef = result["coefficients"]["marketing"]
     r_squared = result["r_squared"]
     p_value = result["p_values"]["marketing"]
-
     assert marketing_coef > 0, "Marketing spend should increase sales"
     assert r_squared > 0.8, "Model should explain most of the variance"
     assert p_value < 0.05, "Marketing effect should be statistically significant"
@@ -81,7 +74,6 @@ def _assert_data_scientist_analysis(result: Dict[str, Any]) -> None:
     accuracy = result.get("accuracy", 0)
     tenure_coef = result["coefficients"]["tenure_months"]
     charges_coef = result["coefficients"]["monthly_charges"]
-
     assert accuracy > 0.6, "Model should be reasonably accurate"
     assert tenure_coef < 0, "Longer tenure should reduce churn likelihood"
     assert charges_coef > 0, "Higher charges should increase churn likelihood"
@@ -137,7 +129,6 @@ async def test_mcp_tool_calls(
     validator: Callable[[Dict[str, Any]], None],
 ):
     """Exercise representative MCP tool calls and validate the returned results."""
-
     response = await mcp_server.handle_request(
         _tool_call_request(tool_name, arguments, request_id=1)
     )
@@ -148,10 +139,8 @@ async def test_mcp_tool_calls(
 @pytest.mark.asyncio
 async def test_invalid_tool_request_returns_error(mcp_server):
     """Requests for unknown tools should yield a JSON-RPC error response."""
-
     response = await mcp_server.handle_request(
         _tool_call_request("nonexistent_tool", {"data": [1, 2, 3]}, request_id=99)
     )
-
     assert "error" in response
     assert response["error"]["message"] == "Unknown tool: nonexistent_tool"

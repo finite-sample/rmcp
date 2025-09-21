@@ -3,7 +3,6 @@
 Comprehensive test runner for RMCP.
 Tests all 40 statistical analysis tools to ensure they work properly.
 """
-
 import asyncio
 import json
 import subprocess
@@ -13,7 +12,6 @@ from pathlib import Path
 
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 
@@ -90,7 +88,6 @@ def check_r_packages():
         "readxl",
         "reshape2",
     ]
-
     r_script = f"""
     packages <- c({', '.join([f'"{pkg}"' for pkg in required_packages])})
     missing <- packages[!packages %in% installed.packages()[,"Package"]]
@@ -100,13 +97,11 @@ def check_r_packages():
         cat("All packages installed")
     }}
     """
-
     try:
         result = subprocess.run(
             ["R", "--slave", "-e", r_script], capture_output=True, text=True
         )
         output = result.stdout.strip()
-
         if "Missing packages:" in output:
             missing = output.replace("Missing packages:", "").strip()
             print(f"❌ Missing R packages: {missing}")
@@ -124,7 +119,6 @@ async def create_test_server():
     """Create server with all tools registered."""
     server = create_server()
     server.configure(allowed_paths=["/tmp"], read_only=False)
-
     # Register ALL 40 tools
     register_tool_functions(
         server.tools,
@@ -179,24 +173,20 @@ async def create_test_server():
         validate_data,
         load_example,
     )
-
     return server
 
 
 async def test_tool(server, tool_name, arguments, expected_success=True):
     """Test a single tool."""
     print(f"  Testing {tool_name}...", end=" ")
-
     request = {
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
         "params": {"name": tool_name, "arguments": arguments},
     }
-
     try:
         response = await server.handle_request(request)
-
         if "result" in response and "content" in response["result"]:
             if expected_success:
                 print("✅")
@@ -212,7 +202,6 @@ async def test_tool(server, tool_name, arguments, expected_success=True):
             else:
                 print("✅ (expected failure)")
                 return True
-
     except Exception as e:
         if expected_success:
             print(f"💥 (Exception: {e})")
@@ -226,28 +215,23 @@ async def run_all_tests():
     """Run all tests systematically."""
     print("🧪 RMCP Comprehensive Test Suite")
     print("=" * 50)
-
     # Check prerequisites
     if not check_r_installation():
         print("❌ Tests cannot run without R")
         return False
-
     if not check_r_packages():
         print("❌ Tests cannot run without required R packages")
         return False
-
     # Create test server
     print("🚀 Creating test server...")
     server = await create_test_server()
     print(f"✅ Server created with {len(server.tools._tools)} tools")
-
     # Test data for various tools
     sample_data = {
         "x": [1, 2, 3, 4, 5],
         "y": [2, 4, 1, 5, 3],
         "group": ["A", "A", "B", "B", "A"],
     }
-
     time_series_data = {
         "values": [100, 102, 105, 103, 107, 110, 108, 112, 115],
         "dates": [
@@ -262,9 +246,7 @@ async def run_all_tests():
             "2023-09",
         ],
     }
-
     test_results = []
-
     # Test categories
     categories = [
         (
@@ -405,14 +387,11 @@ async def run_all_tests():
             ],
         ),
     ]
-
     total_tests = 0
     passed_tests = 0
-
     for category_name, tests in categories:
         print(f"\n{category_name}")
         print("-" * 30)
-
         category_passed = 0
         for tool_name, args in tests:
             total_tests += 1
@@ -420,13 +399,10 @@ async def run_all_tests():
             if success:
                 passed_tests += 1
                 category_passed += 1
-
         print(f"  Category result: {category_passed}/{len(tests)} passed")
-
     print(f"\n{'=' * 50}")
     print(f"🎯 FINAL RESULTS: {passed_tests}/{total_tests} tests passed")
     print(f"📊 Success rate: {passed_tests / total_tests * 100:.1f}%")
-
     if passed_tests == total_tests:
         print("🎉 ALL TESTS PASSED! RMCP is ready for deployment.")
         return True
@@ -439,7 +415,6 @@ async def run_unit_tests():
     """Run existing unit tests."""
     print("\n🧪 Running Unit Tests")
     print("-" * 30)
-
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pytest", "tests/unit/", "-v"],
@@ -447,7 +422,6 @@ async def run_unit_tests():
             text=True,
             cwd=Path(__file__).parent.parent,
         )
-
         if result.returncode == 0:
             print("✅ Unit tests passed")
             return True
@@ -456,7 +430,6 @@ async def run_unit_tests():
             print(result.stdout)
             print(result.stderr)
             return False
-
     except FileNotFoundError:
         print("⚠️ pytest not found, skipping unit tests")
         return True
@@ -466,7 +439,6 @@ async def run_integration_tests():
     """Run existing integration tests."""
     print("\n🔗 Running Integration Tests")
     print("-" * 30)
-
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pytest", "tests/integration/", "-v"],
@@ -474,7 +446,6 @@ async def run_integration_tests():
             text=True,
             cwd=Path(__file__).parent.parent,
         )
-
         if result.returncode == 0:
             print("✅ Integration tests passed")
             return True
@@ -483,7 +454,6 @@ async def run_integration_tests():
             print(result.stdout)
             print(result.stderr)
             return False
-
     except FileNotFoundError:
         print("⚠️ pytest not found, skipping integration tests")
         return True
@@ -493,7 +463,6 @@ async def run_http_transport_tests():
     """Run HTTP transport tests (requires FastAPI)."""
     print("\n🌐 Running HTTP Transport Tests")
     print("-" * 30)
-
     try:
         # Check if FastAPI is available
         import fastapi
@@ -504,7 +473,6 @@ async def run_http_transport_tests():
         print("⚠️ FastAPI not available, skipping HTTP transport tests")
         print("💡 Install with: pip install rmcp[http]")
         return True  # Don't fail the entire test suite
-
     try:
         # Run HTTP transport unit tests
         unit_result = subprocess.run(
@@ -513,7 +481,6 @@ async def run_http_transport_tests():
             text=True,
             cwd=Path(__file__).parent.parent,
         )
-
         # Run HTTP transport integration tests
         integration_result = subprocess.run(
             [
@@ -527,10 +494,8 @@ async def run_http_transport_tests():
             text=True,
             cwd=Path(__file__).parent.parent,
         )
-
         unit_passed = unit_result.returncode == 0
         integration_passed = integration_result.returncode == 0
-
         if unit_passed and integration_passed:
             print("✅ HTTP transport tests passed")
             return True
@@ -545,7 +510,6 @@ async def run_http_transport_tests():
                 print(integration_result.stdout)
                 print(integration_result.stderr)
             return False
-
     except FileNotFoundError:
         print("⚠️ pytest not found, skipping HTTP transport tests")
         return True
@@ -556,38 +520,30 @@ async def main():
     print("🚀 RMCP Comprehensive Test Runner")
     print("Testing all 40 statistical analysis tools + HTTP transport")
     print("=" * 50)
-
     # Run all test categories
     results = []
-
     # 1. Unit tests
     unit_result = await run_unit_tests()
     results.append(("Unit Tests", unit_result))
-
     # 2. Integration tests
     integration_result = await run_integration_tests()
     results.append(("Integration Tests", integration_result))
-
     # 3. HTTP transport tests
     http_result = await run_http_transport_tests()
     results.append(("HTTP Transport Tests", http_result))
-
     # 4. Comprehensive tool tests
     tool_result = await run_all_tests()
     results.append(("Tool Tests", tool_result))
-
     # Summary
     print(f"\n{'=' * 50}")
     print("📋 TEST SUMMARY")
     print("=" * 50)
-
     all_passed = True
     for test_type, passed in results:
         status = "✅ PASSED" if passed else "❌ FAILED"
         print(f"{test_type}: {status}")
         if not passed:
             all_passed = False
-
     if all_passed:
         print("\n🎉 ALL TEST CATEGORIES PASSED!")
         print("✅ RMCP is ready for production use")

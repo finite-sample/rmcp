@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
 """
 Schema validation unit tests for RMCP.
-
 Tests input schema validation and output shape compliance without R execution.
 These tests ensure that tools correctly validate parameters and return expected structures.
 """
-
 import sys
 from pathlib import Path
 from typing import Any
-
 import jsonschema
 import pytest
 from jsonschema import ValidationError, validate
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.tools.descriptive import frequency_table, outlier_detection, summary_stats
 from rmcp.tools.fileops import data_info, filter_data, read_csv
 from rmcp.tools.helpers import load_example, validate_data
@@ -39,10 +35,8 @@ class TestTTestSchemaValidation:
             "mu": 0,
             "alternative": "two.sided",
         }
-
         # Extract schema from tool decorator metadata
         schema = t_test._mcp_tool_input_schema
-
         # Should not raise ValidationError
         validate(instance=valid_input, schema=schema)
 
@@ -58,7 +52,6 @@ class TestTTestSchemaValidation:
             "paired": False,
             "var_equal": False,  # Test new default
         }
-
         schema = t_test._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -68,12 +61,9 @@ class TestTTestSchemaValidation:
             "variable": "values",
             # Missing "data" parameter
         }
-
         schema = t_test._mcp_tool_input_schema
-
         with pytest.raises(ValidationError) as exc_info:
             validate(instance=invalid_input, schema=schema)
-
         assert "'data' is a required property" in str(exc_info.value)
 
     def test_invalid_alternative_value(self):
@@ -83,12 +73,9 @@ class TestTTestSchemaValidation:
             "variable": "values",
             "alternative": "invalid_option",  # Not in enum
         }
-
         schema = t_test._mcp_tool_input_schema
-
         with pytest.raises(ValidationError) as exc_info:
             validate(instance=invalid_input, schema=schema)
-
         assert "is not one of" in str(exc_info.value)
 
 
@@ -103,7 +90,6 @@ class TestChiSquareSchemaValidation:
             "x": "var1",
             "y": "var2",
         }
-
         schema = chi_square_test._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -115,7 +101,6 @@ class TestChiSquareSchemaValidation:
             "x": "category",
             "expected": [0.3, 0.4, 0.3],  # Valid probabilities
         }
-
         schema = chi_square_test._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -127,12 +112,9 @@ class TestChiSquareSchemaValidation:
             "x": "category",
             "expected": [0.5, -0.2, 0.7],  # Negative value
         }
-
         schema = chi_square_test._mcp_tool_input_schema
-
         with pytest.raises(ValidationError) as exc_info:
             validate(instance=invalid_input, schema=schema)
-
         assert "is less than the minimum" in str(exc_info.value)
 
     def test_independence_missing_y_variable(self):
@@ -143,12 +125,9 @@ class TestChiSquareSchemaValidation:
             "x": "var1",
             # Missing "y" parameter required for independence
         }
-
         schema = chi_square_test._mcp_tool_input_schema
-
         with pytest.raises(ValidationError) as exc_info:
             validate(instance=invalid_input, schema=schema)
-
         # The oneOf validation catches that this doesn't match any schema
         assert "was expected" in str(
             exc_info.value
@@ -165,7 +144,6 @@ class TestRegressionSchemaValidation:
             "formula": "y ~ x",
             "na_action": "na.omit",
         }
-
         schema = linear_model._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -181,7 +159,6 @@ class TestRegressionSchemaValidation:
             "method": "pearson",
             "confidence_level": 0.95,
         }
-
         schema = correlation_analysis._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -197,7 +174,6 @@ class TestDescriptiveSchemaValidation:
             "group_by": "group",
             "percentiles": [0.25, 0.5, 0.75],
         }
-
         schema = summary_stats._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -209,7 +185,6 @@ class TestDescriptiveSchemaValidation:
             "method": "iqr",
             "threshold": 3.0,
         }
-
         schema = outlier_detection._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -220,12 +195,9 @@ class TestDescriptiveSchemaValidation:
             "variable": "values",
             "method": "invalid_method",  # Not in enum
         }
-
         schema = outlier_detection._mcp_tool_input_schema
-
         with pytest.raises(ValidationError) as exc_info:
             validate(instance=invalid_input, schema=schema)
-
         assert "is not one of" in str(exc_info.value)
 
 
@@ -243,7 +215,6 @@ class TestVisualizationSchemaValidation:
             "width": 800,
             "height": 600,
         }
-
         schema = scatter_plot._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -255,7 +226,6 @@ class TestVisualizationSchemaValidation:
             "bins": 10,
             "return_image": True,
         }
-
         schema = histogram._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -266,12 +236,9 @@ class TestVisualizationSchemaValidation:
             "variable": "values",
             "bins": 200,  # Exceeds maximum of 100
         }
-
         schema = histogram._mcp_tool_input_schema
-
         with pytest.raises(ValidationError) as exc_info:
             validate(instance=invalid_input, schema=schema)
-
         assert "is greater than the maximum" in str(exc_info.value)
 
 
@@ -286,7 +253,6 @@ class TestFileOpsSchemaValidation:
             "separator": ",",
             "skip_rows": 0,
         }
-
         schema = read_csv._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -300,7 +266,6 @@ class TestFileOpsSchemaValidation:
             ],
             "logic": "AND",
         }
-
         schema = filter_data._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
@@ -310,7 +275,6 @@ class TestOutputShapeCompliance:
 
     def test_t_test_output_structure(self):
         """Test t_test returns expected output structure."""
-
         # Verify the function signature and imports work
         assert callable(t_test)
         assert hasattr(t_test, "_mcp_tool_input_schema")
@@ -319,10 +283,8 @@ class TestOutputShapeCompliance:
     def test_correlation_heatmap_schema_structure(self):
         """Test correlation heatmap has expected schema structure."""
         schema = correlation_heatmap._mcp_tool_input_schema
-
         # Verify required fields
         assert "data" in schema["required"]
-
         # Verify method enum
         method_enum = schema["properties"]["method"]["enum"]
         assert "pearson" in method_enum
@@ -332,13 +294,11 @@ class TestOutputShapeCompliance:
     def test_normality_test_schema_structure(self):
         """Test normality test schema structure."""
         schema = normality_test._mcp_tool_input_schema
-
         # Verify test type enum
         test_enum = schema["properties"]["test"]["enum"]
         assert "shapiro" in test_enum
         assert "jarque_bera" in test_enum
         assert "anderson" in test_enum
-
         # Verify required fields
         assert "data" in schema["required"]
         assert "variable" in schema["required"]

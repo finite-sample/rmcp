@@ -1,15 +1,12 @@
 """
 Regression Analysis Tools for RMCP MCP Server.
-
 This module provides comprehensive regression modeling capabilities including:
 - Linear regression with diagnostics
 - Logistic regression for binary outcomes
 - Correlation analysis with significance testing
 - Comprehensive model validation and statistics
-
 All tools support missing value handling, weighted observations, and return
 detailed statistical outputs suitable for research and business analysis.
-
 Example Usage:
     >>> # Linear regression on sales data
     >>> data = {"sales": [100, 120, 140], "advertising": [10, 15, 20]}
@@ -21,7 +18,6 @@ Example Usage:
 """
 
 from typing import Any
-
 from ..core.schemas import formula_schema, table_schema
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
@@ -124,11 +120,9 @@ from ..registries.tools import tool
 async def linear_model(context, params) -> dict[str, Any]:
     """
     Fit ordinary least squares (OLS) linear regression model.
-
     This tool performs comprehensive linear regression analysis using R's lm() function.
     It supports weighted regression, missing value handling, and returns detailed
     model diagnostics including coefficients, significance tests, and goodness-of-fit.
-
     Args:
         context: Request execution context for logging and progress
         params: Dictionary containing:
@@ -136,7 +130,6 @@ async def linear_model(context, params) -> dict[str, Any]:
             - formula: R formula string (e.g., "y ~ x1 + x2")
             - weights: Optional array of observation weights
             - na_action: How to handle missing values ("na.omit", "na.exclude", "na.fail")
-
     Returns:
         Dictionary containing:
             - coefficients: Model coefficients by variable name
@@ -151,7 +144,6 @@ async def linear_model(context, params) -> dict[str, Any]:
             - fitted_values: Predicted values for each observation
             - residuals: Model residuals
             - n_obs: Number of observations used
-
     Example:
         >>> # Simple linear regression
         >>> data = {
@@ -164,7 +156,6 @@ async def linear_model(context, params) -> dict[str, Any]:
         ... })
         >>> print(f"Price increases ${result['coefficients']['size']:.2f} per sq ft")
         >>> print(f"Model explains {result['r_squared']:.1%} of variance")
-
         >>> # Multiple regression with weights
         >>> data = {
         ...     "sales": [100, 150, 200, 250],
@@ -177,37 +168,31 @@ async def linear_model(context, params) -> dict[str, Any]:
         ...     "weights": [1, 1, 2, 2]  # Weight later observations more
         ... })
     """
-
     await context.info("Fitting linear regression model")
-
     r_script = """
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
-    
     # Handle optional parameters
     weights <- args$weights
     na_action <- args$na_action %||% "na.omit"
-    
     # Fit model
     if (!is.null(weights)) {
         model <- lm(formula, data = data, weights = weights, na.action = get(na_action))
     } else {
         model <- lm(formula, data = data, na.action = get(na_action))
     }
-    
     # Get comprehensive results
     summary_model <- summary(model)
-    
     result <- list(
         coefficients = as.list(coef(model)),
         std_errors = as.list(summary_model$coefficients[, "Std. Error"]),
-        t_values = as.list(summary_model$coefficients[, "t value"]),  
+        t_values = as.list(summary_model$coefficients[, "t value"]),
         p_values = as.list(summary_model$coefficients[, "Pr(>|t|)"]),
         r_squared = summary_model$r.squared,
         adj_r_squared = summary_model$adj.r.squared,
         f_statistic = summary_model$fstatistic[1],
-        f_p_value = pf(summary_model$fstatistic[1], 
-                      summary_model$fstatistic[2], 
+        f_p_value = pf(summary_model$fstatistic[1],
+                      summary_model$fstatistic[2],
                       summary_model$fstatistic[3], lower.tail = FALSE),
         residual_se = summary_model$sigma,
         df_residual = summary_model$df[2],
@@ -217,7 +202,6 @@ async def linear_model(context, params) -> dict[str, Any]:
         method = "lm"
     )
     """
-
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info(
@@ -226,7 +210,6 @@ async def linear_model(context, params) -> dict[str, Any]:
             n_obs=result.get("n_obs"),
         )
         return result
-
     except Exception as e:
         await context.error("Linear model fitting failed", error=str(e))
         raise
@@ -320,11 +303,9 @@ async def linear_model(context, params) -> dict[str, Any]:
 async def correlation_analysis(context, params) -> dict[str, Any]:
     """
     Compute correlation matrix with significance testing.
-
     This tool calculates pairwise correlations between numeric variables using
     Pearson, Spearman, or Kendall methods. It includes significance tests for
     each correlation and handles missing values appropriately.
-
     Args:
         context: Request execution context for logging and progress
         params: Dictionary containing:
@@ -332,7 +313,6 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
             - variables: Optional list of variable names to include
             - method: Correlation method ("pearson", "spearman", "kendall")
             - use: Missing value handling strategy
-
     Returns:
         Dictionary containing:
             - correlation_matrix: Pairwise correlations as nested dict
@@ -340,7 +320,6 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
             - sample_sizes: Number of complete observations for each pair
             - variables_used: List of variables included in analysis
             - method_used: Correlation method applied
-
     Example:
         >>> # Basic correlation analysis
         >>> data = {
@@ -354,7 +333,6 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         ... })
         >>> sales_ad_corr = result["correlation_matrix"]["sales"]["advertising"]
         >>> print(f"Sales-Advertising correlation: {sales_ad_corr:.3f}")
-
         >>> # Spearman correlation for non-linear relationships
         >>> result = await correlation_analysis(context, {
         ...     "data": data,
@@ -362,15 +340,12 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         ...     "variables": ["sales", "advertising"]
         ... })
     """
-
     await context.info("Computing correlation matrix")
-
     r_script = """
     data <- as.data.frame(args$data)
     variables <- args$variables
     method <- args$method %||% "pearson"
     use <- args$use %||% "complete.obs"
-    
     # Select variables if specified
     if (!is.null(variables)) {
         # Validate variables exist
@@ -380,46 +355,36 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         }
         data <- data[, variables, drop = FALSE]
     }
-    
     # Select only numeric variables
     numeric_vars <- sapply(data, is.numeric)
     if (sum(numeric_vars) < 2) {
         stop("Need at least 2 numeric variables for correlation analysis")
     }
     numeric_data <- data[, numeric_vars, drop = FALSE]
-    
     # Compute correlation matrix
     cor_matrix <- cor(numeric_data, method = method, use = use)
-    
     # Compute significance tests and pairwise n_obs
     n <- nrow(numeric_data)
     cor_test_results <- list()
-    
     # Initialize n_obs matrix structure
     n_obs_matrix <- matrix(0, nrow = ncol(numeric_data), ncol = ncol(numeric_data))
     rownames(n_obs_matrix) <- names(numeric_data)
     colnames(n_obs_matrix) <- names(numeric_data)
-    
     # Fill diagonal with total observations
     diag(n_obs_matrix) <- n
-    
     for (i in 1:(ncol(numeric_data)-1)) {
         for (j in (i+1):ncol(numeric_data)) {
             var1 <- names(numeric_data)[i]
             var2 <- names(numeric_data)[j]
-            
             # Filter complete cases for cor.test (cor.test doesn't accept 'use' parameter)
             x <- numeric_data[,i]
             y <- numeric_data[,j]
             complete_cases <- !is.na(x) & !is.na(y)
             n_pairwise <- sum(complete_cases)
-            
             # Store pairwise n_obs in matrix
             n_obs_matrix[i, j] <- n_pairwise
             n_obs_matrix[j, i] <- n_pairwise
-            
             test_result <- cor.test(x[complete_cases], y[complete_cases], method = method)
-            
             cor_test_results[[paste(var1, var2, sep = "_")]] <- list(
                 correlation = test_result$estimate,
                 p_value = test_result$p.value,
@@ -428,19 +393,16 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
             )
         }
     }
-    
     # Convert correlation matrix to nested list structure
     cor_list <- list()
     for (var1 in names(numeric_data)) {
         cor_list[[var1]] <- as.list(setNames(cor_matrix[var1, ], names(numeric_data)))
     }
-    
     # Convert n_obs matrix to nested list structure
     n_obs_list <- list()
     for (var1 in names(numeric_data)) {
         n_obs_list[[var1]] <- as.list(setNames(n_obs_matrix[var1, ], names(numeric_data)))
     }
-    
     result <- list(
         correlation_matrix = cor_list,
         significance_tests = cor_test_results,
@@ -449,7 +411,6 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         variables = names(numeric_data)
     )
     """
-
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info(
@@ -458,7 +419,6 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
             method=result.get("method"),
         )
         return result
-
     except Exception as e:
         await context.error("Correlation analysis failed", error=str(e))
         raise
@@ -582,40 +542,32 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
 )
 async def logistic_regression(context, params) -> dict[str, Any]:
     """Fit logistic regression model."""
-
     await context.info("Fitting logistic regression model")
-
     r_script = """
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
     family <- args$family %||% "binomial"
     link <- args$link %||% "logit"
-    
     # Prepare family specification
     if (family == "binomial") {
         family_spec <- binomial(link = link)
     } else {
         family_spec <- get(family)()
     }
-    
     # Fit GLM
     model <- glm(formula, data = data, family = family_spec)
     summary_model <- summary(model)
-    
     # Additional diagnostics for logistic regression
     if (family == "binomial") {
         # Odds ratios
         odds_ratios <- exp(coef(model))
-        
         # McFadden's R-squared
         ll_null <- logLik(glm(update(formula, . ~ 1), data = data, family = family_spec))
         ll_model <- logLik(model)
         mcfadden_r2 <- 1 - (ll_model / ll_null)
-        
         # Predicted probabilities
         predicted_probs <- fitted(model)
         predicted_classes <- ifelse(predicted_probs > 0.5, 1, 0)
-        
         # Confusion matrix (if binary outcome)
         actual <- model.response(model.frame(model))
         if (all(actual %in% c(0, 1))) {
@@ -626,10 +578,9 @@ async def logistic_regression(context, params) -> dict[str, Any]:
             accuracy <- NULL
         }
     }
-    
     result <- list(
         coefficients = as.list(coef(model)),
-        std_errors = as.list(summary_model$coefficients[, "Std. Error"]), 
+        std_errors = as.list(summary_model$coefficients[, "Std. Error"]),
         z_values = as.list(summary_model$coefficients[, "z value"]),
         p_values = as.list(summary_model$coefficients[, "Pr(>|z|)"]),
         deviance = model$deviance,
@@ -642,7 +593,6 @@ async def logistic_regression(context, params) -> dict[str, Any]:
         family = family,
         link = link
     )
-    
     # Add logistic-specific results
     if (family == "binomial") {
         result$odds_ratios <- as.list(odds_ratios)
@@ -654,7 +604,6 @@ async def logistic_regression(context, params) -> dict[str, Any]:
         }
     }
     """
-
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info(
@@ -663,7 +612,6 @@ async def logistic_regression(context, params) -> dict[str, Any]:
             n_obs=result.get("n_obs"),
         )
         return result
-
     except Exception as e:
         await context.error("Logistic regression fitting failed", error=str(e))
         raise

@@ -1,9 +1,7 @@
 """
 RMCP Tools Module
-
 This module contains all statistical analysis tools for the RMCP MCP server.
 Tools are organized by category and registered with the MCP server.
-
 Categories:
 - regression: Linear and logistic regression, correlation analysis
 - timeseries: ARIMA, decomposition, stationarity testing
