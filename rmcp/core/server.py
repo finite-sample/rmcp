@@ -477,6 +477,42 @@ class MCPServer:
 
         return result
 
+    async def _handle_set_log_level(self, level: str) -> dict[str, Any]:
+        """
+        Handle logging/setLevel request.
+        
+        Args:
+            level: Log level to set (debug, info, notice, warning, error, critical, alert, emergency)
+            
+        Returns:
+            Empty result dict on success
+        """
+        # Validate log level
+        if level not in _SUPPORTED_LOG_LEVELS:
+            raise ValueError(f"Unsupported log level: {level}. Supported levels: {_SUPPORTED_LOG_LEVELS}")
+        
+        # Map MCP levels to Python logging levels
+        level_mapping = {
+            "debug": logging.DEBUG,
+            "info": logging.INFO,
+            "notice": logging.INFO,  # Python doesn't have NOTICE, use INFO
+            "warning": logging.WARNING,
+            "error": logging.ERROR,
+            "critical": logging.CRITICAL,
+            "alert": logging.CRITICAL,    # Python doesn't have ALERT, use CRITICAL
+            "emergency": logging.CRITICAL, # Python doesn't have EMERGENCY, use CRITICAL
+        }
+        
+        # Set log level for RMCP loggers
+        python_level = level_mapping[level]
+        logging.getLogger("rmcp").setLevel(python_level)
+        
+        # Store current level in server state
+        self.lifespan_state.current_log_level = level
+        
+        logger.info(f"Log level set to: {level}")
+        return {}
+
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
         """
         Handle incoming MCP request and route to appropriate handler.
@@ -564,6 +600,9 @@ class MCPServer:
                 name = params.get("name")
                 arguments = params.get("arguments", {})
                 result = await self.prompts.get_prompt(context, name, arguments)
+            elif method == "logging/setLevel":
+                level = params.get("level")
+                result = await self._handle_set_log_level(level)
             else:
                 raise ValueError(f"Unknown method: {method}")
 

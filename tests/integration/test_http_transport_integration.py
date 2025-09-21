@@ -142,7 +142,7 @@ class TestHTTPTransportMCPCompliance:
 
         try:
             async with httpx.AsyncClient() as client:
-                # First initialize
+                # First initialize and capture session ID
                 initialize_request = {
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -154,11 +154,12 @@ class TestHTTPTransportMCPCompliance:
                     },
                 }
 
-                await client.post(
+                init_response = await client.post(
                     f"http://127.0.0.1:{transport.port}/", json=initialize_request
                 )
+                session_id = init_response.headers.get("Mcp-Session-Id")
 
-                # Then list tools
+                # Then list tools with session ID
                 tools_request = {
                     "jsonrpc": "2.0",
                     "id": 2,
@@ -166,9 +167,14 @@ class TestHTTPTransportMCPCompliance:
                     "params": {},
                 }
 
+                headers = {}
+                if session_id:
+                    headers["Mcp-Session-Id"] = session_id
+
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/",
                     json=tools_request,
+                    headers=headers,
                     timeout=5.0,
                 )
 
@@ -205,7 +211,7 @@ class TestHTTPTransportMCPCompliance:
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                # Initialize
+                # Initialize and capture session ID
                 initialize_request = {
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -216,23 +222,30 @@ class TestHTTPTransportMCPCompliance:
                         "clientInfo": {"name": "test-client", "version": "1.0.0"},
                     },
                 }
-                await client.post(
+                init_response = await client.post(
                     f"http://127.0.0.1:{transport.port}/", json=initialize_request
                 )
+                session_id = init_response.headers.get("Mcp-Session-Id")
 
-                # Call a simple tool
+                # Call a simple tool with session ID
                 tool_call_request = {
                     "jsonrpc": "2.0",
                     "id": 3,
                     "method": "tools/call",
                     "params": {
                         "name": "load_example",
-                        "arguments": {"dataset": "sales"},
+                        "arguments": {"dataset_name": "sales"},  # Fixed parameter name
                     },
                 }
 
+                headers = {}
+                if session_id:
+                    headers["Mcp-Session-Id"] = session_id
+
                 response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/", json=tool_call_request
+                    f"http://127.0.0.1:{transport.port}/", 
+                    json=tool_call_request,
+                    headers=headers
                 )
 
                 assert response.status_code == 200
