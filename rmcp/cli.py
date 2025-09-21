@@ -10,7 +10,9 @@ import logging
 import os
 import sys
 from pathlib import Path
+
 import click
+
 from . import __version__
 from .core.server import create_server
 from .registries.prompts import (

@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from shutil import which
 from unittest.mock import AsyncMock, patch
+
 import pytest
 
 # Add rmcp to path

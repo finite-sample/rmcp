@@ -197,6 +197,22 @@ jobs:
         from rmcp.tools.formula_builder import build_formula
         from rmcp.tools.helpers import suggest_fix, load_example
         
+        def extract_json_content(resp):
+            '''Extract JSON content from tool response'''
+            content_items = resp['result'].get('content', [])
+            # Look for JSON content item with proper mimeType
+            for item in content_items:
+                if item.get('annotations', {}).get('mimeType') == 'application/json':
+                    return json.loads(item['text'])
+            # Fallback: try to parse any text as JSON
+            for item in content_items:
+                if item.get('type') == 'text' and item.get('text'):
+                    try:
+                        return json.loads(item['text'])
+                    except json.JSONDecodeError:
+                        continue
+            raise ValueError('No JSON content found in response')
+        
         async def test():
             server = create_server()
             register_tool_functions(server.tools, build_formula, suggest_fix, load_example)
@@ -204,21 +220,21 @@ jobs:
             # Test formula building
             req = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': 'build_formula', 'arguments': {'description': 'predict sales from marketing'}}}
             resp = await server.handle_request(req)
-            result = json.loads(resp['result']['content'][0]['text'])
+            result = extract_json_content(resp)
             assert 'formula' in result
             print(f'✅ Formula builder: {result[\"formula\"]}')
             
             # Test error recovery
             req = {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {'name': 'suggest_fix', 'arguments': {'error_message': 'there is no package called \"forecast\"'}}}
             resp = await server.handle_request(req)
-            result = json.loads(resp['result']['content'][0]['text'])
+            result = extract_json_content(resp)
             assert result['error_type'] == 'missing_package'
             print(f'✅ Error recovery: {result[\"error_type\"]}')
             
             # Test example datasets
             req = {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call', 'params': {'name': 'load_example', 'arguments': {'dataset_name': 'sales', 'size': 'small'}}}
             resp = await server.handle_request(req)
-            result = json.loads(resp['result']['content'][0]['text'])
+            result = extract_json_content(resp)
             assert 'data' in result
             print(f'✅ Example datasets: {result[\"metadata\"][\"rows\"]} rows loaded')
             

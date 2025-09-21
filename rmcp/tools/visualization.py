@@ -4,6 +4,7 @@ Statistical plotting and data visualization capabilities.
 """
 
 from typing import Any
+
 from ..core.schemas import formula_schema, table_schema
 from ..r_integration import execute_r_script_with_image_async
 from ..registries.tools import tool

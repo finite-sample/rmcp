@@ -11,6 +11,7 @@ Each test uses the new MCP architecture with proper tools.
 import asyncio
 import sys
 from pathlib import Path
+
 import pytest
 
 # Add rmcp to path

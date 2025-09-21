@@ -1,10 +1,12 @@
 """Unit tests for common error scenarios exposed through the MCP server."""
 
 from __future__ import annotations
+
 import sys
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
+
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))

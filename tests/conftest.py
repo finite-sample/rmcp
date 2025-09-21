@@ -1,10 +1,12 @@
 """Shared pytest fixtures for RMCP tests."""
 
 from __future__ import annotations
+
 import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]

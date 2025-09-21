@@ -1,9 +1,12 @@
 """Integration tests that exercise the MCP protocol interface."""
 
 from __future__ import annotations
+
 from shutil import which
 from typing import Any, Callable, Dict
+
 import pytest
+
 from rmcp.tools.regression import (
     correlation_analysis,
     linear_model,

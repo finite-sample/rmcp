@@ -14,6 +14,7 @@ import json
 import queue
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
 
 # Skip tests if FastAPI not available

@@ -1,10 +1,13 @@
 """Integration tests for the feature set introduced in v0.3.6."""
 
 from __future__ import annotations
+
 import ast
 from shutil import which
 from typing import Any, Dict
+
 import pytest
+
 from rmcp.tools.fileops import read_excel, read_json
 from rmcp.tools.formula_builder import build_formula, validate_formula
 from rmcp.tools.helpers import load_example, suggest_fix, validate_data

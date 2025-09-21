@@ -12,6 +12,7 @@ import asyncio
 import json
 import time
 from typing import AsyncGenerator
+
 import pytest
 
 # Skip tests if FastAPI not available
