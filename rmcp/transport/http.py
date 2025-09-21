@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class HTTPTransport(Transport):
     """
     HTTP transport implementation using FastAPI.
-    
+
     Provides:
     - POST / endpoint for JSON-RPC requests
     - GET /sse endpoint for server-initiated notifications
@@ -59,23 +59,23 @@ class HTTPTransport(Transport):
 
     def _setup_routes(self) -> None:
         """Setup HTTP routes for MCP communication."""
-        
+
         @self.app.post("/")
         async def handle_jsonrpc(request: Request) -> dict[str, Any]:
             """Handle JSON-RPC requests via POST."""
             try:
                 message = await request.json()
                 logger.debug(f"Received JSON-RPC request: {message}")
-                
+
                 if not self._message_handler:
                     raise HTTPException(500, "Message handler not configured")
-                
+
                 # Process through message handler
                 response = await self._message_handler(message)
-                
+
                 logger.debug(f"Sending JSON-RPC response: {response}")
                 return response or {}
-                
+
             except json.JSONDecodeError:
                 raise HTTPException(400, "Invalid JSON")
             except Exception as e:
@@ -89,7 +89,7 @@ class HTTPTransport(Transport):
         @self.app.get("/sse")
         async def handle_sse() -> StreamingResponse:
             """Handle Server-Sent Events for notifications."""
-            
+
             async def event_generator():
                 """Generate SSE events from notification queue."""
                 while True:
@@ -100,21 +100,21 @@ class HTTPTransport(Transport):
                                 notification = self._notification_queue.get_nowait()
                                 yield {
                                     "event": "notification",
-                                    "data": json.dumps(notification)
+                                    "data": json.dumps(notification),
                                 }
                             except queue.Empty:
                                 break
-                        
+
                         # Small delay to prevent busy waiting
                         await asyncio.sleep(0.1)
-                        
+
                     except asyncio.CancelledError:
                         logger.info("SSE stream cancelled")
                         break
                     except Exception as e:
                         logger.error(f"Error in SSE stream: {e}")
                         break
-            
+
             return EventSourceResponse(event_generator())
 
         @self.app.get("/health")
@@ -145,7 +145,7 @@ class HTTPTransport(Transport):
     async def send_message(self, message: dict[str, Any]) -> None:
         """
         Send a message (notification) via SSE.
-        
+
         For HTTP transport, responses are handled by the HTTP request cycle.
         This is only used for server-initiated notifications.
         """
@@ -159,7 +159,7 @@ class HTTPTransport(Transport):
     async def run(self) -> None:
         """
         Run the HTTP transport using uvicorn.
-        
+
         This starts the FastAPI server and handles the HTTP event loop.
         """
         if not self._message_handler:
@@ -167,7 +167,7 @@ class HTTPTransport(Transport):
 
         try:
             await self.startup()
-            
+
             # Configure uvicorn
             config = uvicorn.Config(
                 app=self.app,
@@ -176,11 +176,11 @@ class HTTPTransport(Transport):
                 log_level="info",
                 access_log=True,
             )
-            
+
             server = uvicorn.Server(config)
             logger.info(f"Starting HTTP server on {self.host}:{self.port}")
             await server.serve()
-            
+
         except Exception as e:
             logger.error(f"HTTP transport error: {e}")
             raise

@@ -69,8 +69,9 @@ class MCPServer:
         # Get version dynamically to avoid circular imports
         if version is None:
             from .. import __version__
+
             version = __version__
-            
+
         self.name = name
         self.version = version
         self.description = description

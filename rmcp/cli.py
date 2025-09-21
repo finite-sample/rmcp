@@ -9,6 +9,7 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
+
 # Modern Python 3.10+ syntax for type hints
 
 import click
@@ -17,8 +18,11 @@ from . import __version__
 from .core.server import create_server
 from .registries.prompts import (
     model_diagnostic_prompt,
+    panel_regression_prompt,
     register_prompt_functions,
+    regression_diagnostics_prompt,
     statistical_workflow_prompt,
+    time_series_forecast_prompt,
 )
 from .registries.resources import ResourcesRegistry
 from .registries.tools import register_tool_functions
@@ -67,7 +71,12 @@ def start(log_level: str):
 
         # Register built-in prompts
         register_prompt_functions(
-            server.prompts, statistical_workflow_prompt, model_diagnostic_prompt
+            server.prompts,
+            statistical_workflow_prompt,
+            model_diagnostic_prompt,
+            regression_diagnostics_prompt,
+            time_series_forecast_prompt,
+            panel_regression_prompt,
         )
 
         # Set up stdio transport
@@ -145,7 +154,12 @@ def serve(
 
         # Register built-in prompts
         register_prompt_functions(
-            server.prompts, statistical_workflow_prompt, model_diagnostic_prompt
+            server.prompts,
+            statistical_workflow_prompt,
+            model_diagnostic_prompt,
+            regression_diagnostics_prompt,
+            time_series_forecast_prompt,
+            panel_regression_prompt,
         )
 
         # Set up stdio transport
@@ -167,7 +181,9 @@ def serve(
 @click.option("--port", default=8000, help="Port to bind to")
 @click.option("--allowed-paths", multiple=True, help="Allowed file system paths")
 @click.option("--cache-root", help="Cache root directory")
-def serve_http(host: str, port: int, allowed_paths: tuple[str, ...], cache_root: str | None):
+def serve_http(
+    host: str, port: int, allowed_paths: tuple[str, ...], cache_root: str | None
+):
     """Run MCP server over HTTP transport (requires fastapi extras)."""
     try:
         from .transport.http import HTTPTransport
@@ -178,22 +194,22 @@ def serve_http(host: str, port: int, allowed_paths: tuple[str, ...], cache_root:
         sys.exit(1)
 
     logger.info(f"Starting HTTP transport on {host}:{port}")
-    
+
     # Create and configure server
     server = create_server()
     _register_builtin_tools(server)
-    
+
     # Create HTTP transport
     transport = HTTPTransport(host=host, port=port)
     transport.set_message_handler(server.handle_request)
-    
+
     click.echo(f"🚀 RMCP HTTP server starting on http://{host}:{port}")
     click.echo(f"📊 Available tools: {len(server.tools._tools)}")
     click.echo(f"🔗 Endpoints:")
     click.echo(f"   • POST http://{host}:{port}/ (JSON-RPC requests)")
     click.echo(f"   • GET  http://{host}:{port}/sse (Server-Sent Events)")
     click.echo(f"   • GET  http://{host}:{port}/health (Health check)")
-    
+
     try:
         asyncio.run(transport.run())
     except KeyboardInterrupt:
@@ -216,7 +232,12 @@ def list_capabilities(allowed_paths: list[str], output: str | None):
 
     _register_builtin_tools(server)
     register_prompt_functions(
-        server.prompts, statistical_workflow_prompt, model_diagnostic_prompt
+        server.prompts,
+        statistical_workflow_prompt,
+        model_diagnostic_prompt,
+        regression_diagnostics_prompt,
+        time_series_forecast_prompt,
+        panel_regression_prompt,
     )
 
     async def _list():

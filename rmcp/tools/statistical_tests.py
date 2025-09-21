@@ -20,7 +20,7 @@ from ..registries.tools import tool
             "variable": {"type": "string"},
             "group": {
                 "type": "string",
-                "description": "Required for two-sample t-test. Column name for group variable. Omit for one-sample t-test."
+                "description": "Required for two-sample t-test. Column name for group variable. Omit for one-sample t-test.",
             },
             "mu": {"type": "number", "default": 0},
             "alternative": {
@@ -230,9 +230,9 @@ async def anova(context, params) -> dict[str, Any]:
                     "test_type": {"const": "goodness_of_fit"},
                     "x": {"type": "string"},
                     "expected": {
-                        "type": "array", 
+                        "type": "array",
                         "items": {"type": "number", "minimum": 0},
-                        "minItems": 1
+                        "minItems": 1,
                     },
                 },
                 "required": ["data", "test_type", "x"],

@@ -148,7 +148,7 @@ def execute_r_script(script: str, args: dict[str, Any]) -> dict[str, Any]:
             # Normalize path for Windows compatibility
             args_path_safe = args_path.replace("\\", "/")
             result_path_safe = result_path.replace("\\", "/")
-            
+
             # Create complete R script
             full_script = f"""
 # Load required libraries
@@ -271,20 +271,20 @@ Original error: {stderr.strip()}"""
 async def execute_r_script_async(script: str, args: dict[str, Any]) -> dict[str, Any]:
     """
     Execute R script asynchronously with proper cancellation support and concurrency control.
-    
+
     This function provides:
     - True async execution using asyncio.create_subprocess_exec
     - Proper subprocess cancellation (SIGTERM -> SIGKILL)
     - Global concurrency limiting via semaphore
     - Same interface and error handling as execute_r_script
-    
+
     Args:
         script: R script code to execute
         args: Arguments to pass to the R script as JSON
-        
+
     Returns:
         dict[str, Any]: Result data from R script execution
-        
+
     Raises:
         RExecutionError: If R script execution fails
         asyncio.CancelledError: If the operation is cancelled
@@ -313,7 +313,7 @@ async def execute_r_script_async(script: str, args: dict[str, Any]) -> dict[str,
                 # Normalize path for Windows compatibility
                 args_path_safe = args_path.replace("\\", "/")
                 result_path_safe = result_path.replace("\\", "/")
-                
+
                 # Create complete R script
                 full_script = f"""
 # Load required libraries
@@ -344,20 +344,22 @@ if (exists("result")) {{
 
                 # Execute R script asynchronously
                 proc = await asyncio.create_subprocess_exec(
-                    "R", "--slave", "--no-restore", f"--file={script_path}",
+                    "R",
+                    "--slave",
+                    "--no-restore",
+                    f"--file={script_path}",
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
                 )
-                
+
                 try:
                     # Wait for process completion with timeout
                     stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                        proc.communicate(),
-                        timeout=120  # 2 minute timeout
+                        proc.communicate(), timeout=120  # 2 minute timeout
                     )
                     # Decode bytes to strings
-                    stdout = stdout_bytes.decode('utf-8') if stdout_bytes else ""
-                    stderr = stderr_bytes.decode('utf-8') if stderr_bytes else ""
+                    stdout = stdout_bytes.decode("utf-8") if stdout_bytes else ""
+                    stderr = stderr_bytes.decode("utf-8") if stderr_bytes else ""
                 except asyncio.CancelledError:
                     logger.info("R script execution cancelled, terminating process")
                     # Graceful termination: SIGTERM first, then SIGKILL
@@ -377,7 +379,7 @@ if (exists("result")) {{
                         "R script execution timed out after 120 seconds",
                         stdout="",
                         stderr="Execution timed out",
-                        returncode=-1
+                        returncode=-1,
                     )
 
                 if proc.returncode != 0:
@@ -390,7 +392,9 @@ if (exists("result")) {{
                         # Extract package name from error
                         import re
 
-                        match = re.search(r"there is no package called '([^']+)'", stderr)
+                        match = re.search(
+                            r"there is no package called '([^']+)'", stderr
+                        )
                         if match:
                             missing_pkg = match.group(1)
                             # Map package to feature category
@@ -415,7 +419,9 @@ if (exists("result")) {{
                                 "dplyr": "Data Manipulation",
                             }
 
-                            feature = pkg_features.get(missing_pkg, "Statistical Analysis")
+                            feature = pkg_features.get(
+                                missing_pkg, "Statistical Analysis"
+                            )
                             error_msg = f"""❌ Missing R Package: '{missing_pkg}'
 
 🔍 This package is required for: {feature}
@@ -437,7 +443,9 @@ if (exists("result")) {{
                     with open(result_path, "r") as f:
                         result_json = f.read()
                         result = json.loads(result_json)
-                        logger.debug(f"R script completed successfully, result keys: {list(result.keys()) if isinstance(result, dict) else type(result)}")
+                        logger.debug(
+                            f"R script completed successfully, result keys: {list(result.keys()) if isinstance(result, dict) else type(result)}"
+                        )
                         return result
 
                 except (FileNotFoundError, json.JSONDecodeError) as e:
