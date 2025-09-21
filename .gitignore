@@ -80,6 +80,7 @@ response.json
 temp_*.R
 temp_*.json
 *.log
+Rplots.pdf
 
 # Test output files
 test_*.log

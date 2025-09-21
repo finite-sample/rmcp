@@ -444,9 +444,9 @@ class MCPServer:
 
         if _MCP_TYPES_AVAILABLE:
             capabilities = ServerCapabilities(
-                tools=ToolsCapability(listChanged=True),
-                resources=ResourcesCapability(subscribe=False, listChanged=True),
-                prompts=PromptsCapability(listChanged=True),
+                tools=ToolsCapability(listChanged=False),
+                resources=ResourcesCapability(subscribe=False, listChanged=False),
+                prompts=PromptsCapability(listChanged=False),
                 logging=LoggingCapability(levels=_SUPPORTED_LOG_LEVELS),
             )
 
@@ -460,9 +460,9 @@ class MCPServer:
             return initialize_result.model_dump(mode="json", exclude_none=True)
 
         capabilities = {
-            "tools": {"listChanged": True},
-            "resources": {"subscribe": False, "listChanged": True},
-            "prompts": {"listChanged": True},
+            "tools": {"listChanged": False},
+            "resources": {"subscribe": False, "listChanged": False},
+            "prompts": {"listChanged": False},
             "logging": {"levels": _SUPPORTED_LOG_LEVELS},
         }
 
