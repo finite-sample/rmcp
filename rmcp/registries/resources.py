@@ -12,17 +12,16 @@ import base64
 import inspect
 import json
 import logging
+import platform
 import sys
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 from urllib.parse import parse_qs, urlparse
 
-import platform
-
 from ..core.context import Context
+from ..r_integration import execute_r_script_async
 from ..security.vfs import VFS, VFSError
 from ..tools.helpers import load_example
-from ..r_integration import execute_r_script_async
 
 logger = logging.getLogger(__name__)
 
@@ -396,9 +395,7 @@ class ResourcesRegistry:
         ]
         for tool_name in sorted(tool_defs):
             tool_def = tool_defs[tool_name]
-            minimal_arguments = self._build_minimal_arguments(
-                tool_def.input_schema
-            )
+            minimal_arguments = self._build_minimal_arguments(tool_def.input_schema)
             example_payload = {"tool": tool_name, "arguments": minimal_arguments}
             example_json = json.dumps(example_payload, indent=2)
             description = tool_def.description or f"Execute {tool_name}"
@@ -415,9 +412,7 @@ class ResourcesRegistry:
                 ]
             )
         catalog_markdown = "\n".join(lines).strip() + "\n"
-        await context.info(
-            "Generated tool catalog resource", tool_count=len(tool_defs)
-        )
+        await context.info("Generated tool catalog resource", tool_count=len(tool_defs))
         return {
             "contents": [
                 {
@@ -498,7 +493,9 @@ result <- list(
   platform = R.version$platform,
   packages = package_details
 )
-""".format(packages=package_vector)
+""".format(
+            packages=package_vector
+        )
         r_environment = await execute_r_script_async(r_script, {}, context)
         python_info = {
             "version": platform.python_version(),

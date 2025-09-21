@@ -33,9 +33,7 @@ async def test_catalog_resource_lists_registered_tools(monkeypatch):
             },
         }
 
-    monkeypatch.setattr(
-        "rmcp.tools.helpers.execute_r_script_async", fake_execute
-    )
+    monkeypatch.setattr("rmcp.tools.helpers.execute_r_script_async", fake_execute)
     context = server.create_context("res-cat", "resources/read")
     result = await server.resources.read_resource(context, "rmcp://catalog")
     markdown = result["contents"][0]["text"]
@@ -51,14 +49,10 @@ async def test_environment_resource_reports_versions(monkeypatch):
         return {
             "rVersion": "R 4.3.2",
             "platform": "x86_64-pc-linux-gnu",
-            "packages": [
-                {"name": "jsonlite", "installed": True, "version": "1.8.8"}
-            ],
+            "packages": [{"name": "jsonlite", "installed": True, "version": "1.8.8"}],
         }
 
-    monkeypatch.setattr(
-        "rmcp.registries.resources.execute_r_script_async", fake_env
-    )
+    monkeypatch.setattr("rmcp.registries.resources.execute_r_script_async", fake_env)
     server = create_server()
     context = server.create_context("res-env", "resources/read")
     result = await server.resources.read_resource(context, "rmcp://env")
@@ -95,9 +89,7 @@ async def test_dataset_resource_streams_example(monkeypatch):
             },
         }
 
-    monkeypatch.setattr(
-        "rmcp.tools.helpers.execute_r_script_async", fake_execute
-    )
+    monkeypatch.setattr("rmcp.tools.helpers.execute_r_script_async", fake_execute)
     server = create_server()
     register_tool_functions(server.tools, load_example)
     context = server.create_context("res-data", "resources/read")
