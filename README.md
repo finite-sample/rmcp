@@ -101,6 +101,52 @@ That's it! RMCP is now ready to handle statistical analysis requests via the Mod
 - **Error Handling**: Comprehensive error reporting and validation
 - **Security**: Safe R execution with controlled environment
 
+## 🔎 MCP Resources for Discovery
+
+RMCP publishes read-only [Model Context Protocol](https://modelcontextprotocol.io/) resources so clients can explore the server without calling any tools:
+
+- `rmcp://catalog` – Markdown index of every registered tool, including its purpose and a minimal JSON-RPC example payload.
+- `rmcp://env` – JSON snapshot of the active runtime (R version, installed package versions, platform) plus the Python host information and current security settings (`read_only`, `allowed_paths`).
+- `rmcp://dataset/{name}` – Parameterised adaptor around the `load_example` tool that streams built-in datasets such as `sales`, `economics`, `customers`, `timeseries`, and `survey`. Optional query parameters let you control `size` (`small`, `medium`, `large`) and `add_noise=true` for more realistic data.
+
+All resources are immutable and respect the server's security configuration, making them safe defaults for assistants that need quick context.
+
+## 🔐 Transport & Security Controls
+
+### Transports at a Glance
+
+- **Stdio (default)** – `rmcp start` launches the server over standard input/output, the lowest latency option for local assistants.
+- **Streamable HTTP** – `rmcp serve-http --host localhost --port 8000` spins up the FastAPI transport with JSON-RPC over `POST /mcp` and Server-Sent Events on `/sse` for push notifications.
+
+### Session Behaviour
+
+- Each HTTP client negotiates an `Mcp-Session-Id`. Non-`initialize` calls are rejected until the session completes the handshake, keeping conversations isolated.
+- Notifications (`notifications/list_changed`) stream over SSE, and clients can opt-in via `resources/subscribe` to receive live catalog updates.
+
+### Origin Validation & Dev Mode
+
+- When you bind to `localhost` (the default), the HTTP transport only accepts same-origin browser requests (`http://localhost`, `127.0.0.1`, or `[::1]`).
+- Remote hosts trigger a prominent warning and relax CORS so you can front the service with your own gateway.
+- Development defaults to `read_only` file access with `allowed_paths` constrained to the working directory. Override them via `rmcp start --allowed-paths <path> --read-write` when you need wider access.
+
+### Enabling OAuth for Remote Deployments
+
+- The HTTP transport exposes a FastAPI app at `transport.app`. Attach any FastAPI dependency or middleware to enforce authentication:
+
+  ```python
+  from fastapi import Depends
+  from fastapi.security import OAuth2PasswordBearer
+  transport = HTTPTransport(host="0.0.0.0", port=8080)
+  oauth = OAuth2PasswordBearer(tokenUrl="/token")
+
+  @transport.app.middleware("http")
+  async def require_token(request, call_next):
+      await oauth(request)
+      return await call_next(request)
+  ```
+
+- Pair the middleware with HTTPS termination (e.g., behind a reverse proxy) and tighten `allowed_paths` to production data directories for a secure deployment.
+
 ## 🎯 Real-World Usage
 
 RMCP works through natural conversation with AI assistants. Here's how users actually interact with it:

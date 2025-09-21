@@ -10,15 +10,46 @@ Following the principle: "Keeps data access explicit and auditable."
 
 import base64
 import inspect
+import json
 import logging
+import sys
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
+
+import platform
 
 from ..core.context import Context
 from ..security.vfs import VFS, VFSError
+from ..tools.helpers import load_example
+from ..r_integration import execute_r_script_async
 
 logger = logging.getLogger(__name__)
+
+_REQUIRED_R_PACKAGES: tuple[str, ...] = (
+    "jsonlite",
+    "plm",
+    "lmtest",
+    "sandwich",
+    "AER",
+    "dplyr",
+    "forecast",
+    "vars",
+    "urca",
+    "tseries",
+    "nortest",
+    "car",
+    "rpart",
+    "randomForest",
+    "ggplot2",
+    "gridExtra",
+    "tidyr",
+    "rlang",
+    "base64enc",
+    "reshape2",
+    "readxl",
+    "knitr",
+)
 
 
 def _paginate_items(
@@ -301,36 +332,42 @@ class ResourcesRegistry:
         }
 
     async def _read_rmcp_resource(self, context: Context, parsed_uri) -> Dict[str, Any]:
-        """Read rmcp:// resource for large dataset access."""
-        # Extract resource ID from URI path (rmcp://data/{resource_id})
-        path_parts = parsed_uri.path.strip("/").split("/")
-        if len(path_parts) != 2 or path_parts[0] != "data":
-            raise ValueError(f"Invalid RMCP resource URI format: {parsed_uri.geturl()}")
-        resource_id = path_parts[1]
-        # Get tools registry from server context
-        # This is a simplified approach - in production you might want a dedicated data store
+        """Read rmcp:// resource for catalog, env, datasets, or stored data."""
+        target = parsed_uri.netloc
         server = getattr(context, "_server", None)
         if not server:
             raise ValueError("Server context not available for RMCP resource access")
+        if target == "catalog":
+            return await self._generate_catalog_resource(context, server, parsed_uri)
+        if target == "env":
+            return await self._generate_environment_resource(context, parsed_uri)
+        if target == "dataset":
+            return await self._generate_dataset_resource(context, server, parsed_uri)
+        if target == "data":
+            return await self._read_stored_rmcp_data(context, server, parsed_uri)
+        raise ValueError(f"Unsupported RMCP resource URI: {parsed_uri.geturl()}")
+
+    async def _read_stored_rmcp_data(
+        self, context: Context, server: Any, parsed_uri
+    ) -> Dict[str, Any]:
+        """Read previously stored RMCP data resources (rmcp://data/{id})."""
+        path_parts = parsed_uri.path.strip("/").split("/")
+        if len(path_parts) != 1 or not path_parts[0]:
+            raise ValueError(f"Invalid RMCP data URI: {parsed_uri.geturl()}")
+        resource_id = path_parts[0]
         tools_registry = getattr(server, "tools", None)
-        if not tools_registry:
-            raise ValueError("Tools registry not available for RMCP resource access")
-        # Check if the resource exists in the large data store
-        if not hasattr(tools_registry, "_large_data_store"):
+        if not tools_registry or not hasattr(tools_registry, "_large_data_store"):
             raise ValueError(f"RMCP resource not found: {resource_id}")
         data_store = tools_registry._large_data_store
         if resource_id not in data_store:
             raise ValueError(f"RMCP resource not found: {resource_id}")
-        # Retrieve the stored data
         stored_resource = data_store[resource_id]
         data = stored_resource["data"]
         content_type = stored_resource.get("content_type", "application/json")
-        # Convert data to JSON string
-        import json
-
         json_content = json.dumps(data, indent=2, default=str)
         await context.info(
-            f"Retrieved RMCP resource: {resource_id}",
+            "Retrieved stored RMCP resource",
+            resource_id=resource_id,
             size_bytes=stored_resource.get("size_bytes", 0),
         )
         return {
@@ -338,6 +375,208 @@ class ResourcesRegistry:
                 {
                     "uri": parsed_uri.geturl(),
                     "mimeType": content_type,
+                    "text": json_content,
+                }
+            ]
+        }
+
+    async def _generate_catalog_resource(
+        self, context: Context, server: Any, parsed_uri
+    ) -> Dict[str, Any]:
+        """Build Markdown catalog describing registered tools and minimal usage."""
+        tools_registry = getattr(server, "tools", None)
+        if not tools_registry:
+            raise ValueError("Tools registry not available for catalog resource")
+        tool_defs = getattr(tools_registry, "_tools", {})
+        lines: list[str] = [
+            "# RMCP Tool Catalog",
+            "",
+            "Each entry lists the tool's purpose and a minimal JSON-RPC call example.",
+            "",
+        ]
+        for tool_name in sorted(tool_defs):
+            tool_def = tool_defs[tool_name]
+            minimal_arguments = self._build_minimal_arguments(
+                tool_def.input_schema
+            )
+            example_payload = {"tool": tool_name, "arguments": minimal_arguments}
+            example_json = json.dumps(example_payload, indent=2)
+            description = tool_def.description or f"Execute {tool_name}"
+            lines.extend(
+                [
+                    f"## {tool_name}",
+                    "",
+                    f"**Purpose:** {description}",
+                    "",
+                    "```json",
+                    example_json,
+                    "```",
+                    "",
+                ]
+            )
+        catalog_markdown = "\n".join(lines).strip() + "\n"
+        await context.info(
+            "Generated tool catalog resource", tool_count=len(tool_defs)
+        )
+        return {
+            "contents": [
+                {
+                    "uri": parsed_uri.geturl(),
+                    "mimeType": "text/markdown",
+                    "text": catalog_markdown,
+                }
+            ]
+        }
+
+    def _build_minimal_arguments(self, schema: dict[str, Any]) -> dict[str, Any]:
+        """Create minimal argument payload based on required schema fields."""
+        if not schema:
+            return {}
+        properties = schema.get("properties", {})
+        required_fields = schema.get("required", [])
+        minimal_arguments: dict[str, Any] = {}
+        for field in required_fields:
+            field_schema = properties.get(field, {})
+            minimal_arguments[field] = self._example_value_for_schema(field_schema)
+        return minimal_arguments
+
+    def _example_value_for_schema(self, schema: dict[str, Any]) -> Any:
+        """Generate a representative value for a schema node."""
+        if not schema:
+            return "<value>"
+        if "default" in schema:
+            return schema["default"]
+        enum_values = schema.get("enum")
+        if isinstance(enum_values, list) and enum_values:
+            return enum_values[0]
+        schema_type = schema.get("type")
+        if isinstance(schema_type, list):
+            schema_type = next((t for t in schema_type if t != "null"), schema_type[0])
+        if schema_type == "string":
+            fmt = schema.get("format")
+            if fmt == "date-time":
+                return "2024-01-01T00:00:00Z"
+            if fmt == "date":
+                return "2024-01-01"
+            return schema.get("pattern", "<text>")
+        if schema_type == "number":
+            return schema.get("minimum", 0)
+        if schema_type == "integer":
+            return int(schema.get("minimum", 0))
+        if schema_type == "boolean":
+            return False
+        if schema_type == "array":
+            items_schema = schema.get("items", {})
+            return [self._example_value_for_schema(items_schema)]
+        if schema_type == "object":
+            nested = schema.get("properties", {})
+            required = schema.get("required", [])
+            example_obj: dict[str, Any] = {}
+            for key in required:
+                example_obj[key] = self._example_value_for_schema(nested.get(key, {}))
+            return example_obj
+        return "<value>"
+
+    async def _generate_environment_resource(
+        self, context: Context, parsed_uri
+    ) -> Dict[str, Any]:
+        """Collect environment metadata including R and Python details."""
+        package_vector = ", ".join(f'"{pkg}"' for pkg in _REQUIRED_R_PACKAGES)
+        r_script = """
+packages <- c({packages})
+package_details <- lapply(packages, function(pkg) {{
+  available <- requireNamespace(pkg, quietly = TRUE)
+  version <- if (available) as.character(packageVersion(pkg)) else NA_character_
+  list(
+    name = pkg,
+    installed = available,
+    version = version
+  )
+}})
+result <- list(
+  rVersion = R.version$version.string,
+  platform = R.version$platform,
+  packages = package_details
+)
+""".format(packages=package_vector)
+        r_environment = await execute_r_script_async(r_script, {}, context)
+        python_info = {
+            "version": platform.python_version(),
+            "implementation": platform.python_implementation(),
+            "platform": sys.platform,
+        }
+        rmcp_info = {
+            "readOnly": context.lifespan.read_only,
+            "allowedPaths": [str(p) for p in context.lifespan.allowed_paths],
+        }
+        r_environment["python"] = python_info
+        r_environment["rmcp"] = rmcp_info
+        json_content = json.dumps(r_environment, indent=2, default=str)
+        await context.info(
+            "Generated environment resource",
+            r_version=r_environment.get("rVersion"),
+            package_count=len(r_environment.get("packages", [])),
+        )
+        return {
+            "contents": [
+                {
+                    "uri": parsed_uri.geturl(),
+                    "mimeType": "application/json",
+                    "text": json_content,
+                }
+            ]
+        }
+
+    async def _generate_dataset_resource(
+        self, context: Context, server: Any, parsed_uri
+    ) -> Dict[str, Any]:
+        """Expose built-in datasets via rmcp://dataset/{name}."""
+        dataset_name = parsed_uri.path.strip("/")
+        if not dataset_name:
+            raise ValueError(
+                f"Dataset resource must specify a name: {parsed_uri.geturl()}"
+            )
+        query = parse_qs(parsed_uri.query)
+        tool_arguments: dict[str, Any] = {"dataset_name": dataset_name}
+        if "size" in query and query["size"]:
+            tool_arguments["size"] = query["size"][0]
+        if "add_noise" in query and query["add_noise"]:
+            add_noise_value = query["add_noise"][0].lower()
+            tool_arguments["add_noise"] = add_noise_value in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
+        tools_registry = getattr(server, "tools", None)
+        if tools_registry and "load_example" not in tools_registry._tools:
+            from ..registries.tools import register_tool_functions
+
+            register_tool_functions(tools_registry, load_example)
+        load_tool = None
+        if tools_registry:
+            load_tool = tools_registry._tools.get("load_example")
+        if not load_tool:
+            raise ValueError("load_example tool is not registered")
+        await context.info(
+            "Resolving dataset resource",
+            dataset=dataset_name,
+            size=tool_arguments.get("size", "small"),
+        )
+        result = await load_tool.handler(context, tool_arguments)
+        if isinstance(result, dict) and "_formatting" in result:
+            result = {k: v for k, v in result.items() if k != "_formatting"}
+        json_content = json.dumps(result, indent=2, default=str)
+        await context.info(
+            "Served dataset resource",
+            dataset=dataset_name,
+            keys=list(result.keys()),
+        )
+        return {
+            "contents": [
+                {
+                    "uri": parsed_uri.geturl(),
+                    "mimeType": "application/json",
                     "text": json_content,
                 }
             ]
