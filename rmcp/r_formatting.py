@@ -10,11 +10,11 @@ as professional markdown tables and natural language summaries.
 def get_r_formatting_utilities() -> str:
     """
     Return R code that provides common formatting functions.
-    
+
     This code will be prepended to R scripts that need formatting capabilities.
     It provides helper functions for creating markdown tables and interpreting
     statistical results in natural language.
-    
+
     Returns:
         String containing R code with formatting utilities
     """
@@ -258,11 +258,13 @@ format_model_stats <- function(model, title = "Model Statistics") {
 def get_r_formatting_for_linear_model() -> str:
     """
     Get R code specifically for formatting linear model results.
-    
+
     Returns:
         String with R code for linear model formatting
     """
-    return get_r_formatting_utilities() + """
+    return (
+        get_r_formatting_utilities()
+        + """
 
 # Format complete linear regression results
 format_linear_model_results <- function(model, formula_str, title = "Linear Regression Results") {
@@ -283,16 +285,19 @@ format_linear_model_results <- function(model, formula_str, title = "Linear Regr
     return(output)
 }
 """
+    )
 
 
 def get_r_formatting_for_correlation() -> str:
     """
     Get R code specifically for formatting correlation analysis results.
-    
+
     Returns:
         String with R code for correlation formatting
     """
-    return get_r_formatting_utilities() + """
+    return (
+        get_r_formatting_utilities()
+        + """
 
 # Format complete correlation analysis results
 format_correlation_results <- function(cor_matrix, sig_tests = NULL, method = "pearson", 
@@ -317,3 +322,4 @@ format_correlation_results <- function(cor_matrix, sig_tests = NULL, method = "p
     return(output)
 }
 """
+    )

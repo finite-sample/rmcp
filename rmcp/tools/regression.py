@@ -20,8 +20,11 @@ Example Usage:
 from typing import Any
 
 from ..core.schemas import formula_schema, table_schema
+from ..r_formatting import (
+    get_r_formatting_for_correlation,
+    get_r_formatting_for_linear_model,
+)
 from ..r_integration import execute_r_script_async
-from ..r_formatting import get_r_formatting_for_linear_model, get_r_formatting_for_correlation
 from ..registries.tools import tool
 
 
@@ -171,11 +174,13 @@ async def linear_model(context, params) -> dict[str, Any]:
         ... })
     """
     await context.info("Fitting linear regression model")
-    
+
     # Include R formatting utilities
     formatting_code = get_r_formatting_for_linear_model()
-    
-    r_script = formatting_code + """
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
     # Handle optional parameters
@@ -224,6 +229,7 @@ async def linear_model(context, params) -> dict[str, Any]:
         )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info(
@@ -363,11 +369,13 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         ... })
     """
     await context.info("Computing correlation matrix")
-    
+
     # Include R formatting utilities for correlation
     formatting_code = get_r_formatting_for_correlation()
-    
-    r_script = formatting_code + """
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     variables <- args$variables
     method <- args$method %||% "pearson"
@@ -457,6 +465,7 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info(
