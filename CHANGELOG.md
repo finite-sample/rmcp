@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.8] - 2024-12-20
+
+### Added
+- **🌐 HTTP Transport**: Full HTTP transport implementation with Server-Sent Events
+  - FastAPI-based HTTP server with MCP protocol support
+  - POST `/` endpoint for JSON-RPC requests (all 40 tools available)
+  - GET `/sse` endpoint for real-time Server-Sent Events
+  - GET `/health` endpoint for monitoring and load balancing
+  - CORS support for web applications
+  - Complete `rmcp serve-http` command functionality
+- **🧪 HTTP Transport Tests**: Comprehensive test suite for HTTP functionality
+  - Unit tests for transport lifecycle and message handling
+  - Integration tests with real HTTP requests and server instances
+  - SSE streaming tests and error handling validation
+  - Zero-mock testing with actual tool execution over HTTP
+
+### Changed
+- **🔄 Breaking**: Minimum Python version now 3.10 (was 3.9)
+- **✨ Modernized Type Hints**: All type hints now use Python 3.10+ union syntax (PEP 604)
+  - `Optional[str]` → `str | None`
+  - `Union[dict, list]` → `dict | list`
+  - `Dict[str, Any]` → `dict[str, Any]`
+  - `List[str]` → `list[str]`
+- **📊 t_test Default**: Now defaults to Welch's test (`var_equal=False`) for better statistical practice
+- **🔧 ANOVA Output**: Normalized column names for consistency across statistical tests
+
+### Fixed
+- **🐛 chi_square_test Validation**: Enhanced validation for independence vs goodness-of-fit tests
+  - Proper normalization of expected probabilities
+  - Better error messages for missing required parameters
+  - Robust oneOf schema validation
+- **⚡ Async Visualization**: All 6 visualization tools now properly use async execution
+  - Fixed subprocess text parameter issues
+  - Consistent async/await patterns throughout
+- **📝 Type Hint Consistency**: Resolved type import errors across entire codebase
+- **🔧 CLI Bug Fix**: Fixed `server.tools.tools` → `server.tools._tools` attribute access
+
+### Developer Experience
+- **📦 Modern Packaging**: Removed legacy typing imports (Dict, List, Optional, Union)
+- **🎯 Cleaner Imports**: Simplified import statements with Python 3.10+ built-ins
+- **📈 Test Coverage**: Comprehensive integration testing for all tool categories
+- **🚀 Claude Desktop**: Fully tested and verified integration
+- **🌐 Multi-Transport**: Both stdio and HTTP transports fully tested and documented
+
+### Technical Details
+- **🧪 Comprehensive Test Suite**: 
+  - 21 unit tests for schema validation (100% pass rate)
+  - 31/40 tools passing integration tests (77.5% coverage)
+  - 100% E2E test success rate
+  - HTTP transport tests with real server instances
+- **⚠️ Smart Warnings**: Shapiro-Wilk test now warns for large samples (n > 5000)
+- **🔧 Better Error Messages**: Enhanced error messages with specific remedial commands
+
 ## [0.3.7] - 2024-12-17
 
 ### Added

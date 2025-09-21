@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "rmcp"
-version = "0.3.7"
-description = "Comprehensive Model Context Protocol server with 40 statistical analysis tools across 9 categories"
+version = "0.3.8"
+description = "Comprehensive Model Context Protocol server with 40 statistical analysis tools, HTTP transport, and Server-Sent Events"
 authors = ["Gaurav Sood <gsood07@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-keywords = ["mcp", "r", "statistics", "econometrics", "model-context-protocol", "data-analysis"]
+keywords = ["mcp", "r", "statistics", "econometrics", "model-context-protocol", "data-analysis", "http", "fastapi", "sse"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers", 
@@ -49,6 +49,7 @@ black = ">=23.0.0"
 isort = ">=5.12.0"
 flake8 = ">=6.0.0"
 mypy = ">=1.5.0"
+httpx = ">=0.25.0"  # For HTTP transport testing
 
 [tool.poetry.group.http.dependencies]
 fastapi = ">=0.100.0"

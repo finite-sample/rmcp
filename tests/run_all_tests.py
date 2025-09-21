@@ -393,10 +393,65 @@ async def run_integration_tests():
         return True
 
 
+async def run_http_transport_tests():
+    """Run HTTP transport tests (requires FastAPI)."""
+    print("\n🌐 Running HTTP Transport Tests")
+    print("-" * 30)
+    
+    try:
+        # Check if FastAPI is available
+        import fastapi
+        import httpx
+        print("✅ FastAPI dependencies available")
+    except ImportError:
+        print("⚠️ FastAPI not available, skipping HTTP transport tests")
+        print("💡 Install with: pip install rmcp[http]")
+        return True  # Don't fail the entire test suite
+    
+    try:
+        # Run HTTP transport unit tests
+        unit_result = subprocess.run(
+            [sys.executable, "-m", "pytest", "tests/unit/test_http_transport.py", "-v"],
+            capture_output=True,
+            text=True,
+            cwd=Path(__file__).parent.parent
+        )
+        
+        # Run HTTP transport integration tests  
+        integration_result = subprocess.run(
+            [sys.executable, "-m", "pytest", "tests/integration/test_http_transport_integration.py", "-v"],
+            capture_output=True,
+            text=True,
+            cwd=Path(__file__).parent.parent
+        )
+        
+        unit_passed = unit_result.returncode == 0
+        integration_passed = integration_result.returncode == 0
+        
+        if unit_passed and integration_passed:
+            print("✅ HTTP transport tests passed")
+            return True
+        else:
+            print("❌ HTTP transport tests failed")
+            if not unit_passed:
+                print("Unit test failures:")
+                print(unit_result.stdout)
+                print(unit_result.stderr)
+            if not integration_passed:
+                print("Integration test failures:")
+                print(integration_result.stdout)
+                print(integration_result.stderr)
+            return False
+            
+    except FileNotFoundError:
+        print("⚠️ pytest not found, skipping HTTP transport tests")
+        return True
+
+
 async def main():
     """Main test runner."""
     print("🚀 RMCP Comprehensive Test Runner")
-    print("Testing all 40 statistical analysis tools")
+    print("Testing all 40 statistical analysis tools + HTTP transport")
     print("=" * 50)
     
     # Run all test categories
@@ -410,7 +465,11 @@ async def main():
     integration_result = await run_integration_tests()
     results.append(("Integration Tests", integration_result))
     
-    # 3. Comprehensive tool tests
+    # 3. HTTP transport tests
+    http_result = await run_http_transport_tests()
+    results.append(("HTTP Transport Tests", http_result))
+    
+    # 4. Comprehensive tool tests
     tool_result = await run_all_tests()
     results.append(("Tool Tests", tool_result))
     

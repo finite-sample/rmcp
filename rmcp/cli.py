@@ -165,19 +165,42 @@ def serve(
 @cli.command()
 @click.option("--host", default="localhost", help="Host to bind to")
 @click.option("--port", default=8000, help="Port to bind to")
-def serve_http(host: str, port: int):
+@click.option("--allowed-paths", multiple=True, help="Allowed file system paths")
+@click.option("--cache-root", help="Cache root directory")
+def serve_http(host: str, port: int, allowed_paths: tuple[str, ...], cache_root: str | None):
     """Run MCP server over HTTP transport (requires fastapi extras)."""
     try:
         from .transport.http import HTTPTransport
     except ImportError:
         click.echo(
-            "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp-mcp[http]"
+            "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp[http]"
         )
         sys.exit(1)
 
-    logger.info(f"HTTP transport not yet implemented")
-    # TODO: Implement HTTP transport
-    click.echo("HTTP transport coming soon!")
+    logger.info(f"Starting HTTP transport on {host}:{port}")
+    
+    # Create and configure server
+    server = create_server()
+    _register_builtin_tools(server)
+    
+    # Create HTTP transport
+    transport = HTTPTransport(host=host, port=port)
+    transport.set_message_handler(server.handle_request)
+    
+    click.echo(f"🚀 RMCP HTTP server starting on http://{host}:{port}")
+    click.echo(f"📊 Available tools: {len(server.tools._tools)}")
+    click.echo(f"🔗 Endpoints:")
+    click.echo(f"   • POST http://{host}:{port}/ (JSON-RPC requests)")
+    click.echo(f"   • GET  http://{host}:{port}/sse (Server-Sent Events)")
+    click.echo(f"   • GET  http://{host}:{port}/health (Health check)")
+    
+    try:
+        asyncio.run(transport.run())
+    except KeyboardInterrupt:
+        click.echo("\n👋 Shutting down HTTP server")
+    except Exception as e:
+        logger.error(f"HTTP server error: {e}")
+        sys.exit(1)
 
 
 @cli.command()

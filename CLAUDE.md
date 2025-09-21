@@ -4,14 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.7** includes 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.8** includes 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## Key Architecture Components
 
 ### Core Server Architecture
 - **FastMCP Server**: Custom MCP implementation in `rmcp/server/fastmcp.py` that handles protocol communication
-- **STDIO Interface**: Located in `rmcp/server/stdio.py`, manages standard input/output communication with MCP clients
-- **CLI Interface**: `rmcp/cli.py` provides command-line interface with `start`, `version` commands
+- **STDIO Interface**: Located in `rmcp/server/stdio.py`, manages standard input/output communication with MCP clients (primary transport for Claude Desktop)
+- **HTTP Interface**: Located in `rmcp/transport/http.py`, provides HTTP/SSE transport for web applications and custom integrations
+- **CLI Interface**: `rmcp/cli.py` provides command-line interface with `start`, `serve-http`, `version` commands
 
 ### Tool System (40 Tools Across 9 Categories)
 The server implements comprehensive statistical analysis tools as Python functions that execute R scripts:
@@ -55,6 +56,15 @@ The server implements comprehensive statistical analysis tools as Python functio
 - **Formula Builder** (`rmcp/tools/formula_builder.py`): Convert natural language to R formulas, validate formulas
 - **Error Recovery** (`rmcp/tools/helpers.py`): Intelligent error diagnosis, data validation, example datasets
 
+### Transport Layer
+- **STDIO Transport** (`rmcp/transport/stdio.py`): Primary transport for Claude Desktop integration
+- **HTTP Transport** (`rmcp/transport/http.py`): FastAPI-based HTTP server with the following endpoints:
+  - `POST /`: JSON-RPC 2.0 requests (all 40 statistical tools available)
+  - `GET /sse`: Server-Sent Events for real-time notifications
+  - `GET /health`: Health check endpoint for monitoring
+  - CORS support for web applications
+  - Async request handling with proper error responses
+
 ### R Integration
 - **Common Utilities** (`rmcp/tools/common.py`): Contains `execute_r_script()` function that creates temporary files, executes R code, and parses JSON results
 - **Required R Packages**: 
@@ -82,11 +92,14 @@ poetry shell
 
 ### CLI Commands
 ```bash
-# Check version (should show 0.3.7)
+# Check version (should show 0.3.8)
 rmcp --version
 
-# Start server (auto-detects MCP protocol vs legacy JSON)
+# Start stdio server (for Claude Desktop integration)
 rmcp start
+
+# Start HTTP server (for web applications and custom clients)
+rmcp serve-http --port 8080
 
 # List available tools (should show 40 tools)
 rmcp list-capabilities
