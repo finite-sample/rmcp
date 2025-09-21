@@ -193,10 +193,9 @@ class TestHTTPTransportIntegrationWithServer:
         transport = HTTPTransport()
 
         # Set up integration
-        transport.set_message_handler(server.handle_request)
+        transport.set_message_handler(server.create_message_handler(transport))
 
         # Verify setup
-        assert transport._message_handler == server.handle_request
         assert callable(transport._message_handler)
 
     def test_run_method_requires_handler(self):
@@ -234,7 +233,7 @@ class TestHTTPTransportFastAPIIntegration:
         app = transport.app
 
         # Check that CORS middleware is added
-        middleware_types = [type(mw).__name__ for mw in app.user_middleware]
+        middleware_types = [mw.cls.__name__ for mw in app.user_middleware]
         assert "CORSMiddleware" in middleware_types
 
     @pytest.mark.asyncio
@@ -253,13 +252,26 @@ class TestHTTPTransportFastAPIIntegration:
 class TestHTTPTransportImportError:
     """Test behavior when FastAPI dependencies are missing."""
 
-    @patch("rmcp.transport.http.FastAPI", side_effect=ImportError("FastAPI not found"))
-    def test_import_error_handling(self, mock_fastapi):
+    def test_import_error_handling(self):
         """Test that ImportError is properly handled and re-raised."""
-        with pytest.raises(
-            ImportError, match="HTTP transport requires 'fastapi' extras"
+        import importlib
+        import sys
+
+        sys.modules.pop("rmcp.transport.http", None)
+
+        with patch.dict(
+            sys.modules,
+            {
+                "fastapi": None,
+                "uvicorn": None,
+                "sse_starlette": None,
+            },
+            clear=False,
         ):
-            from rmcp.transport.http import HTTPTransport
+            with pytest.raises(
+                ImportError, match="HTTP transport requires 'fastapi' extras"
+            ):
+                importlib.import_module("rmcp.transport.http")
 
 
 if __name__ == "__main__":

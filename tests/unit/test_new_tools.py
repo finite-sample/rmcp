@@ -13,8 +13,13 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from shutil import which
 
 import pytest
+
+pytestmark = pytest.mark.skipif(
+    which("R") is None, reason="R binary is required for new tools tests"
+)
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 

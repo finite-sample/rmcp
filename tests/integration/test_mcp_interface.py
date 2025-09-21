@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import ast
-import json
 from shutil import which
 from typing import Any, Callable, Dict
 
@@ -14,6 +12,7 @@ from rmcp.tools.regression import (
     linear_model,
     logistic_regression,
 )
+from tests.utils import extract_json_content
 
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for MCP integration tests"
@@ -40,14 +39,7 @@ def _parse_result(response: Dict[str, Any]) -> Dict[str, Any]:
     assert "result" in response, f"Response missing result payload: {response!r}"
     result = response["result"]
     assert not result.get("isError", False), f"Tool reported error: {result!r}"
-    content = result.get("content")
-    assert content, f"No content returned from tool: {result!r}"
-
-    payload = content[0]["text"]
-    try:
-        return json.loads(payload)
-    except json.JSONDecodeError:
-        return ast.literal_eval(payload)
+    return extract_json_content(response)
 
 
 @pytest.mark.asyncio

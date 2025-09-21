@@ -23,6 +23,8 @@ class RequestState:
     request_id: str
     method: str
     progress_token: Optional[str] = None
+    tool_invocation_id: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
     cancelled: bool = False
 
     def is_cancelled(self) -> bool:
@@ -81,6 +83,8 @@ class Context:
         method: str,
         lifespan_state: LifespanState,
         progress_token: Optional[str] = None,
+        tool_invocation_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         progress_callback: Optional[Callable[[str, int, int], Awaitable[None]]] = None,
         log_callback: Optional[
             Callable[[str, str, Dict[str, Any]], Awaitable[None]]
@@ -88,7 +92,11 @@ class Context:
     ) -> "Context":
         """Create a new context for a request."""
         request_state = RequestState(
-            request_id=request_id, method=method, progress_token=progress_token
+            request_id=request_id,
+            method=method,
+            progress_token=progress_token,
+            tool_invocation_id=tool_invocation_id,
+            metadata=metadata or {},
         )
 
         return cls(

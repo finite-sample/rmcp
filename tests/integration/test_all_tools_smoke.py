@@ -7,10 +7,12 @@ ensuring all tool paths work end-to-end without requiring R environment.
 """
 
 import asyncio
-import json
 import sys
 from pathlib import Path
+from shutil import which
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -37,6 +39,11 @@ from rmcp.tools.regression import (
     correlation_analysis,
     linear_model,
     logistic_regression,
+)
+from tests.utils import extract_json_content, extract_text_summary
+
+pytestmark = pytest.mark.skipif(
+    which("R") is None, reason="R binary is required for comprehensive tool smoke tests"
 )
 from rmcp.tools.statistical_tests import anova, chi_square_test, normality_test, t_test
 from rmcp.tools.timeseries import arima_model, decompose_timeseries, stationarity_test
@@ -429,27 +436,20 @@ async def test_tool_integration(server, tool_name, test_data):
             if not isinstance(content, list) or len(content) == 0:
                 return False, f"Invalid content format: {content}"
 
-            # Check for text content
-            text_content = None
             image_content = None
 
             for item in content:
-                if item.get("type") == "text":
-                    text_content = item.get("text")
-                elif item.get("type") == "image":
+                if item.get("type") == "image":
                     image_content = item.get("data")
 
-            if text_content is None:
-                return False, "No text content found"
+            summary = extract_text_summary(response)
+            if not summary.strip():
+                return False, "No human-readable summary returned"
 
-            # Try parsing the text content
             try:
-                parsed_result = json.loads(text_content)
-            except json.JSONDecodeError:
-                try:
-                    parsed_result = eval(text_content)
-                except:
-                    return False, f"Could not parse result: {text_content}"
+                parsed_result = extract_json_content(response)
+            except AssertionError as exc:
+                return False, str(exc)
 
             # Verify result contains expected data
             if not isinstance(parsed_result, dict):

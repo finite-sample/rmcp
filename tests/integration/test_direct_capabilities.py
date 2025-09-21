@@ -5,9 +5,9 @@ Tests all new tool categories without CLI transport complexity.
 """
 
 import asyncio
-import json
 import sys
 from pathlib import Path
+from shutil import which
 
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -45,6 +45,13 @@ from rmcp.tools.visualization import (
     regression_plot,
     scatter_plot,
     time_series_plot,
+)
+from tests.utils import extract_json_content
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    which("R") is None, reason="R binary is required for direct capability tests"
 )
 
 # Test data
@@ -259,20 +266,11 @@ async def test_tool_call(server, tool_name, params):
         response = await server.handle_request(request)
 
         if "result" in response and "content" in response["result"]:
-            result_text = response["result"]["content"][0]["text"]
-
-            # Try parsing as JSON first
             try:
-                result_data = json.loads(result_text)
-                return result_data
-            except json.JSONDecodeError:
-                # Try eval for Python dict strings
-                try:
-                    result_data = eval(result_text)
-                    return result_data
-                except:
-                    print(f"❌ Could not parse result for {tool_name}")
-                    return None
+                return extract_json_content(response)
+            except AssertionError as exc:
+                print(f"❌ Could not parse result for {tool_name}: {exc}")
+                return None
         else:
             print(f"❌ Unexpected response format for {tool_name}: {response}")
             return None

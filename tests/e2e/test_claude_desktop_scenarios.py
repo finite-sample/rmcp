@@ -12,6 +12,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from shutil import which
 
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -27,6 +28,13 @@ from rmcp.tools.regression import (
     correlation_analysis,
     linear_model,
     logistic_regression,
+)
+from tests.utils import extract_json_content
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    which("R") is None, reason="R binary is required for Claude Desktop scenarios"
 )
 
 
@@ -77,8 +85,7 @@ async def simulate_claude_request(
         response = await server.handle_request(request)
 
         if "result" in response and "content" in response["result"]:
-            content = response["result"]["content"][0]["text"]
-            result_data = json.loads(content)
+            result_data = extract_json_content(response)
             print(f"✅ Success: {tool_name} completed")
             return result_data
         else:
