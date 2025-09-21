@@ -298,8 +298,8 @@ async def _validate_formula(context, formula: str, data: dict) -> dict[str, Any]
             missing_variables = missing_vars,
             existing_variables = existing_vars,
             available_variables = vars_in_data,
-            variable_types = var_types,
-            warnings = warnings,
+            variable_types = as.list(setNames(var_types, names(var_types))),
+            warnings = if(length(warnings) == 0) character(0) else warnings,
             formula_parsed = TRUE
         )
     }}, error = function(e) {{

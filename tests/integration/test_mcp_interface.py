@@ -70,7 +70,7 @@ def _assert_business_analysis(result: Dict[str, Any]) -> None:
 
 
 def _assert_economist_analysis(result: Dict[str, Any]) -> None:
-    correlation = result["correlation_matrix"]["gdp_growth"][1]
+    correlation = result["correlation_matrix"]["gdp_growth"]["unemployment"]
     assert (
         correlation < 0
     ), "GDP growth and unemployment should be negatively correlated"

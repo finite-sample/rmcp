@@ -105,6 +105,21 @@ from ..registries.tools import tool
                 "type": "integer",
                 "description": "Degrees of freedom for residuals",
             },
+            "f_statistic": {
+                "type": "number",
+                "description": "F-statistic for overall model significance",
+            },
+            "f_p_value": {
+                "type": "number",
+                "description": "P-value for F-statistic",
+                "minimum": 0,
+                "maximum": 1,
+            },
+            "residual_se": {
+                "type": "number",
+                "description": "Residual standard error",
+                "minimum": 0,
+            },
             "method": {
                 "type": "string",
                 "description": "Estimation method used",
@@ -200,10 +215,10 @@ async def linear_model(context, params) -> dict[str, Any]:
         p_values = as.list(summary_model$coefficients[, "Pr(>|t|)"]),
         r_squared = summary_model$r.squared,
         adj_r_squared = summary_model$adj.r.squared,
-        fstatistic = summary_model$fstatistic[1],
-        f_pvalue = pf(summary_model$fstatistic[1], 
-                     summary_model$fstatistic[2], 
-                     summary_model$fstatistic[3], lower.tail = FALSE),
+        f_statistic = summary_model$fstatistic[1],
+        f_p_value = pf(summary_model$fstatistic[1], 
+                      summary_model$fstatistic[2], 
+                      summary_model$fstatistic[3], lower.tail = FALSE),
         residual_se = summary_model$sigma,
         df_residual = summary_model$df[2],
         fitted_values = as.numeric(fitted(model)),
@@ -386,9 +401,17 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
     # Compute correlation matrix
     cor_matrix <- cor(numeric_data, method = method, use = use)
     
-    # Compute significance tests
+    # Compute significance tests and pairwise n_obs
     n <- nrow(numeric_data)
     cor_test_results <- list()
+    
+    # Initialize n_obs matrix structure
+    n_obs_matrix <- matrix(0, nrow = ncol(numeric_data), ncol = ncol(numeric_data))
+    rownames(n_obs_matrix) <- names(numeric_data)
+    colnames(n_obs_matrix) <- names(numeric_data)
+    
+    # Fill diagonal with total observations
+    diag(n_obs_matrix) <- n
     
     for (i in 1:(ncol(numeric_data)-1)) {
         for (j in (i+1):ncol(numeric_data)) {
@@ -399,6 +422,12 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
             x <- numeric_data[,i]
             y <- numeric_data[,j]
             complete_cases <- !is.na(x) & !is.na(y)
+            n_pairwise <- sum(complete_cases)
+            
+            # Store pairwise n_obs in matrix
+            n_obs_matrix[i, j] <- n_pairwise
+            n_obs_matrix[j, i] <- n_pairwise
+            
             test_result <- cor.test(x[complete_cases], y[complete_cases], method = method)
             
             cor_test_results[[paste(var1, var2, sep = "_")]] <- list(
@@ -410,11 +439,23 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         }
     }
     
+    # Convert correlation matrix to nested list structure
+    cor_list <- list()
+    for (var1 in names(numeric_data)) {
+        cor_list[[var1]] <- as.list(setNames(cor_matrix[var1, ], names(numeric_data)))
+    }
+    
+    # Convert n_obs matrix to nested list structure
+    n_obs_list <- list()
+    for (var1 in names(numeric_data)) {
+        n_obs_list[[var1]] <- as.list(setNames(n_obs_matrix[var1, ], names(numeric_data)))
+    }
+    
     result <- list(
-        correlation_matrix = as.list(as.data.frame(cor_matrix)),
+        correlation_matrix = cor_list,
         significance_tests = cor_test_results,
         method = method,
-        n_obs = n,
+        n_obs = n_obs_list,
         variables = names(numeric_data)
     )
     """

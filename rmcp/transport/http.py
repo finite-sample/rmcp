@@ -127,7 +127,7 @@ class HTTPTransport(Transport):
     def _setup_routes(self) -> None:
         """Setup HTTP routes for MCP communication."""
 
-        @self.app.post("/")
+        @self.app.post("/mcp")
         async def handle_jsonrpc(request: Request) -> Response:
             """Handle JSON-RPC requests via POST."""
             message: dict[str, Any] | None = None
@@ -195,7 +195,7 @@ class HTTPTransport(Transport):
                 )
 
         async def handle_options(_request: Request) -> Response:
-            """Handle CORS preflight requests for the root endpoint."""
+            """Handle CORS preflight requests for MCP endpoints."""
             return Response(
                 status_code=200,
                 headers={
@@ -206,9 +206,22 @@ class HTTPTransport(Transport):
                 },
             )
 
-        self.app.router.add_route("/", handle_options, methods=["OPTIONS"])
+        # Add CORS support for MCP endpoint
+        self.app.router.add_route("/mcp", handle_options, methods=["OPTIONS"])
 
-        @self.app.get("/sse")
+        # Backward compatibility: redirect root to /mcp
+        @self.app.post("/")
+        async def redirect_root_post(request: Request) -> Response:
+            """Redirect POST / to POST /mcp for backward compatibility."""
+            logger.info("Redirecting POST / to POST /mcp for backward compatibility")
+            return await handle_jsonrpc(request)
+
+        @self.app.options("/")
+        async def redirect_root_options(request: Request) -> Response:
+            """Redirect OPTIONS / to OPTIONS /mcp for backward compatibility."""
+            return await handle_options(request)
+
+        @self.app.get("/mcp/sse")
         async def handle_sse() -> StreamingResponse:
             """Handle Server-Sent Events for notifications."""
 
@@ -246,6 +259,13 @@ class HTTPTransport(Transport):
                         break
 
             return EventSourceResponse(event_generator())
+
+        # Backward compatibility: redirect /sse to /mcp/sse
+        @self.app.get("/sse")
+        async def redirect_sse() -> StreamingResponse:
+            """Redirect GET /sse to GET /mcp/sse for backward compatibility."""
+            logger.info("Redirecting GET /sse to GET /mcp/sse for backward compatibility")
+            return await handle_sse()
 
         @self.app.get("/health")
         async def health_check() -> dict[str, str]:

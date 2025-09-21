@@ -268,7 +268,9 @@ Original error: {stderr.strip()}"""
                     pass
 
 
-async def execute_r_script_async(script: str, args: dict[str, Any]) -> dict[str, Any]:
+async def execute_r_script_async(
+    script: str, args: dict[str, Any], context=None
+) -> dict[str, Any]:
     """
     Execute R script asynchronously with proper cancellation support and concurrency control.
 
@@ -276,11 +278,13 @@ async def execute_r_script_async(script: str, args: dict[str, Any]) -> dict[str,
     - True async execution using asyncio.create_subprocess_exec
     - Proper subprocess cancellation (SIGTERM -> SIGKILL)
     - Global concurrency limiting via semaphore
+    - Progress reporting from R scripts via context
     - Same interface and error handling as execute_r_script
 
     Args:
         script: R script code to execute
         args: Arguments to pass to the R script as JSON
+        context: Optional context for progress reporting and logging
 
     Returns:
         dict[str, Any]: Result data from R script execution
@@ -314,13 +318,29 @@ async def execute_r_script_async(script: str, args: dict[str, Any]) -> dict[str,
                 args_path_safe = args_path.replace("\\", "/")
                 result_path_safe = result_path.replace("\\", "/")
 
-                # Create complete R script
+                # Create complete R script with progress reporting
                 full_script = f"""
 # Load required libraries
 library(jsonlite)
 
 # Define null-coalescing operator (from rlang, defined locally to avoid dependency)
 `%||%` <- function(a, b) if (!is.null(a)) a else b
+
+# Progress reporting function for RMCP
+rmcp_progress <- function(message, current = NULL, total = NULL) {{
+    progress_data <- list(
+        type = "progress",
+        message = message,
+        timestamp = Sys.time()
+    )
+    if (!is.null(current) && !is.null(total)) {{
+        progress_data$current <- current
+        progress_data$total <- total
+        progress_data$percentage <- round((current / total) * 100, 1)
+    }}
+    cat("RMCP_PROGRESS:", toJSON(progress_data, auto_unbox = TRUE), "\\n", file = stderr())
+    flush(stderr())
+}}
 
 # Load arguments
 args <- fromJSON("{args_path_safe}")
@@ -353,13 +373,64 @@ if (exists("result")) {{
                 )
 
                 try:
-                    # Wait for process completion with timeout
-                    stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                        proc.communicate(), timeout=120  # 2 minute timeout
+                    # Monitor stderr for progress messages and collect output
+                    stderr_lines = []
+                    stdout_chunks = []
+                    
+                    async def read_stdout():
+                        """Read stdout to completion."""
+                        nonlocal stdout_chunks
+                        while True:
+                            chunk = await proc.stdout.read(1024)
+                            if not chunk:
+                                break
+                            stdout_chunks.append(chunk)
+                    
+                    async def monitor_stderr():
+                        """Monitor stderr for progress messages and errors."""
+                        nonlocal stderr_lines
+                        while True:
+                            line = await proc.stderr.readline()
+                            if not line:
+                                break
+                            
+                            line_str = line.decode("utf-8").strip()
+                            stderr_lines.append(line_str)
+                            
+                            # Parse progress messages if context is available
+                            if context and line_str.startswith("RMCP_PROGRESS:"):
+                                try:
+                                    import json
+                                    progress_json = line_str[14:]  # Remove "RMCP_PROGRESS:" prefix
+                                    progress_data = json.loads(progress_json)
+                                    
+                                    if progress_data.get("type") == "progress":
+                                        message = progress_data.get("message", "Processing...")
+                                        current = progress_data.get("current")
+                                        total = progress_data.get("total")
+                                        
+                                        if current is not None and total is not None:
+                                            await context.progress(message, current, total)
+                                        else:
+                                            # Send as info log if no numeric progress
+                                            await context.info(f"R: {message}")
+                                            
+                                except (json.JSONDecodeError, AttributeError) as e:
+                                    logger.debug(f"Failed to parse progress message: {e}")
+                    
+                    # Run stdout and stderr monitoring concurrently
+                    await asyncio.wait_for(
+                        asyncio.gather(
+                            read_stdout(),
+                            monitor_stderr(),
+                            proc.wait()
+                        ),
+                        timeout=120  # 2 minute timeout
                     )
-                    # Decode bytes to strings
-                    stdout = stdout_bytes.decode("utf-8") if stdout_bytes else ""
-                    stderr = stderr_bytes.decode("utf-8") if stderr_bytes else ""
+                    
+                    # Combine output
+                    stdout = b"".join(stdout_chunks).decode("utf-8") if stdout_chunks else ""
+                    stderr = "\n".join(stderr_lines) if stderr_lines else ""
                 except asyncio.CancelledError:
                     logger.info("R script execution cancelled, terminating process")
                     # Graceful termination: SIGTERM first, then SIGKILL

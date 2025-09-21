@@ -712,6 +712,11 @@ async def validate_data(context, params) -> dict[str, Any]:
         )
     )
     
+    # Ensure arrays are properly formatted for JSON
+    validation_results$warnings <- if(length(validation_results$warnings) == 0) character(0) else validation_results$warnings
+    validation_results$errors <- if(length(validation_results$errors) == 0) character(0) else validation_results$errors
+    validation_results$suggestions <- if(length(validation_results$suggestions) == 0) character(0) else validation_results$suggestions
+    
     result <- validation_results
     """
 
@@ -1102,8 +1107,8 @@ async def load_example(context, params) -> dict[str, Any]:
         suggested_analyses = list(),
         variable_info = list(
             numeric_variables = numeric_vars,
-            categorical_variables = names(data)[sapply(data, function(x) is.factor(x) || is.character(x))],
-            variable_types = sapply(data, class)
+            categorical_variables = as.list(names(data)[sapply(data, function(x) is.factor(x) || is.character(x))]),
+            variable_types = as.list(setNames(sapply(data, class), names(data)))
         )
     )
     

@@ -315,7 +315,7 @@ class ToolsRegistry:
                 structured_content.append(
                     {
                         "type": "json",
-                        "data": base_payload,
+                        "json": base_payload,
                         "annotations": {"mimeType": "application/json"},
                     }
                 )

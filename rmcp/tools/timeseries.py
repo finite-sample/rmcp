@@ -138,6 +138,7 @@ async def arima_model(context, params) -> dict[str, Any]:
     library(forecast)
     
     # Prepare data
+    rmcp_progress("Preparing time series data")
     values <- args$data$values
     
     # Convert to time series
@@ -148,7 +149,8 @@ async def arima_model(context, params) -> dict[str, Any]:
         ts_data <- ts(values, frequency = 12)
     }
     
-    # Fit ARIMA model
+    # Fit ARIMA model with progress reporting
+    rmcp_progress("Fitting ARIMA model", 20, 100)
     if (!is.null(args$order)) {
         if (!is.null(args$seasonal)) {
             model <- Arima(ts_data, order = args$order, seasonal = args$seasonal)
@@ -156,13 +158,17 @@ async def arima_model(context, params) -> dict[str, Any]:
             model <- Arima(ts_data, order = args$order)
         }
     } else {
-        # Auto ARIMA
+        # Auto ARIMA (can be slow for large datasets)
+        rmcp_progress("Running automatic ARIMA model selection", 30, 100)
         model <- auto.arima(ts_data)
     }
+    rmcp_progress("ARIMA model fitted successfully", 70, 100)
     
     # Generate forecasts
+    rmcp_progress("Generating forecasts", 80, 100)
     forecast_periods <- args$forecast_periods %||% 12
     forecasts <- forecast(model, h = forecast_periods)
+    rmcp_progress("Extracting model results", 95, 100)
     
     # Extract results
     result <- list(
@@ -184,7 +190,7 @@ async def arima_model(context, params) -> dict[str, Any]:
     """
 
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info(
             "ARIMA model fitted successfully",
             aic=result.get("aic"),
@@ -304,7 +310,7 @@ async def decompose_timeseries(context, params) -> dict[str, Any]:
     """
 
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Time series decomposed successfully")
         return result
 
@@ -416,7 +422,7 @@ async def stationarity_test(context, params) -> dict[str, Any]:
     """
 
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info(
             "Stationarity test completed",
             test=result.get("test_name"),

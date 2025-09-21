@@ -103,7 +103,7 @@ class TestHTTPTransportMCPCompliance:
                 }
 
                 response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/",
+                    f"http://127.0.0.1:{transport.port}/mcp",
                     json=initialize_request,
                     timeout=5.0,
                 )
@@ -155,7 +155,7 @@ class TestHTTPTransportMCPCompliance:
                 }
 
                 init_response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/", json=initialize_request
+                    f"http://127.0.0.1:{transport.port}/mcp", json=initialize_request
                 )
                 session_id = init_response.headers.get("Mcp-Session-Id")
 
@@ -172,7 +172,7 @@ class TestHTTPTransportMCPCompliance:
                     headers["Mcp-Session-Id"] = session_id
 
                 response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/",
+                    f"http://127.0.0.1:{transport.port}/mcp",
                     json=tools_request,
                     headers=headers,
                     timeout=5.0,
@@ -223,7 +223,7 @@ class TestHTTPTransportMCPCompliance:
                     },
                 }
                 init_response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/", json=initialize_request
+                    f"http://127.0.0.1:{transport.port}/mcp", json=initialize_request
                 )
                 session_id = init_response.headers.get("Mcp-Session-Id")
 
@@ -243,7 +243,7 @@ class TestHTTPTransportMCPCompliance:
                     headers["Mcp-Session-Id"] = session_id
 
                 response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/",
+                    f"http://127.0.0.1:{transport.port}/mcp",
                     json=tool_call_request,
                     headers=headers,
                 )
@@ -283,7 +283,7 @@ class TestHTTPTransportErrorHandling:
             async with httpx.AsyncClient() as client:
                 # Send invalid JSON
                 response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/",
+                    f"http://127.0.0.1:{transport.port}/mcp",
                     content="invalid json content",
                     headers={"Content-Type": "application/json"},
                     timeout=5.0,
@@ -316,7 +316,7 @@ class TestHTTPTransportErrorHandling:
                 malformed_request = {"not_jsonrpc": "2.0", "invalid": "request"}
 
                 response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/",
+                    f"http://127.0.0.1:{transport.port}/mcp",
                     json=malformed_request,
                     timeout=5.0,
                 )
@@ -351,7 +351,7 @@ class TestHTTPTransportSSE:
             async with httpx.AsyncClient() as client:
                 # Connect to SSE endpoint
                 async with client.stream(
-                    "GET", f"http://127.0.0.1:{transport.port}/sse"
+                    "GET", f"http://127.0.0.1:{transport.port}/mcp/sse"
                 ) as response:
                     assert response.status_code == 200
                     assert response.headers["content-type"].startswith(
@@ -395,7 +395,7 @@ class TestHTTPTransportSSE:
             # Connect to SSE and check for the notification
             async with httpx.AsyncClient() as client:
                 async with client.stream(
-                    "GET", f"http://127.0.0.1:{transport.port}/sse"
+                    "GET", f"http://127.0.0.1:{transport.port}/mcp/sse"
                 ) as response:
                     assert response.status_code == 200
 
@@ -478,7 +478,7 @@ class TestHTTPTransportCORS:
             async with httpx.AsyncClient() as client:
                 # Send OPTIONS request to check CORS
                 response = await client.options(
-                    f"http://127.0.0.1:{transport.port}/",
+                    f"http://127.0.0.1:{transport.port}/mcp",
                     headers={"Origin": "http://localhost:3000"},
                     timeout=5.0,
                 )
@@ -486,6 +486,96 @@ class TestHTTPTransportCORS:
                 assert response.status_code == 200
                 assert "access-control-allow-origin" in response.headers
                 assert "access-control-allow-methods" in response.headers
+
+        finally:
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+
+class TestHTTPTransportBackwardCompatibility:
+    """Test backward compatibility for legacy endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_legacy_root_endpoint_compatibility(self):
+        """Test that legacy POST / endpoint still works via redirect."""
+        transport = HTTPTransport(host="127.0.0.1", port=8010)
+        server = create_server()
+        transport.set_message_handler(server.create_message_handler(transport))
+
+        # Start server in background
+        server_task = asyncio.create_task(transport.run())
+        await asyncio.sleep(0.1)
+
+        try:
+            async with httpx.AsyncClient() as client:
+                # Send initialize request to legacy endpoint
+                initialize_request = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "test-client", "version": "1.0.0"},
+                    },
+                }
+
+                # Test legacy root endpoint (should redirect to /mcp)
+                response = await client.post(
+                    f"http://127.0.0.1:{transport.port}/",
+                    json=initialize_request,
+                    timeout=5.0,
+                )
+
+                assert response.status_code == 200
+                data = response.json()
+
+                # Verify MCP initialize response structure
+                assert data["jsonrpc"] == "2.0"
+                assert data["id"] == 1
+                assert "result" in data
+                assert "protocolVersion" in data["result"]
+                assert "capabilities" in data["result"]
+                assert "serverInfo" in data["result"]
+
+        finally:
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_legacy_sse_endpoint_compatibility(self):
+        """Test that legacy GET /sse endpoint still works via redirect."""
+        transport = HTTPTransport(host="127.0.0.1", port=8011)
+        server = create_server()
+        transport.set_message_handler(server.create_message_handler(transport))
+
+        # Start server in background
+        server_task = asyncio.create_task(transport.run())
+        await asyncio.sleep(0.1)
+
+        try:
+            async with httpx.AsyncClient() as client:
+                # Connect to legacy SSE endpoint
+                async with client.stream(
+                    "GET", f"http://127.0.0.1:{transport.port}/sse"
+                ) as response:
+                    assert response.status_code == 200
+                    assert response.headers["content-type"].startswith(
+                        "text/event-stream"
+                    )
+
+                    # Just verify connection works
+                    events_received = 0
+                    async for line in response.aiter_lines():
+                        events_received += 1
+                        if events_received > 1:  # Just check connection works
+                            break
 
         finally:
             server_task.cancel()

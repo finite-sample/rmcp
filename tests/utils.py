@@ -7,7 +7,10 @@ from typing import Any, Dict, List
 
 
 def _get_content_items(result: Dict[str, Any]) -> List[Dict[str, Any]]:
-    return list(result.get("content", []))
+    # Return both content and structuredContent items
+    items = list(result.get("content", []))
+    items.extend(result.get("structuredContent", []))
+    return items
 
 
 def extract_text_summary(response: Dict[str, Any]) -> str:

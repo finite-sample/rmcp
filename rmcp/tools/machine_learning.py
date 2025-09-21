@@ -128,15 +128,19 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
     nstart <- args$nstart %||% 25
     
     # Select and prepare data
+    rmcp_progress("Preparing data for clustering")
     cluster_data <- data[, variables, drop = FALSE]
     cluster_data <- na.omit(cluster_data)
     
     # Scale variables for clustering
+    rmcp_progress("Scaling variables for clustering")
     scaled_data <- scale(cluster_data)
     
     # Perform k-means
+    rmcp_progress("Running k-means clustering", 0, 100)
     set.seed(123)  # For reproducibility
     kmeans_result <- kmeans(scaled_data, centers = k, iter.max = max_iter, nstart = nstart)
+    rmcp_progress("K-means clustering completed", 100, 100)
     
     # Calculate cluster statistics
     cluster_centers <- kmeans_result$centers
@@ -174,7 +178,7 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
     """
 
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("K-means clustering completed successfully")
         return result
 
@@ -362,7 +366,7 @@ async def decision_tree(context, params) -> dict[str, Any]:
     """
 
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Decision tree built successfully")
         return result
 
@@ -504,6 +508,7 @@ async def random_forest(context, params) -> dict[str, Any]:
     importance <- args$importance %||% TRUE
     
     # Determine problem type
+    rmcp_progress("Analyzing data structure")
     response_var <- all.vars(formula)[1]
     if (is.factor(data[[response_var]]) || is.character(data[[response_var]])) {
         # Convert to factor if character
@@ -516,6 +521,7 @@ async def random_forest(context, params) -> dict[str, Any]:
     }
     
     # Set default mtry if not provided
+    rmcp_progress("Setting model parameters")
     if (is.null(mtry_val)) {
         n_predictors <- length(all.vars(formula)[-1])
         if (problem_type == "classification") {
@@ -525,9 +531,14 @@ async def random_forest(context, params) -> dict[str, Any]:
         }
     }
     
-    # Build Random Forest
+    # Build Random Forest with progress reporting
+    rmcp_progress(paste("Building Random Forest with", n_trees, "trees"), 0, 100)
+    
+    # Custom Random Forest with progress updates
     rf_model <- randomForest(formula, data = data, ntree = n_trees, 
                             mtry = mtry_val, importance = importance)
+    
+    rmcp_progress("Random Forest construction completed", 100, 100)
     
     # Extract results
     if (problem_type == "classification") {
@@ -571,7 +582,7 @@ async def random_forest(context, params) -> dict[str, Any]:
     """
 
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Random Forest model built successfully")
         return result
 
