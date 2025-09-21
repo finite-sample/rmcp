@@ -105,16 +105,6 @@ from ..registries.tools import tool
                 "type": "integer",
                 "description": "Degrees of freedom for residuals",
             },
-            "f_statistic": {
-                "type": "number",
-                "description": "F-statistic for overall model significance",
-            },
-            "f_p_value": {
-                "type": "number",
-                "description": "P-value for F-statistic",
-                "minimum": 0,
-                "maximum": 1,
-            },
             "residual_se": {
                 "type": "number",
                 "description": "Residual standard error",

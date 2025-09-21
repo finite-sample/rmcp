@@ -379,7 +379,6 @@ if (exists("result")) {{
 
                     async def read_stdout():
                         """Read stdout to completion."""
-                        nonlocal stdout_chunks
                         while True:
                             chunk = await proc.stdout.read(1024)
                             if not chunk:
@@ -388,7 +387,6 @@ if (exists("result")) {{
 
                     async def monitor_stderr():
                         """Monitor stderr for progress messages and errors."""
-                        nonlocal stderr_lines
                         while True:
                             line = await proc.stderr.readline()
                             if not line:
