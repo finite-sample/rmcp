@@ -264,7 +264,9 @@ class HTTPTransport(Transport):
         @self.app.get("/sse")
         async def redirect_sse() -> StreamingResponse:
             """Redirect GET /sse to GET /mcp/sse for backward compatibility."""
-            logger.info("Redirecting GET /sse to GET /mcp/sse for backward compatibility")
+            logger.info(
+                "Redirecting GET /sse to GET /mcp/sse for backward compatibility"
+            )
             return await handle_sse()
 
         @self.app.get("/health")

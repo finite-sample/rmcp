@@ -170,10 +170,23 @@ async def test_data_validation_edge_cases_surface_warnings(
             "suggestions": ["Provide at least one observation"],
             "data_quality": {
                 "dimensions": {"rows": 3, "columns": 2},
-                "variable_types": {"numeric": 1, "character": 0, "factor": 0, "logical": 0},
-                "missing_values": {"total_missing_cells": 3, "variables_with_missing": 1, "max_missing_percentage": 100.0},
-                "data_issues": {"constant_variables": 0, "high_outlier_variables": 0, "duplicate_rows": 0}
-            }
+                "variable_types": {
+                    "numeric": 1,
+                    "character": 0,
+                    "factor": 0,
+                    "logical": 0,
+                },
+                "missing_values": {
+                    "total_missing_cells": 3,
+                    "variables_with_missing": 1,
+                    "max_missing_percentage": 100.0,
+                },
+                "data_issues": {
+                    "constant_variables": 0,
+                    "high_outlier_variables": 0,
+                    "duplicate_rows": 0,
+                },
+            },
         }
 
     monkeypatch.setattr(

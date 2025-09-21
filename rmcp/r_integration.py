@@ -376,7 +376,7 @@ if (exists("result")) {{
                     # Monitor stderr for progress messages and collect output
                     stderr_lines = []
                     stdout_chunks = []
-                    
+
                     async def read_stdout():
                         """Read stdout to completion."""
                         nonlocal stdout_chunks
@@ -385,7 +385,7 @@ if (exists("result")) {{
                             if not chunk:
                                 break
                             stdout_chunks.append(chunk)
-                    
+
                     async def monitor_stderr():
                         """Monitor stderr for progress messages and errors."""
                         nonlocal stderr_lines
@@ -393,43 +393,50 @@ if (exists("result")) {{
                             line = await proc.stderr.readline()
                             if not line:
                                 break
-                            
+
                             line_str = line.decode("utf-8").strip()
                             stderr_lines.append(line_str)
-                            
+
                             # Parse progress messages if context is available
                             if context and line_str.startswith("RMCP_PROGRESS:"):
                                 try:
                                     import json
-                                    progress_json = line_str[14:]  # Remove "RMCP_PROGRESS:" prefix
+
+                                    progress_json = line_str[
+                                        14:
+                                    ]  # Remove "RMCP_PROGRESS:" prefix
                                     progress_data = json.loads(progress_json)
-                                    
+
                                     if progress_data.get("type") == "progress":
-                                        message = progress_data.get("message", "Processing...")
+                                        message = progress_data.get(
+                                            "message", "Processing..."
+                                        )
                                         current = progress_data.get("current")
                                         total = progress_data.get("total")
-                                        
+
                                         if current is not None and total is not None:
-                                            await context.progress(message, current, total)
+                                            await context.progress(
+                                                message, current, total
+                                            )
                                         else:
                                             # Send as info log if no numeric progress
                                             await context.info(f"R: {message}")
-                                            
+
                                 except (json.JSONDecodeError, AttributeError) as e:
-                                    logger.debug(f"Failed to parse progress message: {e}")
-                    
+                                    logger.debug(
+                                        f"Failed to parse progress message: {e}"
+                                    )
+
                     # Run stdout and stderr monitoring concurrently
                     await asyncio.wait_for(
-                        asyncio.gather(
-                            read_stdout(),
-                            monitor_stderr(),
-                            proc.wait()
-                        ),
-                        timeout=120  # 2 minute timeout
+                        asyncio.gather(read_stdout(), monitor_stderr(), proc.wait()),
+                        timeout=120,  # 2 minute timeout
                     )
-                    
+
                     # Combine output
-                    stdout = b"".join(stdout_chunks).decode("utf-8") if stdout_chunks else ""
+                    stdout = (
+                        b"".join(stdout_chunks).decode("utf-8") if stdout_chunks else ""
+                    )
                     stderr = "\n".join(stderr_lines) if stderr_lines else ""
                 except asyncio.CancelledError:
                     logger.info("R script execution cancelled, terminating process")
