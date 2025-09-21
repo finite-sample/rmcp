@@ -409,7 +409,15 @@ def check_r_packages():
         "Time Series": ["forecast", "vars", "urca", "tseries"],
         "Statistical Testing": ["nortest", "car"],
         "Machine Learning": ["rpart", "randomForest"],
-        "Data Visualization": ["ggplot2", "gridExtra", "tidyr", "rlang"],
+        "Data Visualization": [
+            "ggplot2",
+            "gridExtra",
+            "tidyr",
+            "rlang",
+            "base64enc",
+            "reshape2",
+        ],
+        "File Operations": ["readxl"],
     }
 
     click.echo("🔍 Checking R Package Installation Status")

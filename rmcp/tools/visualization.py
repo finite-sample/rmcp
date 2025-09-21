@@ -40,7 +40,7 @@ from ..registries.tools import tool
         "properties": {
             "plot_type": {
                 "type": "string",
-                "enum": ["scatter_plot"],
+                "enum": ["scatter"],
                 "description": "Type of plot generated",
             },
             "variables": {
@@ -88,7 +88,6 @@ from ..registries.tools import tool
             },
         },
         "required": ["plot_type", "variables"],
-        "additionalProperties": False,
     },
     description="Create scatter plot with optional grouping and trend lines",
 )
@@ -141,12 +140,17 @@ async def scatter_plot(context, params) -> dict[str, Any]:
     
     # Prepare result
     result <- list(
-        x_variable = x_var,
-        y_variable = y_var,
-        group_variable = group_var,
-        correlation = correlation,
+        plot_type = "scatter",
+        variables = list(
+            x = x_var,
+            y = y_var,
+            group = group_var
+        ),
+        statistics = list(
+            correlation = correlation,
+            n_points = sum(!is.na(data[[x_var]]) & !is.na(data[[y_var]]))
+        ),
         title = title,
-        n_points = sum(!is.na(data[[x_var]]) & !is.na(data[[y_var]])),
         plot_saved = plot_saved
     )
     
@@ -162,6 +166,8 @@ async def scatter_plot(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:
@@ -265,7 +271,6 @@ async def scatter_plot(context, params) -> dict[str, Any]:
             },
         },
         "required": ["plot_type", "variable", "bins", "statistics", "n_obs"],
-        "additionalProperties": False,
     },
     description="Create histogram with optional grouping and density overlay",
 )
@@ -325,6 +330,7 @@ async def histogram(context, params) -> dict[str, Any]:
     
     # Prepare result
     result <- list(
+        plot_type = "histogram",
         variable = variable,
         group_variable = group_var,
         bins = bins,
@@ -346,6 +352,8 @@ async def histogram(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:
@@ -443,7 +451,6 @@ async def histogram(context, params) -> dict[str, Any]:
             },
         },
         "required": ["plot_type", "variable", "summary_statistics"],
-        "additionalProperties": False,
     },
     description="Create box plot with optional grouping",
 )
@@ -521,6 +528,7 @@ async def boxplot(context, params) -> dict[str, Any]:
     
     # Prepare result
     result <- list(
+        plot_type = "boxplot",
         variable = variable,
         group_variable = group_var,
         summary_statistics = summary_stats,
@@ -540,6 +548,8 @@ async def boxplot(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:
@@ -640,7 +650,6 @@ async def boxplot(context, params) -> dict[str, Any]:
             },
         },
         "required": ["plot_type", "statistics", "has_dates", "show_trend"],
-        "additionalProperties": False,
     },
     description="Create time series plot with optional trend line",
 )
@@ -712,6 +721,7 @@ async def time_series_plot(context, params) -> dict[str, Any]:
     
     # Prepare result
     result <- list(
+        plot_type = "time_series",
         title = title,
         statistics = ts_stats,
         has_dates = !is.null(dates),
@@ -731,6 +741,8 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:
@@ -787,7 +799,7 @@ async def time_series_plot(context, params) -> dict[str, Any]:
         "properties": {
             "plot_type": {
                 "type": "string",
-                "enum": ["correlation_heatmap"],
+                "enum": ["heatmap"],
                 "description": "Type of plot generated",
             },
             "correlation_matrix": {
@@ -835,7 +847,6 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             "method",
             "n_variables",
         ],
-        "additionalProperties": False,
     },
     description="Create correlation heatmap matrix",
 )
@@ -898,9 +909,10 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
         plot_saved <- FALSE
     }
     
-    # Prepare result
+    # Prepare result - convert matrix to proper object format
     result <- list(
-        correlation_matrix = as.matrix(cor_matrix),
+        plot_type = "heatmap",
+        correlation_matrix = as.list(as.data.frame(cor_matrix)),
         variables = variables,
         method = method,
         title = title,
@@ -920,6 +932,8 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:
@@ -1028,7 +1042,6 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             "residual_plots",
             "n_obs",
         ],
-        "additionalProperties": False,
     },
     description="Create regression diagnostic plots (fitted vs residuals, Q-Q plot, etc.)",
 )
@@ -1136,6 +1149,7 @@ async def regression_plot(context, params) -> dict[str, Any]:
     
     # Prepare result
     result <- list(
+        plot_type = "regression_diagnostics",
         title = title,
         r_squared = model_summary$r.squared,
         adj_r_squared = model_summary$adj.r.squared,
@@ -1158,6 +1172,8 @@ async def regression_plot(context, params) -> dict[str, Any]:
             result$image_data <- image_data
         }
     }
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:

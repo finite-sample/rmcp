@@ -162,7 +162,7 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
     
     result <- list(
         cluster_assignments = cluster_assignments,
-        cluster_centers = as.data.frame(cluster_centers),
+        cluster_centers = as.list(as.data.frame(cluster_centers)),
         cluster_sizes = as.list(cluster_sizes),
         within_ss = wss,
         total_within_ss = total_wss,
@@ -564,9 +564,33 @@ async def random_forest(context, params) -> dict[str, Any]:
     # Variable importance
     if (importance) {
         var_imp <- importance(rf_model)
-        var_importance <- as.data.frame(var_imp)
+        # Convert to proper list format for JSON
+        if (is.matrix(var_imp) && !any(is.na(var_imp))) {
+            # For classification, use first column or mean if multiple columns
+            if (ncol(var_imp) > 1) {
+                var_importance <- as.list(var_imp[, 1])
+            } else {
+                var_importance <- as.list(var_imp[, 1])
+            }
+        } else if (!is.null(var_imp) && !any(is.na(var_imp))) {
+            var_importance <- as.list(var_imp)
+        } else {
+            # If importance is NA or unavailable, return NULL
+            var_importance <- NULL
+        }
     } else {
         var_importance <- NULL
+    }
+    
+    # Get OOB error with proper NULL handling
+    oob_error_val <- if (problem_type == "classification") {
+        oob_error  # Already calculated above
+    } else {
+        if (!is.null(rf_model$mse) && length(rf_model$mse) >= n_trees) {
+            rf_model$mse[n_trees]
+        } else {
+            NULL
+        }
     }
     
     result <- list(
@@ -575,10 +599,12 @@ async def random_forest(context, params) -> dict[str, Any]:
         variable_importance = var_importance,
         n_trees = n_trees,
         mtry = rf_model$mtry,
-        oob_error = rf_model$err.rate[n_trees, 1],
+        oob_error = oob_error_val,
         formula = deparse(formula),
         n_obs = nrow(data)
     )
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:

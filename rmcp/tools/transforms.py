@@ -85,12 +85,22 @@ async def lag_lead(context, params) -> dict[str, Any]:
         }
     }
     
+    # Get created variables and ensure it's always an array
+    created_vars <- names(result_data)[!names(result_data) %in% names(data)]
+    if (length(created_vars) == 0) {
+        created_vars <- character(0)
+    }
+    # Force array format even for single elements
+    created_vars <- as.character(created_vars)
+    
     result <- list(
-        data = result_data,
-        variables_created = names(result_data)[!names(result_data) %in% names(data)],
+        data = as.list(result_data),
+        variables_created = created_vars,
         n_obs = nrow(result_data),
         operation = "lag_lead"
     )
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:
@@ -211,7 +221,7 @@ async def winsorize(context, params) -> dict[str, Any]:
     }
     
     result <- list(
-        data = result_data,
+        data = as.list(result_data),
         outliers_summary = outliers_summary,
         percentiles = percentiles,
         variables_winsorized = variables,
@@ -328,13 +338,20 @@ async def difference(context, params) -> dict[str, Any]:
         }
     }
     
+    # Ensure variables_differenced is always an array
+    diff_vars <- if (length(variables) == 0) character(0) else variables
+    # Force array format even for single elements
+    diff_vars <- as.character(diff_vars)
+    
     result <- list(
-        data = result_data,
-        variables_differenced = variables,
+        data = as.list(result_data),
+        variables_differenced = diff_vars,
         difference_order = diff_order,
         log_transformed = log_transform,
         n_obs = nrow(result_data)
     )
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:
@@ -449,7 +466,7 @@ async def standardize(context, params) -> dict[str, Any]:
     }
     
     result <- list(
-        data = result_data,
+        data = as.list(result_data),
         scaling_method = method,
         scaling_info = scaling_info,
         variables_scaled = variables,

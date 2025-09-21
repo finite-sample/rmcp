@@ -438,11 +438,16 @@ async def frequency_table(context, params) -> dict[str, Any]:
         freq_tables[[var]] <- freq_data
     }
     
+    # Force variables to be array even for single elements
+    variables_array <- as.character(variables)
+    
     result <- list(
         frequency_tables = freq_tables,
-        variables = variables,
+        variables = variables_array,
         total_observations = nrow(data)
     )
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:

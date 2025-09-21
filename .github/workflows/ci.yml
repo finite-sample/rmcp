@@ -230,6 +230,6 @@ jobs:
     - name: Check documentation
       run: |
         grep -q "40 statistical tools" README.md || (echo "❌ README doesn't mention 40 tools" && exit 1)
-        grep -q "Version 0.3.7" README.md || (echo "❌ README version not updated" && exit 1)
-        grep -q "version.*0.3.7" pyproject.toml || (echo "❌ pyproject.toml version not updated" && exit 1)
+        grep -q "Version 0.3.9" README.md || (echo "❌ README version not updated" && exit 1)
+        grep -q "version.*0.3.9" pyproject.toml || (echo "❌ pyproject.toml version not updated" && exit 1)
         echo "✅ Documentation check passed"

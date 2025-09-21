@@ -298,11 +298,18 @@ async def decompose_timeseries(context, params) -> dict[str, Any]:
         decomp <- decompose(ts_data, type = "additive")
     }
     
+    # Convert to numeric and handle NA values properly for JSON
+    convert_with_na <- function(x) {
+        result <- as.numeric(x)
+        result[is.na(result)] <- NULL
+        return(result)
+    }
+    
     result <- list(
-        original = as.numeric(decomp$x),
-        trend = as.numeric(decomp$trend),
-        seasonal = as.numeric(decomp$seasonal),  
-        remainder = as.numeric(decomp$random),
+        original = convert_with_na(decomp$x),
+        trend = convert_with_na(decomp$trend),
+        seasonal = convert_with_na(decomp$seasonal),  
+        remainder = convert_with_na(decomp$random),
         type = decomp_type,
         frequency = frequency,
         n_obs = length(values)
@@ -409,12 +416,20 @@ async def stationarity_test(context, params) -> dict[str, Any]:
         test_name <- "Phillips-Perron"
     }
     
+    # Handle critical values properly - some tests might not have them
+    critical_vals <- if (is.null(test_result$critical) || length(test_result$critical) == 0) {
+        # Return empty named list to ensure it's treated as object, not array
+        structure(list(), names = character(0))
+    } else {
+        as.list(test_result$critical)
+    }
+    
     result <- list(
         test_name = test_name,
         test_type = test_type,
         statistic = as.numeric(test_result$statistic),
         p_value = test_result$p.value,
-        critical_values = as.list(test_result$critical),
+        critical_values = critical_vals,
         alternative = test_result$alternative,
         is_stationary = if (test_type == "kpss") test_result$p.value > 0.05 else test_result$p.value < 0.05,
         n_obs = length(values)

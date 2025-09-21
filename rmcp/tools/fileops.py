@@ -393,13 +393,20 @@ async def data_info(context, params) -> dict[str, Any]:
     n_cols <- ncol(data)
     col_names <- names(data)
     
-    # Variable types
+    # Variable types - ensure all are arrays
     var_types <- sapply(data, class)
     numeric_vars <- names(data)[sapply(data, is.numeric)]
     character_vars <- names(data)[sapply(data, is.character)]
     factor_vars <- names(data)[sapply(data, is.factor)]
     logical_vars <- names(data)[sapply(data, is.logical)]
     date_vars <- names(data)[sapply(data, function(x) inherits(x, "Date"))]
+    
+    # Ensure variables are always arrays even if empty or single
+    numeric_vars <- if (length(numeric_vars) == 0) character(0) else as.character(numeric_vars)
+    character_vars <- if (length(character_vars) == 0) character(0) else as.character(character_vars)
+    factor_vars <- if (length(factor_vars) == 0) character(0) else as.character(factor_vars)
+    logical_vars <- if (length(logical_vars) == 0) character(0) else as.character(logical_vars)
+    date_vars <- if (length(date_vars) == 0) character(0) else as.character(date_vars)
     
     # Missing value analysis
     missing_counts <- sapply(data, function(x) sum(is.na(x)))
@@ -431,8 +438,10 @@ async def data_info(context, params) -> dict[str, Any]:
     # Add data sample if requested
     if (include_sample && n_rows > 0) {
         sample_rows <- min(sample_size, n_rows)
-        result$sample_data <- head(data, sample_rows)
+        result$sample_data <- as.list(head(data, sample_rows))
     }
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:

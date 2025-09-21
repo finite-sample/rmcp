@@ -171,6 +171,8 @@ async def panel_regression(context, params) -> dict[str, Any]:
         id_variable = id_var,
         time_variable = time_var
     )
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:
@@ -223,7 +225,6 @@ async def panel_regression(context, params) -> dict[str, Any]:
             "r_squared": {
                 "type": "number",
                 "description": "R-squared value",
-                "minimum": 0,
                 "maximum": 1,
             },
             "adj_r_squared": {
@@ -345,21 +346,23 @@ async def instrumental_variables(context, params) -> dict[str, Any]:
         r_squared = summary_iv$r.squared,
         adj_r_squared = summary_iv$adj.r.squared,
         weak_instruments = list(
-            statistic = summary_iv$diagnostics["Weak instruments", "statistic"],
-            p_value = summary_iv$diagnostics["Weak instruments", "p-value"]
+            statistic = if (is.na(summary_iv$diagnostics["Weak instruments", "statistic"])) NULL else summary_iv$diagnostics["Weak instruments", "statistic"],
+            p_value = if (is.na(summary_iv$diagnostics["Weak instruments", "p-value"])) NULL else summary_iv$diagnostics["Weak instruments", "p-value"]
         ),
         wu_hausman = list(
-            statistic = summary_iv$diagnostics["Wu-Hausman", "statistic"],
-            p_value = summary_iv$diagnostics["Wu-Hausman", "p-value"]
+            statistic = if (is.na(summary_iv$diagnostics["Wu-Hausman", "statistic"])) NULL else summary_iv$diagnostics["Wu-Hausman", "statistic"],
+            p_value = if (is.na(summary_iv$diagnostics["Wu-Hausman", "p-value"])) NULL else summary_iv$diagnostics["Wu-Hausman", "p-value"]
         ),
         sargan = list(
-            statistic = summary_iv$diagnostics["Sargan", "statistic"], 
-            p_value = summary_iv$diagnostics["Sargan", "p-value"]
+            statistic = if (is.na(summary_iv$diagnostics["Sargan", "statistic"])) NULL else summary_iv$diagnostics["Sargan", "statistic"], 
+            p_value = if (is.na(summary_iv$diagnostics["Sargan", "p-value"])) NULL else summary_iv$diagnostics["Sargan", "p-value"]
         ),
         robust_se = robust,
         formula = formula_str,
         n_obs = nobs(iv_model)
     )
+    
+    cat(toJSON(result, auto_unbox = FALSE, na = "null"))
     """
 
     try:
