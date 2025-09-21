@@ -42,6 +42,78 @@ from ..registries.tools import tool
         },
         "required": ["data", "formula"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "coefficients": {
+                "type": "object",
+                "description": "Regression coefficients by variable name",
+                "additionalProperties": {"type": "number"}
+            },
+            "std_errors": {
+                "type": "object", 
+                "description": "Standard errors of coefficients",
+                "additionalProperties": {"type": "number"}
+            },
+            "t_values": {
+                "type": "object",
+                "description": "t-statistics for coefficients", 
+                "additionalProperties": {"type": "number"}
+            },
+            "p_values": {
+                "type": "object",
+                "description": "P-values for coefficient significance tests",
+                "additionalProperties": {"type": "number"}
+            },
+            "r_squared": {
+                "type": "number",
+                "description": "R-squared (coefficient of determination)",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "adj_r_squared": {
+                "type": "number", 
+                "description": "Adjusted R-squared",
+                "maximum": 1
+            },
+            "f_statistic": {
+                "type": "number",
+                "description": "F-statistic for overall model significance"
+            },
+            "f_p_value": {
+                "type": "number",
+                "description": "P-value for F-statistic",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "residuals": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Model residuals"
+            },
+            "fitted_values": {
+                "type": "array", 
+                "items": {"type": "number"},
+                "description": "Fitted/predicted values"
+            },
+            "n_obs": {
+                "type": "integer",
+                "description": "Number of observations",
+                "minimum": 1
+            },
+            "df_residual": {
+                "type": "integer",
+                "description": "Degrees of freedom for residuals"
+            },
+            "method": {
+                "type": "string",
+                "description": "Estimation method used",
+                "enum": ["lm"]
+            }
+        },
+        "required": ["coefficients", "r_squared", "n_obs", "method"],
+        "additionalProperties": False
+    },
     description="Fit linear regression model with comprehensive diagnostics",
 )
 async def linear_model(context, params) -> dict[str, Any]:
@@ -185,6 +257,59 @@ async def linear_model(context, params) -> dict[str, Any]:
         },
         "required": ["data"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "correlation_matrix": {
+                "type": "object",
+                "description": "Correlation coefficients between variables",
+                "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {"type": "number"}
+                }
+            },
+            "significance_tests": {
+                "type": "object",
+                "description": "P-values and test statistics for correlations",
+                "properties": {
+                    "p_values": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object", 
+                            "additionalProperties": {"type": "number"}
+                        }
+                    },
+                    "test_statistics": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": {"type": "number"}
+                        }
+                    }
+                }
+            },
+            "method": {
+                "type": "string",
+                "description": "Correlation method used",
+                "enum": ["pearson", "spearman", "kendall"]
+            },
+            "n_obs": {
+                "type": "object",
+                "description": "Number of observations used for each correlation",
+                "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {"type": "integer"}
+                }
+            },
+            "variables": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Variables included in the analysis"
+            }
+        },
+        "required": ["correlation_matrix", "method", "variables"],
+        "additionalProperties": False
+    },
     description="Comprehensive correlation analysis with significance tests",
 )
 async def correlation_analysis(context, params) -> dict[str, Any]:
@@ -327,6 +452,100 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
             },
         },
         "required": ["data", "formula"],
+    },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "coefficients": {
+                "type": "object",
+                "description": "Model coefficients by variable name",
+                "additionalProperties": {"type": "number"}
+            },
+            "std_errors": {
+                "type": "object",
+                "description": "Standard errors of coefficients",
+                "additionalProperties": {"type": "number"}
+            },
+            "z_values": {
+                "type": "object",
+                "description": "Z-statistics for coefficients",
+                "additionalProperties": {"type": "number"}
+            },
+            "p_values": {
+                "type": "object",
+                "description": "P-values for coefficient significance tests",
+                "additionalProperties": {"type": "number"}
+            },
+            "deviance": {
+                "type": "number",
+                "description": "Residual deviance of the model"
+            },
+            "null_deviance": {
+                "type": "number",
+                "description": "Null deviance of the model"
+            },
+            "aic": {
+                "type": "number",
+                "description": "Akaike Information Criterion"
+            },
+            "bic": {
+                "type": "number",
+                "description": "Bayesian Information Criterion"
+            },
+            "fitted_values": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Fitted/predicted values"
+            },
+            "residuals": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Deviance residuals"
+            },
+            "n_obs": {
+                "type": "integer",
+                "description": "Number of observations",
+                "minimum": 1
+            },
+            "family": {
+                "type": "string",
+                "description": "Error distribution family used",
+                "enum": ["binomial", "poisson", "gamma", "inverse.gaussian"]
+            },
+            "link": {
+                "type": "string",
+                "description": "Link function used"
+            },
+            "odds_ratios": {
+                "type": "object",
+                "description": "Odds ratios for binomial models",
+                "additionalProperties": {"type": "number"}
+            },
+            "mcfadden_r_squared": {
+                "type": "number",
+                "description": "McFadden's pseudo R-squared for binomial models",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "predicted_probabilities": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Predicted probabilities for binomial models"
+            },
+            "accuracy": {
+                "type": "number",
+                "description": "Classification accuracy for binary models",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "confusion_matrix": {
+                "type": "object",
+                "description": "Confusion matrix for binary classification",
+                "additionalProperties": {"type": "array"}
+            }
+        },
+        "required": ["coefficients", "deviance", "null_deviance", "aic", "bic", "n_obs", "family", "link"],
+        "additionalProperties": False
     },
     description="Fit generalized linear model (logistic regression)",
 )

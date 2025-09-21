@@ -40,6 +40,61 @@ from ..registries.tools import tool
         },
         "required": ["description"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "formula": {
+                "type": ["string", "null"],
+                "description": "Generated R formula"
+            },
+            "matched_pattern": {
+                "type": ["string", "null"],
+                "description": "Pattern that was matched to generate the formula"
+            },
+            "alternatives": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Alternative formula specifications"
+            },
+            "validation": {
+                "type": ["object", "null"],
+                "description": "Validation results if data was provided",
+                "properties": {
+                    "is_valid": {"type": "boolean"},
+                    "missing_variables": {"type": "array", "items": {"type": "string"}},
+                    "existing_variables": {"type": "array", "items": {"type": "string"}},
+                    "available_variables": {"type": "array", "items": {"type": "string"}},
+                    "variable_types": {"type": "object", "additionalProperties": {"type": "string"}},
+                    "warnings": {"type": "array", "items": {"type": "string"}},
+                    "formula_parsed": {"type": "boolean"},
+                    "error": {"type": "string"}
+                }
+            },
+            "examples": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "description": {"type": "string"},
+                        "formula": {"type": "string"},
+                        "use_case": {"type": "string"}
+                    }
+                },
+                "description": "Example formulas for the analysis type"
+            },
+            "interpretation": {
+                "type": ["string", "null"],
+                "description": "Human-readable interpretation of the formula"
+            },
+            "suggestions": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Suggestions for improving the formula"
+            }
+        },
+        "required": ["formula", "matched_pattern", "alternatives", "examples", "interpretation", "suggestions"],
+        "additionalProperties": False
+    },
     description="Convert natural language descriptions to R formulas",
 )
 async def build_formula(context, params) -> dict[str, Any]:
@@ -420,6 +475,60 @@ def _get_formula_examples(analysis_type: str) -> List[dict[str, str]]:
             },
         },
         "required": ["formula", "data"],
+    },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "is_valid": {
+                "type": "boolean",
+                "description": "Whether the formula is valid"
+            },
+            "missing_variables": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Variables in formula but not in data"
+            },
+            "existing_variables": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Variables in formula that exist in data"
+            },
+            "available_variables": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "All variables available in the dataset"
+            },
+            "variable_types": {
+                "type": "object",
+                "description": "Data types of variables in the formula",
+                "additionalProperties": {"type": "string"}
+            },
+            "warnings": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Validation warnings about data quality or types"
+            },
+            "formula_parsed": {
+                "type": "boolean",
+                "description": "Whether the formula syntax is valid"
+            },
+            "error": {
+                "type": "string",
+                "description": "Error message if validation failed"
+            },
+            "suggestions": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Suggestions for fixing or improving the formula"
+            },
+            "analysis_type": {
+                "type": "string",
+                "enum": ["regression", "anova", "correlation"],
+                "description": "Type of analysis the formula is intended for"
+            }
+        },
+        "required": ["is_valid", "formula_parsed", "suggestions", "analysis_type"],
+        "additionalProperties": False
     },
     description="Validate R formula syntax and check against data",
 )

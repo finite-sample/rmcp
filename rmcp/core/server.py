@@ -20,6 +20,7 @@ from typing import Any, Awaitable, Callable, Dict, Optional
 try:
     from mcp import LoggingLevel
     from mcp.types import (
+        CompletionCapability,
         Implementation,
         InitializeResult,
         LoggingCapability,
@@ -395,6 +396,9 @@ class MCPServer:
             log_callback=log_callback,
         )
 
+        # Add server reference for resource access to large data store
+        context._server = self
+
         # Track request for cancellation
         self._active_requests[request_id] = context.request
 
@@ -448,6 +452,7 @@ class MCPServer:
                 resources=ResourcesCapability(subscribe=False, listChanged=False),
                 prompts=PromptsCapability(listChanged=False),
                 logging=LoggingCapability(levels=_SUPPORTED_LOG_LEVELS),
+                completion=CompletionCapability(),
             )
 
             initialize_result = InitializeResult(
@@ -464,6 +469,7 @@ class MCPServer:
             "resources": {"subscribe": False, "listChanged": False},
             "prompts": {"listChanged": False},
             "logging": {"levels": _SUPPORTED_LOG_LEVELS},
+            "completion": {},
         }
 
         result = {
@@ -513,6 +519,207 @@ class MCPServer:
         logger.info(f"Log level set to: {level}")
         return {}
 
+    async def _handle_completion(self, params: dict[str, Any]) -> dict[str, Any]:
+        """
+        Handle completion/complete request for auto-completion suggestions.
+        
+        Provides intelligent auto-completion for:
+        - Tool names
+        - Tool parameter names 
+        - R formula syntax
+        - Variable names from datasets
+        - Analysis type options
+        
+        Args:
+            params: Completion parameters including ref (completion target)
+            
+        Returns:
+            Dict with completion suggestions
+        """
+        ref = params.get("ref", {})
+        completion_type = ref.get("type")
+        name = ref.get("name", "")
+        
+        completions = []
+        
+        if completion_type == "tools":
+            # Complete tool names
+            all_tools = await self.tools.list_tools(
+                self.create_context("completion", "completion/complete"), 
+                limit=None
+            )
+            tool_names = [tool["name"] for tool in all_tools.get("tools", [])]
+            
+            # Filter based on partial input
+            if name:
+                matching_tools = [tool for tool in tool_names if tool.startswith(name)]
+            else:
+                matching_tools = tool_names
+                
+            completions = [
+                {
+                    "type": "text",
+                    "value": tool_name,
+                    "label": tool_name,
+                    "detail": f"Statistical analysis tool"
+                }
+                for tool_name in matching_tools[:10]  # Limit to 10 suggestions
+            ]
+            
+        elif completion_type == "tool_parameters":
+            # Complete parameter names for specific tools
+            tool_name = ref.get("toolName")
+            if tool_name and tool_name in self.tools._registry:
+                tool_func = self.tools._registry[tool_name]
+                if hasattr(tool_func, "_rmcp_input_schema"):
+                    schema = tool_func._rmcp_input_schema
+                    properties = schema.get("properties", {})
+                    
+                    if name:
+                        matching_params = [p for p in properties.keys() if p.startswith(name)]
+                    else:
+                        matching_params = list(properties.keys())
+                    
+                    completions = [
+                        {
+                            "type": "parameter",
+                            "value": param,
+                            "label": param,
+                            "detail": properties[param].get("description", "Parameter")
+                        }
+                        for param in matching_params[:10]
+                    ]
+                    
+        elif completion_type == "formula":
+            # Complete R formula syntax
+            formula_suggestions = [
+                {
+                    "type": "formula",
+                    "value": "y ~ x",
+                    "label": "y ~ x",
+                    "detail": "Simple regression formula"
+                },
+                {
+                    "type": "formula", 
+                    "value": "y ~ x1 + x2",
+                    "label": "y ~ x1 + x2",
+                    "detail": "Multiple regression formula"
+                },
+                {
+                    "type": "formula",
+                    "value": "y ~ x1 * x2", 
+                    "label": "y ~ x1 * x2",
+                    "detail": "Interaction formula"
+                },
+                {
+                    "type": "formula",
+                    "value": "y ~ .",
+                    "label": "y ~ .",
+                    "detail": "Use all variables"
+                },
+                {
+                    "type": "formula",
+                    "value": "y ~ x + I(x^2)",
+                    "label": "y ~ x + I(x^2)", 
+                    "detail": "Polynomial formula"
+                }
+            ]
+            
+            if name:
+                # Filter based on partial input
+                completions = [s for s in formula_suggestions if name in s["value"]]
+            else:
+                completions = formula_suggestions
+                
+        elif completion_type == "analysis_type":
+            # Complete analysis type options
+            analysis_types = [
+                {"value": "regression", "detail": "Linear and logistic regression"},
+                {"value": "correlation", "detail": "Correlation analysis"},
+                {"value": "timeseries", "detail": "Time series modeling"},
+                {"value": "classification", "detail": "Classification and clustering"},
+                {"value": "anova", "detail": "Analysis of variance"},
+                {"value": "econometrics", "detail": "Panel data and IV regression"},
+                {"value": "general", "detail": "General statistical analysis"}
+            ]
+            
+            if name:
+                matching_types = [t for t in analysis_types if t["value"].startswith(name)]
+            else:
+                matching_types = analysis_types
+                
+            completions = [
+                {
+                    "type": "option",
+                    "value": at["value"],
+                    "label": at["value"],
+                    "detail": at["detail"]
+                }
+                for at in matching_types
+            ]
+            
+        elif completion_type == "dataset":
+            # Complete example dataset names
+            datasets = [
+                {"value": "sales", "detail": "Sales and marketing data with seasonal patterns"},
+                {"value": "economics", "detail": "Economic indicators for regression analysis"},
+                {"value": "customers", "detail": "Customer data for churn prediction"},
+                {"value": "timeseries", "detail": "Time series data with trend and seasonality"},
+                {"value": "survey", "detail": "Survey data with Likert scales"}
+            ]
+            
+            if name:
+                matching_datasets = [d for d in datasets if d["value"].startswith(name)]
+            else:
+                matching_datasets = datasets
+                
+            completions = [
+                {
+                    "type": "dataset",
+                    "value": d["value"], 
+                    "label": d["value"],
+                    "detail": d["detail"]
+                }
+                for d in matching_datasets
+            ]
+            
+        else:
+            # Default: provide general RMCP help
+            completions = [
+                {
+                    "type": "help",
+                    "value": "load_example",
+                    "label": "load_example",
+                    "detail": "Load example datasets for analysis"
+                },
+                {
+                    "type": "help", 
+                    "value": "data_info",
+                    "label": "data_info",
+                    "detail": "Get information about your dataset"
+                },
+                {
+                    "type": "help",
+                    "value": "validate_data", 
+                    "label": "validate_data",
+                    "detail": "Validate data quality before analysis"
+                },
+                {
+                    "type": "help",
+                    "value": "build_formula",
+                    "label": "build_formula", 
+                    "detail": "Convert natural language to R formulas"
+                }
+            ]
+        
+        return {
+            "completion": {
+                "values": completions,
+                "total": len(completions),
+                "hasMore": False
+            }
+        }
+
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
         """
         Handle incoming MCP request and route to appropriate handler.
@@ -537,6 +744,8 @@ class MCPServer:
             - resources/read: Read a resource by URI
             - prompts/list: List available prompts
             - prompts/get: Get a prompt with arguments
+            - completion/complete: Provide auto-completion suggestions
+            - logging/setLevel: Set the server logging level
         """
         method = request.get("method")
         request_id = request.get("id")
@@ -603,6 +812,8 @@ class MCPServer:
             elif method == "logging/setLevel":
                 level = params.get("level")
                 result = await self._handle_set_log_level(level)
+            elif method == "completion/complete":
+                result = await self._handle_completion(params)
             else:
                 raise ValueError(f"Unknown method: {method}")
 

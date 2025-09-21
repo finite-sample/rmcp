@@ -35,6 +35,43 @@ from ..registries.tools import tool
         },
         "required": ["error_message"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "error_type": {
+                "type": "string",
+                "enum": ["missing_package", "missing_variable", "formula_syntax", "file_not_found", "data_type", "missing_values", "memory_size", "general"],
+                "description": "Categorized type of error"
+            },
+            "suggestions": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Actionable suggestions to fix the error"
+            },
+            "data_suggestions": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Data-specific suggestions based on analysis"
+            },
+            "next_steps": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Recommended next steps to resolve the issue"
+            },
+            "documentation_links": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Relevant documentation and help links"
+            },
+            "quick_fixes": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Quick fix commands or code snippets"
+            }
+        },
+        "required": ["error_type", "suggestions", "data_suggestions", "next_steps", "documentation_links", "quick_fixes"],
+        "additionalProperties": False
+    },
     description="Analyze errors and suggest fixes with actionable solutions",
 )
 async def suggest_fix(context, params) -> dict[str, Any]:
@@ -377,6 +414,75 @@ async def _analyze_data_for_errors(context, data: dict) -> dict[str, Any]:
         },
         "required": ["data"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "is_valid": {
+                "type": "boolean",
+                "description": "Whether the data passes validation"
+            },
+            "warnings": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Validation warnings that don't prevent analysis"
+            },
+            "errors": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Critical errors that prevent analysis"
+            },
+            "suggestions": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Suggestions for improving data quality"
+            },
+            "data_quality": {
+                "type": "object",
+                "properties": {
+                    "dimensions": {
+                        "type": "object",
+                        "properties": {
+                            "rows": {"type": "integer", "minimum": 0},
+                            "columns": {"type": "integer", "minimum": 0}
+                        }
+                    },
+                    "variable_types": {
+                        "type": "object",
+                        "properties": {
+                            "numeric": {"type": "integer", "minimum": 0},
+                            "character": {"type": "integer", "minimum": 0},
+                            "factor": {"type": "integer", "minimum": 0},
+                            "logical": {"type": "integer", "minimum": 0}
+                        }
+                    },
+                    "missing_values": {
+                        "type": "object",
+                        "properties": {
+                            "total_missing_cells": {"type": "integer", "minimum": 0},
+                            "variables_with_missing": {"type": "integer", "minimum": 0},
+                            "max_missing_percentage": {"type": "number", "minimum": 0, "maximum": 100}
+                        }
+                    },
+                    "data_issues": {
+                        "type": "object",
+                        "properties": {
+                            "constant_variables": {"type": "integer", "minimum": 0},
+                            "high_outlier_variables": {"type": "integer", "minimum": 0},
+                            "duplicate_rows": {"type": ["integer", "null"], "minimum": 0}
+                        }
+                    }
+                },
+                "description": "Detailed data quality assessment"
+            },
+            "recommendations": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Analysis-specific recommendations"
+            }
+        },
+        "required": ["is_valid", "warnings", "errors", "suggestions", "data_quality", "recommendations"],
+        "additionalProperties": False
+    },
     description="Validate data quality and identify potential issues before analysis",
 )
 async def validate_data(context, params) -> dict[str, Any]:
@@ -677,6 +783,95 @@ def _get_analysis_recommendations(
             },
         },
         "required": ["dataset_name"],
+    },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "data": {
+                "type": "object",
+                "description": "Example dataset in column-wise format",
+                "additionalProperties": {
+                    "type": "array",
+                    "items": {"type": ["string", "number", "boolean", "null"]}
+                }
+            },
+            "metadata": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "enum": ["sales", "economics", "customers", "timeseries", "survey"],
+                        "description": "Dataset name"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Dataset description and purpose"
+                    },
+                    "size": {
+                        "type": "string",
+                        "enum": ["small", "medium", "large"],
+                        "description": "Size category of the dataset"
+                    },
+                    "rows": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Number of rows in the dataset"
+                    },
+                    "columns": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Number of columns in the dataset"
+                    },
+                    "has_noise": {
+                        "type": "boolean",
+                        "description": "Whether noise/missing values were added"
+                    }
+                },
+                "description": "Dataset metadata and information"
+            },
+            "statistics": {
+                "type": "object",
+                "description": "Basic statistics for numeric variables",
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                        "mean": {"type": "number"},
+                        "sd": {"type": "number", "minimum": 0},
+                        "min": {"type": "number"},
+                        "max": {"type": "number"},
+                        "missing": {"type": "integer", "minimum": 0}
+                    }
+                }
+            },
+            "suggested_analyses": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Suggested analyses appropriate for this dataset"
+            },
+            "variable_info": {
+                "type": "object",
+                "properties": {
+                    "numeric_variables": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Names of numeric variables"
+                    },
+                    "categorical_variables": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Names of categorical variables"
+                    },
+                    "variable_types": {
+                        "type": "object",
+                        "description": "Data type for each variable",
+                        "additionalProperties": {"type": "string"}
+                    }
+                },
+                "description": "Information about variables in the dataset"
+            }
+        },
+        "required": ["data", "metadata", "statistics", "suggested_analyses", "variable_info"],
+        "additionalProperties": False
     },
     description="Load example datasets for testing and learning",
 )

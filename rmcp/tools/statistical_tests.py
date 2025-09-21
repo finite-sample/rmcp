@@ -33,6 +33,95 @@ from ..registries.tools import tool
         },
         "required": ["data", "variable"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "test_type": {
+                "type": "string",
+                "description": "Type of t-test performed",
+                "enum": ["One-sample t-test", "Paired t-test", "Two-sample t-test (equal variances)", "Welch's t-test"]
+            },
+            "statistic": {
+                "type": "number",
+                "description": "t-statistic value"
+            },
+            "df": {
+                "type": "number",
+                "description": "Degrees of freedom",
+                "minimum": 0
+            },
+            "p_value": {
+                "type": "number",
+                "description": "P-value of the test",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "confidence_interval": {
+                "type": "object",
+                "properties": {
+                    "lower": {"type": "number"},
+                    "upper": {"type": "number"},
+                    "level": {"type": "number", "minimum": 0, "maximum": 1}
+                },
+                "description": "Confidence interval for the mean difference"
+            },
+            "alternative": {
+                "type": "string",
+                "enum": ["two.sided", "less", "greater"],
+                "description": "Alternative hypothesis"
+            },
+            "mean": {
+                "type": "number",
+                "description": "Sample mean (one-sample test)"
+            },
+            "null_value": {
+                "type": "number",
+                "description": "Null hypothesis value (one-sample test)"
+            },
+            "n_obs": {
+                "type": "integer",
+                "description": "Number of observations (one-sample test)",
+                "minimum": 1
+            },
+            "mean_x": {
+                "type": "number",
+                "description": "Mean of group x (two-sample test)"
+            },
+            "mean_y": {
+                "type": "number",
+                "description": "Mean of group y (two-sample test)"
+            },
+            "mean_difference": {
+                "type": "number",
+                "description": "Difference between group means (two-sample test)"
+            },
+            "groups": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Group levels (two-sample test)"
+            },
+            "paired": {
+                "type": "boolean",
+                "description": "Whether test was paired (two-sample test)"
+            },
+            "var_equal": {
+                "type": "boolean",
+                "description": "Whether equal variances assumed (two-sample test)"
+            },
+            "n_obs_x": {
+                "type": "integer",
+                "description": "Number of observations in group x (two-sample test)",
+                "minimum": 1
+            },
+            "n_obs_y": {
+                "type": "integer",
+                "description": "Number of observations in group y (two-sample test)",
+                "minimum": 1
+            }
+        },
+        "required": ["test_type", "statistic", "df", "p_value", "confidence_interval", "alternative"],
+        "additionalProperties": False
+    },
     description="Perform t-tests (one-sample, two-sample, paired)",
 )
 async def t_test(context, params) -> dict[str, Any]:
@@ -137,6 +226,90 @@ async def t_test(context, params) -> dict[str, Any]:
         },
         "required": ["data", "formula"],
     },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "anova_table": {
+                "type": "object",
+                "properties": {
+                    "terms": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Model terms/factors"
+                    },
+                    "df": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Degrees of freedom"
+                    },
+                    "sum_sq": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Sum of squares"
+                    },
+                    "mean_sq": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Mean squares"
+                    },
+                    "f_value": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "F-statistics"
+                    },
+                    "p_value": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "P-values"
+                    }
+                },
+                "description": "ANOVA table with test statistics"
+            },
+            "model_summary": {
+                "type": "object",
+                "properties": {
+                    "r_squared": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "description": "R-squared value"
+                    },
+                    "adj_r_squared": {
+                        "type": "number",
+                        "maximum": 1,
+                        "description": "Adjusted R-squared value"
+                    },
+                    "residual_se": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Residual standard error"
+                    },
+                    "df_residual": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Residual degrees of freedom"
+                    },
+                    "n_obs": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Number of observations"
+                    }
+                },
+                "description": "Overall model fit statistics"
+            },
+            "formula": {
+                "type": "string",
+                "description": "Model formula used"
+            },
+            "anova_type": {
+                "type": "string",
+                "description": "Type of ANOVA performed",
+                "enum": ["Type I", "Type II", "Type III"]
+            }
+        },
+        "required": ["anova_table", "model_summary", "formula", "anova_type"],
+        "additionalProperties": False
+    },
     description="Analysis of Variance (ANOVA) with multiple types",
 )
 async def anova(context, params) -> dict[str, Any]:
@@ -239,6 +412,73 @@ async def anova(context, params) -> dict[str, Any]:
                 "additionalProperties": False,
             },
         ],
+    },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "test_type": {
+                "type": "string",
+                "description": "Type of chi-square test performed",
+                "enum": ["Chi-square test of independence", "Chi-square goodness of fit test"]
+            },
+            "statistic": {
+                "type": "number",
+                "description": "Chi-square test statistic",
+                "minimum": 0
+            },
+            "df": {
+                "type": "number",
+                "description": "Degrees of freedom",
+                "minimum": 0
+            },
+            "p_value": {
+                "type": "number",
+                "description": "P-value of the test",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "expected_frequencies": {
+                "type": "array",
+                "description": "Expected frequencies under null hypothesis",
+                "items": {"type": "array", "items": {"type": "number"}}
+            },
+            "residuals": {
+                "type": "array",
+                "description": "Standardized residuals",
+                "items": {"type": "array", "items": {"type": "number"}}
+            },
+            "contingency_table": {
+                "type": "array",
+                "description": "Observed contingency table (independence test)",
+                "items": {"type": "array", "items": {"type": "number"}}
+            },
+            "x_variable": {
+                "type": "string",
+                "description": "X variable name (independence test)"
+            },
+            "y_variable": {
+                "type": "string",
+                "description": "Y variable name (independence test)"
+            },
+            "cramers_v": {
+                "type": "number",
+                "description": "Cramer's V effect size (independence test)",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "observed_frequencies": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Observed frequencies (goodness of fit test)"
+            },
+            "categories": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Category names (goodness of fit test)"
+            }
+        },
+        "required": ["test_type", "statistic", "df", "p_value", "expected_frequencies", "residuals"],
+        "additionalProperties": False
     },
     description="Chi-square tests for independence and goodness of fit",
 )
@@ -351,6 +591,63 @@ async def chi_square_test(context, params) -> dict[str, Any]:
             },
         },
         "required": ["data", "variable"],
+    },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "test_name": {
+                "type": "string",
+                "description": "Name of the normality test performed",
+                "enum": ["Shapiro-Wilk normality test", "Jarque-Bera normality test", "Anderson-Darling normality test"]
+            },
+            "statistic": {
+                "type": "number",
+                "description": "Test statistic value"
+            },
+            "df": {
+                "type": "number",
+                "description": "Degrees of freedom (Jarque-Bera only)",
+                "minimum": 0
+            },
+            "p_value": {
+                "type": "number",
+                "description": "P-value of the test",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "is_normal": {
+                "type": "boolean",
+                "description": "Whether data appears normal (p > 0.05)"
+            },
+            "variable": {
+                "type": "string",
+                "description": "Variable tested for normality"
+            },
+            "n_obs": {
+                "type": "integer",
+                "description": "Number of valid observations",
+                "minimum": 1
+            },
+            "mean": {
+                "type": "number",
+                "description": "Sample mean"
+            },
+            "sd": {
+                "type": "number",
+                "description": "Sample standard deviation",
+                "minimum": 0
+            },
+            "skewness": {
+                "type": "number",
+                "description": "Sample skewness"
+            },
+            "excess_kurtosis": {
+                "type": "number",
+                "description": "Excess kurtosis (normal distribution = 0)"
+            }
+        },
+        "required": ["test_name", "statistic", "p_value", "is_normal", "variable", "n_obs", "mean", "sd", "skewness", "excess_kurtosis"],
+        "additionalProperties": False
     },
     description="Test variables for normality (Shapiro-Wilk, Jarque-Bera, Anderson-Darling)",
 )
