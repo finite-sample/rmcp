@@ -15,7 +15,7 @@ import logging
 from pathlib import Path
 import inspect
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlparse
 
 from ..core.context import Context
 from ..security.vfs import VFS, VFSError
@@ -23,13 +23,54 @@ from ..security.vfs import VFS, VFSError
 logger = logging.getLogger(__name__)
 
 
+def _paginate_items(
+    items: List[Dict[str, Any]], cursor: Optional[str], limit: Optional[int]
+) -> tuple[List[Dict[str, Any]], Optional[str]]:
+    """Return a slice of items based on cursor/limit pagination."""
+
+    total_items = len(items)
+    start_index = 0
+
+    if cursor is not None:
+        if not isinstance(cursor, str):
+            raise ValueError("cursor must be a string if provided")
+
+        try:
+            start_index = int(cursor)
+        except ValueError as exc:  # pragma: no cover - defensive
+            raise ValueError("cursor must be an integer string") from exc
+
+        if start_index < 0 or start_index > total_items:
+            raise ValueError("cursor is out of range")
+
+    if limit is not None:
+        try:
+            limit_value = int(limit)
+        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
+            raise ValueError("limit must be an integer") from exc
+
+        if limit_value <= 0:
+            raise ValueError("limit must be a positive integer")
+    else:
+        limit_value = total_items - start_index
+
+    end_index = min(start_index + limit_value, total_items)
+    next_cursor = str(end_index) if end_index < total_items else None
+
+    return items[start_index:end_index], next_cursor
+
+
 class ResourcesRegistry:
     """Registry for MCP resources with VFS security."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        on_list_changed: Optional[Callable[[Optional[List[str]]], None]] = None,
+    ):
         self._static_resources: Dict[str, Dict[str, Any]] = {}
         self._memory_objects: Dict[str, Any] = {}
-        self._resource_templates: Dict[str, str] = {}
+        self._resource_templates: Dict[str, Dict[str, Any]] = {}
+        self._on_list_changed = on_list_changed
 
     def register_static_resource(
         self,
@@ -52,6 +93,7 @@ class ResourcesRegistry:
         }
 
         logger.debug(f"Registered static resource: {uri}")
+        self._emit_list_changed([uri])
 
     def register_memory_object(
         self,
@@ -73,6 +115,7 @@ class ResourcesRegistry:
         }
 
         logger.debug(f"Registered memory object: {name}")
+        self._emit_list_changed([uri])
 
     def register_resource_template(
         self,
@@ -82,32 +125,42 @@ class ResourcesRegistry:
     ) -> None:
         """Register a parameterized resource template."""
 
-        self._resource_templates[uri_template] = name
+        self._resource_templates[uri_template] = {
+            "name": name,
+            "description": description or f"Template: {name}",
+        }
 
         logger.debug(f"Registered resource template: {uri_template}")
+        self._emit_list_changed([uri_template])
 
-    async def list_resources(self, context: Context) -> Dict[str, Any]:
+    async def list_resources(
+        self,
+        context: Context,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
         """List available resources for MCP resources/list."""
 
-        resources = []
+        resources: List[Dict[str, Any]] = []
 
-        # Static resources
-        for resource_info in self._static_resources.values():
-            resources.append(resource_info)
+        for uri, resource_info in sorted(self._static_resources.items()):
+            entry: Dict[str, Any] = {"uri": uri, "name": resource_info["name"]}
+            if resource_info.get("description"):
+                entry["description"] = resource_info["description"]
+            if resource_info.get("mimeType"):
+                entry["mimeType"] = resource_info["mimeType"]
+            resources.append(entry)
 
-        # Resource templates
-        for uri_template, name in self._resource_templates.items():
-            resources.append(
-                {
-                    "uri": uri_template,
-                    "name": name,
-                    "description": f"Template: {name}",
-                }
-            )
+        for uri_template, metadata in sorted(self._resource_templates.items()):
+            entry = {"uri": uri_template, "name": metadata["name"]}
+            if metadata.get("description"):
+                entry["description"] = metadata["description"]
+            resources.append(entry)
 
-        # File system resources (if VFS configured)
         if hasattr(context.lifespan, "vfs") and context.lifespan.vfs:
-            for mount_name, mount_path in context.lifespan.resource_mounts.items():
+            for mount_name, mount_path in sorted(
+                context.lifespan.resource_mounts.items()
+            ):
                 resources.append(
                     {
                         "uri": f"file://{mount_name}/",
@@ -116,9 +169,20 @@ class ResourcesRegistry:
                     }
                 )
 
-        await context.info(f"Listed {len(resources)} available resources")
+        page, next_cursor = _paginate_items(resources, cursor, limit)
 
-        return {"resources": resources}
+        await context.info(
+            "Listed resources",
+            count=len(page),
+            total=len(resources),
+            next_cursor=next_cursor,
+        )
+
+        response: Dict[str, Any] = {"resources": page}
+        if next_cursor is not None:
+            response["nextCursor"] = next_cursor
+
+        return response
 
     async def read_resource(self, context: Context, uri: str) -> Dict[str, Any]:
         """Read a resource for MCP resources/read."""
@@ -279,6 +343,17 @@ class ResourcesRegistry:
                 }
             ]
         }
+
+    def _emit_list_changed(self, item_ids: Optional[List[str]] = None) -> None:
+        """Emit list changed notification when available."""
+
+        if not self._on_list_changed:
+            return
+
+        try:
+            self._on_list_changed(item_ids)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning("List changed callback failed for resources: %s", exc)
 
 
 def resource(

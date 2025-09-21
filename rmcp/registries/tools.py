@@ -23,6 +23,43 @@ from ..core.schemas import SchemaError, statistical_result_schema, validate_sche
 logger = logging.getLogger(__name__)
 
 
+def _paginate_items(
+    items: list[Any], cursor: str | None, limit: int | None
+) -> tuple[list[Any], str | None]:
+    """Return a slice of items based on cursor/limit pagination."""
+
+    total_items = len(items)
+    start_index = 0
+
+    if cursor is not None:
+        if not isinstance(cursor, str):
+            raise ValueError("cursor must be a string if provided")
+
+        try:
+            start_index = int(cursor)
+        except ValueError as exc:  # pragma: no cover - defensive
+            raise ValueError("cursor must be an integer string") from exc
+
+        if start_index < 0 or start_index > total_items:
+            raise ValueError("cursor is out of range")
+
+    if limit is not None:
+        try:
+            limit_value = int(limit)
+        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
+            raise ValueError("limit must be an integer") from exc
+
+        if limit_value <= 0:
+            raise ValueError("limit must be a positive integer")
+    else:
+        limit_value = total_items - start_index
+
+    end_index = min(start_index + limit_value, total_items)
+    next_cursor = str(end_index) if end_index < total_items else None
+
+    return items[start_index:end_index], next_cursor
+
+
 @dataclass
 class ToolDefinition:
     """Tool metadata and handler."""
@@ -39,8 +76,12 @@ class ToolDefinition:
 class ToolsRegistry:
     """Registry for MCP tools with schema validation."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        on_list_changed: Callable[[list[str] | None], None] | None = None,
+    ):
         self._tools: dict[str, ToolDefinition] = {}
+        self._on_list_changed = on_list_changed
 
     def register(
         self,
@@ -69,11 +110,21 @@ class ToolsRegistry:
 
         logger.debug(f"Registered tool: {name}")
 
-    async def list_tools(self, context: Context) -> dict[str, Any]:
+        self._emit_list_changed([name])
+
+    async def list_tools(
+        self,
+        context: Context,
+        cursor: str | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
         """List available tools for MCP tools/list."""
 
-        tools = []
-        for tool_def in self._tools.values():
+        ordered_tools = sorted(self._tools.values(), key=lambda tool: tool.name)
+        page, next_cursor = _paginate_items(ordered_tools, cursor, limit)
+
+        tools: list[dict[str, Any]] = []
+        for tool_def in page:
             tool_info = {
                 "name": tool_def.name,
                 "title": tool_def.title,
@@ -89,9 +140,18 @@ class ToolsRegistry:
 
             tools.append(tool_info)
 
-        await context.info(f"Listed {len(tools)} available tools")
+        await context.info(
+            "Listed tools",
+            count=len(tools),
+            total=len(ordered_tools),
+            next_cursor=next_cursor,
+        )
 
-        return {"tools": tools}
+        response: dict[str, Any] = {"tools": tools}
+        if next_cursor is not None:
+            response["nextCursor"] = next_cursor
+
+        return response
 
     async def call_tool(
         self, context: Context, name: str, arguments: dict[str, Any]
@@ -144,6 +204,17 @@ class ToolsRegistry:
                 "content": [{"type": "text", "text": f"Tool execution error: {e}"}],
                 "isError": True,
             }
+
+    def _emit_list_changed(self, item_ids: list[str] | None = None) -> None:
+        """Emit list changed notification when available."""
+
+        if not self._on_list_changed:
+            return
+
+        try:
+            self._on_list_changed(item_ids)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning("List changed callback failed for tools: %s", exc)
 
     def _format_tool_response(
         self, tool_def: ToolDefinition, result: Any

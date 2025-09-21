@@ -19,6 +19,43 @@ from ..core.schemas import SchemaError, validate_schema
 logger = logging.getLogger(__name__)
 
 
+def _paginate_items(
+    items: List["PromptDefinition"], cursor: Optional[str], limit: Optional[int]
+) -> tuple[List["PromptDefinition"], Optional[str]]:
+    """Return a slice of prompts based on cursor/limit pagination."""
+
+    total_items = len(items)
+    start_index = 0
+
+    if cursor is not None:
+        if not isinstance(cursor, str):
+            raise ValueError("cursor must be a string if provided")
+
+        try:
+            start_index = int(cursor)
+        except ValueError as exc:  # pragma: no cover - defensive
+            raise ValueError("cursor must be an integer string") from exc
+
+        if start_index < 0 or start_index > total_items:
+            raise ValueError("cursor is out of range")
+
+    if limit is not None:
+        try:
+            limit_value = int(limit)
+        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
+            raise ValueError("limit must be an integer") from exc
+
+        if limit_value <= 0:
+            raise ValueError("limit must be a positive integer")
+    else:
+        limit_value = total_items - start_index
+
+    end_index = min(start_index + limit_value, total_items)
+    next_cursor = str(end_index) if end_index < total_items else None
+
+    return items[start_index:end_index], next_cursor
+
+
 @dataclass
 class PromptDefinition:
     """Prompt template metadata and content."""
@@ -34,8 +71,12 @@ class PromptDefinition:
 class PromptsRegistry:
     """Registry for MCP prompts with templating support."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        on_list_changed: Optional[Callable[[Optional[List[str]]], None]] = None,
+    ):
         self._prompts: Dict[str, PromptDefinition] = {}
+        self._on_list_changed = on_list_changed
 
     def register(
         self,
@@ -62,11 +103,21 @@ class PromptsRegistry:
 
         logger.debug(f"Registered prompt: {name}")
 
-    async def list_prompts(self, context: Context) -> Dict[str, Any]:
+        self._emit_list_changed([name])
+
+    async def list_prompts(
+        self,
+        context: Context,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
         """List available prompts for MCP prompts/list."""
 
-        prompts = []
-        for prompt_def in self._prompts.values():
+        ordered_prompts = sorted(self._prompts.values(), key=lambda prompt: prompt.name)
+        page, next_cursor = _paginate_items(ordered_prompts, cursor, limit)
+
+        prompts: List[Dict[str, Any]] = []
+        for prompt_def in page:
             prompt_info = {
                 "name": prompt_def.name,
                 "title": prompt_def.title,
@@ -81,9 +132,18 @@ class PromptsRegistry:
 
             prompts.append(prompt_info)
 
-        await context.info(f"Listed {len(prompts)} available prompts")
+        await context.info(
+            "Listed prompts",
+            count=len(prompts),
+            total=len(ordered_prompts),
+            next_cursor=next_cursor,
+        )
 
-        return {"prompts": prompts}
+        response: Dict[str, Any] = {"prompts": prompts}
+        if next_cursor is not None:
+            response["nextCursor"] = next_cursor
+
+        return response
 
     async def get_prompt(
         self, context: Context, name: str, arguments: Optional[Dict[str, Any]] = None
@@ -136,6 +196,17 @@ class PromptsRegistry:
             raise ValueError(f"Missing template argument: {e}")
         except Exception as e:
             raise ValueError(f"Template rendering error: {e}")
+
+    def _emit_list_changed(self, item_ids: Optional[List[str]] = None) -> None:
+        """Emit list changed notification when available."""
+
+        if not self._on_list_changed:
+            return
+
+        try:
+            self._on_list_changed(item_ids)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning("List changed callback failed for prompts: %s", exc)
 
 
 def prompt(
