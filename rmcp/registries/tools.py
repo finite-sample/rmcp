@@ -284,7 +284,7 @@ class ToolsRegistry:
         if isinstance(base_payload, (dict, list)) and base_payload:
             # Check if this is a large dataset that should be stored as a resource
             resource_uri = self._check_for_large_data_and_create_resource(base_payload)
-            
+
             if resource_uri:
                 # Large dataset - provide resource link instead of inline data
                 structured_content.append(
@@ -294,20 +294,20 @@ class ToolsRegistry:
                             "uri": resource_uri,
                             "mimeType": "application/json",
                             "name": "Large Dataset",
-                            "description": f"Dataset with {self._estimate_data_size(base_payload)} items"
+                            "description": f"Dataset with {self._estimate_data_size(base_payload)} items",
                         },
-                        "annotations": {"large_data": True}
+                        "annotations": {"large_data": True},
                     }
                 )
-                
+
                 # Add summary in content for human readability
                 data_summary = self._create_data_summary(base_payload)
                 if data_summary:
                     content.append(
                         {
-                            "type": "text", 
+                            "type": "text",
                             "text": f"📊 **Large Dataset Created**\n\n{data_summary}\n\n*Full dataset available via resource link.*",
-                            "annotations": {"mimeType": "text/markdown"}
+                            "annotations": {"mimeType": "text/markdown"},
                         }
                     )
             else:
@@ -316,13 +316,17 @@ class ToolsRegistry:
                     {
                         "type": "json",
                         "data": base_payload,
-                        "annotations": {"mimeType": "application/json"}
+                        "annotations": {"mimeType": "application/json"},
                     }
                 )
 
         # Add images to both content streams
         if image_data:
-            image_block = {"type": "image", "data": image_data, "mimeType": image_mime_type}
+            image_block = {
+                "type": "image",
+                "data": image_data,
+                "mimeType": image_mime_type,
+            }
             content.append(image_block)
             structured_content.append(image_block)
 
@@ -378,18 +382,18 @@ class ToolsRegistry:
     def _check_for_large_data_and_create_resource(self, data: Any) -> str | None:
         """
         Check if data is large and should be stored as a resource.
-        
+
         Returns resource URI if data should be stored as resource, None otherwise.
         """
         # Thresholds for considering data "large"
         MAX_ROWS = 1000
         MAX_SIZE_BYTES = 50 * 1024  # 50KB
-        
+
         try:
             # Estimate data size
             data_json = json.dumps(data, default=str)
-            size_bytes = len(data_json.encode('utf-8'))
-            
+            size_bytes = len(data_json.encode("utf-8"))
+
             # Check if it's a table-like structure with many rows
             is_large_table = False
             if isinstance(data, dict):
@@ -397,80 +401,80 @@ class ToolsRegistry:
                 if self._is_tabular_data(data):
                     num_rows = self._count_table_rows(data)
                     is_large_table = num_rows > MAX_ROWS
-                    
+
                 # Check for array of objects format [{col1: val, col2: val}, ...]
                 elif "data" in data and isinstance(data["data"], list):
                     is_large_table = len(data["data"]) > MAX_ROWS
-                    
+
             elif isinstance(data, list) and len(data) > MAX_ROWS:
                 is_large_table = True
-                
+
             # Create resource if data is large
             if size_bytes > MAX_SIZE_BYTES or is_large_table:
                 resource_id = str(uuid.uuid4())
                 resource_uri = f"rmcp://data/{resource_id}"
-                
+
                 # Store data in server's resource registry
                 # This is a simplified implementation - in production you might want
                 # to store in a proper cache/database
-                if not hasattr(self, '_large_data_store'):
+                if not hasattr(self, "_large_data_store"):
                     self._large_data_store = {}
-                    
+
                 self._large_data_store[resource_id] = {
-                    'data': data,
-                    'content_type': 'application/json',
-                    'size_bytes': size_bytes
+                    "data": data,
+                    "content_type": "application/json",
+                    "size_bytes": size_bytes,
                 }
-                
+
                 return resource_uri
-                
+
         except Exception as e:
             # If we can't serialize or analyze the data, just return None
             # and let it be handled as normal inline data
             pass
-            
+
         return None
-        
+
     def _is_tabular_data(self, data: dict) -> bool:
         """Check if data is in tabular format (column-wise)."""
         if not isinstance(data, dict):
             return False
-            
+
         # Look for data key containing column-wise structure
         if "data" in data and isinstance(data["data"], dict):
             data_obj = data["data"]
         else:
             data_obj = data
-            
+
         # Check if all values are lists of similar length
         if not data_obj:
             return False
-            
+
         list_values = [v for v in data_obj.values() if isinstance(v, list)]
         if len(list_values) < 2:  # Need at least 2 columns to be considered tabular
             return False
-            
+
         # Check if all lists have similar lengths (within 10% of each other)
         lengths = [len(lst) for lst in list_values]
         if not lengths:
             return False
-            
+
         min_len, max_len = min(lengths), max(lengths)
         return max_len - min_len <= max(1, min_len * 0.1)
-        
+
     def _count_table_rows(self, data: dict) -> int:
         """Count rows in tabular data."""
         if "data" in data and isinstance(data["data"], dict):
             data_obj = data["data"]
         else:
             data_obj = data
-            
+
         # Find the first list value to get row count
         for value in data_obj.values():
             if isinstance(value, list):
                 return len(value)
         return 0
-        
+
     def _estimate_data_size(self, data: Any) -> str:
         """Create a human-readable estimate of data size."""
         if isinstance(data, dict):
@@ -484,39 +488,43 @@ class ToolsRegistry:
             return f"{len(data):,} items"
         else:
             return "large dataset"
-            
+
     def _create_data_summary(self, data: Any) -> str:
         """Create a summary of large dataset for human readers."""
         summary_parts = []
-        
+
         if isinstance(data, dict):
             if self._is_tabular_data(data):
                 rows = self._count_table_rows(data)
-                
+
                 # Get column info
                 if "data" in data and isinstance(data["data"], dict):
                     columns = list(data["data"].keys())
                 else:
                     columns = [k for k, v in data.items() if isinstance(v, list)]
-                    
-                summary_parts.append(f"**Dimensions**: {rows:,} rows × {len(columns)} columns")
-                
+
+                summary_parts.append(
+                    f"**Dimensions**: {rows:,} rows × {len(columns)} columns"
+                )
+
                 if columns:
                     col_preview = ", ".join(columns[:5])
                     if len(columns) > 5:
                         col_preview += f", ... ({len(columns)-5} more)"
                     summary_parts.append(f"**Columns**: {col_preview}")
-                    
+
                 # Show preview of first few rows if available
                 if rows > 0:
-                    summary_parts.append(f"**Preview**: First few rows available via resource")
-                    
+                    summary_parts.append(
+                        f"**Preview**: First few rows available via resource"
+                    )
+
             else:
                 summary_parts.append(f"**Type**: Dictionary with {len(data)} fields")
-                
+
         elif isinstance(data, list):
             summary_parts.append(f"**Type**: Array with {len(data):,} items")
-            
+
         return "\n".join(summary_parts)
 
 

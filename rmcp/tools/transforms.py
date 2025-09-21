@@ -31,27 +31,27 @@ from ..registries.tools import tool
                 "description": "Transformed dataset with lag/lead variables",
                 "additionalProperties": {
                     "type": "array",
-                    "items": {"type": ["number", "string", "null"]}
-                }
+                    "items": {"type": ["number", "string", "null"]},
+                },
             },
             "variables_created": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Names of newly created lag/lead variables"
+                "description": "Names of newly created lag/lead variables",
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations in result",
-                "minimum": 0
+                "minimum": 0,
             },
             "operation": {
                 "type": "string",
                 "enum": ["lag_lead"],
-                "description": "Type of transformation performed"
-            }
+                "description": "Type of transformation performed",
+            },
         },
         "required": ["data", "variables_created", "n_obs", "operation"],
-        "additionalProperties": False
+        "additionalProperties": False,
     },
     description="Create lagged and lead variables for time series analysis",
 )
@@ -128,8 +128,8 @@ async def lag_lead(context, params) -> dict[str, Any]:
                 "description": "Dataset with winsorized variables",
                 "additionalProperties": {
                     "type": "array",
-                    "items": {"type": ["number", "string", "null"]}
-                }
+                    "items": {"type": ["number", "string", "null"]},
+                },
             },
             "outliers_summary": {
                 "type": "object",
@@ -141,28 +141,34 @@ async def lag_lead(context, params) -> dict[str, Any]:
                         "upper_threshold": {"type": "number"},
                         "n_capped_lower": {"type": "integer", "minimum": 0},
                         "n_capped_upper": {"type": "integer", "minimum": 0},
-                        "total_capped": {"type": "integer", "minimum": 0}
-                    }
-                }
+                        "total_capped": {"type": "integer", "minimum": 0},
+                    },
+                },
             },
             "percentiles": {
                 "type": "array",
                 "items": {"type": "number"},
-                "description": "Percentile thresholds used for winsorization"
+                "description": "Percentile thresholds used for winsorization",
             },
             "variables_winsorized": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Variables that were winsorized"
+                "description": "Variables that were winsorized",
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations in result",
-                "minimum": 0
-            }
+                "minimum": 0,
+            },
         },
-        "required": ["data", "outliers_summary", "percentiles", "variables_winsorized", "n_obs"],
-        "additionalProperties": False
+        "required": [
+            "data",
+            "outliers_summary",
+            "percentiles",
+            "variables_winsorized",
+            "n_obs",
+        ],
+        "additionalProperties": False,
     },
     description="Winsorize variables to handle outliers",
 )
@@ -243,32 +249,38 @@ async def winsorize(context, params) -> dict[str, Any]:
                 "description": "Dataset with differenced variables",
                 "additionalProperties": {
                     "type": "array",
-                    "items": {"type": ["number", "string", "null"]}
-                }
+                    "items": {"type": ["number", "string", "null"]},
+                },
             },
             "variables_differenced": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Original variables that were differenced"
+                "description": "Original variables that were differenced",
             },
             "difference_order": {
                 "type": "integer",
                 "description": "Order of differencing applied",
                 "minimum": 1,
-                "maximum": 3
+                "maximum": 3,
             },
             "log_transformed": {
                 "type": "boolean",
-                "description": "Whether log transformation was applied before differencing"
+                "description": "Whether log transformation was applied before differencing",
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations in result",
-                "minimum": 0
-            }
+                "minimum": 0,
+            },
         },
-        "required": ["data", "variables_differenced", "difference_order", "log_transformed", "n_obs"],
-        "additionalProperties": False
+        "required": [
+            "data",
+            "variables_differenced",
+            "difference_order",
+            "log_transformed",
+            "n_obs",
+        ],
+        "additionalProperties": False,
     },
     description="Compute differences of variables (for stationarity)",
 )
@@ -358,35 +370,41 @@ async def difference(context, params) -> dict[str, Any]:
                 "description": "Dataset with standardized variables",
                 "additionalProperties": {
                     "type": "array",
-                    "items": {"type": ["number", "string", "null"]}
-                }
+                    "items": {"type": ["number", "string", "null"]},
+                },
             },
             "scaling_method": {
                 "type": "string",
                 "enum": ["z_score", "min_max", "robust"],
-                "description": "Standardization method used"
+                "description": "Standardization method used",
             },
             "scaling_info": {
                 "type": "object",
                 "description": "Scaling parameters for each variable",
                 "additionalProperties": {
                     "type": "object",
-                    "additionalProperties": {"type": "number"}
-                }
+                    "additionalProperties": {"type": "number"},
+                },
             },
             "variables_scaled": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Variables that were standardized"
+                "description": "Variables that were standardized",
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations in result",
-                "minimum": 0
-            }
+                "minimum": 0,
+            },
         },
-        "required": ["data", "scaling_method", "scaling_info", "variables_scaled", "n_obs"],
-        "additionalProperties": False
+        "required": [
+            "data",
+            "scaling_method",
+            "scaling_info",
+            "variables_scaled",
+            "n_obs",
+        ],
+        "additionalProperties": False,
     },
     description="Standardize variables using z-score, min-max, or robust scaling",
 )

@@ -41,17 +41,17 @@ from ..registries.tools import tool
             "plot_type": {
                 "type": "string",
                 "enum": ["scatter_plot"],
-                "description": "Type of plot generated"
+                "description": "Type of plot generated",
             },
             "variables": {
-                "type": "object", 
+                "type": "object",
                 "properties": {
                     "x": {"type": "string"},
                     "y": {"type": "string"},
-                    "group": {"type": ["string", "null"]}
+                    "group": {"type": ["string", "null"]},
                 },
                 "required": ["x", "y"],
-                "description": "Variables plotted"
+                "description": "Variables plotted",
             },
             "statistics": {
                 "type": "object",
@@ -63,32 +63,32 @@ from ..registries.tools import tool
                         "properties": {
                             "slope": {"type": "number"},
                             "intercept": {"type": "number"},
-                            "r_squared": {"type": "number"}
-                        }
-                    }
+                            "r_squared": {"type": "number"},
+                        },
+                    },
                 },
-                "description": "Statistical summary of the plot"
+                "description": "Statistical summary of the plot",
             },
             "dimensions": {
                 "type": "object",
                 "properties": {
                     "width": {"type": "integer"},
-                    "height": {"type": "integer"}
+                    "height": {"type": "integer"},
                 },
-                "description": "Plot dimensions in pixels"
+                "description": "Plot dimensions in pixels",
             },
             "image_data": {
                 "type": "string",
-                "description": "Base64-encoded PNG image data"
+                "description": "Base64-encoded PNG image data",
             },
             "image_mime_type": {
                 "type": "string",
                 "enum": ["image/png"],
-                "description": "MIME type of the image"
-            }
+                "description": "MIME type of the image",
+            },
         },
         "required": ["plot_type", "variables"],
-        "additionalProperties": False
+        "additionalProperties": False,
     },
     description="Create scatter plot with optional grouping and trend lines",
 )
@@ -216,19 +216,19 @@ async def scatter_plot(context, params) -> dict[str, Any]:
             "plot_type": {
                 "type": "string",
                 "enum": ["histogram"],
-                "description": "Type of plot generated"
+                "description": "Type of plot generated",
             },
             "variable": {
                 "type": "string",
-                "description": "Variable analyzed in histogram"
+                "description": "Variable analyzed in histogram",
             },
             "group_variable": {
                 "type": ["string", "null"],
-                "description": "Grouping variable if specified"
+                "description": "Grouping variable if specified",
             },
             "bins": {
                 "type": "integer",
-                "description": "Number of bins used in histogram"
+                "description": "Number of bins used in histogram",
             },
             "statistics": {
                 "type": "object",
@@ -237,35 +237,35 @@ async def scatter_plot(context, params) -> dict[str, Any]:
                     "median": {"type": "number"},
                     "sd": {"type": "number"},
                     "skewness": {"type": "number"},
-                    "kurtosis": {"type": "number"}
+                    "kurtosis": {"type": "number"},
                 },
-                "description": "Descriptive statistics for the variable"
+                "description": "Descriptive statistics for the variable",
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of valid observations",
-                "minimum": 0
+                "minimum": 0,
             },
             "dimensions": {
                 "type": "object",
                 "properties": {
                     "width": {"type": "integer"},
-                    "height": {"type": "integer"}
+                    "height": {"type": "integer"},
                 },
-                "description": "Plot dimensions in pixels"
+                "description": "Plot dimensions in pixels",
             },
             "image_data": {
                 "type": "string",
-                "description": "Base64-encoded PNG image data"
+                "description": "Base64-encoded PNG image data",
             },
             "image_mime_type": {
                 "type": "string",
                 "enum": ["image/png"],
-                "description": "MIME type of the image"
-            }
+                "description": "MIME type of the image",
+            },
         },
         "required": ["plot_type", "variable", "bins", "statistics", "n_obs"],
-        "additionalProperties": False
+        "additionalProperties": False,
     },
     description="Create histogram with optional grouping and density overlay",
 )
@@ -399,15 +399,15 @@ async def histogram(context, params) -> dict[str, Any]:
             "plot_type": {
                 "type": "string",
                 "enum": ["boxplot"],
-                "description": "Type of plot generated"
+                "description": "Type of plot generated",
             },
             "variable": {
                 "type": "string",
-                "description": "Variable analyzed in boxplot"
+                "description": "Variable analyzed in boxplot",
             },
             "group_variable": {
                 "type": ["string", "null"],
-                "description": "Grouping variable if specified"
+                "description": "Grouping variable if specified",
             },
             "summary_statistics": {
                 "type": "object",
@@ -420,30 +420,30 @@ async def histogram(context, params) -> dict[str, Any]:
                         "q3": {"type": "number"},
                         "iqr": {"type": "number"},
                         "n": {"type": "integer"},
-                        "outliers": {"type": "integer"}
-                    }
-                }
+                        "outliers": {"type": "integer"},
+                    },
+                },
             },
             "dimensions": {
                 "type": "object",
                 "properties": {
                     "width": {"type": "integer"},
-                    "height": {"type": "integer"}
+                    "height": {"type": "integer"},
                 },
-                "description": "Plot dimensions in pixels"
+                "description": "Plot dimensions in pixels",
             },
             "image_data": {
                 "type": "string",
-                "description": "Base64-encoded PNG image data"
+                "description": "Base64-encoded PNG image data",
             },
             "image_mime_type": {
                 "type": "string",
                 "enum": ["image/png"],
-                "description": "MIME type of the image"
-            }
+                "description": "MIME type of the image",
+            },
         },
         "required": ["plot_type", "variable", "summary_statistics"],
-        "additionalProperties": False
+        "additionalProperties": False,
     },
     description="Create box plot with optional grouping",
 )
@@ -599,7 +599,7 @@ async def boxplot(context, params) -> dict[str, Any]:
             "plot_type": {
                 "type": "string",
                 "enum": ["time_series_plot"],
-                "description": "Type of plot generated"
+                "description": "Type of plot generated",
             },
             "statistics": {
                 "type": "object",
@@ -609,38 +609,38 @@ async def boxplot(context, params) -> dict[str, Any]:
                     "min": {"type": "number"},
                     "max": {"type": "number"},
                     "range": {"type": "number"},
-                    "n_obs": {"type": "integer"}
+                    "n_obs": {"type": "integer"},
                 },
-                "description": "Time series descriptive statistics"
+                "description": "Time series descriptive statistics",
             },
             "has_dates": {
                 "type": "boolean",
-                "description": "Whether date information was provided"
+                "description": "Whether date information was provided",
             },
             "show_trend": {
                 "type": "boolean",
-                "description": "Whether trend line was included"
+                "description": "Whether trend line was included",
             },
             "dimensions": {
                 "type": "object",
                 "properties": {
                     "width": {"type": "integer"},
-                    "height": {"type": "integer"}
+                    "height": {"type": "integer"},
                 },
-                "description": "Plot dimensions in pixels"
+                "description": "Plot dimensions in pixels",
             },
             "image_data": {
                 "type": "string",
-                "description": "Base64-encoded PNG image data"
+                "description": "Base64-encoded PNG image data",
             },
             "image_mime_type": {
                 "type": "string",
                 "enum": ["image/png"],
-                "description": "MIME type of the image"
-            }
+                "description": "MIME type of the image",
+            },
         },
         "required": ["plot_type", "statistics", "has_dates", "show_trend"],
-        "additionalProperties": False
+        "additionalProperties": False,
     },
     description="Create time series plot with optional trend line",
 )
@@ -788,51 +788,54 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             "plot_type": {
                 "type": "string",
                 "enum": ["correlation_heatmap"],
-                "description": "Type of plot generated"
+                "description": "Type of plot generated",
             },
             "correlation_matrix": {
                 "type": "object",
                 "description": "Correlation coefficients between variables",
-                "additionalProperties": {
-                    "type": "array",
-                    "items": {"type": "number"}
-                }
+                "additionalProperties": {"type": "array", "items": {"type": "number"}},
             },
             "variables": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Variables included in correlation matrix"
+                "description": "Variables included in correlation matrix",
             },
             "method": {
                 "type": "string",
                 "enum": ["pearson", "spearman", "kendall"],
-                "description": "Correlation method used"
+                "description": "Correlation method used",
             },
             "n_variables": {
                 "type": "integer",
                 "description": "Number of variables in correlation matrix",
-                "minimum": 2
+                "minimum": 2,
             },
             "dimensions": {
                 "type": "object",
                 "properties": {
                     "width": {"type": "integer"},
-                    "height": {"type": "integer"}
+                    "height": {"type": "integer"},
                 },
-                "description": "Plot dimensions in pixels"
+                "description": "Plot dimensions in pixels",
             },
             "image_data": {
                 "type": "string",
-                "description": "Base64-encoded PNG image data"
+                "description": "Base64-encoded PNG image data",
             },
             "image_mime_type": {
                 "type": "string",
                 "enum": ["image/png"],
-                "description": "MIME type of the image"
-            }
+                "description": "MIME type of the image",
+            },
         },
-        "required": ["plot_type", "correlation_matrix", "variables", "method", "n_variables"],
-        "additionalProperties": False
+        "required": [
+            "plot_type",
+            "correlation_matrix",
+            "variables",
+            "method",
+            "n_variables",
+        ],
+        "additionalProperties": False,
     },
     description="Create correlation heatmap matrix",
 )
@@ -970,57 +973,62 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             "plot_type": {
                 "type": "string",
                 "enum": ["regression_plot"],
-                "description": "Type of plot generated"
+                "description": "Type of plot generated",
             },
             "r_squared": {
                 "type": "number",
                 "description": "R-squared value of the regression model",
                 "minimum": 0,
-                "maximum": 1
+                "maximum": 1,
             },
             "adj_r_squared": {
                 "type": "number",
                 "description": "Adjusted R-squared value",
-                "maximum": 1
+                "maximum": 1,
             },
             "residual_se": {
                 "type": "number",
                 "description": "Residual standard error",
-                "minimum": 0
+                "minimum": 0,
             },
-            "formula": {
-                "type": "string",
-                "description": "Regression formula used"
-            },
+            "formula": {"type": "string", "description": "Regression formula used"},
             "residual_plots": {
                 "type": "boolean",
-                "description": "Whether diagnostic plots were generated"
+                "description": "Whether diagnostic plots were generated",
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations in the model",
-                "minimum": 1
+                "minimum": 1,
             },
             "dimensions": {
                 "type": "object",
                 "properties": {
                     "width": {"type": "integer"},
-                    "height": {"type": "integer"}
+                    "height": {"type": "integer"},
                 },
-                "description": "Plot dimensions in pixels"
+                "description": "Plot dimensions in pixels",
             },
             "image_data": {
                 "type": "string",
-                "description": "Base64-encoded PNG image data"
+                "description": "Base64-encoded PNG image data",
             },
             "image_mime_type": {
                 "type": "string",
                 "enum": ["image/png"],
-                "description": "MIME type of the image"
-            }
+                "description": "MIME type of the image",
+            },
         },
-        "required": ["plot_type", "r_squared", "adj_r_squared", "residual_se", "formula", "residual_plots", "n_obs"],
-        "additionalProperties": False
+        "required": [
+            "plot_type",
+            "r_squared",
+            "adj_r_squared",
+            "residual_se",
+            "formula",
+            "residual_plots",
+            "n_obs",
+        ],
+        "additionalProperties": False,
     },
     description="Create regression diagnostic plots (fitted vs residuals, Q-Q plot, etc.)",
 )

@@ -243,9 +243,9 @@ class TestHTTPTransportMCPCompliance:
                     headers["Mcp-Session-Id"] = session_id
 
                 response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/", 
+                    f"http://127.0.0.1:{transport.port}/",
                     json=tool_call_request,
-                    headers=headers
+                    headers=headers,
                 )
 
                 assert response.status_code == 200

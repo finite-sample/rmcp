@@ -55,7 +55,7 @@ class LifespanState:
 
     # Virtual File System (for security isolation)
     vfs: Optional[Any] = None
-    
+
     # Logging
     current_log_level: str = "info"
 

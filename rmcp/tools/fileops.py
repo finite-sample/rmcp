@@ -37,8 +37,8 @@ from ..registries.tools import tool
                 "description": "CSV data in column-wise format",
                 "additionalProperties": {
                     "type": "array",
-                    "items": {"type": ["string", "number", "boolean", "null"]}
-                }
+                    "items": {"type": ["string", "number", "boolean", "null"]},
+                },
             },
             "file_info": {
                 "type": "object",
@@ -49,12 +49,15 @@ from ..registries.tools import tool
                     "n_cols": {"type": "integer", "minimum": 0},
                     "column_names": {"type": "array", "items": {"type": "string"}},
                     "numeric_variables": {"type": "array", "items": {"type": "string"}},
-                    "character_variables": {"type": "array", "items": {"type": "string"}},
+                    "character_variables": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
                     "factor_variables": {"type": "array", "items": {"type": "string"}},
                     "file_size_bytes": {"type": ["number", "null"]},
-                    "modified_date": {"type": ["string", "null"]}
+                    "modified_date": {"type": ["string", "null"]},
                 },
-                "description": "File metadata and structure information"
+                "description": "File metadata and structure information",
             },
             "parsing_info": {
                 "type": "object",
@@ -62,24 +65,33 @@ from ..registries.tools import tool
                     "header": {"type": "boolean"},
                     "separator": {"type": "string"},
                     "na_strings": {"type": "array", "items": {"type": "string"}},
-                    "rows_skipped": {"type": "integer", "minimum": 0}
+                    "rows_skipped": {"type": "integer", "minimum": 0},
                 },
-                "description": "Parsing parameters used"
+                "description": "Parsing parameters used",
             },
             "summary": {
                 "type": "object",
                 "properties": {
                     "rows_read": {"type": "integer", "minimum": 0},
                     "columns_read": {"type": "integer", "minimum": 0},
-                    "column_types": {"type": "object", "additionalProperties": {"type": "string"}},
-                    "missing_values": {"type": "object", "additionalProperties": {"type": "integer"}},
-                    "sample_data": {"type": "object", "description": "First few rows as sample"}
+                    "column_types": {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                    },
+                    "missing_values": {
+                        "type": "object",
+                        "additionalProperties": {"type": "integer"},
+                    },
+                    "sample_data": {
+                        "type": "object",
+                        "description": "First few rows as sample",
+                    },
                 },
-                "description": "Data summary and quality information"
-            }
+                "description": "Data summary and quality information",
+            },
         },
         "required": ["data", "file_info", "parsing_info", "summary"],
-        "additionalProperties": False
+        "additionalProperties": False,
     },
     description="Read CSV files with flexible parsing options",
 )
@@ -202,35 +214,42 @@ async def read_csv(context, params) -> dict[str, Any]:
         "properties": {
             "file_path": {
                 "type": "string",
-                "description": "Path where the file was written"
+                "description": "Path where the file was written",
             },
             "rows_written": {
                 "type": "integer",
                 "description": "Number of rows written to file",
-                "minimum": 0
+                "minimum": 0,
             },
             "cols_written": {
                 "type": "integer",
                 "description": "Number of columns written to file",
-                "minimum": 0
+                "minimum": 0,
             },
             "file_size_bytes": {
                 "type": "number",
                 "description": "Size of the written file in bytes",
-                "minimum": 0
+                "minimum": 0,
             },
             "success": {
                 "type": "boolean",
                 "enum": [True],
-                "description": "Whether the file was written successfully"
+                "description": "Whether the file was written successfully",
             },
             "timestamp": {
                 "type": "string",
-                "description": "Timestamp when the file was written"
-            }
+                "description": "Timestamp when the file was written",
+            },
         },
-        "required": ["file_path", "rows_written", "cols_written", "file_size_bytes", "success", "timestamp"],
-        "additionalProperties": False
+        "required": [
+            "file_path",
+            "rows_written",
+            "cols_written",
+            "file_size_bytes",
+            "success",
+            "timestamp",
+        ],
+        "additionalProperties": False,
     },
     description="Write data to CSV file with formatting options",
 )
@@ -299,9 +318,9 @@ async def write_csv(context, params) -> dict[str, Any]:
                 "type": "object",
                 "properties": {
                     "rows": {"type": "integer", "minimum": 0},
-                    "columns": {"type": "integer", "minimum": 0}
+                    "columns": {"type": "integer", "minimum": 0},
                 },
-                "description": "Dataset dimensions"
+                "description": "Dataset dimensions",
             },
             "variables": {
                 "type": "object",
@@ -311,14 +330,14 @@ async def write_csv(context, params) -> dict[str, Any]:
                     "character": {"type": "array", "items": {"type": "string"}},
                     "factor": {"type": "array", "items": {"type": "string"}},
                     "logical": {"type": "array", "items": {"type": "string"}},
-                    "date": {"type": "array", "items": {"type": "string"}}
+                    "date": {"type": "array", "items": {"type": "string"}},
                 },
-                "description": "Variables grouped by data type"
+                "description": "Variables grouped by data type",
             },
             "variable_types": {
                 "type": "object",
                 "description": "Data type for each variable",
-                "additionalProperties": {"type": "string"}
+                "additionalProperties": {"type": "string"},
             },
             "missing_values": {
                 "type": "object",
@@ -326,30 +345,36 @@ async def write_csv(context, params) -> dict[str, Any]:
                     "counts": {
                         "type": "object",
                         "additionalProperties": {"type": "integer"},
-                        "description": "Missing value count per variable"
+                        "description": "Missing value count per variable",
                     },
                     "percentages": {
                         "type": "object",
                         "additionalProperties": {"type": "number"},
-                        "description": "Missing value percentage per variable"
+                        "description": "Missing value percentage per variable",
                     },
                     "total_missing": {"type": "integer", "minimum": 0},
-                    "complete_cases": {"type": "integer", "minimum": 0}
+                    "complete_cases": {"type": "integer", "minimum": 0},
                 },
-                "description": "Missing value analysis"
+                "description": "Missing value analysis",
             },
             "memory_usage_bytes": {
                 "type": "number",
                 "description": "Memory usage of the dataset in bytes",
-                "minimum": 0
+                "minimum": 0,
             },
             "sample_data": {
                 "type": "object",
-                "description": "Sample of the first few rows (if requested)"
-            }
+                "description": "Sample of the first few rows (if requested)",
+            },
         },
-        "required": ["dimensions", "variables", "variable_types", "missing_values", "memory_usage_bytes"],
-        "additionalProperties": False
+        "required": [
+            "dimensions",
+            "variables",
+            "variable_types",
+            "missing_values",
+            "memory_usage_bytes",
+        ],
+        "additionalProperties": False,
     },
     description="Get comprehensive information about a dataset",
 )
@@ -453,37 +478,44 @@ async def data_info(context, params) -> dict[str, Any]:
                 "description": "Filtered dataset in column-wise format",
                 "additionalProperties": {
                     "type": "array",
-                    "items": {"type": ["string", "number", "boolean", "null"]}
-                }
+                    "items": {"type": ["string", "number", "boolean", "null"]},
+                },
             },
             "filter_expression": {
                 "type": "string",
-                "description": "R expression used for filtering"
+                "description": "R expression used for filtering",
             },
             "original_rows": {
                 "type": "integer",
                 "description": "Number of rows in original dataset",
-                "minimum": 0
+                "minimum": 0,
             },
             "filtered_rows": {
                 "type": "integer",
                 "description": "Number of rows after filtering",
-                "minimum": 0
+                "minimum": 0,
             },
             "rows_removed": {
                 "type": "integer",
                 "description": "Number of rows removed by filtering",
-                "minimum": 0
+                "minimum": 0,
             },
             "removal_percentage": {
                 "type": "number",
                 "description": "Percentage of rows removed",
                 "minimum": 0,
-                "maximum": 100
-            }
+                "maximum": 100,
+            },
         },
-        "required": ["data", "filter_expression", "original_rows", "filtered_rows", "rows_removed", "removal_percentage"],
-        "additionalProperties": False
+        "required": [
+            "data",
+            "filter_expression",
+            "original_rows",
+            "filtered_rows",
+            "rows_removed",
+            "removal_percentage",
+        ],
+        "additionalProperties": False,
     },
     description="Filter data based on multiple conditions",
 )
@@ -583,8 +615,8 @@ async def filter_data(context, params) -> dict[str, Any]:
                 "description": "Excel data in column-wise format",
                 "additionalProperties": {
                     "type": "array",
-                    "items": {"type": ["string", "number", "boolean", "null"]}
-                }
+                    "items": {"type": ["string", "number", "boolean", "null"]},
+                },
             },
             "file_info": {
                 "type": "object",
@@ -596,24 +628,33 @@ async def filter_data(context, params) -> dict[str, Any]:
                     "columns": {"type": "integer", "minimum": 0},
                     "column_names": {"type": "array", "items": {"type": "string"}},
                     "file_size_bytes": {"type": "number", "minimum": 0},
-                    "modified_date": {"type": "string"}
+                    "modified_date": {"type": "string"},
                 },
-                "description": "Excel file metadata and structure information"
+                "description": "Excel file metadata and structure information",
             },
             "summary": {
                 "type": "object",
                 "properties": {
                     "rows_read": {"type": "integer", "minimum": 0},
                     "columns_read": {"type": "integer", "minimum": 0},
-                    "column_types": {"type": "object", "additionalProperties": {"type": "string"}},
-                    "missing_values": {"type": "object", "additionalProperties": {"type": "integer"}},
-                    "sample_data": {"type": "object", "description": "First few rows as sample"}
+                    "column_types": {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                    },
+                    "missing_values": {
+                        "type": "object",
+                        "additionalProperties": {"type": "integer"},
+                    },
+                    "sample_data": {
+                        "type": "object",
+                        "description": "First few rows as sample",
+                    },
                 },
-                "description": "Data summary and quality information"
-            }
+                "description": "Data summary and quality information",
+            },
         },
         "required": ["data", "file_info", "summary"],
-        "additionalProperties": False
+        "additionalProperties": False,
     },
     description="Read Excel files (.xlsx, .xls) with flexible sheet and range selection",
 )
@@ -761,8 +802,8 @@ async def read_excel(context, params) -> dict[str, Any]:
                 "description": "JSON data converted to column-wise format",
                 "additionalProperties": {
                     "type": "array",
-                    "items": {"type": ["string", "number", "boolean", "null"]}
-                }
+                    "items": {"type": ["string", "number", "boolean", "null"]},
+                },
             },
             "file_info": {
                 "type": "object",
@@ -773,24 +814,33 @@ async def read_excel(context, params) -> dict[str, Any]:
                     "column_names": {"type": "array", "items": {"type": "string"}},
                     "file_size_bytes": {"type": ["number", "null"]},
                     "modified_date": {"type": ["string", "null"]},
-                    "is_url": {"type": "boolean"}
+                    "is_url": {"type": "boolean"},
                 },
-                "description": "JSON file metadata and structure information"
+                "description": "JSON file metadata and structure information",
             },
             "summary": {
                 "type": "object",
                 "properties": {
                     "rows_read": {"type": "integer", "minimum": 0},
                     "columns_read": {"type": "integer", "minimum": 0},
-                    "column_types": {"type": "object", "additionalProperties": {"type": "string"}},
-                    "missing_values": {"type": "object", "additionalProperties": {"type": "integer"}},
-                    "sample_data": {"type": "object", "description": "First few rows as sample"}
+                    "column_types": {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                    },
+                    "missing_values": {
+                        "type": "object",
+                        "additionalProperties": {"type": "integer"},
+                    },
+                    "sample_data": {
+                        "type": "object",
+                        "description": "First few rows as sample",
+                    },
                 },
-                "description": "Data summary and quality information"
-            }
+                "description": "Data summary and quality information",
+            },
         },
         "required": ["data", "file_info", "summary"],
-        "additionalProperties": False
+        "additionalProperties": False,
     },
     description="Read JSON files and convert to tabular format",
 )

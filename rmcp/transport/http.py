@@ -44,14 +44,14 @@ class HTTPTransport(Transport):
         super().__init__("HTTP")
         self.host = host
         self.port = port
-        
+
         # Session management
         self._sessions: Dict[str, Dict[str, Any]] = {}
         self._initialized_sessions: set[str] = set()
-        
+
         # Security validation
         self._is_localhost = host in ("localhost", "127.0.0.1", "::1")
-        
+
         # Issue security warning for remote binding
         if not self._is_localhost:
             logger.warning(
@@ -59,7 +59,7 @@ class HTTPTransport(Transport):
                 "This allows remote access! For production, implement proper authentication. "
                 "See https://spec.modelcontextprotocol.io/specification/server/transports/#security"
             )
-        
+
         self.app = FastAPI(title="RMCP HTTP Transport", version="1.0.0")
         self._notification_queue: queue.Queue[dict[str, Any]] = queue.Queue()
         self._setup_routes()
@@ -68,12 +68,12 @@ class HTTPTransport(Transport):
     def _setup_cors(self) -> None:
         """Configure CORS for web client access."""
         # Secure CORS configuration - only allow localhost origins by default
-        allowed_origins = [
-            "http://localhost:*",
-            "http://127.0.0.1:*", 
-            "http://[::1]:*"
-        ] if self._is_localhost else ["*"]  # Allow all for remote (with warning)
-        
+        allowed_origins = (
+            ["http://localhost:*", "http://127.0.0.1:*", "http://[::1]:*"]
+            if self._is_localhost
+            else ["*"]
+        )  # Allow all for remote (with warning)
+
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=allowed_origins,
@@ -105,22 +105,24 @@ class HTTPTransport(Transport):
     def _get_or_create_session(self, request: Request) -> str:
         """Get or create session ID from headers."""
         session_id = request.headers.get("mcp-session-id")
-        
+
         if not session_id:
             # Create new session for initialize
             session_id = str(uuid.uuid4())
             self._sessions[session_id] = {
                 "created_at": asyncio.get_event_loop().time(),
-                "initialized": False
+                "initialized": False,
             }
             logger.debug(f"Created new session: {session_id}")
-        
+
         return session_id
 
     def _check_session_initialized(self, session_id: str, method: str) -> None:
         """Check if session is initialized for non-initialize requests."""
         if method != "initialize" and session_id not in self._initialized_sessions:
-            raise HTTPException(400, "Session not initialized. Send initialize request first.")
+            raise HTTPException(
+                400, "Session not initialized. Send initialize request first."
+            )
 
     def _setup_routes(self) -> None:
         """Setup HTTP routes for MCP communication."""
@@ -130,12 +132,12 @@ class HTTPTransport(Transport):
             """Handle JSON-RPC requests via POST."""
             message: dict[str, Any] | None = None
             session_id: str | None = None
-            
+
             try:
                 # Security validations
                 self._validate_origin(request)
                 self._validate_protocol_version(request)
-                
+
                 # Parse request
                 message = await request.json()
                 logger.debug(f"Received JSON-RPC request: {message}")
@@ -146,10 +148,10 @@ class HTTPTransport(Transport):
                 # Session management
                 session_id = self._get_or_create_session(request)
                 method = message.get("method", "")
-                
+
                 # Check initialization state
                 self._check_session_initialized(session_id, method)
-                
+
                 # Track initialize completion
                 if method == "initialize":
                     self._initialized_sessions.add(session_id)
@@ -159,13 +161,13 @@ class HTTPTransport(Transport):
                 response = await self._message_handler(message)
 
                 logger.debug(f"Sending JSON-RPC response: {response}")
-                
+
                 # Add session ID to response headers
                 headers = {"Mcp-Session-Id": session_id}
                 return Response(
                     content=json.dumps(response or {}),
                     media_type="application/json",
-                    headers=headers
+                    headers=headers,
                 )
 
             except json.JSONDecodeError:
@@ -180,16 +182,16 @@ class HTTPTransport(Transport):
                         "id": base_message.get("id"),
                         "error": {"code": -32600, "message": str(e)},
                     }
-                
+
                 # Add session ID to error response if available
                 headers = {}
                 if session_id:
                     headers["Mcp-Session-Id"] = session_id
-                    
+
                 return Response(
                     content=json.dumps(error_response),
                     media_type="application/json",
-                    headers=headers
+                    headers=headers,
                 )
 
         async def handle_options(_request: Request) -> Response:

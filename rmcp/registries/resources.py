@@ -348,43 +348,47 @@ class ResourcesRegistry:
 
     async def _read_rmcp_resource(self, context: Context, parsed_uri) -> Dict[str, Any]:
         """Read rmcp:// resource for large dataset access."""
-        
+
         # Extract resource ID from URI path (rmcp://data/{resource_id})
-        path_parts = parsed_uri.path.strip('/').split('/')
-        if len(path_parts) != 2 or path_parts[0] != 'data':
+        path_parts = parsed_uri.path.strip("/").split("/")
+        if len(path_parts) != 2 or path_parts[0] != "data":
             raise ValueError(f"Invalid RMCP resource URI format: {parsed_uri.geturl()}")
-            
+
         resource_id = path_parts[1]
-        
+
         # Get tools registry from server context
         # This is a simplified approach - in production you might want a dedicated data store
-        server = getattr(context, '_server', None)
+        server = getattr(context, "_server", None)
         if not server:
             raise ValueError("Server context not available for RMCP resource access")
-            
-        tools_registry = getattr(server, 'tools', None) 
+
+        tools_registry = getattr(server, "tools", None)
         if not tools_registry:
             raise ValueError("Tools registry not available for RMCP resource access")
-            
+
         # Check if the resource exists in the large data store
-        if not hasattr(tools_registry, '_large_data_store'):
+        if not hasattr(tools_registry, "_large_data_store"):
             raise ValueError(f"RMCP resource not found: {resource_id}")
-            
+
         data_store = tools_registry._large_data_store
         if resource_id not in data_store:
             raise ValueError(f"RMCP resource not found: {resource_id}")
-            
+
         # Retrieve the stored data
         stored_resource = data_store[resource_id]
-        data = stored_resource['data']
-        content_type = stored_resource.get('content_type', 'application/json')
-        
+        data = stored_resource["data"]
+        content_type = stored_resource.get("content_type", "application/json")
+
         # Convert data to JSON string
         import json
+
         json_content = json.dumps(data, indent=2, default=str)
-        
-        await context.info(f"Retrieved RMCP resource: {resource_id}", size_bytes=stored_resource.get('size_bytes', 0))
-        
+
+        await context.info(
+            f"Retrieved RMCP resource: {resource_id}",
+            size_bytes=stored_resource.get("size_bytes", 0),
+        )
+
         return {
             "contents": [
                 {

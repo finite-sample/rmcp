@@ -30,76 +30,87 @@ from ..registries.tools import tool
             "cluster_assignments": {
                 "type": "array",
                 "items": {"type": "integer"},
-                "description": "Cluster assignment for each observation"
+                "description": "Cluster assignment for each observation",
             },
             "cluster_centers": {
                 "type": "object",
                 "description": "Centroid coordinates for each cluster",
-                "additionalProperties": {
-                    "type": "array",
-                    "items": {"type": "number"}
-                }
+                "additionalProperties": {"type": "array", "items": {"type": "number"}},
             },
             "cluster_sizes": {
                 "type": "object",
                 "description": "Number of observations in each cluster",
-                "additionalProperties": {"type": "integer"}
+                "additionalProperties": {"type": "integer"},
             },
             "within_ss": {
                 "type": "array",
                 "items": {"type": "number"},
-                "description": "Within-cluster sum of squares for each cluster"
+                "description": "Within-cluster sum of squares for each cluster",
             },
             "total_within_ss": {
                 "type": "number",
                 "description": "Total within-cluster sum of squares",
-                "minimum": 0
+                "minimum": 0,
             },
             "between_ss": {
                 "type": "number",
                 "description": "Between-cluster sum of squares",
-                "minimum": 0
+                "minimum": 0,
             },
             "total_ss": {
                 "type": "number",
                 "description": "Total sum of squares",
-                "minimum": 0
+                "minimum": 0,
             },
             "variance_explained": {
                 "type": "number",
                 "description": "Percentage of variance explained by clustering",
                 "minimum": 0,
-                "maximum": 100
+                "maximum": 100,
             },
             "silhouette_score": {
                 "type": "number",
                 "description": "Average silhouette score (-1 to 1, higher is better)",
                 "minimum": -1,
-                "maximum": 1
+                "maximum": 1,
             },
             "k": {
                 "type": "integer",
                 "description": "Number of clusters",
                 "minimum": 2,
-                "maximum": 20
+                "maximum": 20,
             },
             "variables": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Variables used for clustering"
+                "description": "Variables used for clustering",
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations clustered",
-                "minimum": 1
+                "minimum": 1,
             },
             "converged": {
                 "type": "boolean",
-                "description": "Whether the algorithm converged"
-            }
+                "description": "Whether the algorithm converged",
+            },
         },
-        "required": ["cluster_assignments", "cluster_centers", "cluster_sizes", "within_ss", "total_within_ss", "between_ss", "total_ss", "variance_explained", "silhouette_score", "k", "variables", "n_obs", "converged"],
-        "additionalProperties": False
+        "required": [
+            "cluster_assignments",
+            "cluster_centers",
+            "cluster_sizes",
+            "within_ss",
+            "total_within_ss",
+            "between_ss",
+            "total_ss",
+            "variance_explained",
+            "silhouette_score",
+            "k",
+            "variables",
+            "n_obs",
+            "converged",
+        ],
+        "additionalProperties": False,
     },
     description="K-means clustering analysis with cluster validation",
 )
@@ -195,7 +206,7 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
             "tree_type": {
                 "type": "string",
                 "enum": ["classification", "regression"],
-                "description": "Type of decision tree"
+                "description": "Type of decision tree",
             },
             "performance": {
                 "type": "object",
@@ -207,73 +218,76 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
                                 "type": "number",
                                 "minimum": 0,
                                 "maximum": 1,
-                                "description": "Classification accuracy"
+                                "description": "Classification accuracy",
                             },
                             "confusion_matrix": {
                                 "type": "array",
-                                "items": {
-                                    "type": "array",
-                                    "items": {"type": "number"}
-                                },
-                                "description": "Confusion matrix for classification"
-                            }
+                                "items": {"type": "array", "items": {"type": "number"}},
+                                "description": "Confusion matrix for classification",
+                            },
                         },
-                        "required": ["accuracy", "confusion_matrix"]
+                        "required": ["accuracy", "confusion_matrix"],
                     },
                     {
                         "properties": {
                             "mse": {
                                 "type": "number",
                                 "minimum": 0,
-                                "description": "Mean squared error"
+                                "description": "Mean squared error",
                             },
                             "rmse": {
                                 "type": "number",
                                 "minimum": 0,
-                                "description": "Root mean squared error"
+                                "description": "Root mean squared error",
                             },
                             "r_squared": {
                                 "type": "number",
                                 "maximum": 1,
-                                "description": "R-squared value"
-                            }
+                                "description": "R-squared value",
+                            },
                         },
-                        "required": ["mse", "rmse", "r_squared"]
-                    }
-                ]
+                        "required": ["mse", "rmse", "r_squared"],
+                    },
+                ],
             },
             "variable_importance": {
                 "type": "object",
                 "description": "Relative importance of variables",
-                "additionalProperties": {"type": "number"}
+                "additionalProperties": {"type": "number"},
             },
             "predictions": {
                 "type": "array",
                 "items": {"type": "number"},
-                "description": "Model predictions for training data"
+                "description": "Model predictions for training data",
             },
             "n_nodes": {
                 "type": "integer",
                 "description": "Number of nodes in the tree",
-                "minimum": 1
+                "minimum": 1,
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations",
-                "minimum": 1
+                "minimum": 1,
             },
-            "formula": {
-                "type": "string",
-                "description": "Model formula used"
-            },
+            "formula": {"type": "string", "description": "Model formula used"},
             "tree_complexity": {
                 "type": "number",
                 "description": "Complexity parameter of the tree",
-                "minimum": 0
-            }
+                "minimum": 0,
+            },
         },
-        "required": ["tree_type", "performance", "variable_importance", "predictions", "n_nodes", "n_obs", "formula", "tree_complexity"],
-        "additionalProperties": False
+        "required": [
+            "tree_type",
+            "performance",
+            "variable_importance",
+            "predictions",
+            "n_nodes",
+            "n_obs",
+            "formula",
+            "tree_complexity",
+        ],
+        "additionalProperties": False,
     },
     description="Decision tree classification and regression",
 )
@@ -381,7 +395,7 @@ async def decision_tree(context, params) -> dict[str, Any]:
             "problem_type": {
                 "type": "string",
                 "enum": ["classification", "regression"],
-                "description": "Type of machine learning problem"
+                "description": "Type of machine learning problem",
             },
             "performance": {
                 "type": "object",
@@ -393,82 +407,85 @@ async def decision_tree(context, params) -> dict[str, Any]:
                                 "type": "number",
                                 "minimum": 0,
                                 "maximum": 1,
-                                "description": "Out-of-bag error rate"
+                                "description": "Out-of-bag error rate",
                             },
                             "confusion_matrix": {
                                 "type": "array",
-                                "items": {
-                                    "type": "array",
-                                    "items": {"type": "number"}
-                                },
-                                "description": "Confusion matrix for classification"
+                                "items": {"type": "array", "items": {"type": "number"}},
+                                "description": "Confusion matrix for classification",
                             },
                             "class_error": {
                                 "type": "object",
                                 "description": "Error rate by class",
-                                "additionalProperties": {"type": "number"}
-                            }
+                                "additionalProperties": {"type": "number"},
+                            },
                         },
-                        "required": ["oob_error_rate", "confusion_matrix", "class_error"]
+                        "required": [
+                            "oob_error_rate",
+                            "confusion_matrix",
+                            "class_error",
+                        ],
                     },
                     {
                         "properties": {
                             "mse": {
                                 "type": "number",
                                 "minimum": 0,
-                                "description": "Mean squared error"
+                                "description": "Mean squared error",
                             },
                             "rmse": {
                                 "type": "number",
                                 "minimum": 0,
-                                "description": "Root mean squared error"
+                                "description": "Root mean squared error",
                             },
                             "variance_explained": {
                                 "type": "number",
                                 "description": "Percentage of variance explained",
-                                "maximum": 100
-                            }
+                                "maximum": 100,
+                            },
                         },
-                        "required": ["mse", "rmse", "variance_explained"]
-                    }
-                ]
+                        "required": ["mse", "rmse", "variance_explained"],
+                    },
+                ],
             },
             "variable_importance": {
                 "type": ["object", "null"],
                 "description": "Variable importance measures (if calculated)",
-                "additionalProperties": {
-                    "type": "array",
-                    "items": {"type": "number"}
-                }
+                "additionalProperties": {"type": "array", "items": {"type": "number"}},
             },
             "n_trees": {
                 "type": "integer",
                 "description": "Number of trees in the forest",
                 "minimum": 1,
-                "maximum": 1000
+                "maximum": 1000,
             },
             "mtry": {
                 "type": "integer",
                 "description": "Number of variables randomly sampled at each split",
-                "minimum": 1
+                "minimum": 1,
             },
             "oob_error": {
                 "type": "number",
                 "description": "Out-of-bag error estimate",
-                "minimum": 0
+                "minimum": 0,
             },
-            "formula": {
-                "type": "string",
-                "description": "Model formula used"
-            },
+            "formula": {"type": "string", "description": "Model formula used"},
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations",
-                "minimum": 1
-            }
+                "minimum": 1,
+            },
         },
-        "required": ["problem_type", "performance", "n_trees", "mtry", "oob_error", "formula", "n_obs"],
-        "additionalProperties": False
+        "required": [
+            "problem_type",
+            "performance",
+            "n_trees",
+            "mtry",
+            "oob_error",
+            "formula",
+            "n_obs",
+        ],
+        "additionalProperties": False,
     },
     description="Random Forest ensemble model for classification and regression",
 )

@@ -53,73 +53,78 @@ from ..registries.tools import tool
             "model_type": {
                 "type": "string",
                 "enum": ["ARIMA"],
-                "description": "Type of time series model"
+                "description": "Type of time series model",
             },
             "order": {
                 "type": "array",
                 "items": {"type": "integer"},
-                "description": "ARIMA order (p, d, q) and seasonal order if applicable"
+                "description": "ARIMA order (p, d, q) and seasonal order if applicable",
             },
             "coefficients": {
                 "type": "object",
                 "description": "Model coefficients",
-                "additionalProperties": {"type": "number"}
+                "additionalProperties": {"type": "number"},
             },
-            "aic": {
-                "type": "number",
-                "description": "Akaike Information Criterion"
-            },
-            "bic": {
-                "type": "number",
-                "description": "Bayesian Information Criterion"
-            },
-            "loglik": {
-                "type": "number",
-                "description": "Log-likelihood value"
-            },
+            "aic": {"type": "number", "description": "Akaike Information Criterion"},
+            "bic": {"type": "number", "description": "Bayesian Information Criterion"},
+            "loglik": {"type": "number", "description": "Log-likelihood value"},
             "sigma2": {
                 "type": "number",
                 "description": "Estimated innovation variance",
-                "minimum": 0
+                "minimum": 0,
             },
             "fitted_values": {
                 "type": "array",
                 "items": {"type": "number"},
-                "description": "Fitted values from the model"
+                "description": "Fitted values from the model",
             },
             "residuals": {
                 "type": "array",
                 "items": {"type": "number"},
-                "description": "Model residuals"
+                "description": "Model residuals",
             },
             "forecasts": {
                 "type": "array",
                 "items": {"type": "number"},
-                "description": "Point forecasts"
+                "description": "Point forecasts",
             },
             "forecast_lower": {
                 "type": "array",
                 "items": {"type": "number"},
-                "description": "Lower bounds of 95% prediction intervals"
+                "description": "Lower bounds of 95% prediction intervals",
             },
             "forecast_upper": {
                 "type": "array",
                 "items": {"type": "number"},
-                "description": "Upper bounds of 95% prediction intervals"
+                "description": "Upper bounds of 95% prediction intervals",
             },
             "accuracy": {
                 "type": "object",
                 "description": "Model accuracy metrics",
-                "additionalProperties": {"type": "number"}
+                "additionalProperties": {"type": "number"},
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations in training data",
-                "minimum": 1
-            }
+                "minimum": 1,
+            },
         },
-        "required": ["model_type", "order", "aic", "bic", "loglik", "sigma2", "fitted_values", "residuals", "forecasts", "forecast_lower", "forecast_upper", "accuracy", "n_obs"],
-        "additionalProperties": False
+        "required": [
+            "model_type",
+            "order",
+            "aic",
+            "bic",
+            "loglik",
+            "sigma2",
+            "fitted_values",
+            "residuals",
+            "forecasts",
+            "forecast_lower",
+            "forecast_upper",
+            "accuracy",
+            "n_obs",
+        ],
+        "additionalProperties": False,
     },
     description="Fit ARIMA time series model with forecasting",
 )
@@ -220,41 +225,49 @@ async def arima_model(context, params) -> dict[str, Any]:
             "original": {
                 "type": "array",
                 "items": {"type": "number"},
-                "description": "Original time series values"
+                "description": "Original time series values",
             },
             "trend": {
                 "type": "array",
                 "items": {"type": ["number", "null"]},
-                "description": "Trend component (may contain null values at ends)"
+                "description": "Trend component (may contain null values at ends)",
             },
             "seasonal": {
                 "type": "array",
                 "items": {"type": ["number", "null"]},
-                "description": "Seasonal component"
+                "description": "Seasonal component",
             },
             "remainder": {
                 "type": "array",
                 "items": {"type": ["number", "null"]},
-                "description": "Remainder/irregular component"
+                "description": "Remainder/irregular component",
             },
             "type": {
                 "type": "string",
                 "enum": ["additive", "multiplicative"],
-                "description": "Type of decomposition performed"
+                "description": "Type of decomposition performed",
             },
             "frequency": {
                 "type": "integer",
                 "description": "Seasonal frequency used",
-                "minimum": 1
+                "minimum": 1,
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations in time series",
-                "minimum": 1
-            }
+                "minimum": 1,
+            },
         },
-        "required": ["original", "trend", "seasonal", "remainder", "type", "frequency", "n_obs"],
-        "additionalProperties": False
+        "required": [
+            "original",
+            "trend",
+            "seasonal",
+            "remainder",
+            "type",
+            "frequency",
+            "n_obs",
+        ],
+        "additionalProperties": False,
     },
     description="Decompose time series into trend, seasonal, and remainder components",
 )
@@ -322,44 +335,47 @@ async def decompose_timeseries(context, params) -> dict[str, Any]:
             "test_name": {
                 "type": "string",
                 "description": "Full name of the stationarity test",
-                "enum": ["Augmented Dickey-Fuller", "KPSS", "Phillips-Perron"]
+                "enum": ["Augmented Dickey-Fuller", "KPSS", "Phillips-Perron"],
             },
             "test_type": {
                 "type": "string",
                 "description": "Short test identifier",
-                "enum": ["adf", "kpss", "pp"]
+                "enum": ["adf", "kpss", "pp"],
             },
-            "statistic": {
-                "type": "number",
-                "description": "Test statistic value"
-            },
+            "statistic": {"type": "number", "description": "Test statistic value"},
             "p_value": {
                 "type": "number",
                 "description": "P-value of the test",
                 "minimum": 0,
-                "maximum": 1
+                "maximum": 1,
             },
             "critical_values": {
                 "type": "object",
                 "description": "Critical values at different significance levels",
-                "additionalProperties": {"type": "number"}
+                "additionalProperties": {"type": "number"},
             },
-            "alternative": {
-                "type": "string",
-                "description": "Alternative hypothesis"
-            },
+            "alternative": {"type": "string", "description": "Alternative hypothesis"},
             "is_stationary": {
                 "type": "boolean",
-                "description": "Whether time series appears to be stationary"
+                "description": "Whether time series appears to be stationary",
             },
             "n_obs": {
                 "type": "integer",
                 "description": "Number of observations in time series",
-                "minimum": 1
-            }
+                "minimum": 1,
+            },
         },
-        "required": ["test_name", "test_type", "statistic", "p_value", "critical_values", "alternative", "is_stationary", "n_obs"],
-        "additionalProperties": False
+        "required": [
+            "test_name",
+            "test_type",
+            "statistic",
+            "p_value",
+            "critical_values",
+            "alternative",
+            "is_stationary",
+            "n_obs",
+        ],
+        "additionalProperties": False,
     },
     description="Test time series for stationarity (ADF, KPSS, Phillips-Perron)",
 )
