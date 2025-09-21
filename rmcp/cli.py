@@ -366,6 +366,7 @@ def check_r_packages():
             "reshape2",
         ],
         "File Operations": ["readxl"],
+        "Reporting & Formatting": ["knitr"],
     }
     click.echo("🔍 Checking R Package Installation Status")
     click.echo("=" * 50)

@@ -198,7 +198,9 @@ install.packages(c(
   # Machine learning
   "rpart", "randomForest",
   # Data visualization  
-  "ggplot2", "gridExtra", "tidyr", "rlang"
+  "ggplot2", "gridExtra", "tidyr", "rlang",
+  # Reporting & formatting
+  "knitr"
 ), repos = "https://cran.rstudio.com/")
 ```
 
@@ -213,6 +215,7 @@ install.packages(c("jsonlite", "plm", "lmtest", "sandwich", "AER"))
 - **Data Visualization**: `ggplot2`, `gridExtra`, `tidyr`, `rlang`
 - **Statistical Testing**: `nortest`, `car`
 - **Data Manipulation**: `dplyr`
+- **Reporting & Formatting**: `knitr`
 
 💡 **Tip**: Install all packages first to avoid errors. Missing packages will cause specific tools to fail with clear error messages.
 
@@ -628,7 +631,7 @@ Then install missing packages in R:
 install.packages(c(
   "jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr",
   "forecast", "vars", "urca", "tseries", "nortest", "car",
-  "rpart", "randomForest", "ggplot2", "gridExtra", "tidyr", "rlang"
+  "rpart", "randomForest", "ggplot2", "gridExtra", "tidyr", "rlang", "knitr"
 ), repos = "https://cran.rstudio.com/")
 
 # Or install just core packages (limited functionality)

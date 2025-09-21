@@ -155,11 +155,18 @@ class ToolsRegistry:
                 result = {}
             elif not isinstance(result, (dict, list, str, int, float, bool)):
                 result = {"error": "Tool returned invalid result type"}
-            # Validate output schema if provided (disabled for flexibility)
-            # if tool_def.output_schema:
-            #     validate_schema(result, tool_def.output_schema, f"tool '{name}' output")
+            
+            # Extract formatting information before validation (schema-safe approach)
+            formatting_info = None
+            if isinstance(result, dict) and "_formatting" in result:
+                formatting_info = result.pop("_formatting")  # Remove from result
+            
+            # Validate output schema if provided (re-enabled for safety)
+            if tool_def.output_schema:
+                validate_schema(result, tool_def.output_schema, f"tool '{name}' output")
+            
             await context.info(f"Tool completed: {name}")
-            return self._format_tool_response(tool_def, result)
+            return self._format_tool_response(tool_def, result, formatting_info)
         except SchemaError as e:
             await context.error(f"Schema validation failed for tool '{name}': {e}")
             return {
@@ -183,7 +190,7 @@ class ToolsRegistry:
             logger.warning("List changed callback failed for tools: %s", exc)
 
     def _format_tool_response(
-        self, tool_def: ToolDefinition, result: Any
+        self, tool_def: ToolDefinition, result: Any, formatting_info: dict | None = None
     ) -> dict[str, Any]:
         """Convert tool output into rich MCP content."""
         if (
@@ -207,7 +214,7 @@ class ToolsRegistry:
             base_payload = {"status": "completed"}
         elif not base_payload and not isinstance(base_payload, (list, dict)):
             base_payload = {"status": "completed"}
-        summary = self._build_summary(tool_def, base_payload)
+        summary = self._build_summary(tool_def, base_payload, formatting_info)
         content: list[dict[str, Any]] = []
         structured_content: list[dict[str, Any]] = []
         # Build human-readable content (text summaries)
@@ -288,9 +295,22 @@ class ToolsRegistry:
             response["structuredContent"] = structured_content
         return response
 
-    def _build_summary(self, tool_def: ToolDefinition, payload: Any) -> str:
+    def _build_summary(self, tool_def: ToolDefinition, payload: Any, formatting_info: dict | None = None) -> str:
         """Create a concise markdown summary for human readers."""
         title = tool_def.title or tool_def.name
+        
+        # Check for custom formatted summary (NEW: Enhanced formatting from separate formatting_info)
+        if formatting_info:
+            # Priority 1: Use formatted summary if available (from R formatting utilities)
+            if "summary" in formatting_info and formatting_info["summary"]:
+                # formatted_summary already includes interpretation, so just return it
+                return formatting_info["summary"]
+            
+            # Priority 2: Use interpretation alone if no formatted_summary
+            if "interpretation" in formatting_info and formatting_info["interpretation"]:
+                return f"## {title} Results\n\n{formatting_info['interpretation']}"
+        
+        # Fallback to original logic for tools without custom formatting
         if isinstance(payload, str):
             return payload
         if isinstance(payload, list):

@@ -21,6 +21,7 @@ from typing import Any
 
 from ..core.schemas import formula_schema, table_schema
 from ..r_integration import execute_r_script_async
+from ..r_formatting import get_r_formatting_for_linear_model, get_r_formatting_for_correlation
 from ..registries.tools import tool
 
 
@@ -170,21 +171,35 @@ async def linear_model(context, params) -> dict[str, Any]:
         ... })
     """
     await context.info("Fitting linear regression model")
-    r_script = """
+    
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_for_linear_model()
+    
+    r_script = formatting_code + """
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
     # Handle optional parameters
     weights <- args$weights
     na_action <- args$na_action %||% "na.omit"
+    
     # Fit model
     if (!is.null(weights)) {
         model <- lm(formula, data = data, weights = weights, na.action = get(na_action))
     } else {
         model <- lm(formula, data = data, na.action = get(na_action))
     }
+    
     # Get comprehensive results
     summary_model <- summary(model)
+    
+    # Generate formatted summary using our formatting functions
+    formatted_summary <- format_linear_model_results(model, args$formula)
+    
+    # Generate natural language interpretation
+    interpretation <- interpret_linear_model(model, args$formula)
+    
     result <- list(
+        # Schema-compliant fields only (strict validation)
         coefficients = as.list(coef(model)),
         std_errors = as.list(summary_model$coefficients[, "Std. Error"]),
         t_values = as.list(summary_model$coefficients[, "t value"]),
@@ -200,7 +215,13 @@ async def linear_model(context, params) -> dict[str, Any]:
         fitted_values = as.numeric(fitted(model)),
         residuals = as.numeric(residuals(model)),
         n_obs = nrow(model$model),
-        method = "lm"
+        method = "lm",
+        
+        # Special non-validated field for formatting (will be extracted before validation)
+        `_formatting` = list(
+            summary = formatted_summary,
+            interpretation = interpretation
+        )
     )
     """
     try:
@@ -342,11 +363,16 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         ... })
     """
     await context.info("Computing correlation matrix")
-    r_script = """
+    
+    # Include R formatting utilities for correlation
+    formatting_code = get_r_formatting_for_correlation()
+    
+    r_script = formatting_code + """
     data <- as.data.frame(args$data)
     variables <- args$variables
     method <- args$method %||% "pearson"
     use <- args$use %||% "complete.obs"
+    
     # Select variables if specified
     if (!is.null(variables)) {
         # Validate variables exist
@@ -356,14 +382,17 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         }
         data <- data[, variables, drop = FALSE]
     }
+    
     # Select only numeric variables
     numeric_vars <- sapply(data, is.numeric)
     if (sum(numeric_vars) < 2) {
         stop("Need at least 2 numeric variables for correlation analysis")
     }
     numeric_data <- data[, numeric_vars, drop = FALSE]
+    
     # Compute correlation matrix
     cor_matrix <- cor(numeric_data, method = method, use = use)
+    
     # Compute significance tests and pairwise n_obs
     n <- nrow(numeric_data)
     cor_test_results <- list()
@@ -373,6 +402,7 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
     colnames(n_obs_matrix) <- names(numeric_data)
     # Fill diagonal with total observations
     diag(n_obs_matrix) <- n
+    
     for (i in 1:(ncol(numeric_data)-1)) {
         for (j in (i+1):ncol(numeric_data)) {
             var1 <- names(numeric_data)[i]
@@ -394,6 +424,13 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
             )
         }
     }
+    
+    # Generate formatted summary using our formatting functions
+    formatted_summary <- format_correlation_results(cor_matrix, cor_test_results, method)
+    
+    # Generate natural language interpretation
+    interpretation <- interpret_correlations(cor_matrix, cor_test_results)
+    
     # Convert correlation matrix to nested list structure
     cor_list <- list()
     for (var1 in names(numeric_data)) {
@@ -404,12 +441,20 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
     for (var1 in names(numeric_data)) {
         n_obs_list[[var1]] <- as.list(setNames(n_obs_matrix[var1, ], names(numeric_data)))
     }
+    
     result <- list(
+        # Schema-compliant fields only (strict validation)
         correlation_matrix = cor_list,
         significance_tests = cor_test_results,
         method = method,
         n_obs = n_obs_list,
-        variables = names(numeric_data)
+        variables = names(numeric_data),
+        
+        # Special non-validated field for formatting (will be extracted before validation)
+        `_formatting` = list(
+            summary = formatted_summary,
+            interpretation = interpretation
+        )
     )
     """
     try:

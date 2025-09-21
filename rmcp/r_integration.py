@@ -186,6 +186,7 @@ write_json(result, "{result_path_safe}", auto_unbox = TRUE)
                             "tidyr": "Data Tidying",
                             "rlang": "Programming Tools",
                             "dplyr": "Data Manipulation",
+                            "knitr": "Table Formatting & Reporting",
                         }
                         feature = pkg_features.get(missing_pkg, "Statistical Analysis")
                         error_msg = f"""❌ Missing R Package: '{missing_pkg}'
@@ -196,7 +197,7 @@ write_json(result, "{result_path_safe}", auto_unbox = TRUE)
    install.packages(c(
      "jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr", "forecast",
      "vars", "urca", "tseries", "nortest", "car", "rpart", "randomForest",
-     "ggplot2", "gridExtra", "tidyr", "rlang"
+     "ggplot2", "gridExtra", "tidyr", "rlang", "knitr"
    ))
 💡 Check package status: rmcp check-r-packages"""
                 elif "could not find function" in stderr:
