@@ -106,6 +106,7 @@ class MCPServer:
         # Transport + notification state
         self._transports: set[Transport] = set()
         self._pending_notifications: list[dict[str, Any]] = []
+        self._resource_subscribers: set[Transport] = set()
         # Registries
         self.tools = ToolsRegistry(
             on_list_changed=self._make_list_changed_callback("tools")
@@ -380,7 +381,7 @@ class MCPServer:
         if _MCP_TYPES_AVAILABLE:
             capabilities = ServerCapabilities(
                 tools=ToolsCapability(listChanged=False),
-                resources=ResourcesCapability(subscribe=False, listChanged=False),
+                resources=ResourcesCapability(subscribe=True, listChanged=True),
                 prompts=PromptsCapability(listChanged=False),
                 logging=LoggingCapability(levels=_SUPPORTED_LOG_LEVELS),
                 completion=CompletionCapability(),
@@ -394,7 +395,7 @@ class MCPServer:
             return initialize_result.model_dump(mode="json", exclude_none=True)
         capabilities = {
             "tools": {"listChanged": False},
-            "resources": {"subscribe": False, "listChanged": False},
+            "resources": {"subscribe": True, "listChanged": True},
             "prompts": {"listChanged": False},
             "logging": {"levels": _SUPPORTED_LOG_LEVELS},
             "completion": {},
@@ -438,6 +439,30 @@ class MCPServer:
         # Store current level in server state
         self.lifespan_state.current_log_level = level
         logger.info(f"Log level set to: {level}")
+        return {}
+
+    async def _handle_resources_subscribe(self, context: Context) -> dict[str, Any]:
+        """Subscribe the current transport to resource change notifications."""
+        transport = self._current_transport()
+        if not transport:
+            raise ValueError("resources/subscribe requires an active transport")
+        self._resource_subscribers.add(transport)
+        await context.info(
+            "Transport subscribed to resource updates",
+            transport=getattr(transport, "name", "transport"),
+        )
+        return {"subscription": "resources"}
+
+    async def _handle_resources_unsubscribe(self, context: Context) -> dict[str, Any]:
+        """Unsubscribe the current transport from resource notifications."""
+        transport = self._current_transport()
+        if not transport:
+            return {}
+        self._resource_subscribers.discard(transport)
+        await context.info(
+            "Transport unsubscribed from resource updates",
+            transport=getattr(transport, "name", "transport"),
+        )
         return {}
 
     async def _handle_completion(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -702,6 +727,10 @@ class MCPServer:
             elif method == "resources/read":
                 uri = params.get("uri")
                 result = await self.resources.read_resource(context, uri)
+            elif method == "resources/subscribe":
+                result = await self._handle_resources_subscribe(context)
+            elif method == "resources/unsubscribe":
+                result = await self._handle_resources_unsubscribe(context)
             elif method == "prompts/list":
                 result = await self.prompts.list_prompts(
                     context,
@@ -785,7 +814,18 @@ class MCPServer:
 
     async def _broadcast_notification(self, notification: dict[str, Any]) -> None:
         """Broadcast a notification to all registered transports."""
-        for transport in list(self._transports):
+        transports = list(self._transports)
+        kind = notification.get("params", {}).get("kind")
+        if kind == "resources":
+            if self._resource_subscribers:
+                transports = [
+                    transport
+                    for transport in transports
+                    if transport in self._resource_subscribers
+                ]
+            else:
+                return
+        for transport in transports:
             try:
                 await transport.send_message(dict(notification))
             except Exception as exc:  # pragma: no cover - defensive logging
@@ -831,6 +871,33 @@ class MCPServer:
                         lambda path=example_path: path.read_text(encoding="utf-8")
                     ),
                 )
+        # Discovery resources
+        self.resources.register_static_resource(
+            uri="rmcp://catalog",
+            name="Tool Catalog",
+            description="Index of tools with usage examples",
+            mime_type="text/markdown",
+        )
+        self.resources.register_static_resource(
+            uri="rmcp://env",
+            name="Environment Report",
+            description="R version, packages, and platform details",
+            mime_type="application/json",
+        )
+        self.resources.register_resource_template(
+            uri_template="rmcp://dataset/{name}",
+            name="Example Dataset",
+            description="Expose built-in sample datasets via rmcp://dataset/<name>",
+        )
+
+    def _current_transport(self) -> Transport | None:
+        """Return the transport currently handling a request, if any."""
+        info = _transport_context.get()
+        if info and isinstance(info, dict):
+            transport = info.get("transport")
+            if isinstance(transport, Transport):
+                return transport
+        return None
 
     async def _handle_notification(self, method: str, params: dict[str, Any]) -> None:
         """
