@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/github/license/finite-sample/rmcp)](https://github.com/finite-sample/rmcp/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/dynamic/toml?url=https://raw.githubusercontent.com/finite-sample/rmcp/main/pyproject.toml&query=$.tool.poetry.dependencies.python&label=Python)](https://www.python.org/downloads/)
 
-**Version 0.3.9** - A comprehensive Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
+**Version 0.3.10** - A comprehensive Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
 
 **🆕 Python 3.10+ required** for modern type hints and performance improvements.
 

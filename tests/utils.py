@@ -32,6 +32,14 @@ def extract_text_summary(response: Dict[str, Any]) -> str:
 def extract_json_content(response: Dict[str, Any]) -> Any:
     """Return the first JSON payload embedded in a tool response."""
     result = response.get("result", response)
+
+    # Check structuredContent first (new format)
+    structured = result.get("structuredContent", [])
+    for item in structured:
+        if item.get("type") == "json":
+            return item.get("json")
+
+    # Then check content items (legacy format)
     for item in _get_content_items(result):
         if item.get("type") == "json":
             return item.get("json")
@@ -40,6 +48,7 @@ def extract_json_content(response: Dict[str, Any]) -> Any:
             text = item.get("text", "")
             if text:
                 return json.loads(text)
+
     # Fallback: attempt to parse any text block as JSON
     for item in _get_content_items(result):
         if item.get("type") == "text" and item.get("text"):
@@ -47,4 +56,5 @@ def extract_json_content(response: Dict[str, Any]) -> Any:
                 return json.loads(item["text"])
             except json.JSONDecodeError:
                 continue
+
     raise AssertionError("No JSON content found in response")
