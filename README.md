@@ -1,11 +1,15 @@
 # RMCP: R Model Context Protocol Server
 
+[![Python application](https://github.com/finite-sample/rmcp/actions/workflows/ci.yml/badge.svg)](https://github.com/finite-sample/rmcp/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/badge/docs-github.io-blue)](https://finite-sample.github.io/rmcp/)
 [![PyPI version](https://img.shields.io/pypi/v/rmcp.svg)](https://pypi.org/project/rmcp/)
 [![Downloads](https://pepy.tech/badge/rmcp)](https://pepy.tech/project/rmcp)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/github/license/finite-sample/rmcp)](https://github.com/finite-sample/rmcp/blob/main/LICENSE)
+[![Python](https://img.shields.io/badge/dynamic/toml?url=https://raw.githubusercontent.com/finite-sample/rmcp/main/pyproject.toml&query=$.tool.poetry.dependencies.python&label=Python)](https://www.python.org/downloads/)
 
-**Version 0.3.6** - A comprehensive Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
+**Version 0.3.8** - A comprehensive Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants and applications to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks seamlessly through natural conversation.
+
+**🆕 Python 3.10+ required** for modern type hints and performance improvements.
 
 **🎉 Now with 40 statistical tools across 9 categories including natural language formula building and intelligent error recovery!**
 
@@ -93,7 +97,7 @@ That's it! RMCP is now ready to handle statistical analysis requests via the Mod
 
 ### Production Ready
 - **MCP Protocol**: Full JSON-RPC 2.0 compliance
-- **Transport Agnostic**: stdio, HTTP, WebSocket support
+- **Multiple Transports**: stdio transport (primary) and HTTP transport with SSE
 - **Error Handling**: Comprehensive error reporting and validation
 - **Security**: Safe R execution with controlled environment
 
@@ -136,6 +140,33 @@ RMCP works through natural conversation with AI assistants. Here's how users act
 **Claude responds:**
 > *"I can help diagnose that error. The issue is that the 'forecast' package is missing, which is required for Time Series Forecasting. You can fix this by running: `install.packages(\"forecast\")`. I can also check all your R packages and install everything RMCP needs at once."*
 
+### 📈 Visual Analytics - See Plots Directly in Claude
+
+**New in v0.3.7**: All visualization tools now display plots **directly in your Claude conversation** - no more file management!
+
+**You ask Claude:**
+> *"Create a correlation heatmap of my sales, marketing, and customer satisfaction data"*
+
+**Claude responds with:**
+- 📊 **Interactive heatmap displayed inline** showing correlation strengths with color coding
+- 📋 **Statistical analysis**: correlation matrix with exact values and significance tests
+- 💡 **Insights**: "Strong positive correlation (r=0.89) between marketing and sales suggests effective targeting"
+
+**Supported Visual Tools:**
+- 🔥 **Correlation Heatmaps**: Color-coded correlation matrices with statistical values
+- 📈 **Scatter Plots**: Trend lines, grouping, and regression analysis  
+- 📊 **Histograms**: Distribution analysis with density overlays
+- 📦 **Box Plots**: Outlier detection and quartile analysis
+- ⏱️ **Time Series**: Trend analysis with forecasting
+- 🔍 **Regression Diagnostics**: 4-panel diagnostic plots for model validation
+
+**Key Benefits:**
+- ✅ **Immediate visual feedback** - see results instantly
+- ✅ **No file management** - plots appear in conversation  
+- ✅ **Combined analysis** - statistics + visualizations together
+- ✅ **Professional quality** - publication-ready plots with ggplot2
+- ✅ **Optional saving** - can still export to files when needed
+
 ## 📊 Validated User Scenarios
 
 RMCP has been tested with real-world scenarios achieving **100% success rate**:
@@ -148,7 +179,7 @@ RMCP has been tested with real-world scenarios achieving **100% success rate**:
 ## 🔧 Installation & Setup
 
 ### Prerequisites
-- **Python 3.8+**
+- **Python 3.9+**
 - **R 4.0+** with required packages (see below)
 
 #### R Package Requirements
@@ -186,13 +217,16 @@ install.packages(c("jsonlite", "plm", "lmtest", "sandwich", "AER"))
 💡 **Tip**: Install all packages first to avoid errors. Missing packages will cause specific tools to fail with clear error messages.
 
 ### Install via pip
+
+**Requirements**: Python 3.10+ (for modern type hints and performance)
+
 ```bash
 pip install rmcp
 ```
 
 ### Development Installation
 ```bash
-git clone https://github.com/gojiplus/rmcp.git
+git clone https://github.com/finite-sample/rmcp.git
 cd rmcp
 pip install -e ".[dev]"
 ```
@@ -246,8 +280,11 @@ p-value = 0.0001, 95% CI: [0.8, 1.2]. Strong evidence of treatment effect."
 ### Command Line Interface
 
 ```bash
-# Start MCP server (stdio transport)
+# Start MCP server (stdio transport for Claude Desktop)
 rmcp start
+
+# Start HTTP server (for web applications and custom clients)
+rmcp serve-http --port 8080
 
 # Check version and available tools
 rmcp --version
@@ -280,6 +317,72 @@ result = await linear_model(context, {
 
 print(f"Advertising effectiveness: ${result['coefficients']['advertising']:.2f} per dollar")
 print(f"Model explains {result['r_squared']:.1%} of variance")
+```
+
+### HTTP Transport Usage
+
+RMCP now supports HTTP transport for web applications and custom integrations:
+
+#### Starting the HTTP Server
+
+```bash
+# Install with HTTP support
+pip install rmcp[http]
+
+# Start HTTP server
+rmcp serve-http --host 0.0.0.0 --port 8080
+
+# Server provides these endpoints:
+# • POST http://localhost:8080/ (JSON-RPC requests)
+# • GET  http://localhost:8080/sse (Server-Sent Events)
+# • GET  http://localhost:8080/health (Health check)
+```
+
+#### Making HTTP Requests
+
+```bash
+# Initialize MCP connection
+curl -X POST http://localhost:8080/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-06-18",
+      "capabilities": {},
+      "clientInfo": {"name": "my-app", "version": "1.0.0"}
+    }
+  }'
+
+# Call a statistical tool
+curl -X POST http://localhost:8080/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "summary_stats",
+      "arguments": {
+        "data": {
+          "sales": [100, 150, 200, 175, 225],
+          "month": [1, 2, 3, 4, 5]
+        }
+      }
+    }
+  }'
+```
+
+#### Server-Sent Events for Notifications
+
+```bash
+# Connect to SSE stream for real-time updates
+curl -N http://localhost:8080/sse
+
+# Health check
+curl http://localhost:8080/health
+# Returns: {"status": "healthy", "transport": "HTTP"}
 ```
 
 ### MCP Protocol Example
@@ -449,7 +552,7 @@ RMCP is built with production best practices:
 
 - **Clean Architecture**: Modular design with clear separation of concerns
 - **MCP Compliance**: Full Model Context Protocol specification support
-- **Transport Layer**: Pluggable transports (stdio, HTTP, WebSocket)
+- **Multiple Transports**: stdio (primary) and HTTP with Server-Sent Events
 - **R Integration**: Safe subprocess execution with JSON serialization
 - **Error Handling**: Comprehensive error reporting and recovery
 - **Security**: Controlled R execution environment
@@ -469,7 +572,7 @@ We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.
 
 ### Development Setup
 ```bash
-git clone https://github.com/gojiplus/rmcp.git
+git clone https://github.com/finite-sample/rmcp.git
 cd rmcp
 pip install -e ".[dev]"
 pre-commit install
@@ -552,8 +655,8 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start
 
 - 📖 **Documentation**: See [Quick Start Guide](examples/quick_start_guide.md) for working examples
 - 🔧 **Troubleshooting**: [Comprehensive troubleshooting guide](docs/troubleshooting.md)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/gojiplus/rmcp/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/gojiplus/rmcp/discussions)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/finite-sample/rmcp/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/finite-sample/rmcp/discussions)
 
 ## 🎉 Acknowledgments
 

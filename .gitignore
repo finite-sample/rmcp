@@ -56,6 +56,8 @@ env.bak/
 venv.bak/
 /venv-release-test
 /venv-test
+rmcp_test_env/
+*_test_env/
 
 # IDEs
 .vscode/
@@ -78,6 +80,11 @@ response.json
 temp_*.R
 temp_*.json
 *.log
+
+# Test output files
+test_*.log
+test_*.xlsx
+test_*.csv
 
 # MyPy
 .mypy_cache/

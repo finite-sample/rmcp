@@ -4,10 +4,11 @@ Econometric analysis tools for RMCP.
 Advanced econometric modeling for panel data, instrumental variables, etc.
 """
 
-from typing import Dict, Any
+from typing import Any
+
+from ..core.schemas import formula_schema, table_schema
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
-from ..core.schemas import table_schema, formula_schema
-from ..r_integration import execute_r_script
 
 
 @tool(
@@ -19,20 +20,23 @@ from ..r_integration import execute_r_script
             "formula": formula_schema(),
             "id_variable": {"type": "string"},
             "time_variable": {"type": "string"},
-            "model": {"type": "string", "enum": ["pooling", "within", "between", "random"], "default": "within"},
-            "robust": {"type": "boolean", "default": True}
+            "model": {
+                "type": "string",
+                "enum": ["pooling", "within", "between", "random"],
+                "default": "within",
+            },
+            "robust": {"type": "boolean", "default": True},
         },
-        "required": ["data", "formula", "id_variable", "time_variable"]
+        "required": ["data", "formula", "id_variable", "time_variable"],
     },
-    description="Panel data regression with fixed/random effects"
+    description="Panel data regression with fixed/random effects",
 )
-async def panel_regression(context, params):
+async def panel_regression(context, params) -> dict[str, Any]:
     """Perform panel data regression."""
-    
+
     await context.info("Fitting panel data regression")
-    
-    r_script = '''
-    if (!require(plm)) install.packages("plm", quietly = TRUE)
+
+    r_script = """
     library(plm)
     
     data <- as.data.frame(args$data)
@@ -58,7 +62,6 @@ async def panel_regression(context, params):
     
     # Get robust standard errors if requested
     if (robust) {
-        if (!require(lmtest)) install.packages("lmtest", quietly = TRUE)
         library(lmtest)
         robust_se <- coeftest(model, vcov = vcovHC(model, type = "HC1"))
         coef_table <- robust_se
@@ -82,13 +85,13 @@ async def panel_regression(context, params):
         id_variable = id_var,
         time_variable = time_var
     )
-    '''
-    
+    """
+
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Panel regression completed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Panel regression failed", error=str(e))
         raise
@@ -100,20 +103,22 @@ async def panel_regression(context, params):
         "type": "object",
         "properties": {
             "data": table_schema(),
-            "formula": {"type": "string", "description": "Format: 'y ~ x1 + x2 | z1 + z2' where | separates instruments"},
-            "robust": {"type": "boolean", "default": True}
+            "formula": {
+                "type": "string",
+                "description": "Format: 'y ~ x1 + x2 | z1 + z2' where | separates instruments",
+            },
+            "robust": {"type": "boolean", "default": True},
         },
-        "required": ["data", "formula"]
+        "required": ["data", "formula"],
     },
-    description="Two-stage least squares (2SLS) instrumental variables regression"
+    description="Two-stage least squares (2SLS) instrumental variables regression",
 )
-async def instrumental_variables(context, params):
+async def instrumental_variables(context, params) -> dict[str, Any]:
     """Perform instrumental variables regression."""
-    
+
     await context.info("Fitting instrumental variables model")
-    
-    r_script = '''
-    if (!require(AER)) install.packages("AER", quietly = TRUE)
+
+    r_script = """
     library(AER)
     
     data <- as.data.frame(args$data)
@@ -160,13 +165,13 @@ async def instrumental_variables(context, params):
         formula = formula_str,
         n_obs = nobs(iv_model)
     )
-    '''
-    
+    """
+
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Instrumental variables model fitted successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Instrumental variables fitting failed", error=str(e))
         raise
@@ -180,19 +185,22 @@ async def instrumental_variables(context, params):
             "data": table_schema(),
             "variables": {"type": "array", "items": {"type": "string"}},
             "lags": {"type": "integer", "minimum": 1, "maximum": 10, "default": 2},
-            "type": {"type": "string", "enum": ["const", "trend", "both", "none"], "default": "const"}
+            "type": {
+                "type": "string",
+                "enum": ["const", "trend", "both", "none"],
+                "default": "const",
+            },
         },
-        "required": ["data", "variables"]
+        "required": ["data", "variables"],
     },
-    description="Vector Autoregression (VAR) model for multivariate time series"
+    description="Vector Autoregression (VAR) model for multivariate time series",
 )
-async def var_model(context, params):
+async def var_model(context, params) -> dict[str, Any]:
     """Fit Vector Autoregression model."""
-    
+
     await context.info("Fitting VAR model")
-    
-    r_script = '''
-    if (!require(vars)) install.packages("vars", quietly = TRUE)
+
+    r_script = """
     library(vars)
     
     data <- as.data.frame(args$data)
@@ -238,13 +246,13 @@ async def var_model(context, params):
         bic = BIC(var_model),
         residual_covariance = as.matrix(var_summary$covres)
     )
-    '''
-    
+    """
+
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("VAR model fitted successfully")
         return result
-        
+
     except Exception as e:
         await context.error("VAR model fitting failed", error=str(e))
         raise

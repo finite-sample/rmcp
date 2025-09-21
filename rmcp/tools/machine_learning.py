@@ -4,10 +4,11 @@ Machine learning tools for RMCP.
 Clustering, classification trees, and ML capabilities.
 """
 
-from typing import Dict, Any
+from typing import Any
+
+from ..core.schemas import formula_schema, table_schema
+from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
-from ..core.schemas import table_schema, formula_schema
-from ..r_integration import execute_r_script
 
 
 @tool(
@@ -19,18 +20,19 @@ from ..r_integration import execute_r_script
             "variables": {"type": "array", "items": {"type": "string"}},
             "k": {"type": "integer", "minimum": 2, "maximum": 20},
             "max_iter": {"type": "integer", "minimum": 1, "default": 100},
-            "nstart": {"type": "integer", "minimum": 1, "default": 25}
+            "nstart": {"type": "integer", "minimum": 1, "default": 25},
         },
-        "required": ["data", "variables", "k"]
+        "required": ["data", "variables", "k"],
     },
-    description="K-means clustering analysis with cluster validation"
+    description="K-means clustering analysis with cluster validation",
 )
-async def kmeans_clustering(context, params):
+async def kmeans_clustering(context, params) -> dict[str, Any]:
     """Perform K-means clustering."""
-    
+
     await context.info("Performing K-means clustering")
+
+    r_script = """
     
-    r_script = '''
     data <- as.data.frame(args$data)
     variables <- args$variables
     k <- args$k
@@ -61,13 +63,10 @@ async def kmeans_clustering(context, params):
     # Cluster sizes
     cluster_sizes <- table(cluster_assignments)
     
-    # Silhouette analysis (if package available)
-    silhouette_score <- NA
-    if (require(cluster, quietly = TRUE)) {
-        library(cluster)
-        sil <- silhouette(cluster_assignments, dist(scaled_data))
-        silhouette_score <- mean(sil[, 3])
-    }
+    # Silhouette analysis 
+    library(cluster)
+    sil <- silhouette(cluster_assignments, dist(scaled_data))
+    silhouette_score <- mean(sil[, 3])
     
     result <- list(
         cluster_assignments = cluster_assignments,
@@ -84,13 +83,13 @@ async def kmeans_clustering(context, params):
         n_obs = nrow(cluster_data),
         converged = kmeans_result$iter < max_iter
     )
-    '''
-    
+    """
+
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("K-means clustering completed successfully")
         return result
-        
+
     except Exception as e:
         await context.error("K-means clustering failed", error=str(e))
         raise
@@ -103,21 +102,24 @@ async def kmeans_clustering(context, params):
         "properties": {
             "data": table_schema(),
             "formula": formula_schema(),
-            "type": {"type": "string", "enum": ["classification", "regression"], "default": "classification"},
+            "type": {
+                "type": "string",
+                "enum": ["classification", "regression"],
+                "default": "classification",
+            },
             "min_split": {"type": "integer", "minimum": 1, "default": 20},
-            "max_depth": {"type": "integer", "minimum": 1, "default": 30}
+            "max_depth": {"type": "integer", "minimum": 1, "default": 30},
         },
-        "required": ["data", "formula"]
+        "required": ["data", "formula"],
     },
-    description="Decision tree classification and regression"
+    description="Decision tree classification and regression",
 )
-async def decision_tree(context, params):
+async def decision_tree(context, params) -> dict[str, Any]:
     """Build decision tree model."""
-    
+
     await context.info("Building decision tree")
-    
-    r_script = '''
-    if (!require(rpart)) install.packages("rpart", quietly = TRUE)
+
+    r_script = """
     library(rpart)
     
     data <- as.data.frame(args$data)
@@ -180,13 +182,13 @@ async def decision_tree(context, params):
         formula = deparse(formula),
         tree_complexity = tree_model$cptable[nrow(tree_model$cptable), "CP"]
     )
-    '''
-    
+    """
+
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Decision tree built successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Decision tree building failed", error=str(e))
         raise
@@ -199,21 +201,25 @@ async def decision_tree(context, params):
         "properties": {
             "data": table_schema(),
             "formula": formula_schema(),
-            "n_trees": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 500},
+            "n_trees": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000,
+                "default": 500,
+            },
             "mtry": {"type": "integer", "minimum": 1},
-            "importance": {"type": "boolean", "default": True}
+            "importance": {"type": "boolean", "default": True},
         },
-        "required": ["data", "formula"]
+        "required": ["data", "formula"],
     },
-    description="Random Forest ensemble model for classification and regression"
+    description="Random Forest ensemble model for classification and regression",
 )
-async def random_forest(context, params):
+async def random_forest(context, params) -> dict[str, Any]:
     """Build Random Forest model."""
-    
+
     await context.info("Building Random Forest model")
-    
-    r_script = '''
-    if (!require(randomForest)) install.packages("randomForest", quietly = TRUE)
+
+    r_script = """
     library(randomForest)
     
     data <- as.data.frame(args$data)
@@ -287,13 +293,13 @@ async def random_forest(context, params):
         formula = deparse(formula),
         n_obs = nrow(data)
     )
-    '''
-    
+    """
+
     try:
-        result = execute_r_script(r_script, params)
+        result = await execute_r_script_async(r_script, params)
         await context.info("Random Forest model built successfully")
         return result
-        
+
     except Exception as e:
         await context.error("Random Forest building failed", error=str(e))
         raise

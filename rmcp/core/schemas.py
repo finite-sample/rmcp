@@ -7,25 +7,27 @@ Provides utilities for:
 - Type conversion helpers
 """
 
-from typing import Any, Dict, List, Optional, Union
 import json
+from typing import Any
+
 import jsonschema
-from jsonschema import validate, ValidationError as JsonSchemaValidationError
+from jsonschema import ValidationError as JsonSchemaValidationError
+from jsonschema import validate
 
 
 class SchemaError(Exception):
     """Schema validation error with MCP error code."""
-    
-    def __init__(self, message: str, field: Optional[str] = None):
+
+    def __init__(self, message: str, field: str | None = None):
         super().__init__(message)
         self.field = field
         self.code = -32602  # JSON-RPC invalid params error
 
 
-def validate_schema(data: Any, schema: Dict[str, Any], context: str = "") -> None:
+def validate_schema(data: Any, schema: dict[str, Any], context: str = "") -> None:
     """
     Validate data against JSON schema.
-    
+
     Raises SchemaError with MCP-compatible error code on failure.
     """
     try:
@@ -34,10 +36,10 @@ def validate_schema(data: Any, schema: Dict[str, Any], context: str = "") -> Non
         field_path = ".".join(str(p) for p in e.absolute_path)
         error_context = f" in {context}" if context else ""
         field_info = f" (field: {field_path})" if field_path else ""
-        
+
         raise SchemaError(
             f"Schema validation failed{error_context}: {e.message}{field_info}",
-            field=field_path
+            field=field_path,
         ) from e
     except Exception as e:
         raise SchemaError(f"Schema validation error: {str(e)}") from e
@@ -45,77 +47,106 @@ def validate_schema(data: Any, schema: Dict[str, Any], context: str = "") -> Non
 
 # Common schema patterns for statistical tools
 
-def table_schema(required_columns: Optional[List[str]] = None) -> Dict[str, Any]:
+
+def table_schema(required_columns: list[str] | None = None) -> dict[str, Any]:
     """Schema for tabular data (dict with column arrays)."""
     schema = {
         "type": "object",
         "properties": {},
         "additionalProperties": {
             "type": "array",
-            "items": {"type": ["number", "string", "null"]}
-        }
+            "items": {"type": ["number", "string", "null"]},
+        },
     }
-    
+
     if required_columns:
         schema["required"] = required_columns
         for col in required_columns:
             schema["properties"][col] = {
                 "type": "array",
-                "items": {"type": ["number", "string", "null"]}
+                "items": {"type": ["number", "string", "null"]},
             }
-    
+
     return schema
 
 
-def formula_schema() -> Dict[str, Any]:
+def formula_schema() -> dict[str, Any]:
     """Schema for R formula strings."""
     return {
         "type": "string",
         "pattern": r"^[^~]+~[^~]+$",
-        "description": "R formula (e.g., 'y ~ x1 + x2')"
+        "description": "R formula (e.g., 'y ~ x1 + x2')",
     }
 
 
-def numeric_array_schema(min_length: int = 1) -> Dict[str, Any]:
+def numeric_array_schema(min_length: int = 1) -> dict[str, Any]:
     """Schema for numeric arrays."""
-    return {
-        "type": "array",
-        "items": {"type": "number"},
-        "minItems": min_length
-    }
+    return {"type": "array", "items": {"type": "number"}, "minItems": min_length}
 
 
-def positive_number_schema() -> Dict[str, Any]:
+def positive_number_schema() -> dict[str, Any]:
     """Schema for positive numbers."""
-    return {
-        "type": "number",
-        "minimum": 0,
-        "exclusiveMinimum": True
-    }
+    return {"type": "number", "minimum": 0, "exclusiveMinimum": True}
 
 
-def confidence_level_schema() -> Dict[str, Any]:
+def confidence_level_schema() -> dict[str, Any]:
     """Schema for confidence levels (0-1)."""
     return {
         "type": "number",
         "minimum": 0,
         "maximum": 1,
         "exclusiveMinimum": True,
-        "exclusiveMaximum": True
+        "exclusiveMaximum": True,
     }
 
 
-def choice_schema(choices: List[str]) -> Dict[str, Any]:
+def choice_schema(choices: list[str]) -> dict[str, Any]:
     """Schema for enumerated choices."""
+    return {"type": "string", "enum": choices}
+
+
+def image_content_schema() -> dict[str, Any]:
+    """Schema for image content in MCP responses."""
     return {
-        "type": "string",
-        "enum": choices
+        "type": "object",
+        "properties": {
+            "type": {"type": "string", "const": "image"},
+            "data": {"type": "string", "description": "Base64 encoded image"},
+            "mimeType": {
+                "type": "string",
+                "enum": ["image/png", "image/jpeg", "image/svg+xml"],
+            },
+            "alt": {"type": "string", "description": "Alternative text description"},
+        },
+        "required": ["type", "data", "mimeType"],
+    }
+
+
+def text_content_schema() -> dict[str, Any]:
+    """Schema for text content in MCP responses."""
+    return {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string", "const": "text"},
+            "text": {"type": "string", "description": "Text content"},
+        },
+        "required": ["type", "text"],
+    }
+
+
+def mcp_content_schema() -> dict[str, Any]:
+    """Schema for MCP content arrays (text and/or images)."""
+    return {
+        "type": "array",
+        "items": {"anyOf": [text_content_schema(), image_content_schema()]},
+        "minItems": 1,
     }
 
 
 # Tool result schemas
 
-def statistical_result_schema() -> Dict[str, Any]:
+
+def statistical_result_schema() -> dict[str, Any]:
     """Base schema for statistical analysis results."""
     return {
         "type": "object",
@@ -128,18 +159,18 @@ def statistical_result_schema() -> Dict[str, Any]:
                 "properties": {
                     "method": {"type": "string"},
                     "n_obs": {"type": "integer", "minimum": 0},
-                    "timestamp": {"type": "string", "format": "date-time"}
-                }
-            }
+                    "timestamp": {"type": "string", "format": "date-time"},
+                },
+            },
         },
-        "required": ["success"]
+        "required": ["success"],
     }
 
 
-def error_result_schema() -> Dict[str, Any]:
+def error_result_schema() -> dict[str, Any]:
     """Schema for error results."""
     return {
-        "type": "object", 
+        "type": "object",
         "properties": {
             "success": {"const": False},
             "error": {
@@ -147,10 +178,10 @@ def error_result_schema() -> Dict[str, Any]:
                 "properties": {
                     "type": {"type": "string"},
                     "message": {"type": "string"},
-                    "details": {"type": "object"}
+                    "details": {"type": "object"},
                 },
-                "required": ["type", "message"]
-            }
+                "required": ["type", "message"],
+            },
         },
-        "required": ["success", "error"]
+        "required": ["success", "error"],
     }
