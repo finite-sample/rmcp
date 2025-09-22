@@ -6,7 +6,7 @@ Essential data manipulation and cleaning capabilities.
 from typing import Any
 
 from ..core.schemas import table_schema
-from ..r_formatting import get_r_formatting_utilities
+from ..r_assets.loader import get_r_script
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
@@ -59,62 +59,7 @@ async def lag_lead(context, params) -> dict[str, Any]:
     """Create lagged and lead variables."""
     await context.info("Creating lag/lead variables")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    data <- as.data.frame(args$data)
-    variables <- args$variables
-    lags <- args$lags %||% c(1)
-    leads <- args$leads %||% c()
-    result_data <- data
-    # Create lagged variables
-    for (var in variables) {
-        for (lag_val in lags) {
-            new_var <- paste0(var, "_lag", lag_val)
-            result_data[[new_var]] <- c(rep(NA, lag_val), head(data[[var]], -lag_val))
-        }
-    }
-    # Create lead variables
-    for (var in variables) {
-        for (lead_val in leads) {
-            new_var <- paste0(var, "_lead", lead_val)
-            result_data[[new_var]] <- c(tail(data[[var]], -lead_val), rep(NA, lead_val))
-        }
-    }
-    # Get created variables and ensure it's always an array
-    created_vars <- names(result_data)[!names(result_data) %in% names(data)]
-    if (length(created_vars) == 0) {
-        created_vars <- character(0)
-    }
-    result <- list(
-        data = as.list(result_data),
-        variables_created = I(as.character(created_vars)),
-        n_obs = nrow(result_data),
-        operation = "lag_lead",
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = tryCatch({
-                # Create lag/lead summary table
-                lagLead_summary <- data.frame(
-                    Operation = "Lag/Lead",
-                    Variables_Input = length(variables),
-                    Variables_Created = length(created_vars),
-                    Observations = nrow(result_data)
-                )
-                as.character(knitr::kable(lagLead_summary, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                "Lag/lead variables created successfully"
-            }),
-            interpretation = paste0("Created ", length(created_vars), " lag/lead variables from ", 
-                                  length(variables), " input variables.")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("transforms", "lag_lead")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Lag/lead variables created successfully")
@@ -197,65 +142,7 @@ async def winsorize(context, params) -> dict[str, Any]:
     """Winsorize variables to handle outliers."""
     await context.info("Winsorizing variables")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    data <- as.data.frame(args$data)
-    variables <- args$variables
-    percentiles <- args$percentiles %||% c(0.01, 0.99)
-    result_data <- data
-    outliers_summary <- list()
-    for (var in variables) {
-        original_values <- data[[var]]
-        # Calculate percentile thresholds
-        lower_threshold <- quantile(original_values, percentiles[1], na.rm = TRUE)
-        upper_threshold <- quantile(original_values, percentiles[2], na.rm = TRUE)
-        # Winsorize
-        winsorized <- pmax(pmin(original_values, upper_threshold), lower_threshold)
-        result_data[[var]] <- winsorized
-        # Track changes
-        n_lower <- sum(original_values < lower_threshold, na.rm = TRUE)
-        n_upper <- sum(original_values > upper_threshold, na.rm = TRUE)
-        outliers_summary[[var]] <- list(
-            lower_threshold = lower_threshold,
-            upper_threshold = upper_threshold,
-            n_capped_lower = n_lower,
-            n_capped_upper = n_upper,
-            total_capped = n_lower + n_upper
-        )
-    }
-    result <- list(
-        data = as.list(result_data),
-        outliers_summary = outliers_summary,
-        percentiles = percentiles,
-        variables_winsorized = I(variables),
-        n_obs = nrow(result_data),
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = tryCatch({
-                # Create winsorization summary table
-                total_capped <- sum(sapply(outliers_summary, function(x) x$total_capped))
-                winsor_summary <- data.frame(
-                    Operation = "Winsorization",
-                    Variables = length(variables),
-                    Percentiles = paste0(percentiles[1]*100, "%-", percentiles[2]*100, "%"),
-                    Total_Outliers_Capped = total_capped,
-                    Observations = nrow(result_data)
-                )
-                as.character(knitr::kable(winsor_summary, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                "Variables winsorized successfully"
-            }),
-            interpretation = paste0("Winsorized ", length(variables), " variables at ", 
-                                  percentiles[1]*100, "%-", percentiles[2]*100, "% thresholds.")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("transforms", "winsorize")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Variables winsorized successfully")
@@ -324,75 +211,7 @@ async def difference(context, params) -> dict[str, Any]:
     """Compute differences of variables."""
     await context.info("Computing variable differences")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    data <- as.data.frame(args$data)
-    variables <- args$variables
-    diff_order <- args$order %||% 1
-    log_transform <- args$log_transform %||% FALSE
-    result_data <- data
-    for (var in variables) {
-        original_values <- data[[var]]
-        # Log transform first if requested
-        if (log_transform) {
-            if (any(original_values <= 0, na.rm = TRUE)) {
-                stop(paste(
-                    "Cannot log-transform", var, "- contains non-positive values"
-                ))
-            }
-            transformed <- log(original_values)
-            log_var <- paste0("log_", var)
-            result_data[[log_var]] <- transformed
-            working_values <- transformed
-            base_name <- log_var
-        } else {
-            working_values <- original_values
-            base_name <- var
-        }
-        # Compute differences
-        diff_values <- working_values
-        for (i in 1:diff_order) {
-            diff_values <- diff(diff_values)
-            diff_name <- paste0(base_name, "_diff", if (diff_order > 1) i else "")
-            # Pad with NA to maintain same length
-            padded_diff <- c(rep(NA, i), diff_values)
-            result_data[[diff_name]] <- padded_diff
-        }
-    }
-    # Ensure variables_differenced is always an array
-    diff_vars <- if (length(variables) == 0) character(0) else variables
-    result <- list(
-        data = as.list(result_data),
-        variables_differenced = I(as.character(diff_vars)),
-        difference_order = diff_order,
-        log_transformed = log_transform,
-        n_obs = nrow(result_data),
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = tryCatch({
-                # Create differencing summary table
-                diff_summary <- data.frame(
-                    Operation = "Differencing",
-                    Variables = length(variables),
-                    Order = diff_order,
-                    Log_Transformed = log_transform,
-                    Observations = nrow(result_data)
-                )
-                as.character(knitr::kable(diff_summary, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                "Variable differences computed successfully"
-            }),
-            interpretation = paste0("Applied ", diff_order, "-order differencing to ", length(variables), 
-                                  " variables", if (log_transform) " (with log transformation)" else ".")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("transforms", "difference")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Variable differences computed successfully")
@@ -467,64 +286,7 @@ async def standardize(context, params) -> dict[str, Any]:
     """Standardize variables."""
     await context.info("Standardizing variables")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    data <- as.data.frame(args$data)
-    variables <- args$variables
-    method <- args$method %||% "z_score"
-    result_data <- data
-    scaling_info <- list()
-    for (var in variables) {
-        original_values <- data[[var]]
-        if (method == "z_score") {
-            mean_val <- mean(original_values, na.rm = TRUE)
-            sd_val <- sd(original_values, na.rm = TRUE)
-            scaled <- (original_values - mean_val) / sd_val
-            scaling_info[[var]] <- list(mean = mean_val, sd = sd_val)
-        } else if (method == "min_max") {
-            min_val <- min(original_values, na.rm = TRUE)
-            max_val <- max(original_values, na.rm = TRUE)
-            scaled <- (original_values - min_val) / (max_val - min_val)
-            scaling_info[[var]] <- list(min = min_val, max = max_val)
-        } else if (method == "robust") {
-            median_val <- median(original_values, na.rm = TRUE)
-            mad_val <- mad(original_values, na.rm = TRUE)
-            scaled <- (original_values - median_val) / mad_val
-            scaling_info[[var]] <- list(median = median_val, mad = mad_val)
-        }
-        new_var <- paste0(var, "_", method)
-        result_data[[new_var]] <- scaled
-    }
-    result <- list(
-        data = as.list(result_data),
-        scaling_method = method,
-        scaling_info = scaling_info,
-        variables_scaled = variables,
-        n_obs = nrow(result_data),
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = tryCatch({
-                # Create standardization summary table
-                std_summary <- data.frame(
-                    Operation = "Standardization",
-                    Method = method,
-                    Variables = length(variables),
-                    Observations = nrow(result_data)
-                )
-                as.character(knitr::kable(std_summary, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                "Variables standardized successfully"
-            }),
-            interpretation = paste0("Standardized ", length(variables), " variables using ", method, " method.")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("transforms", "standardize")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Variables standardized successfully")

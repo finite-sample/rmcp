@@ -20,7 +20,6 @@ from urllib.parse import parse_qs, urlparse
 
 from ..core.context import Context
 from ..r_integration import execute_r_script_async
-from ..security.vfs import VFS, VFSError
 from ..tools.helpers import load_example
 
 logger = logging.getLogger(__name__)

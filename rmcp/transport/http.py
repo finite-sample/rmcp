@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 
 try:
     import uvicorn
-    from fastapi import FastAPI, Header, HTTPException, Request
+    from fastapi import FastAPI, HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import Response, StreamingResponse
     from sse_starlette import EventSourceResponse

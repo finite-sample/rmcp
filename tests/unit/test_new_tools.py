@@ -72,7 +72,7 @@ class TestFormulaBuilder:
         params = {"formula": "sales ~ marketing", "data": test_data}
         result = await validate_formula(context, params)
         assert "is_valid" in result
-        assert result["is_valid"] == True
+        assert result["is_valid"] is True
 
 
 class TestErrorRecovery:

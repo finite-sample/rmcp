@@ -11,14 +11,12 @@ Following the principle: "Registries are discoverable and testable."
 import inspect
 import json
 import logging
-import sys
 import uuid
 from dataclasses import dataclass
-from functools import wraps
 from typing import Any, Awaitable, Callable, Sequence
 
 from ..core.context import Context
-from ..core.schemas import SchemaError, statistical_result_schema, validate_schema
+from ..core.schemas import SchemaError, validate_schema
 
 logger = logging.getLogger(__name__)
 

@@ -5,8 +5,7 @@ Comprehensive time series modeling and forecasting capabilities.
 
 from typing import Any
 
-from ..core.schemas import table_schema
-from ..r_formatting import get_r_formatting_utilities
+from ..r_assets.loader import get_r_script
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
@@ -132,82 +131,7 @@ async def arima_model(context, params) -> dict[str, Any]:
     """Fit ARIMA model and generate forecasts."""
     await context.info("Fitting ARIMA time series model")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    # Install required packages
-    library(forecast)
-    # Prepare data
-    rmcp_progress("Preparing time series data")
-    values <- args$data$values
-    # Convert to time series
-    if (!is.null(args$data$dates)) {
-        dates <- as.Date(args$data$dates)
-        ts_data <- ts(values, frequency = 12)  # Assume monthly by default
-    } else {
-        ts_data <- ts(values, frequency = 12)
-    }
-    # Fit ARIMA model with progress reporting
-    rmcp_progress("Fitting ARIMA model", 20, 100)
-    if (!is.null(args$order)) {
-        if (!is.null(args$seasonal)) {
-            model <- Arima(ts_data, order = args$order, seasonal = args$seasonal)
-        } else {
-            model <- Arima(ts_data, order = args$order)
-        }
-    } else {
-        # Auto ARIMA (can be slow for large datasets)
-        rmcp_progress("Running automatic ARIMA model selection", 30, 100)
-        model <- auto.arima(ts_data)
-    }
-    rmcp_progress("ARIMA model fitted successfully", 70, 100)
-    # Generate forecasts
-    rmcp_progress("Generating forecasts", 80, 100)
-    forecast_periods <- args$forecast_periods %||% 12
-    forecasts <- forecast(model, h = forecast_periods)
-    rmcp_progress("Extracting model results", 95, 100)
-    # Extract results
-    result <- list(
-        model_type = "ARIMA",
-        order = arimaorder(model),
-        coefficients = as.list(coef(model)),
-        aic = AIC(model),
-        bic = BIC(model),
-        loglik = logLik(model)[1],
-        sigma2 = model$sigma2,
-        fitted_values = as.numeric(fitted(model)),
-        residuals = as.numeric(residuals(model)),
-        forecasts = as.numeric(forecasts$mean),
-        forecast_lower = as.numeric(forecasts$lower[,2]),  # 95% CI
-        forecast_upper = as.numeric(forecasts$upper[,2]),
-        accuracy = accuracy(model),
-        n_obs = length(values),
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = tryCatch({
-                # Try to tidy the ARIMA model
-                tidy_model <- broom::tidy(model)
-                as.character(knitr::kable(tidy_model, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                # Fallback: create summary table
-                model_summary <- data.frame(
-                    Model = "ARIMA",
-                    AIC = AIC(model),
-                    BIC = BIC(model),
-                    Observations = length(values)
-                )
-                as.character(knitr::kable(model_summary, format = "markdown", digits = 4)))
-            }),
-            interpretation = paste0("ARIMA model fitted with AIC = ", round(AIC(model), 2), 
-                                  ". Forecasted ", forecast_periods, " periods ahead.")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("timeseries", "arima_model")
     try:
         result = await execute_r_script_async(r_script, params, context)
         await context.info(
@@ -299,56 +223,7 @@ async def decompose_timeseries(context, params) -> dict[str, Any]:
     """Decompose time series into components."""
     await context.info("Decomposing time series")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    values <- args$data$values
-    frequency <- args$frequency %||% 12
-    decomp_type <- args$type %||% "additive"
-    # Create time series
-    ts_data <- ts(values, frequency = frequency)
-    # Decompose
-    if (decomp_type == "multiplicative") {
-        decomp <- decompose(ts_data, type = "multiplicative")
-    } else {
-        decomp <- decompose(ts_data, type = "additive")
-    }
-    # Handle NA values properly for JSON - use I() to preserve arrays
-    result <- list(
-        original = I(as.numeric(decomp$x)),
-        trend = I(as.numeric(decomp$trend)),
-        seasonal = I(as.numeric(decomp$seasonal)),
-        remainder = I(as.numeric(decomp$random)),
-        type = decomp_type,
-        frequency = frequency,
-        n_obs = length(values),
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = tryCatch({
-                # Create decomposition summary table
-                decomp_summary <- data.frame(
-                    Component = c("Original", "Trend", "Seasonal", "Remainder"),
-                    Missing_Values = c(
-                        sum(is.na(decomp$x)),
-                        sum(is.na(decomp$trend)),
-                        sum(is.na(decomp$seasonal)),
-                        sum(is.na(decomp$random))
-                    ),
-                    Type = c(decomp_type, decomp_type, decomp_type, decomp_type)
-                )
-                as.character(knitr::kable(decomp_summary, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                "Time series decomposition completed successfully"
-            }),
-            interpretation = paste0("Time series decomposed using ", decomp_type, " method with frequency ", frequency, ".")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("timeseries", "decompose_timeseries")
     try:
         result = await execute_r_script_async(r_script, params, context)
         await context.info("Time series decomposed successfully")
@@ -428,57 +303,7 @@ async def stationarity_test(context, params) -> dict[str, Any]:
     """Test time series stationarity."""
     await context.info("Testing time series stationarity")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    library(tseries)
-    values <- args$data$values
-    test_type <- args$test %||% "adf"
-    ts_data <- ts(values)
-    if (test_type == "adf") {
-        test_result <- adf.test(ts_data)
-        test_name <- "Augmented Dickey-Fuller"
-    } else if (test_type == "kpss") {
-        test_result <- kpss.test(ts_data)
-        test_name <- "KPSS"
-    } else if (test_type == "pp") {
-        test_result <- pp.test(ts_data)
-        test_name <- "Phillips-Perron"
-    }
-    # Handle critical values properly - some tests might not have them
-    critical_vals <- if (is.null(test_result$critical) || length(test_result$critical) == 0) {
-        # Return empty named list to ensure it's treated as object, not array
-        structure(list(), names = character(0))
-    } else {
-        as.list(test_result$critical)
-    }
-    result <- list(
-        test_name = test_name,
-        test_type = test_type,
-        statistic = as.numeric(test_result$statistic),
-        p_value = test_result$p.value,
-        critical_values = critical_vals,
-        alternative = test_result$alternative,
-        is_stationary = if (test_type == "kpss") test_result$p.value > 0.05 else test_result$p.value < 0.05,
-        n_obs = length(values),
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = format_result_table(test_result, paste0(test_name, " Test Results")),
-            interpretation = paste0(test_name, " test: ", 
-                                  get_significance(test_result$p.value),
-                                  if (test_type == "kpss") {
-                                      if (test_result$p.value > 0.05) " - series appears stationary" else " - series appears non-stationary"
-                                  } else {
-                                      if (test_result$p.value < 0.05) " - series appears stationary" else " - series appears non-stationary"
-                                  })
-        )
-    )
-    """
-    )
+    r_script = get_r_script("timeseries", "stationarity_test")
     try:
         result = await execute_r_script_async(r_script, params, context)
         await context.info(

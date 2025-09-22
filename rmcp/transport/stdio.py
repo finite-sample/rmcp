@@ -14,7 +14,7 @@ import sys
 from typing import Any, AsyncIterator
 
 from ..transport.base import Transport
-from ..transport.jsonrpc import JSONRPCEnvelope, JSONRPCError, JSONRPCMessage
+from ..transport.jsonrpc import JSONRPCEnvelope, JSONRPCError
 
 # Configure logging to stderr only (never stdout)
 logger = logging.getLogger(__name__)

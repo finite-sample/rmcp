@@ -10,7 +10,6 @@ Following the principle: "A single shell centralizes initialization and teardown
 
 import asyncio
 import logging
-import sys
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, Optional
@@ -376,7 +375,8 @@ class MCPServer:
         """
         client_info = params.get("clientInfo", {})
         logger.info(
-            f"Initializing MCP connection with client: {client_info.get('name', 'unknown')}"
+            f"Initializing MCP connection with client: "
+            f"{client_info.get('name', 'unknown')}"
         )
         if _MCP_TYPES_AVAILABLE:
             capabilities = ServerCapabilities(
@@ -420,13 +420,14 @@ class MCPServer:
         # Validate log level
         if level not in _SUPPORTED_LOG_LEVELS:
             raise ValueError(
-                f"Unsupported log level: {level}. Supported levels: {_SUPPORTED_LOG_LEVELS}"
+                f"Unsupported log level: {level}. "
+                f"Supported levels: {_SUPPORTED_LOG_LEVELS}"
             )
         # Map MCP levels to Python logging levels
         level_mapping = {
             "debug": logging.DEBUG,
             "info": logging.INFO,
-            "notice": logging.INFO,  # Python doesn't have NOTICE, use INFO
+            "notice": logging.INFO,  # Python doesn't have NOTICE
             "warning": logging.WARNING,
             "error": logging.ERROR,
             "critical": logging.CRITICAL,
@@ -499,7 +500,7 @@ class MCPServer:
                     "type": "text",
                     "value": tool_name,
                     "label": tool_name,
-                    "detail": f"Statistical analysis tool",
+                    "detail": "Statistical analysis tool",
                 }
                 for tool_name in matching_tools[:10]  # Limit to 10 suggestions
             ]

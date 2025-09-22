@@ -87,7 +87,7 @@ async def test_business_analyst_scenario():
         r_squared = result["r_squared"]
         marketing_effect = result["coefficients"]["marketing"]
         marketing_pvalue = result["p_values"]["marketing"]
-        print(f"✅ Sales Model Results:")
+        print("✅ Sales Model Results:")
         print(f"   📈 Marketing ROI: ${marketing_effect:.2f} sales per $1 marketing")
         print(f"   📊 Model explains {r_squared:.1%} of sales variation")
         print(f"   🎯 Marketing effect p-value: {marketing_pvalue:.4f}")
@@ -145,7 +145,7 @@ async def test_economist_scenario():
         gdp_unemp_corr = corr_matrix["gdp_growth"][
             "unemployment"
         ]  # Access by variable name
-        print(f"✅ Macroeconomic Correlations:")
+        print("✅ Macroeconomic Correlations:")
         print(f"   📉 GDP-Unemployment: {gdp_unemp_corr:.3f} (Okun's Law)")
         print(f"   📊 Sample size: {corr_result['n_obs']} observations")
         print(f"   🔬 Variables analyzed: {', '.join(corr_result['variables'])}")

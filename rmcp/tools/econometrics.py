@@ -6,7 +6,7 @@ Advanced econometric modeling for panel data, instrumental variables, etc.
 from typing import Any
 
 from ..core.schemas import formula_schema, table_schema
-from ..r_formatting import get_r_formatting_utilities
+from ..r_assets.loader import get_r_script
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
@@ -121,86 +121,7 @@ async def panel_regression(context, params) -> dict[str, Any]:
     """Perform panel data regression."""
     await context.info("Fitting panel data regression")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    library(plm)
-    data <- as.data.frame(args$data)
-    formula <- as.formula(args$formula)
-    id_var <- args$id_variable
-    time_var <- args$time_variable
-    model_type <- args$model %||% "within"
-    robust <- args$robust %||% TRUE
-    # Create panel data frame
-    pdata <- pdata.frame(data, index = c(id_var, time_var))
-    # Fit panel model
-    if (model_type == "pooling") {
-        model <- plm(formula, data = pdata, model = "pooling")
-    } else if (model_type == "within") {
-        model <- plm(formula, data = pdata, model = "within")  # Fixed effects
-    } else if (model_type == "between") {
-        model <- plm(formula, data = pdata, model = "between")
-    } else if (model_type == "random") {
-        model <- plm(formula, data = pdata, model = "random")
-    }
-    # Get robust standard errors if requested
-    if (robust) {
-        library(lmtest)
-        robust_se <- coeftest(model, vcov = vcovHC(model, type = "HC1"))
-        coef_table <- robust_se
-    } else {
-        coef_table <- summary(model)$coefficients
-    }
-    # Extract coefficients with proper names
-    coef_vals <- coef_table[, "Estimate"]
-    names(coef_vals) <- rownames(coef_table)
-    std_err_vals <- coef_table[, "Std. Error"]
-    names(std_err_vals) <- rownames(coef_table)
-    t_vals <- coef_table[, "t value"]
-    names(t_vals) <- rownames(coef_table)
-    p_vals <- coef_table[, "Pr(>|t|)"]
-    names(p_vals) <- rownames(coef_table)
-    result <- list(
-        coefficients = as.list(coef_vals),
-        std_errors = as.list(std_err_vals),
-        t_values = as.list(t_vals),
-        p_values = as.list(p_vals),
-        r_squared = summary(model)$r.squared[1],
-        adj_r_squared = summary(model)$r.squared[2],
-        model_type = model_type,
-        robust_se = robust,
-        n_obs = nobs(model),
-        n_groups = pdim(model)$nT$n,
-        time_periods = pdim(model)$nT$T,
-        formula = deparse(formula),
-        id_variable = id_var,
-        time_variable = time_var,
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = tryCatch({
-                # Try to tidy the panel model
-                tidy_model <- broom::tidy(model)
-                as.character(knitr::kable(tidy_model, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                # Fallback: create summary table
-                panel_summary <- data.frame(
-                    Model = paste0("Panel (", model_type, ")"),
-                    Groups = pdim(model)$nT$n,
-                    Time_Periods = pdim(model)$nT$T,
-                    R_Squared = round(summary(model)$r.squared[1], 4)
-                )
-                as.character(knitr::kable(panel_summary, format = "markdown", digits = 4)))
-            }),
-            interpretation = paste0("Panel regression (", model_type, " effects) with ", 
-                                  pdim(model)$nT$n, " groups and ", pdim(model)$nT$T, " time periods.")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("econometrics", "panel_regression")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Panel regression completed successfully")
@@ -338,86 +259,7 @@ async def instrumental_variables(context, params) -> dict[str, Any]:
     """Perform instrumental variables regression."""
     await context.info("Fitting instrumental variables model")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    library(AER)
-    data <- as.data.frame(args$data)
-    formula_str <- args$formula
-    robust <- args$robust %||% TRUE
-    # Parse IV formula (y ~ x1 + x2 | z1 + z2)
-    formula <- as.formula(formula_str)
-    # Fit 2SLS model
-    iv_model <- ivreg(formula, data = data)
-    # Get robust standard errors if requested
-    if (robust) {
-        robust_se <- coeftest(iv_model, vcov = sandwich)
-        coef_table <- robust_se
-    } else {
-        coef_table <- summary(iv_model)$coefficients
-    }
-    # Diagnostic tests
-    summary_iv <- summary(iv_model, diagnostics = TRUE)
-    # Extract coefficients with proper names
-    coef_vals <- coef_table[, "Estimate"]
-    names(coef_vals) <- rownames(coef_table)
-    std_err_vals <- coef_table[, "Std. Error"]
-    names(std_err_vals) <- rownames(coef_table)
-    t_vals <- coef_table[, "t value"]
-    names(t_vals) <- rownames(coef_table)
-    p_vals <- coef_table[, "Pr(>|t|)"]
-    names(p_vals) <- rownames(coef_table)
-    result <- list(
-        coefficients = as.list(coef_vals),
-        std_errors = as.list(std_err_vals),
-        t_values = as.list(t_vals),
-        p_values = as.list(p_vals),
-        r_squared = summary_iv$r.squared,
-        adj_r_squared = summary_iv$adj.r.squared,
-        weak_instruments = {
-            wi_stat <- if (is.na(summary_iv$diagnostics["Weak instruments", "statistic"])) NULL else summary_iv$diagnostics["Weak instruments", "statistic"]
-            wi_p <- if (is.na(summary_iv$diagnostics["Weak instruments", "p-value"])) NULL else summary_iv$diagnostics["Weak instruments", "p-value"]
-            if (is.null(wi_stat) && is.null(wi_p)) NULL else list(statistic = wi_stat, p_value = wi_p)
-        },
-        wu_hausman = {
-            wh_stat <- if (is.na(summary_iv$diagnostics["Wu-Hausman", "statistic"])) NULL else summary_iv$diagnostics["Wu-Hausman", "statistic"]
-            wh_p <- if (is.na(summary_iv$diagnostics["Wu-Hausman", "p-value"])) NULL else summary_iv$diagnostics["Wu-Hausman", "p-value"]
-            if (is.null(wh_stat) && is.null(wh_p)) NULL else list(statistic = wh_stat, p_value = wh_p)
-        },
-        sargan = {
-            s_stat <- if (is.na(summary_iv$diagnostics["Sargan", "statistic"])) NULL else summary_iv$diagnostics["Sargan", "statistic"]
-            s_p <- if (is.na(summary_iv$diagnostics["Sargan", "p-value"])) NULL else summary_iv$diagnostics["Sargan", "p-value"]
-            if (is.null(s_stat) && is.null(s_p)) NULL else list(statistic = s_stat, p_value = s_p)
-        },
-        robust_se = robust,
-        formula = formula_str,
-        n_obs = nobs(iv_model),
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = tryCatch({
-                # Try to tidy the IV model
-                tidy_model <- broom::tidy(iv_model)
-                as.character(knitr::kable(tidy_model, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                # Fallback: create summary table
-                iv_summary <- data.frame(
-                    Model = "2SLS",
-                    R_Squared = round(summary_iv$r.squared, 4),
-                    Observations = nobs(iv_model),
-                    Robust_SE = robust
-                )
-                as.character(knitr::kable(iv_summary, format = "markdown", digits = 4)))
-            }),
-            interpretation = paste0("Instrumental variables (2SLS) regression with ", 
-                                  nobs(iv_model), " observations.")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("econometrics", "instrumental_variables")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Instrumental variables model fitted successfully")
@@ -541,72 +383,7 @@ async def var_model(context, params) -> dict[str, Any]:
     """Fit Vector Autoregression model."""
     await context.info("Fitting VAR model")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    library(vars)
-    data <- as.data.frame(args$data)
-    variables <- args$variables
-    lag_order <- args$lags %||% 2
-    var_type <- args$type %||% "const"
-    # Select variables for VAR
-    var_data <- data[, variables, drop = FALSE]
-    # Remove missing values
-    var_data <- na.omit(var_data)
-    # Fit VAR model
-    var_model <- VAR(var_data, p = lag_order, type = var_type)
-    # Extract coefficients for each equation
-    equations <- list()
-    for (var in variables) {
-        eq_summary <- summary(var_model)$varresult[[var]]
-        equations[[var]] <- list(
-            coefficients = as.list(coef(eq_summary)),
-            std_errors = as.list(eq_summary$coefficients[, "Std. Error"]),
-            t_values = as.list(eq_summary$coefficients[, "t value"]),
-            p_values = as.list(eq_summary$coefficients[, "Pr(>|t|)"]),
-            r_squared = eq_summary$r.squared,
-            adj_r_squared = eq_summary$adj.r.squared
-        )
-    }
-    # Model diagnostics
-    var_summary <- summary(var_model)
-    result <- list(
-        equations = equations,
-        variables = variables,
-        lag_order = lag_order,
-        var_type = var_type,
-        n_obs = nobs(var_model),
-        n_variables = length(variables),
-        loglik = logLik(var_model)[1],
-        aic = AIC(var_model),
-        bic = BIC(var_model),
-        residual_covariance = as.matrix(var_summary$covres),
-        
-        # Special non-validated field for formatting
-        "_formatting" = list(
-            summary = tryCatch({
-                # Create VAR summary table
-                var_summary_df <- data.frame(
-                    Model = "VAR",
-                    Variables = length(variables),
-                    Lags = lag_order,
-                    Observations = nobs(var_model),
-                    AIC = round(AIC(var_model), 2),
-                    BIC = round(BIC(var_model), 2)
-                )
-                as.character(knitr::kable(var_summary_df, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                "VAR model fitted successfully"
-            }),
-            interpretation = paste0("VAR(", lag_order, ") model with ", length(variables), 
-                                  " variables and ", nobs(var_model), " observations.")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("econometrics", "var_model")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("VAR model fitted successfully")

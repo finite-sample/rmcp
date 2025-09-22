@@ -6,7 +6,7 @@ Comprehensive data exploration and summary capabilities.
 from typing import Any
 
 from ..core.schemas import table_schema
-from ..r_formatting import get_r_formatting_utilities
+from ..r_assets.loader import get_r_script
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
@@ -81,114 +81,7 @@ async def summary_stats(context, params) -> dict[str, Any]:
     """Compute comprehensive descriptive statistics."""
     await context.info("Computing summary statistics")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    library(dplyr)
-    data <- as.data.frame(args$data)
-    variables <- args$variables
-    group_by <- args$group_by
-    percentiles <- args$percentiles %||% c(0.25, 0.5, 0.75)
-    # Select variables to analyze
-    if (is.null(variables)) {
-        numeric_vars <- names(data)[sapply(data, is.numeric)]
-        if (length(numeric_vars) == 0) {
-            stop("No numeric variables found in data")
-        }
-        variables <- numeric_vars
-    }
-    # Function to compute detailed stats
-    compute_stats <- function(x) {
-        x_clean <- x[!is.na(x)]
-        if (length(x_clean) == 0) {
-            return(list(
-                n = 0, n_missing = length(x), mean = NA, sd = NA, min = NA, max = NA,
-                q25 = NA, median = NA, q75 = NA, skewness = NA, kurtosis = NA
-            ))
-        }
-        stats <- list(
-            n = length(x_clean),
-            n_missing = sum(is.na(x)),
-            mean = mean(x_clean),
-            sd = sd(x_clean),
-            min = min(x_clean),
-            max = max(x_clean),
-            range = max(x_clean) - min(x_clean),
-            skewness = (sum((x_clean - mean(x_clean))^3) / length(x_clean)) / (sd(x_clean)^3),
-            kurtosis = (sum((x_clean - mean(x_clean))^4) / length(x_clean)) / (sd(x_clean)^4) - 3
-        )
-        # Add percentiles
-        for (i in seq_along(percentiles)) {
-            pct_name <- paste0("p", percentiles[i] * 100)
-            stats[[pct_name]] <- quantile(x_clean, percentiles[i])
-        }
-        return(stats)
-    }
-    if (is.null(group_by)) {
-        # Overall statistics
-        stats_list <- list()
-        for (var in variables) {
-            stats_list[[var]] <- compute_stats(data[[var]])
-        }
-        result <- list(
-            statistics = stats_list,
-            variables = variables,
-            n_obs = nrow(data),
-            grouped = FALSE
-        )
-        
-        # Add formatting using assignment approach like normality test
-        result$"_formatting" <- list(
-            summary = tryCatch({
-                # Create a simple data frame for broom::tidy
-                stats_df <- do.call(rbind, lapply(names(stats_list), function(var) {
-                    s <- stats_list[[var]]
-                    data.frame(variable = var, n = s$n, mean = s$mean, sd = s$sd, min = s$min, max = s$max)
-                }))
-                as.character(knitr::kable(stats_df, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                "Summary statistics computed successfully"
-            }),
-            interpretation = paste0("Summary statistics for ", length(variables), " variables computed.")
-        )
-    } else {
-        # Grouped statistics
-        grouped_stats <- list()
-        groups <- unique(data[[group_by]][!is.na(data[[group_by]])])
-        for (group_val in groups) {
-            group_data <- data[data[[group_by]] == group_val, ]
-            group_stats <- list()
-            for (var in variables) {
-                group_stats[[var]] <- compute_stats(group_data[[var]])
-            }
-            grouped_stats[[as.character(group_val)]] <- group_stats
-        }
-        result <- list(
-            statistics = grouped_stats,
-            variables = variables,
-            group_by = group_by,
-            groups = as.character(groups),
-            n_obs = nrow(data),
-            grouped = TRUE
-        )
-        
-        # Add formatting using assignment approach like normality test
-        result$"_formatting" <- list(
-            summary = tryCatch({
-                # Create summary table for grouped stats
-                group_summary <- paste0("Grouped statistics by ", group_by, " (", length(groups), " groups)")
-                as.character(knitr::kable(data.frame(Summary = group_summary), format = "markdown"))
-            }, error = function(e) {
-                "Grouped summary statistics computed successfully"
-            }),
-            interpretation = paste0("Summary statistics for ", length(variables), " variables across ", length(groups), " groups.")
-        )
-    }
-    """
-    )
+    r_script = get_r_script("descriptive", "summary_stats")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Summary statistics computed successfully")
@@ -276,71 +169,7 @@ async def outlier_detection(context, params) -> dict[str, Any]:
     """Detect outliers in data."""
     await context.info("Detecting outliers")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    data <- as.data.frame(args$data)
-    variable <- args$variable
-    method <- args$method %||% "iqr"
-    threshold <- args$threshold %||% 3.0
-    values <- data[[variable]]
-    values_clean <- values[!is.na(values)]
-    if (method == "iqr") {
-        Q1 <- quantile(values_clean, 0.25)
-        Q3 <- quantile(values_clean, 0.75)
-        IQR <- Q3 - Q1
-        lower_bound <- Q1 - 1.5 * IQR
-        upper_bound <- Q3 + 1.5 * IQR
-        outliers <- which(values < lower_bound | values > upper_bound)
-        bounds <- list(lower = lower_bound, upper = upper_bound, iqr = IQR)
-    } else if (method == "z_score") {
-        mean_val <- mean(values_clean)
-        sd_val <- sd(values_clean)
-        z_scores <- abs((values - mean_val) / sd_val)
-        outliers <- which(z_scores > threshold)
-        bounds <- list(threshold = threshold, mean = mean_val, sd = sd_val)
-    } else if (method == "modified_z") {
-        median_val <- median(values_clean)
-        mad_val <- mad(values_clean)
-        modified_z <- abs(0.6745 * (values - median_val) / mad_val)
-        outliers <- which(modified_z > threshold)
-        bounds <- list(threshold = threshold, median = median_val, mad = mad_val)
-    }
-    result <- list(
-        method = method,
-        outlier_indices = outliers,
-        outlier_values = values[outliers],
-        n_outliers = length(outliers),
-        n_obs = length(values[!is.na(values)]),
-        outlier_percentage = length(outliers) / length(values_clean) * 100,
-        bounds = bounds,
-        variable = variable,
-        
-        # Special non-validated field for formatting (using assignment instead of backticks)
-        "_formatting" = list(
-            summary = tryCatch({
-                # Create outlier summary table
-                outlier_df <- data.frame(
-                    Method = method,
-                    Variable = variable,
-                    Outliers_Detected = length(outliers),
-                    Total_Observations = length(values_clean),
-                    Outlier_Percentage = round(length(outliers) / length(values_clean) * 100, 2)
-                )
-                as.character(knitr::kable(outlier_df, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                "Outlier detection completed successfully"
-            }),
-            interpretation = paste0("Detected ", length(outliers), " outliers (", 
-                                  round(length(outliers) / length(values_clean) * 100, 1), 
-                                  "% of observations) using ", method, " method.")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("descriptive", "outlier_detection")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Outlier detection completed successfully")
@@ -430,67 +259,7 @@ async def frequency_table(context, params) -> dict[str, Any]:
     """Generate frequency tables."""
     await context.info("Creating frequency tables")
 
-    # Include R formatting utilities
-    formatting_code = get_r_formatting_utilities()
-
-    r_script = (
-        formatting_code
-        + """
-    data <- as.data.frame(args$data)
-    variables <- args$variables
-    include_percentages <- args$include_percentages %||% TRUE
-    sort_by <- args$sort_by %||% "frequency"
-    freq_tables <- list()
-    for (var in variables) {
-        values <- data[[var]]
-        freq_table <- table(values, useNA = "ifany")
-        # Sort if requested
-        if (sort_by == "frequency") {
-            freq_table <- sort(freq_table, decreasing = TRUE)
-        }
-        freq_data <- list(
-            values = names(freq_table),
-            frequencies = as.numeric(freq_table),
-            n_total = length(values[!is.na(values)])
-        )
-        if (include_percentages) {
-            freq_data$percentages <- as.numeric(freq_table) / sum(freq_table) * 100
-        }
-        # Add missing value info
-        n_missing <- sum(is.na(values))
-        if (n_missing > 0) {
-            freq_data$n_missing <- n_missing
-            freq_data$missing_percentage <- n_missing / length(values) * 100
-        }
-        freq_tables[[var]] <- freq_data
-    }
-    result <- list(
-        frequency_tables = freq_tables,
-        variables = I(as.character(variables)),
-        total_observations = nrow(data),
-        
-        # Special non-validated field for formatting (using assignment instead of backticks)
-        "_formatting" = list(
-            summary = tryCatch({
-                # Create frequency summary table
-                freq_summary <- do.call(rbind, lapply(names(freq_tables), function(var) {
-                    ft <- freq_tables[[var]]
-                    data.frame(
-                        Variable = var,
-                        Unique_Values = length(ft$values),
-                        Total_Observations = ft$n_total,
-                        Missing_Values = ifelse(is.null(ft$n_missing), 0, ft$n_missing)
-                    )
-                }))
-                as.character(knitr::kable(freq_summary, format = "markdown", digits = 4)))
-            }, error = function(e) {
-                "Frequency tables created successfully"
-            }),
-            interpretation = paste0("Frequency tables created for ", length(variables), " variables.")
-        )
-    )
-    """
-    )
+    r_script = get_r_script("descriptive", "frequency_table")
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Frequency tables created successfully")

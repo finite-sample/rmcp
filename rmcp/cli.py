@@ -180,7 +180,8 @@ def serve_http(
         from .transport.http import HTTPTransport
     except ImportError:
         click.echo(
-            "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp[http]"
+            "HTTP transport requires 'fastapi' extras. "
+            "Install with: pip install rmcp[http]"
         )
         sys.exit(1)
     logger.info(f"Starting HTTP transport on {host}:{port}")
@@ -348,7 +349,6 @@ def setup(config_file: str | None):
 @cli.command("check-r-packages")
 def check_r_packages():
     """Check R package installation status."""
-    import json
     import subprocess
 
     # Define all required packages with their categories

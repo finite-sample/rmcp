@@ -6,6 +6,7 @@ ensuring all tool paths work end-to-end without requiring R environment.
 """
 import asyncio
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 from shutil import which
 from unittest.mock import AsyncMock, patch
@@ -146,9 +147,10 @@ MOCK_RESPONSES = {
     # Data transformations
     "standardize": {
         "data": {"x_standardized": [-1.26, -0.63, 0.0, 0.63, 1.26]},
-        "method": "z_score",
-        "original_mean": 3.0,
-        "original_sd": 1.58,
+        "scaling_method": "z_score",
+        "scaling_info": {"x": {"mean": 3.0, "sd": 1.58}},
+        "variables_scaled": ["x"],
+        "n_obs": 5,
     },
     "winsorize": {
         "data": {"x_winsorized": [1, 2, 3, 4, 4]},
@@ -172,11 +174,20 @@ MOCK_RESPONSES = {
         "frequency": 4,
     },
     "arima_model": {
+        "model_type": "ARIMA",
         "order": [1, 0, 1],
         "coefficients": {"ar1": 0.5, "ma1": 0.3},
         "aic": 45.2,
-        "forecast": [108, 109, 110],
-        "forecast_se": [2.1, 2.3, 2.5],
+        "bic": 47.8,
+        "loglik": -20.1,
+        "sigma2": 1.25,
+        "fitted_values": [100, 101, 102, 103, 104, 105, 104, 103, 102, 101],
+        "residuals": [0, 1, -4, 2, 4, 5, -9, -3, 1, 6],
+        "forecasts": [108, 109, 110],
+        "forecast_lower": [105, 106, 107],
+        "forecast_upper": [111, 112, 113],
+        "accuracy": {"ME": 0.1, "RMSE": 2.5, "MAE": 1.8, "MPE": 0.05, "MAPE": 2.1},
+        "n_obs": 10,
     },
     # Machine learning
     "kmeans_clustering": {
@@ -221,39 +232,68 @@ MOCK_RESPONSES = {
     },
     # Visualization (with mock image data)
     "scatter_plot": {
+        "plot_type": "scatter",
+        "variables": {"x": "x", "y": "y", "group": None},
+        "statistics": {"correlation": 0.99, "n_points": 5},
         "image_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
         "image_mime_type": "image/png",
-        "status": "Plot created successfully",
     },
     "histogram": {
+        "plot_type": "histogram",
+        "variable": "x",
+        "bins": 5,
+        "statistics": {"mean": 3.0, "std": 1.58, "skewness": 0.0, "kurtosis": -1.3},
+        "n_obs": 5,
         "image_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
         "image_mime_type": "image/png",
-        "bins": 5,
-        "status": "Histogram created successfully",
     },
     "boxplot": {
+        "plot_type": "boxplot",
+        "variable": "x",
+        "summary_statistics": {
+            "min": 1,
+            "q1": 2,
+            "median": 3,
+            "q3": 4,
+            "max": 5,
+            "outliers": [5],
+        },
+        "n_obs": 5,
         "image_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
         "image_mime_type": "image/png",
-        "outliers": [5],
-        "status": "Boxplot created successfully",
     },
     "time_series_plot": {
+        "plot_type": "time_series_plot",
+        "statistics": {
+            "n_points": 10,
+            "trend": "increasing",
+            "seasonality_detected": False,
+        },
+        "has_dates": False,
+        "show_trend": True,
         "image_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
         "image_mime_type": "image/png",
-        "trend": "increasing",
-        "status": "Time series plot created successfully",
     },
     "correlation_heatmap": {
+        "plot_type": "heatmap",
+        "correlation_matrix": {"x": [1.0, 0.99], "y": [0.99, 1.0]},
+        "variables": ["x", "y"],
+        "method": "pearson",
+        "n_obs": 5,
+        "n_variables": 2,
         "image_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
         "image_mime_type": "image/png",
-        "max_correlation": 0.99,
-        "status": "Correlation heatmap created successfully",
     },
     "regression_plot": {
+        "plot_type": "regression_plot",
+        "r_squared": 0.99,
+        "adj_r_squared": 0.98,
+        "residual_se": 0.12,
+        "formula": "y ~ x",
+        "residual_plots": True,
+        "n_obs": 5,
         "image_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
         "image_mime_type": "image/png",
-        "r_squared": 0.99,
-        "status": "Regression diagnostic plots created successfully",
     },
     # File operations
     "read_csv": {
@@ -400,15 +440,66 @@ async def run_tool_integration_test(server, tool_name, test_data):
     try:
         # Mock R execution to return expected response
         mock_response = MOCK_RESPONSES.get(tool_name, {"status": "mocked"})
-        with (
+
+        # Create async mock functions that handle different parameter signatures
+        async def mock_execute_r_script_async(*args, **kwargs):
+            return mock_response
+
+        async def mock_execute_r_script_with_image_async(*args, **kwargs):
+            return mock_response
+
+        # Patch all the relevant modules that import the R functions
+        patches = [
             patch(
-                "rmcp.r_integration.execute_r_script_async", return_value=mock_response
+                "rmcp.tools.statistical_tests.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
             ),
             patch(
-                "rmcp.r_integration.execute_r_script_with_image_async",
-                return_value=mock_response,
+                "rmcp.tools.descriptive.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
             ),
-        ):
+            patch(
+                "rmcp.tools.transforms.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
+            ),
+            patch(
+                "rmcp.tools.timeseries.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
+            ),
+            patch(
+                "rmcp.tools.machine_learning.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
+            ),
+            patch(
+                "rmcp.tools.econometrics.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
+            ),
+            patch(
+                "rmcp.tools.fileops.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
+            ),
+            patch(
+                "rmcp.tools.helpers.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
+            ),
+            patch(
+                "rmcp.tools.formula_builder.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
+            ),
+            patch(
+                "rmcp.tools.regression.execute_r_script_async",
+                side_effect=mock_execute_r_script_async,
+            ),
+            patch(
+                "rmcp.tools.visualization.execute_r_script_with_image_async",
+                side_effect=mock_execute_r_script_with_image_async,
+            ),
+        ]
+
+        with ExitStack() as stack:
+            # Apply all patches
+            for p in patches:
+                stack.enter_context(p)
             response = await server.handle_request(request)
             # Validate response structure
             if "result" not in response:
