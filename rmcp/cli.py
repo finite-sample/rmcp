@@ -476,6 +476,8 @@ def _register_builtin_tools(server):
         read_excel,
         read_json,
         write_csv,
+        write_excel,
+        write_json,
     )
     from .tools.formula_builder import build_formula, validate_formula
     from .tools.helpers import load_example, suggest_fix, validate_data
@@ -528,7 +530,9 @@ def _register_builtin_tools(server):
         data_info,
         filter_data,
         read_excel,
+        write_excel,
         read_json,
+        write_json,
         # Econometrics
         panel_regression,
         instrumental_variables,
@@ -552,7 +556,7 @@ def _register_builtin_tools(server):
         validate_data,
         load_example,
     )
-    logger.info("Registered comprehensive statistical analysis tools (40 total)")
+    logger.info("Registered comprehensive statistical analysis tools (42 total)")
 
 
 if __name__ == "__main__":

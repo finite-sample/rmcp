@@ -187,6 +187,82 @@ async def write_csv(context, params) -> dict[str, Any]:
 
 
 @tool(
+    name="write_excel",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "data": table_schema(),
+            "file_path": {"type": "string"},
+            "sheet_name": {"type": "string", "default": "Sheet1"},
+            "include_rownames": {"type": "boolean", "default": False},
+        },
+        "required": ["data", "file_path"],
+    },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "Path where the Excel file was written",
+            },
+            "sheet_name": {
+                "type": "string",
+                "description": "Name of the worksheet where data was written",
+            },
+            "rows_written": {
+                "type": "integer",
+                "description": "Number of rows written to file",
+                "minimum": 0,
+            },
+            "cols_written": {
+                "type": "integer",
+                "description": "Number of columns written to file",
+                "minimum": 0,
+            },
+            "file_size_bytes": {
+                "type": "number",
+                "description": "Size of the written file in bytes",
+                "minimum": 0,
+            },
+            "success": {
+                "type": "boolean",
+                "enum": [True],
+                "description": "Whether the file was written successfully",
+            },
+            "timestamp": {
+                "type": "string",
+                "description": "Timestamp when the file was written",
+            },
+        },
+        "required": [
+            "file_path",
+            "sheet_name",
+            "rows_written",
+            "cols_written",
+            "file_size_bytes",
+            "success",
+            "timestamp",
+        ],
+        "additionalProperties": False,
+    },
+    description="Write data to Excel file with worksheet and formatting options",
+)
+async def write_excel(context, params) -> dict[str, Any]:
+    """Write data to Excel file."""
+    await context.info("Writing Excel file", file_path=params.get("file_path"))
+
+    # Load R script from separated file
+    r_script = get_r_script("fileops", "write_excel")
+    try:
+        result = await execute_r_script_async(r_script, params)
+        await context.info("Excel file written successfully")
+        return result
+    except Exception as e:
+        await context.error("Excel writing failed", error=str(e))
+        raise
+
+
+@tool(
     name="data_info",
     input_schema={
         "type": "object",
@@ -559,4 +635,86 @@ async def read_json(context, params) -> dict[str, Any]:
         return result
     except Exception as e:
         await context.error("JSON file reading failed", error=str(e))
+        raise
+
+
+@tool(
+    name="write_json",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "data": table_schema(),
+            "file_path": {"type": "string"},
+            "pretty": {"type": "boolean", "default": True},
+            "auto_unbox": {"type": "boolean", "default": True},
+        },
+        "required": ["data", "file_path"],
+    },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "Path where the JSON file was written",
+            },
+            "rows_written": {
+                "type": "integer",
+                "description": "Number of rows written to file",
+                "minimum": 0,
+            },
+            "cols_written": {
+                "type": "integer",
+                "description": "Number of columns written to file",
+                "minimum": 0,
+            },
+            "variables_written": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Names of variables/columns written",
+            },
+            "file_size_bytes": {
+                "type": "number",
+                "description": "Size of the written file in bytes",
+                "minimum": 0,
+            },
+            "pretty_formatted": {
+                "type": "boolean",
+                "description": "Whether the JSON was formatted with indentation",
+            },
+            "success": {
+                "type": "boolean",
+                "enum": [True],
+                "description": "Whether the file was written successfully",
+            },
+            "timestamp": {
+                "type": "string",
+                "description": "Timestamp when the file was written",
+            },
+        },
+        "required": [
+            "file_path",
+            "rows_written",
+            "cols_written",
+            "variables_written",
+            "file_size_bytes",
+            "pretty_formatted",
+            "success",
+            "timestamp",
+        ],
+        "additionalProperties": False,
+    },
+    description="Write data to JSON file with column-wise format and formatting options",
+)
+async def write_json(context, params) -> dict[str, Any]:
+    """Write data to JSON file."""
+    await context.info("Writing JSON file", file_path=params.get("file_path"))
+
+    # Load R script from separated file
+    r_script = get_r_script("fileops", "write_json")
+    try:
+        result = await execute_r_script_async(r_script, params)
+        await context.info("JSON file written successfully")
+        return result
+    except Exception as e:
+        await context.error("JSON writing failed", error=str(e))
         raise
