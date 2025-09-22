@@ -226,7 +226,7 @@ class ToolsRegistry:
                     "annotations": {"mimeType": "text/markdown"},
                 }
             )
-        # For backwards compatibility, also add JSON as text if no summary
+        # Add JSON as text when no summary is available
         if isinstance(base_payload, str) and not summary:
             content.append(
                 {
@@ -304,21 +304,21 @@ class ToolsRegistry:
         """Create a concise markdown summary for human readers."""
         title = tool_def.title or tool_def.name
 
-        # Check for custom formatted summary (NEW: Enhanced formatting from separate formatting_info)
+        # Prefer formatted summaries provided by formatting_info
         if formatting_info:
-            # Priority 1: Use formatted summary if available (from R formatting utilities)
+            # Use the formatted summary when available
             if "summary" in formatting_info and formatting_info["summary"]:
                 # formatted_summary already includes interpretation, so just return it
                 return formatting_info["summary"]
 
-            # Priority 2: Use interpretation alone if no formatted_summary
+            # Use the interpretation text when no formatted_summary is present
             if (
                 "interpretation" in formatting_info
                 and formatting_info["interpretation"]
             ):
                 return f"## {title} Results\n\n{formatting_info['interpretation']}"
 
-        # Fallback to original logic for tools without custom formatting
+        # Fallback to the default summary logic
         if isinstance(payload, str):
             return payload
         if isinstance(payload, list):
