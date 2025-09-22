@@ -14,13 +14,13 @@ RUN apt-get update && apt-get install -y \
     git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install all required R packages for RMCP (22 packages)
+# Install all required R packages for RMCP (24 packages)
 # This is the time-consuming step that we want to cache
 RUN R -e "install.packages(c(\
     'jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', \
     'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', \
     'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', \
-    'rlang', 'readxl', 'base64enc', 'reshape2'\
+    'rlang', 'readxl', 'base64enc', 'reshape2', 'knitr', 'broom'\
     ), repos='https://cran.rstudio.com/', quiet=TRUE)"
 
 # Install Python dependencies needed for CI

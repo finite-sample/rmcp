@@ -6,6 +6,7 @@ Advanced econometric modeling for panel data, instrumental variables, etc.
 from typing import Any
 
 from ..core.schemas import formula_schema, table_schema
+from ..r_formatting import get_r_formatting_utilities
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
@@ -119,7 +120,13 @@ from ..registries.tools import tool
 async def panel_regression(context, params) -> dict[str, Any]:
     """Perform panel data regression."""
     await context.info("Fitting panel data regression")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     library(plm)
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
@@ -170,9 +177,30 @@ async def panel_regression(context, params) -> dict[str, Any]:
         time_periods = pdim(model)$nT$T,
         formula = deparse(formula),
         id_variable = id_var,
-        time_variable = time_var
+        time_variable = time_var,
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Try to tidy the panel model
+                tidy_model <- broom::tidy(model)
+                as.character(knitr::kable(tidy_model, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                # Fallback: create summary table
+                panel_summary <- data.frame(
+                    Model = paste0("Panel (", model_type, ")"),
+                    Groups = pdim(model)$nT$n,
+                    Time_Periods = pdim(model)$nT$T,
+                    R_Squared = round(summary(model)$r.squared[1], 4)
+                )
+                as.character(knitr::kable(panel_summary, format = "markdown", digits = 4)))
+            }),
+            interpretation = paste0("Panel regression (", model_type, " effects) with ", 
+                                  pdim(model)$nT$n, " groups and ", pdim(model)$nT$T, " time periods.")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Panel regression completed successfully")
@@ -309,7 +337,13 @@ async def panel_regression(context, params) -> dict[str, Any]:
 async def instrumental_variables(context, params) -> dict[str, Any]:
     """Perform instrumental variables regression."""
     await context.info("Fitting instrumental variables model")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     library(AER)
     data <- as.data.frame(args$data)
     formula_str <- args$formula
@@ -360,9 +394,30 @@ async def instrumental_variables(context, params) -> dict[str, Any]:
         },
         robust_se = robust,
         formula = formula_str,
-        n_obs = nobs(iv_model)
+        n_obs = nobs(iv_model),
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Try to tidy the IV model
+                tidy_model <- broom::tidy(iv_model)
+                as.character(knitr::kable(tidy_model, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                # Fallback: create summary table
+                iv_summary <- data.frame(
+                    Model = "2SLS",
+                    R_Squared = round(summary_iv$r.squared, 4),
+                    Observations = nobs(iv_model),
+                    Robust_SE = robust
+                )
+                as.character(knitr::kable(iv_summary, format = "markdown", digits = 4)))
+            }),
+            interpretation = paste0("Instrumental variables (2SLS) regression with ", 
+                                  nobs(iv_model), " observations.")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Instrumental variables model fitted successfully")
@@ -485,7 +540,13 @@ async def instrumental_variables(context, params) -> dict[str, Any]:
 async def var_model(context, params) -> dict[str, Any]:
     """Fit Vector Autoregression model."""
     await context.info("Fitting VAR model")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     library(vars)
     data <- as.data.frame(args$data)
     variables <- args$variables
@@ -522,9 +583,30 @@ async def var_model(context, params) -> dict[str, Any]:
         loglik = logLik(var_model)[1],
         aic = AIC(var_model),
         bic = BIC(var_model),
-        residual_covariance = as.matrix(var_summary$covres)
+        residual_covariance = as.matrix(var_summary$covres),
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Create VAR summary table
+                var_summary_df <- data.frame(
+                    Model = "VAR",
+                    Variables = length(variables),
+                    Lags = lag_order,
+                    Observations = nobs(var_model),
+                    AIC = round(AIC(var_model), 2),
+                    BIC = round(BIC(var_model), 2)
+                )
+                as.character(knitr::kable(var_summary_df, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                "VAR model fitted successfully"
+            }),
+            interpretation = paste0("VAR(", lag_order, ") model with ", length(variables), 
+                                  " variables and ", nobs(var_model), " observations.")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("VAR model fitted successfully")

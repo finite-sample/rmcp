@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.10** includes 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.11** includes 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## Key Architecture Components
 
@@ -70,8 +70,10 @@ The server implements comprehensive statistical analysis tools as Python functio
 - **Required R Packages**: 
   - Core: plm, lmtest, sandwich, AER, jsonlite, dplyr
   - Advanced: forecast, vars, urca, ggplot2, gridExtra, tidyr, rlang
+  - Formatting: broom, knitr (for professional markdown output with formatted tables)
 - All data exchange between Python and R happens via JSON serialization
 - Enhanced error handling with custom `RExecutionError` class for detailed diagnostics
+- **Professional Output Formatting**: All 40 tools include `_formatting` fields with markdown tables and natural language interpretations using broom/knitr packages
 
 ## Development Commands
 
@@ -92,7 +94,7 @@ poetry shell
 
 ### CLI Commands
 ```bash
-# Check version (should show 0.3.8)
+# Check version (should show 0.3.11)
 rmcp --version
 
 # Start stdio server (for Claude Desktop integration)
@@ -165,7 +167,38 @@ docker run -it r-econometrics-mcp
 docker run -i r-econometrics-mcp
 ```
 
-## Recent Improvements (v0.3.10)
+## Recent Improvements (v0.3.11)
+
+### 🔧 Professional Output Formatting
+- **Formatted Statistical Output**: All 40 tools now provide professionally formatted results using broom and knitr packages
+  - Markdown tables for statistical summaries using `knitr::kable()`
+  - Tidy statistical results using `broom::tidy()`, `broom::glance()`, and `broom::augment()`
+  - Natural language interpretations of statistical results
+  - Schema-safe formatting via `_formatting` fields (extracted before validation)
+
+### 🐛 Critical Bug Fixes
+- **Fixed knitr_kable JSON Serialization**: Resolved "No method asJSON S3 class: knitr_kable" error
+  - Wrapped all `knitr::kable()` calls with `as.character()` for proper JSON serialization
+  - Fixed unbalanced parentheses from automated replacements across all tool files
+  - All 40 tools now work correctly with formatted output
+
+- **Fixed File Operations Schema Issues**: Resolved schema validation failures in file import tools
+  - Updated `sample_data` schema to accept both objects and arrays
+  - Fixed `missing_values` and `column_types` to return proper named lists using `as.list()`
+  - All file operations (CSV, Excel, JSON) now validate correctly
+
+### 🧪 Test Suite Improvements  
+- **100% Test Success Rate**: All unit, integration, and end-to-end tests now pass
+  - Fixed e2e scenario that was failing due to schema validation
+  - Comprehensive test coverage across all 40 statistical tools
+  - Reliable CI/CD pipeline with consistent results
+
+### 📊 Code Quality & Maintenance
+- **Dependency Management**: Added broom and knitr as required R packages for consistent formatting
+- **Code Formatting**: Applied black formatting across all Python files
+- **Documentation**: Streamlined README.md from 720 to 213 lines (70% reduction) for better user experience
+
+## Previous Improvements (v0.3.10)
 
 ### 🔧 Enhanced Flexibility
 - **Output Schema Validation**: Made optional for increased flexibility

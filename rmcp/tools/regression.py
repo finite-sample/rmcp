@@ -198,10 +198,10 @@ async def linear_model(context, params) -> dict[str, Any]:
     summary_model <- summary(model)
     
     # Generate formatted summary using our formatting functions
-    formatted_summary <- format_linear_model_results(model, args$formula)
+    formatted_summary <- format_lm_results(model, args$formula)
     
     # Generate natural language interpretation
-    interpretation <- interpret_linear_model(model, args$formula)
+    interpretation <- interpret_lm(model)
     
     result <- list(
         # Schema-compliant fields only (strict validation)
@@ -223,7 +223,7 @@ async def linear_model(context, params) -> dict[str, Any]:
         method = "lm",
         
         # Special non-validated field for formatting (will be extracted before validation)
-        `_formatting` = list(
+        "_formatting" = list(
             summary = formatted_summary,
             interpretation = interpretation
         )
@@ -434,10 +434,18 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
     }
     
     # Generate formatted summary using our formatting functions
-    formatted_summary <- format_correlation_results(cor_matrix, cor_test_results, method)
+    formatted_summary <- format_correlation_matrix(cor_matrix)
     
     # Generate natural language interpretation
-    interpretation <- interpret_correlations(cor_matrix, cor_test_results)
+    # Extract the smallest p-value from significance tests for overall interpretation
+    min_p <- 1
+    for (test in cor_test_results) {
+        if (!is.na(test$p_value) && test$p_value < min_p) {
+            min_p <- test$p_value
+        }
+    }
+    sig_text <- get_significance(min_p)
+    interpretation <- paste0("Strongest correlations are ", sig_text, ".")
     
     # Convert correlation matrix to nested list structure
     cor_list <- list()
@@ -459,7 +467,7 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         variables = names(numeric_data),
         
         # Special non-validated field for formatting (will be extracted before validation)
-        `_formatting` = list(
+        "_formatting" = list(
             summary = formatted_summary,
             interpretation = interpretation
         )

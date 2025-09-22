@@ -6,6 +6,7 @@ Essential data manipulation and cleaning capabilities.
 from typing import Any
 
 from ..core.schemas import table_schema
+from ..r_formatting import get_r_formatting_utilities
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
@@ -57,7 +58,13 @@ from ..registries.tools import tool
 async def lag_lead(context, params) -> dict[str, Any]:
     """Create lagged and lead variables."""
     await context.info("Creating lag/lead variables")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     variables <- args$variables
     lags <- args$lags %||% c(1)
@@ -86,9 +93,28 @@ async def lag_lead(context, params) -> dict[str, Any]:
         data = as.list(result_data),
         variables_created = I(as.character(created_vars)),
         n_obs = nrow(result_data),
-        operation = "lag_lead"
+        operation = "lag_lead",
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Create lag/lead summary table
+                lagLead_summary <- data.frame(
+                    Operation = "Lag/Lead",
+                    Variables_Input = length(variables),
+                    Variables_Created = length(created_vars),
+                    Observations = nrow(result_data)
+                )
+                as.character(knitr::kable(lagLead_summary, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                "Lag/lead variables created successfully"
+            }),
+            interpretation = paste0("Created ", length(created_vars), " lag/lead variables from ", 
+                                  length(variables), " input variables.")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Lag/lead variables created successfully")
@@ -170,7 +196,13 @@ async def lag_lead(context, params) -> dict[str, Any]:
 async def winsorize(context, params) -> dict[str, Any]:
     """Winsorize variables to handle outliers."""
     await context.info("Winsorizing variables")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     variables <- args$variables
     percentiles <- args$percentiles %||% c(0.01, 0.99)
@@ -200,9 +232,30 @@ async def winsorize(context, params) -> dict[str, Any]:
         outliers_summary = outliers_summary,
         percentiles = percentiles,
         variables_winsorized = I(variables),
-        n_obs = nrow(result_data)
+        n_obs = nrow(result_data),
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Create winsorization summary table
+                total_capped <- sum(sapply(outliers_summary, function(x) x$total_capped))
+                winsor_summary <- data.frame(
+                    Operation = "Winsorization",
+                    Variables = length(variables),
+                    Percentiles = paste0(percentiles[1]*100, "%-", percentiles[2]*100, "%"),
+                    Total_Outliers_Capped = total_capped,
+                    Observations = nrow(result_data)
+                )
+                as.character(knitr::kable(winsor_summary, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                "Variables winsorized successfully"
+            }),
+            interpretation = paste0("Winsorized ", length(variables), " variables at ", 
+                                  percentiles[1]*100, "%-", percentiles[2]*100, "% thresholds.")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Variables winsorized successfully")
@@ -270,7 +323,13 @@ async def winsorize(context, params) -> dict[str, Any]:
 async def difference(context, params) -> dict[str, Any]:
     """Compute differences of variables."""
     await context.info("Computing variable differences")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     variables <- args$variables
     diff_order <- args$order %||% 1
@@ -311,9 +370,29 @@ async def difference(context, params) -> dict[str, Any]:
         variables_differenced = I(as.character(diff_vars)),
         difference_order = diff_order,
         log_transformed = log_transform,
-        n_obs = nrow(result_data)
+        n_obs = nrow(result_data),
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Create differencing summary table
+                diff_summary <- data.frame(
+                    Operation = "Differencing",
+                    Variables = length(variables),
+                    Order = diff_order,
+                    Log_Transformed = log_transform,
+                    Observations = nrow(result_data)
+                )
+                as.character(knitr::kable(diff_summary, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                "Variable differences computed successfully"
+            }),
+            interpretation = paste0("Applied ", diff_order, "-order differencing to ", length(variables), 
+                                  " variables", if (log_transform) " (with log transformation)" else ".")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Variable differences computed successfully")
@@ -387,7 +466,13 @@ async def difference(context, params) -> dict[str, Any]:
 async def standardize(context, params) -> dict[str, Any]:
     """Standardize variables."""
     await context.info("Standardizing variables")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     variables <- args$variables
     method <- args$method %||% "z_score"
@@ -419,9 +504,27 @@ async def standardize(context, params) -> dict[str, Any]:
         scaling_method = method,
         scaling_info = scaling_info,
         variables_scaled = variables,
-        n_obs = nrow(result_data)
+        n_obs = nrow(result_data),
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Create standardization summary table
+                std_summary <- data.frame(
+                    Operation = "Standardization",
+                    Method = method,
+                    Variables = length(variables),
+                    Observations = nrow(result_data)
+                )
+                as.character(knitr::kable(std_summary, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                "Variables standardized successfully"
+            }),
+            interpretation = paste0("Standardized ", length(variables), " variables using ", method, " method.")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Variables standardized successfully")

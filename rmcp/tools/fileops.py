@@ -82,7 +82,7 @@ from ..registries.tools import tool
                         "additionalProperties": {"type": "integer"},
                     },
                     "sample_data": {
-                        "type": "object",
+                        "type": ["object", "array"],
                         "description": "First few rows as sample",
                     },
                 },
@@ -165,8 +165,8 @@ async def read_csv(context, params) -> dict[str, Any]:
         summary = list(
             rows_read = nrow(data),
             columns_read = ncol(data),
-            column_types = sapply(data, class),
-            missing_values = sapply(data, function(x) sum(is.na(x))),
+            column_types = as.list(sapply(data, class)),
+            missing_values = as.list(sapply(data, function(x) sum(is.na(x)))),
             sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
         )
     )
@@ -343,7 +343,7 @@ async def write_csv(context, params) -> dict[str, Any]:
                 "minimum": 0,
             },
             "sample_data": {
-                "type": "object",
+                "type": ["object", "array"],
                 "description": "Sample of the first few rows (if requested)",
             },
         },
@@ -610,7 +610,7 @@ async def filter_data(context, params) -> dict[str, Any]:
                         "additionalProperties": {"type": "integer"},
                     },
                     "sample_data": {
-                        "type": "object",
+                        "type": ["object", "array"],
                         "description": "First few rows as sample",
                     },
                 },
@@ -698,8 +698,8 @@ async def read_excel(context, params) -> dict[str, Any]:
         summary = list(
             rows_read = nrow(data),
             columns_read = ncol(data),
-            column_types = sapply(data, class),
-            missing_values = sapply(data, function(x) sum(is.na(x))),
+            column_types = as.list(sapply(data, class)),
+            missing_values = as.list(sapply(data, function(x) sum(is.na(x)))),
             sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
         )
     )
@@ -780,7 +780,7 @@ async def read_excel(context, params) -> dict[str, Any]:
                         "additionalProperties": {"type": "integer"},
                     },
                     "sample_data": {
-                        "type": "object",
+                        "type": ["object", "array"],
                         "description": "First few rows as sample",
                     },
                 },
@@ -854,8 +854,8 @@ async def read_json(context, params) -> dict[str, Any]:
         summary = list(
             rows_read = nrow(data),
             columns_read = ncol(data),
-            column_types = sapply(data, class),
-            missing_values = sapply(data, function(x) sum(is.na(x))),
+            column_types = as.list(sapply(data, class)),
+            missing_values = as.list(sapply(data, function(x) sum(is.na(x)))),
             sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
         )
     )

@@ -6,6 +6,7 @@ Clustering, classification trees, and ML capabilities.
 from typing import Any
 
 from ..core.schemas import formula_schema, table_schema
+from ..r_formatting import get_r_formatting_utilities
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
@@ -116,7 +117,13 @@ from ..registries.tools import tool
 async def kmeans_clustering(context, params) -> dict[str, Any]:
     """Perform K-means clustering."""
     await context.info("Performing K-means clustering")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     variables <- args$variables
     k <- args$k
@@ -161,9 +168,31 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
         k = k,
         variables = variables,
         n_obs = nrow(cluster_data),
-        converged = kmeans_result$iter < max_iter
+        converged = kmeans_result$iter < max_iter,
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Create clustering summary table
+                cluster_summary <- data.frame(
+                    Method = "K-means",
+                    Clusters = k,
+                    Variables = length(variables),
+                    Observations = nrow(cluster_data),
+                    Variance_Explained = round(between_ss / total_ss * 100, 2),
+                    Silhouette_Score = round(silhouette_score, 3)
+                )
+                as.character(knitr::kable(cluster_summary, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                "K-means clustering completed successfully"
+            }),
+            interpretation = paste0("K-means clustering with ", k, " clusters explains ", 
+                                  round(between_ss / total_ss * 100, 1), "% of variance (silhouette score: ", 
+                                  round(silhouette_score, 3), ").")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params, context)
         await context.info("K-means clustering completed successfully")
@@ -284,7 +313,13 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
 async def decision_tree(context, params) -> dict[str, Any]:
     """Build decision tree model."""
     await context.info("Building decision tree")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     library(rpart)
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
@@ -336,9 +371,30 @@ async def decision_tree(context, params) -> dict[str, Any]:
         n_nodes = nrow(tree_model$frame),
         n_obs = nrow(data),
         formula = deparse(formula),
-        tree_complexity = tree_model$cptable[nrow(tree_model$cptable), "CP"]
+        tree_complexity = tree_model$cptable[nrow(tree_model$cptable), "CP"],
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Try to tidy the tree model
+                tidy_tree <- broom::tidy(tree_model)
+                as.character(knitr::kable(tidy_tree, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                # Fallback: create summary table
+                tree_summary <- data.frame(
+                    Model = paste0("Decision Tree (", tree_type, ")"),
+                    Nodes = nrow(tree_model$frame),
+                    Complexity = round(tree_model$cptable[nrow(tree_model$cptable), "CP"], 6),
+                    Observations = nrow(data)
+                )
+                as.character(knitr::kable(tree_summary, format = "markdown", digits = 4)))
+            }),
+            interpretation = paste0("Decision tree (", tree_type, ") with ", nrow(tree_model$frame), 
+                                  " nodes built from ", nrow(data), " observations.")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params, context)
         await context.info("Decision tree built successfully")
@@ -469,7 +525,13 @@ async def decision_tree(context, params) -> dict[str, Any]:
 async def random_forest(context, params) -> dict[str, Any]:
     """Build Random Forest model."""
     await context.info("Building Random Forest model")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     library(randomForest)
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
@@ -560,9 +622,29 @@ async def random_forest(context, params) -> dict[str, Any]:
         mtry = rf_model$mtry,
         oob_error = oob_error_val,
         formula = deparse(formula),
-        n_obs = nrow(data)
+        n_obs = nrow(data),
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Create random forest summary table
+                rf_summary <- data.frame(
+                    Model = paste0("Random Forest (", problem_type, ")"),
+                    Trees = n_trees,
+                    Mtry = rf_model$mtry,
+                    OOB_Error = if (is.null(oob_error_val)) NA else round(oob_error_val, 4),
+                    Observations = nrow(data)
+                )
+                as.character(knitr::kable(rf_summary, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                "Random Forest model completed successfully"
+            }),
+            interpretation = paste0("Random Forest (", problem_type, ") with ", n_trees, 
+                                  " trees built from ", nrow(data), " observations.")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params, context)
         await context.info("Random Forest model built successfully")

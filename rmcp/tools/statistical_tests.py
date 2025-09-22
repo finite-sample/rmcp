@@ -6,6 +6,7 @@ Comprehensive statistical testing capabilities.
 from typing import Any
 
 from ..core.schemas import table_schema
+from ..r_formatting import get_r_formatting_utilities
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
@@ -131,7 +132,13 @@ from ..registries.tools import tool
 async def t_test(context, params) -> dict[str, Any]:
     """Perform t-test analysis."""
     await context.info("Performing t-test")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     variable <- args$variable
     group <- args$group
@@ -158,7 +165,13 @@ async def t_test(context, params) -> dict[str, Any]:
             mean = as.numeric(test_result$estimate),
             null_value = mu,
             alternative = alternative,
-            n_obs = length(values)
+            n_obs = length(values),
+            
+            # Special non-validated field for formatting
+            "_formatting" = list(
+                summary = format_result_table(test_result, "T-Test Results"),
+                interpretation = interpret_result(test_result, "T-test")
+            )
         )
     } else {
         # Two-sample t-test
@@ -193,10 +206,17 @@ async def t_test(context, params) -> dict[str, Any]:
             paired = paired,
             var_equal = var_equal,
             n_obs_x = length(x),
-            n_obs_y = length(y)
+            n_obs_y = length(y),
+            
+            # Special non-validated field for formatting
+            "_formatting" = list(
+                summary = format_result_table(test_result, "T-Test Results"),
+                interpretation = interpret_result(test_result, "T-test")
+            )
         )
     }
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("T-test completed successfully")
@@ -303,7 +323,13 @@ async def t_test(context, params) -> dict[str, Any]:
 async def anova(context, params) -> dict[str, Any]:
     """Perform ANOVA analysis."""
     await context.info("Performing ANOVA")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     formula <- as.formula(args$formula)
     anova_type <- args$type %||% "I"
@@ -348,9 +374,24 @@ async def anova(context, params) -> dict[str, Any]:
             n_obs = nrow(model$model)
         ),
         formula = deparse(formula),
-        anova_type = paste("Type", anova_type)
+        anova_type = paste("Type", anova_type),
+        
+        # Special non-validated field for formatting
+        "_formatting" = list(
+            summary = tryCatch({
+                # Try to tidy the ANOVA table 
+                tidy_anova <- broom::tidy(anova_table)
+                as.character(knitr::kable(tidy_anova, format = "markdown", digits = 4)))
+            }, error = function(e) {
+                # Fallback: format the data frame directly
+                as.character(knitr::kable(df, format = "markdown", digits = 4)))
+            }),
+            interpretation = paste0("ANOVA ", 
+                                  get_significance(min(p_value, na.rm = TRUE)), ".")
+        )
     )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("ANOVA completed successfully")
@@ -469,7 +510,13 @@ async def anova(context, params) -> dict[str, Any]:
 async def chi_square_test(context, params) -> dict[str, Any]:
     """Perform chi-square tests."""
     await context.info("Performing chi-square test")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     x_var <- args$x
     y_var <- args$y
@@ -492,7 +539,13 @@ async def chi_square_test(context, params) -> dict[str, Any]:
             residuals = as.matrix(test_result$residuals),
             x_variable = x_var,
             y_variable = y_var,
-            cramers_v = sqrt(test_result$statistic / (sum(cont_table) * (min(dim(cont_table)) - 1)))
+            cramers_v = sqrt(test_result$statistic / (sum(cont_table) * (min(dim(cont_table)) - 1))),
+            
+            # Special non-validated field for formatting
+            "_formatting" = list(
+                summary = format_result_table(test_result, "Chi-Square Test"),
+                interpretation = interpret_result(test_result, "Chi-square test")
+            )
         )
     } else {
         # Goodness of fit test
@@ -533,10 +586,17 @@ async def chi_square_test(context, params) -> dict[str, Any]:
             df = test_result$parameter,
             p_value = test_result$p.value,
             residuals = as.numeric(test_result$residuals),
-            categories = names(observed)
+            categories = names(observed),
+            
+            # Special non-validated field for formatting
+            "_formatting" = list(
+                summary = format_result_table(test_result, "Chi-Square Goodness of Fit"),
+                interpretation = interpret_result(test_result, "Chi-square test")
+            )
         )
     }
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Chi-square test completed successfully")
@@ -629,7 +689,13 @@ async def chi_square_test(context, params) -> dict[str, Any]:
 async def normality_test(context, params) -> dict[str, Any]:
     """Test for normality."""
     await context.info("Testing for normality")
-    r_script = """
+
+    # Include R formatting utilities
+    formatting_code = get_r_formatting_utilities()
+
+    r_script = (
+        formatting_code
+        + """
     data <- as.data.frame(args$data)
     variable <- args$variable
     test_type <- args$test %||% "shapiro"
@@ -683,7 +749,14 @@ async def normality_test(context, params) -> dict[str, Any]:
     result$sd <- sd(values)
     result$skewness <- (sum((values - mean(values))^3) / n) / (sd(values)^3)
     result$excess_kurtosis <- (sum((values - mean(values))^4) / n) / (sd(values)^4) - 3
+    
+    # Add formatting
+    result$"_formatting" <- list(
+        summary = format_result_table(test_result, paste0(result$test_name, " Results")),
+        interpretation = interpret_result(test_result, result$test_name)
+    )
     """
+    )
     try:
         result = await execute_r_script_async(r_script, params)
         await context.info("Normality test completed successfully")
