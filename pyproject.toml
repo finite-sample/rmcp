@@ -50,6 +50,7 @@ isort = ">=5.12.0"
 flake8 = ">=6.0.0"
 mypy = ">=1.5.0"
 httpx = ">=0.25.0"  # For HTTP transport testing
+pandas = ">=1.5.0"  # For e2e test data creation
 
 [tool.poetry.group.http.dependencies]
 fastapi = ">=0.100.0"

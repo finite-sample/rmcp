@@ -98,7 +98,7 @@ from ..registries.tools import tool
 async def read_csv(context, params) -> dict[str, Any]:
     """Read CSV file and return data."""
     await context.info("Reading CSV file", file_path=params.get("file_path"))
-    
+
     # Load R script from separated file
     r_script = get_r_script("fileops", "read_csv")
     try:
@@ -174,7 +174,7 @@ async def read_csv(context, params) -> dict[str, Any]:
 async def write_csv(context, params) -> dict[str, Any]:
     """Write data to CSV file."""
     await context.info("Writing CSV file", file_path=params.get("file_path"))
-    
+
     # Load R script from separated file
     r_script = get_r_script("fileops", "write_csv")
     try:
@@ -272,7 +272,7 @@ async def write_csv(context, params) -> dict[str, Any]:
 async def data_info(context, params) -> dict[str, Any]:
     """Get comprehensive dataset information."""
     await context.info("Analyzing dataset structure")
-    
+
     # Load R script from separated file
     r_script = get_r_script("fileops", "data_info")
     try:
@@ -361,7 +361,7 @@ async def data_info(context, params) -> dict[str, Any]:
 async def filter_data(context, params) -> dict[str, Any]:
     """Filter data based on conditions."""
     await context.info("Filtering data")
-    
+
     # Load R script from separated file
     r_script = get_r_script("fileops", "filter_data")
     try:
@@ -452,7 +452,7 @@ async def filter_data(context, params) -> dict[str, Any]:
 async def read_excel(context, params) -> dict[str, Any]:
     """Read Excel file and return data."""
     await context.info("Reading Excel file", file_path=params.get("file_path"))
-    
+
     # Load R script from separated file
     r_script = get_r_script("fileops", "read_excel")
     try:
@@ -546,7 +546,7 @@ async def read_excel(context, params) -> dict[str, Any]:
 async def read_json(context, params) -> dict[str, Any]:
     """Read JSON file and return data."""
     await context.info("Reading JSON file", file_path=params.get("file_path"))
-    
+
     # Load R script from separated file
     r_script = get_r_script("fileops", "read_json")
     try:

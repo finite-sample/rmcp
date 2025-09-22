@@ -18,10 +18,10 @@ Example Usage:
     >>> print(script[:100])  # Show first 100 characters
 """
 
+import logging
 import os
 from pathlib import Path
 from typing import Dict, Optional, Set
-import logging
 
 logger = logging.getLogger(__name__)
 
