@@ -29,7 +29,7 @@ except ImportError:
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary", 
+    "sphinx.ext.autosummary",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "myst_parser",
@@ -40,8 +40,8 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # Source file parsers
 source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
+    ".rst": "restructuredtext",
+    ".md": "markdown",
 }
 
 # -- Options for HTML output -------------------------------------------------

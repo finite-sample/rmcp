@@ -83,7 +83,59 @@ class MCPServer:
         self,
         name: str = "RMCP MCP Server",
         version: str = None,
-        description: str = "R-based statistical analysis MCP server",
+        description: str = """RMCP provides 44 comprehensive statistical analysis tools through R:
+
+**Regression & Econometrics (8 tools):**
+- Linear/logistic regression with diagnostics and residual analysis
+- Panel data regression (fixed/random effects) with robust standard errors
+- Instrumental variables (2SLS) regression for causal inference
+- Vector autoregression (VAR) models for multivariate time series
+- Correlation analysis with significance testing and confidence intervals
+
+**Time Series Analysis (6 tools):**
+- ARIMA modeling with automatic order selection and forecasting
+- Time series decomposition (trend, seasonal, remainder components)
+- Stationarity testing (ADF, KPSS, Phillips-Perron tests)
+- Lag/lead variable creation and differencing transformations
+
+**Statistical Testing (5 tools):**
+- T-tests (one-sample, two-sample, paired) with effect sizes
+- ANOVA (one-way, two-way) with post-hoc comparisons
+- Chi-square tests for independence and goodness-of-fit
+- Normality tests (Shapiro-Wilk, Kolmogorov-Smirnov, Anderson-Darling)
+
+**Data Analysis & Transformation (9 tools):**
+- Comprehensive descriptive statistics with distribution analysis
+- Outlier detection using multiple methods (IQR, Z-score, Mahalanobis)
+- Data standardization (z-score, min-max, robust scaling)
+- Winsorization for outlier treatment and data cleaning
+- Professional frequency tables with percentages and cumulative statistics
+
+**Machine Learning (4 tools):**
+- K-means clustering with optimal cluster selection and visualization
+- Decision trees for classification and regression with pruning
+- Random forest models with variable importance and out-of-bag error
+
+**Professional Visualizations (6 tools):**
+- Scatter plots with trend lines, confidence bands, and grouping
+- Time series plots for single/multiple variables with forecasting
+- Histograms with density overlays and distribution fitting
+- Correlation heatmaps with hierarchical clustering
+- Box plots for distribution comparison and outlier identification
+- Comprehensive residual diagnostic plots (4-panel analysis)
+
+**File Operations (3 tools):**
+- CSV/Excel/JSON import with automatic type detection
+- Data filtering, export, and comprehensive dataset information
+- Missing value analysis and data quality reporting
+
+**Advanced Features:**
+- Formula builder: Convert natural language to R statistical formulas
+- Error recovery: Intelligent error diagnosis with suggested fixes
+- Flexible R execution: Custom R code with 80+ whitelisted packages
+- Example datasets: Built-in datasets for testing and learning
+
+All tools provide professionally formatted output with markdown tables, statistical interpretations, and inline visualizations (base64 images). Results include both raw data and formatted summaries using broom/knitr for publication-ready output.""",
     ):
         """
         Initialize the MCP server instance.
@@ -926,7 +978,59 @@ class MCPServer:
 def create_server(
     name: str = "RMCP MCP Server",
     version: str = None,
-    description: str = "R-based statistical analysis MCP server",
+    description: str = """RMCP provides 44 comprehensive statistical analysis tools through R:
+
+**Regression & Econometrics (8 tools):**
+- Linear/logistic regression with diagnostics and residual analysis
+- Panel data regression (fixed/random effects) with robust standard errors
+- Instrumental variables (2SLS) regression for causal inference
+- Vector autoregression (VAR) models for multivariate time series
+- Correlation analysis with significance testing and confidence intervals
+
+**Time Series Analysis (6 tools):**
+- ARIMA modeling with automatic order selection and forecasting
+- Time series decomposition (trend, seasonal, remainder components)
+- Stationarity testing (ADF, KPSS, Phillips-Perron tests)
+- Lag/lead variable creation and differencing transformations
+
+**Statistical Testing (5 tools):**
+- T-tests (one-sample, two-sample, paired) with effect sizes
+- ANOVA (one-way, two-way) with post-hoc comparisons
+- Chi-square tests for independence and goodness-of-fit
+- Normality tests (Shapiro-Wilk, Kolmogorov-Smirnov, Anderson-Darling)
+
+**Data Analysis & Transformation (9 tools):**
+- Comprehensive descriptive statistics with distribution analysis
+- Outlier detection using multiple methods (IQR, Z-score, Mahalanobis)
+- Data standardization (z-score, min-max, robust scaling)
+- Winsorization for outlier treatment and data cleaning
+- Professional frequency tables with percentages and cumulative statistics
+
+**Machine Learning (4 tools):**
+- K-means clustering with optimal cluster selection and visualization
+- Decision trees for classification and regression with pruning
+- Random forest models with variable importance and out-of-bag error
+
+**Professional Visualizations (6 tools):**
+- Scatter plots with trend lines, confidence bands, and grouping
+- Time series plots for single/multiple variables with forecasting
+- Histograms with density overlays and distribution fitting
+- Correlation heatmaps with hierarchical clustering
+- Box plots for distribution comparison and outlier identification
+- Comprehensive residual diagnostic plots (4-panel analysis)
+
+**File Operations (3 tools):**
+- CSV/Excel/JSON import with automatic type detection
+- Data filtering, export, and comprehensive dataset information
+- Missing value analysis and data quality reporting
+
+**Advanced Features:**
+- Formula builder: Convert natural language to R statistical formulas
+- Error recovery: Intelligent error diagnosis with suggested fixes
+- Flexible R execution: Custom R code with 80+ whitelisted packages
+- Example datasets: Built-in datasets for testing and learning
+
+All tools provide professionally formatted output with markdown tables, statistical interpretations, and inline visualizations (base64 images). Results include both raw data and formatted summaries using broom/knitr for publication-ready output.""",
 ) -> MCPServer:
     """
     Factory function to create a new MCP server instance.
