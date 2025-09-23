@@ -99,3 +99,4 @@ dmypy.json
 docs/_build/
 docs/.doctrees/
 *.doctree
+environment.pickle
