@@ -51,7 +51,7 @@ async def _run_server_with_transport(server, transport) -> None:
 @click.group()
 @click.version_option(version=__version__)
 def cli():
-    """RMCP MCP Server - Comprehensive statistical analysis with 40 tools across 9 categories."""
+    """RMCP MCP Server - Comprehensive statistical analysis with 44 tools across 11 categories."""
     pass
 
 
@@ -479,6 +479,7 @@ def _register_builtin_tools(server):
         write_excel,
         write_json,
     )
+    from .tools.flexible_r import execute_r_analysis, list_allowed_r_packages
     from .tools.formula_builder import build_formula, validate_formula
     from .tools.helpers import load_example, suggest_fix, validate_data
     from .tools.machine_learning import decision_tree, kmeans_clustering, random_forest
@@ -555,8 +556,11 @@ def _register_builtin_tools(server):
         suggest_fix,
         validate_data,
         load_example,
+        # Flexible R execution
+        execute_r_analysis,
+        list_allowed_r_packages,
     )
-    logger.info("Registered comprehensive statistical analysis tools (42 total)")
+    logger.info("Registered comprehensive statistical analysis tools (44 total)")
 
 
 if __name__ == "__main__":

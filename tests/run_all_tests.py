@@ -28,6 +28,7 @@ from rmcp.tools.fileops import (
     write_excel,
     write_json,
 )
+from rmcp.tools.flexible_r import execute_r_analysis, list_allowed_r_packages
 from rmcp.tools.formula_builder import build_formula, validate_formula
 from rmcp.tools.helpers import load_example, suggest_fix, validate_data
 from rmcp.tools.machine_learning import decision_tree, kmeans_clustering, random_forest
@@ -122,7 +123,7 @@ async def create_test_server():
     """Create server with all tools registered."""
     server = create_server()
     server.configure(allowed_paths=["/tmp"], read_only=False)
-    # Register ALL 42 tools
+    # Register ALL 44 tools
     register_tool_functions(
         server.tools,
         # Regression & Correlation (3 tools)
@@ -177,6 +178,9 @@ async def create_test_server():
         suggest_fix,
         validate_data,
         load_example,
+        # Flexible R Execution (2 tools)
+        execute_r_analysis,
+        list_allowed_r_packages,
     )
     return server
 
@@ -423,6 +427,26 @@ async def run_all_tests():
                 ("suggest_fix", {"error_type": "model_fitting", "context": "R linear regression failed"}),
             ],
         ),
+        (
+            "🔧 Flexible R Execution",
+            [
+                (
+                    "execute_r_analysis",
+                    {
+                        "r_code": "result <- list(mean_x = mean(data$x), mean_y = mean(data$y))",
+                        "data": sample_data,
+                        "description": "Calculate means of x and y variables",
+                        "packages": ["base"]
+                    },
+                ),
+                (
+                    "list_allowed_r_packages",
+                    {
+                        "category": "stats"
+                    },
+                ),
+            ],
+        ),
     ]
     total_tests = 0
     passed_tests = 0
@@ -564,7 +588,7 @@ async def run_http_transport_tests():
 async def main():
     """Main test runner."""
     print("🚀 RMCP Comprehensive Test Runner")
-    print("Testing all 42 statistical analysis tools + HTTP transport")
+    print("Testing all 44 statistical analysis tools + HTTP transport")
     print("=" * 50)
     # Run all test categories
     results = []

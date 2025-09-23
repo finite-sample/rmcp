@@ -14,13 +14,20 @@ RUN apt-get update && apt-get install -y \
     git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install all required R packages for RMCP (24 packages)
+# Install all required R packages for RMCP (45+ packages)
 # This is the time-consuming step that we want to cache
+# Includes core structured tools + commonly used flexible_r packages
 RUN R -e "install.packages(c(\
+    # Core structured tools packages \
     'jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', \
     'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', \
     'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', \
-    'rlang', 'readxl', 'base64enc', 'reshape2', 'knitr', 'broom'\
+    'rlang', 'readxl', 'openxlsx', 'base64enc', 'reshape2', 'knitr', 'broom', \
+    # Common flexible_r packages for advanced statistics \
+    'MASS', 'boot', 'survival', 'nlme', 'mgcv', 'lme4', 'glmnet', \
+    'e1071', 'caret', 'nnet', 'gbm', 'xgboost', 'kernlab', 'cluster', \
+    'zoo', 'xts', 'TTR', 'quantmod', 'data.table', 'lattice', \
+    'corrplot', 'viridis', 'RColorBrewer', 'lavaan'\
     ), repos='https://cran.rstudio.com/', quiet=TRUE)"
 
 # Install Python dependencies needed for CI

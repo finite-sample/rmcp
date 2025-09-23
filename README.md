@@ -6,7 +6,7 @@
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://finite-sample.github.io/rmcp/)
 [![License](https://img.shields.io/github/license/finite-sample/rmcp)](https://github.com/finite-sample/rmcp/blob/main/LICENSE)
 
-**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with 40 statistical analysis tools across 9 categories. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with 42 statistical analysis tools across 9 categories. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## 🚀 Quick Start (30 seconds)
 
