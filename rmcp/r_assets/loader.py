@@ -19,9 +19,8 @@ Example Usage:
 """
 
 import logging
-import os
 from pathlib import Path
-from typing import Dict, Optional, Set
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 

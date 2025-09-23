@@ -182,7 +182,7 @@ jobs:
             result = await server.tools.list_tools(ctx)
             count = len(result['tools'])
             print(f'Registered tools: {count}')
-            assert count >= 40, f'Expected at least 40 tools, got {count}'
+            assert count >= 44, f'Expected at least 44 tools, got {count}'
             print('✅ Tool count verification passed')
         asyncio.run(count())
         "
@@ -253,9 +253,57 @@ jobs:
         asyncio.run(test())
         "
     
-    - name: Check documentation
+    - name: Verify package metadata consistency
       run: |
-        grep -q "40 statistical tools" README.md || (echo "❌ README doesn't mention 40 tools" && exit 1)
-        grep -q "Version 0.3.10" README.md || (echo "❌ README version not updated" && exit 1)
-        grep -q "version.*0.3.10" pyproject.toml || (echo "❌ pyproject.toml version not updated" && exit 1)
-        echo "✅ Documentation check passed"
+        python -c "
+        import rmcp
+        import sys
+        
+        # Check version consistency between __init__.py and pyproject.toml
+        import tomllib
+        with open('pyproject.toml', 'rb') as f:
+            pyproject = tomllib.load(f)
+        
+        init_version = rmcp.__version__
+        toml_version = pyproject['tool']['poetry']['version']
+        
+        assert init_version == toml_version, \
+            f'Version mismatch: __init__.py={init_version} vs pyproject.toml={toml_version}'
+        
+        print(f'✅ Version consistency verified: {init_version}')
+        "
+    
+    - name: Verify tool registration and count
+      run: |
+        python -c "
+        from rmcp.core.server import create_server
+        from rmcp.cli import _register_builtin_tools
+        
+        # Create server and register all tools
+        server = create_server()
+        _register_builtin_tools(server)
+        
+        # Count registered tools
+        tool_count = len(server.tools._tools)
+        tool_names = set(server.tools._tools.keys())
+        
+        print(f'✅ Registered {tool_count} tools')
+        
+        # Verify minimum expected tool count
+        assert tool_count >= 44, f'Expected at least 44 tools, got {tool_count}'
+        
+        # Verify key tools exist (sampling from each category)
+        required_tools = {
+            'linear_model', 'correlation_analysis',  # Regression
+            'execute_r_analysis', 'list_allowed_r_packages',  # Flexible R
+            'read_csv', 'write_excel',  # File operations
+            'build_formula', 'suggest_fix',  # Helpers
+            'arima_model', 'summary_stats'  # Time series, descriptive
+        }
+        
+        missing = required_tools - tool_names
+        assert not missing, f'Missing required tools: {missing}'
+        
+        print('✅ All required tools registered and accessible')
+        print(f'✅ Tool registration verification passed ({tool_count} tools)')
+        "

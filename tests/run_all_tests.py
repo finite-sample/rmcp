@@ -48,6 +48,9 @@ from rmcp.tools.visualization import (
     time_series_plot,
 )
 
+# Import test R script loader
+from test_r_loader import get_flexible_r_script
+
 
 def check_r_installation():
     """Check if R is installed and accessible."""
@@ -440,10 +443,7 @@ async def run_all_tests():
                 (
                     "execute_r_analysis",
                     {
-                        "r_code": (
-                            "result <- list("
-                            "mean_x = mean(data$x), mean_y = mean(data$y))"
-                        ),
+                        "r_code": get_flexible_r_script("test_basic_analysis"),
                         "data": sample_data,
                         "description": "Calculate means of x and y variables",
                         "packages": ["base"],

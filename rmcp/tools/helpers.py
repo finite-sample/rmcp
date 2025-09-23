@@ -95,7 +95,6 @@ async def suggest_fix(context, params) -> dict[str, Any]:
     error_message = params["error_message"]
     tool_name = params.get("tool_name", "unknown")
     data = params.get("data")
-    parameters = params.get("parameters")
     await context.info("Analyzing error", error=error_message, tool=tool_name)
     # Pattern-based error analysis
     suggestions = []
@@ -636,7 +635,6 @@ async def load_example(context, params) -> dict[str, Any]:
     """Load example datasets for analysis and testing."""
     dataset_name = params["dataset_name"]
     size = params.get("size", "small")
-    add_noise = params.get("add_noise", False)
     await context.info("Loading example dataset", name=dataset_name, size=size)
     r_script = get_r_script("helpers", "load_example")
     try:

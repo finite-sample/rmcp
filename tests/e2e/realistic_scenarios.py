@@ -239,7 +239,7 @@ async def test_data_scientist_scenario():
         mcfadden_r2 = churn_model.get("mcfadden_r_squared", 0)
         tenure_coef = churn_model["coefficients"]["tenure_months"]
         support_coef = churn_model["coefficients"]["support_tickets"]
-        print(f"✅ Churn Prediction Model:")
+        print("✅ Churn Prediction Model:")
         print(f"   🎯 Accuracy: {accuracy:.1%}")
         print(f"   📊 McFadden R²: {mcfadden_r2:.3f}")
         print(f"   📉 Tenure effect: {tenure_coef:.4f} (longer tenure = less churn)")
@@ -319,7 +319,7 @@ async def test_researcher_scenario():
         treatment_pvalue = treatment_model["p_values"]["treatment"]
         baseline_coef = treatment_model["coefficients"]["baseline_score"]
         r_squared = treatment_model["r_squared"]
-        print(f"✅ Treatment Effect Results:")
+        print("✅ Treatment Effect Results:")
         print(f"   🧪 Treatment effect: {treatment_coef:.3f} points")
         print(f"   📊 Significance: p = {treatment_pvalue:.4f}")
         print(f"   📈 Baseline control: {baseline_coef:.3f}")

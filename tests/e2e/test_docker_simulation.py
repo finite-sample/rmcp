@@ -147,13 +147,13 @@ def main():
                 passed += 1
         except Exception as e:
             print(f"❌ Test failed: {e}")
-    print(f"\n📋 R Package Dependencies:")
+    print("\n📋 R Package Dependencies:")
     print("-" * 30)
     test_required_r_packages()
-    print(f"\n📋 Image Size Estimation:")
+    print("\n📋 Image Size Estimation:")
     print("-" * 30)
     estimated_size = estimate_docker_image_size()
-    print(f"\n🎯 Docker Simulation Results:")
+    print("\n🎯 Docker Simulation Results:")
     print("=" * 50)
     print(f"✅ Core Tests: {passed}/{total} passed")
     print(f"📏 Estimated Size: ~{estimated_size}MB")

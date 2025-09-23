@@ -388,7 +388,7 @@ class ToolsRegistry:
                     "size_bytes": size_bytes,
                 }
                 return resource_uri
-        except Exception as e:
+        except Exception:
             # If we can't serialize or analyze the data, just return None
             # and let it be handled as normal inline data
             pass

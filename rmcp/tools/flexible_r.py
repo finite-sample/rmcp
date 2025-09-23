@@ -255,7 +255,6 @@ async def execute_r_analysis(context, params) -> dict[str, Any]:
     description = params["description"]
     data = params.get("data")
     packages = params.get("packages", [])
-    timeout = params.get("timeout_seconds", 60)
     return_image = params.get("return_image", False)
 
     await context.info(f"Executing R analysis: {description}")
@@ -315,13 +314,10 @@ async def execute_r_analysis(context, params) -> dict[str, Any]:
             result = await execute_r_script_with_image_async(
                 full_script,
                 args,
-                timeout=timeout * 1000,  # Convert to milliseconds
                 include_image=True,
             )
         else:
-            result = await execute_r_script_async(
-                full_script, args, timeout=timeout * 1000  # Convert to milliseconds
-            )
+            result = await execute_r_script_async(full_script, args)
 
         await context.info("R analysis completed successfully")
 
