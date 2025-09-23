@@ -201,11 +201,23 @@ jobs:
             '''Extract JSON content from tool response'''
             result = resp.get('result', {})
             
-            # Check structuredContent first (new format)
-            structured = result.get('structuredContent', [])
-            for item in structured:
-                if item.get('type') == 'json':
-                    return item.get('json')
+            # Check structuredContent first (new MCP-compliant format)
+            structured = result.get('structuredContent')
+            if structured:
+                # Handle new object format (single item)
+                if isinstance(structured, dict):
+                    if structured.get('type') == 'json':
+                        return structured.get('json')
+                    # Handle multi-item object format
+                    elif 'items' in structured:
+                        for item in structured['items']:
+                            if item.get('type') == 'json':
+                                return item.get('json')
+                # Handle legacy array format
+                elif isinstance(structured, list):
+                    for item in structured:
+                        if item.get('type') == 'json':
+                            return item.get('json')
             
             # Then check content with annotations (legacy format)
             content_items = result.get('content', [])
