@@ -14,7 +14,7 @@ RMCP is a Model Context Protocol (MCP) server that provides comprehensive statis
 - **HTTP Interface**: Located in `rmcp/transport/http.py`, provides HTTP/SSE transport for web applications and custom integrations
 - **CLI Interface**: `rmcp/cli.py` provides command-line interface with `start`, `serve-http`, `version` commands
 
-### Tool System (40 Tools Across 9 Categories)
+### Tool System (44 Tools Across 11 Categories)
 The server implements comprehensive statistical analysis tools as Python functions that execute R scripts:
 
 #### Regression & Correlation Tools
@@ -52,14 +52,21 @@ The server implements comprehensive statistical analysis tools as Python functio
 #### File Operations
 - **File Operations** (`rmcp/tools/fileops.py`): CSV, Excel, JSON import/export, data filtering, data info
 
-#### Natural Language & User Experience (NEW)
+#### Natural Language & User Experience
 - **Formula Builder** (`rmcp/tools/formula_builder.py`): Convert natural language to R formulas, validate formulas
 - **Error Recovery** (`rmcp/tools/helpers.py`): Intelligent error diagnosis, data validation, example datasets
+
+#### Flexible R Execution (NEW in v0.3.11)
+- **Flexible R Analysis** (`rmcp/tools/flexible_r.py`): Execute custom R code with security validation
+  - Package whitelist enforcement (45+ allowed packages)
+  - Execution timeout limits and memory constraints
+  - Audit logging and comprehensive safety features
+  - Support for visualization with base64 image encoding
 
 ### Transport Layer
 - **STDIO Transport** (`rmcp/transport/stdio.py`): Primary transport for Claude Desktop integration
 - **HTTP Transport** (`rmcp/transport/http.py`): FastAPI-based HTTP server with the following endpoints:
-  - `POST /`: JSON-RPC 2.0 requests (all 40 statistical tools available)
+  - `POST /`: JSON-RPC 2.0 requests (all 44 statistical tools available)
   - `GET /sse`: Server-Sent Events for real-time notifications
   - `GET /health`: Health check endpoint for monitoring
   - CORS support for web applications
@@ -71,9 +78,10 @@ The server implements comprehensive statistical analysis tools as Python functio
   - Core: plm, lmtest, sandwich, AER, jsonlite, dplyr
   - Advanced: forecast, vars, urca, ggplot2, gridExtra, tidyr, rlang
   - Formatting: broom, knitr (for professional markdown output with formatted tables)
+  - Flexible R: 45+ packages including MASS, boot, survival, nlme, mgcv, lme4, glmnet, openxlsx
 - All data exchange between Python and R happens via JSON serialization
 - Enhanced error handling with custom `RExecutionError` class for detailed diagnostics
-- **Professional Output Formatting**: All 40 tools include `_formatting` fields with markdown tables and natural language interpretations using broom/knitr packages
+- **Professional Output Formatting**: All 44 tools include `_formatting` fields with markdown tables and natural language interpretations using broom/knitr packages
 
 ## Development Commands
 
@@ -103,7 +111,7 @@ rmcp start
 # Start HTTP server (for web applications and custom clients)
 rmcp serve-http --port 8080
 
-# List available tools (should show 40 tools)
+# List available tools (should show 44 tools)
 rmcp list-capabilities
 
 # Start with debug logging
@@ -188,7 +196,7 @@ docker run -i r-econometrics-mcp
 - **Fixed knitr_kable JSON Serialization**: Resolved "No method asJSON S3 class: knitr_kable" error
   - Wrapped all `knitr::kable()` calls with `as.character()` for proper JSON serialization
   - Fixed unbalanced parentheses from automated replacements across all tool files
-  - All 40 tools now work correctly with formatted output
+  - All 44 tools now work correctly with formatted output
 
 - **Fixed File Operations Schema Issues**: Resolved schema validation failures in file import tools
   - Updated `sample_data` schema to accept both objects and arrays
@@ -198,13 +206,21 @@ docker run -i r-econometrics-mcp
 ### 🧪 Test Suite Improvements  
 - **100% Test Success Rate**: All unit, integration, and end-to-end tests now pass
   - Fixed e2e scenario that was failing due to schema validation
-  - Comprehensive test coverage across all 40 statistical tools
+  - Comprehensive test coverage across all 44 statistical tools
   - Reliable CI/CD pipeline with consistent results
 
 ### 📊 Code Quality & Maintenance
 - **Dependency Management**: Added broom and knitr as required R packages for consistent formatting
 - **Code Formatting**: Applied black formatting across all Python files
 - **Documentation**: Streamlined README.md from 720 to 213 lines (70% reduction) for better user experience
+- **Linting Compliance**: Achieved 0 flake8 errors across entire codebase
+  - Fixed unused imports, variables, and f-strings without placeholders
+  - Resolved all line length issues (E501) for consistent code style
+  - All black, isort, and flake8 checks now pass in CI/CD
+- **Documentation Synchronization**: Automated docs/index.rst to pull content from README.md
+  - Uses MyST parser to include README.md directly in Sphinx documentation
+  - Eliminates manual synchronization between README and documentation
+  - Documentation builds properly ignore _build/ artifacts via .gitignore
 
 ## Previous Improvements (v0.3.10)
 
@@ -238,11 +254,11 @@ docker run -i r-econometrics-mcp
 - **Direct R Testing**: Comprehensive validation of statistical capabilities
   - Linear regression, time series, machine learning, econometrics
   - Base64 image encoding for inline visualization
-  - All 40 tools working correctly across 9 categories
+  - All 44 tools working correctly across 11 categories
 
 ## Tool Registration Pattern
 
-Tools are registered in `rmcp/cli.py` using the `_register_builtin_tools` function. All 40 tools are imported and registered automatically:
+Tools are registered in `rmcp/cli.py` using the `_register_builtin_tools` function. All 44 tools are imported and registered automatically:
 
 ```python
 # Tools are imported and registered in rmcp/cli.py
@@ -256,9 +272,9 @@ def _register_builtin_tools(server):
         server.tools,
         linear_model,
         correlation_analysis,
-        # ... all 40 tools ...
+        # ... all 44 tools ...
     )
-    logger.info("Registered comprehensive statistical analysis tools (40 total)")
+    logger.info("Registered comprehensive statistical analysis tools (44 total)")
 ```
 
 ## R Script Execution Flow
@@ -383,7 +399,7 @@ execute_r_analysis(
 - **Helper Tool Reliability**: Enhanced suggest_fix, validate_data, load_example functions
 
 ### Previous Improvements (v0.3.6)
-- **40 Statistical Tools**: Complete ecosystem across 9 categories
+- **44 Statistical Tools**: Complete ecosystem across 11 categories
 - **Natural Language Features**: Formula builder and intelligent error recovery
 - **PyPI Distribution**: Professional package available via `pip install rmcp`
 - **Comprehensive Testing**: Unit → Integration → E2E test organization
@@ -410,14 +426,14 @@ The CI/CD pipeline uses an optimized Docker-first approach:
    - 3 end-to-end scenarios
 
 4. **Feature Verification** (27s)
-   - Tool count verification (40 tools)
+   - Tool count verification (44 tools)
    - New features testing
-   - Documentation consistency checks
+   - Code-based verification (no longer relies on documentation content)
 
 ### Docker Optimization (`Dockerfile.ci`)
 ```dockerfile
 FROM python:3.11-slim
-# Pre-installs all R packages (22 packages)
+# Pre-installs all R packages (45+ packages including flexible R packages)
 # Pre-installs Python dependencies (pytest, black, etc.)
 # Cached for subsequent CI runs
 ```
@@ -453,3 +469,45 @@ All RMCP tools return data in standardized column-wise format:
 - `Dockerfile.ci`: CI-optimized Docker image with pre-installed R packages
 - `Dockerfile`: Multi-stage build with R base image for development
 - `.github/workflows/ci.yml`: Integrated CI/CD workflow with Docker optimization
+- `.github/workflows/docs.yml`: Automated documentation build and GitHub Pages deployment
+- `docs/conf.py`: Sphinx configuration with MyST parser for README.md inclusion
+- `docs/index.rst`: Documentation entry point that automatically includes README.md content
+- `.gitignore`: Comprehensive patterns including documentation build artifacts (_build/, *.doctree)
+
+## MCP Client Integration
+
+### Claude Desktop Integration
+RMCP is configured to work with Claude Desktop via the Model Context Protocol (MCP):
+
+**Configuration Location**: `~/.modelcontext/mcp.json`
+```json
+[
+  {
+    "id": "rmcp",
+    "command": ["rmcp", "start"],
+    "displayName": "R Econometrics",
+    "description": "Run econometric analysis in R via MCP",
+    "tags": ["statistics", "econometrics", "R"]
+  }
+]
+```
+
+### Cursor IDE Integration
+RMCP also works with Cursor IDE through MCP. Recent fixes ensure full compatibility:
+
+**Configuration Location**: `~/.cursor/mcp.json`
+```json
+{
+  "mcpServers": {
+    "rmcp": {
+      "command": "rmcp",
+      "args": ["start"],
+      "env": {
+        "RMCP_LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}
+```
+
+**Note**: Version 0.3.11+ includes critical fixes for MCP specification compliance, ensuring `structuredContent` returns proper objects instead of arrays, which resolves JSON schema validation issues with Cursor and other MCP clients.

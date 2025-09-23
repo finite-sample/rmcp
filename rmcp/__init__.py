@@ -14,7 +14,17 @@ from .registries.prompts import PromptsRegistry, prompt
 from .registries.resources import ResourcesRegistry, resource
 from .registries.tools import ToolsRegistry, tool
 
-__version__ = "0.3.11"
+try:
+    from importlib.metadata import version, PackageNotFoundError
+
+    try:
+        __version__ = version("rmcp")
+    except PackageNotFoundError:
+        # Package is not installed - fallback for development
+        __version__ = "0.0.0+unknown"
+except ImportError:
+    # Should not happen with Python >=3.10, but keeping as safety
+    __version__ = "0.0.0+unknown"
 __author__ = "Gaurav Sood"
 __email__ = "gsood07@gmail.com"
 __all__ = [
