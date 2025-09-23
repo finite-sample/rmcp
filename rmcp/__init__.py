@@ -15,7 +15,7 @@ from .registries.resources import ResourcesRegistry, resource
 from .registries.tools import ToolsRegistry, tool
 
 try:
-    from importlib.metadata import version, PackageNotFoundError
+    from importlib.metadata import PackageNotFoundError, version
 
     try:
         __version__ = version("rmcp")
