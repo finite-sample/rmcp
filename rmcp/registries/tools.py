@@ -290,7 +290,17 @@ class ToolsRegistry:
         # Prepare response
         response = {"content": content}
         if structured_content:
-            response["structuredContent"] = structured_content
+            # MCP specification requires structuredContent to be an object, not an array
+            if len(structured_content) == 1:
+                # Single item - use it directly as the object
+                response["structuredContent"] = structured_content[0]
+            else:
+                # Multiple items - wrap in proper object structure
+                response["structuredContent"] = {
+                    "items": structured_content,
+                    "count": len(structured_content),
+                    "type": "multi_content",
+                }
         return response
 
     def _build_summary(

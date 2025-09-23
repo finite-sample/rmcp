@@ -84,15 +84,33 @@ class HTTPTransport(Transport):
                 if parsed.hostname not in ("localhost", "127.0.0.1", None):
                     raise HTTPException(403, "Origin not allowed")
 
-    def _validate_protocol_version(self, request: Request) -> None:
-        """Validate MCP-Protocol-Version header."""
+    def _validate_protocol_version(self, request: Request, method: str) -> None:
+        """Validate MCP-Protocol-Version header according to MCP specification."""
         protocol_version = request.headers.get("mcp-protocol-version")
-        if not protocol_version:
-            # Only require for non-initialize requests in strict mode
-            # For now, we'll be lenient but log the issue
-            logger.debug("Missing MCP-Protocol-Version header")
-        elif protocol_version not in ("2025-06-18",):  # Add supported versions
-            logger.warning(f"Unsupported protocol version: {protocol_version}")
+        supported_versions = ("2025-06-18",)
+
+        if method == "initialize":
+            # Initialize requests don't require the header (it's set after negotiation)
+            if protocol_version and protocol_version not in supported_versions:
+                raise HTTPException(
+                    400,
+                    f"Unsupported protocol version: {protocol_version}. "
+                    f"Supported versions: {', '.join(supported_versions)}",
+                )
+        else:
+            # All non-initialize requests MUST include the MCP-Protocol-Version header
+            if not protocol_version:
+                raise HTTPException(
+                    400,
+                    "Missing required MCP-Protocol-Version header. "
+                    "All requests after initialization must include this header.",
+                )
+            if protocol_version not in supported_versions:
+                raise HTTPException(
+                    400,
+                    f"Unsupported protocol version: {protocol_version}. "
+                    f"Supported versions: {', '.join(supported_versions)}",
+                )
 
     def _get_or_create_session(self, request: Request) -> str:
         """Get or create session ID from headers."""
@@ -123,17 +141,19 @@ class HTTPTransport(Transport):
             message: dict[str, Any] | None = None
             session_id: str | None = None
             try:
+                # Parse request first to get method for protocol validation
+                message = await request.json()
+                method = message.get("method", "")
+                logger.debug(f"Received JSON-RPC request: {message}")
+
                 # Security validations
                 self._validate_origin(request)
-                self._validate_protocol_version(request)
-                # Parse request
-                message = await request.json()
-                logger.debug(f"Received JSON-RPC request: {message}")
+                self._validate_protocol_version(request, method)
+
                 if not self._message_handler:
                     raise HTTPException(500, "Message handler not configured")
                 # Session management
                 session_id = self._get_or_create_session(request)
-                method = message.get("method", "")
                 # Check initialization state
                 self._check_session_initialized(session_id, method)
                 # Track initialize completion
