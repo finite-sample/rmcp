@@ -94,3 +94,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+*.doctree
