@@ -235,13 +235,15 @@ async def run_all_tests():
     print("🚀 Creating test server...")
     server = await create_test_server()
     print(f"✅ Server created with {len(server.tools._tools)} tools")
-    
+
     # Create temporary test files for file operations
     import os
     import csv
     import json
+
     try:
         import pandas as pd
+
         # Create CSV file
         with open("temp_test.csv", "w", newline="") as f:
             writer = csv.writer(f)
@@ -249,15 +251,15 @@ async def run_all_tests():
             writer.writerow([1, 2, "A"])
             writer.writerow([2, 4, "A"])
             writer.writerow([3, 1, "B"])
-        
+
         # Create Excel file
         df = pd.DataFrame({"x": [1, 2, 3], "y": [2, 4, 1], "group": ["A", "A", "B"]})
         df.to_excel("temp_test.xlsx", index=False)
-        
+
         # Create JSON file
         with open("temp_test.json", "w") as f:
             json.dump({"x": [1, 2, 3], "y": [2, 4, 1], "group": ["A", "A", "B"]}, f)
-        
+
         print("✅ Test files created")
     except ImportError:
         print("⚠️ pandas not available, file tests may fail")
@@ -424,7 +426,13 @@ async def run_all_tests():
                 ("validate_formula", {"formula": "y ~ x", "data": sample_data}),
                 ("validate_data", {"data": sample_data}),
                 ("load_example", {"dataset_name": "economics"}),
-                ("suggest_fix", {"error_type": "model_fitting", "context": "R linear regression failed"}),
+                (
+                    "suggest_fix",
+                    {
+                        "error_type": "model_fitting",
+                        "context": "R linear regression failed",
+                    },
+                ),
             ],
         ),
         (
@@ -436,14 +444,12 @@ async def run_all_tests():
                         "r_code": "result <- list(mean_x = mean(data$x), mean_y = mean(data$y))",
                         "data": sample_data,
                         "description": "Calculate means of x and y variables",
-                        "packages": ["base"]
+                        "packages": ["base"],
                     },
                 ),
                 (
                     "list_allowed_r_packages",
-                    {
-                        "category": "stats"
-                    },
+                    {"category": "stats"},
                 ),
             ],
         ),
@@ -463,13 +469,20 @@ async def run_all_tests():
         print(f"  Category result: {category_passed}/{len(tests)} passed")
     # Cleanup temporary test files
     try:
-        for filename in ["temp_test.csv", "temp_test.xlsx", "temp_test.json", "temp_output.csv", "temp_output.xlsx", "temp_output.json"]:
+        for filename in [
+            "temp_test.csv",
+            "temp_test.xlsx",
+            "temp_test.json",
+            "temp_output.csv",
+            "temp_output.xlsx",
+            "temp_output.json",
+        ]:
             if os.path.exists(filename):
                 os.remove(filename)
         print("✅ Test files cleaned up")
     except Exception as e:
         print(f"⚠️ Warning: Could not clean up test files: {e}")
-    
+
     print(f"\n{'=' * 50}")
     print(f"🎯 FINAL RESULTS: {passed_tests}/{total_tests} tests passed")
     print(f"📊 Success rate: {passed_tests / total_tests * 100:.1f}%")
