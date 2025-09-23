@@ -13,7 +13,7 @@ Security Features:
 
 import logging
 import re
-from typing import Any, Optional, Set
+from typing import Any, Optional
 
 from ..core.schemas import table_schema
 from ..r_integration import execute_r_script_async, execute_r_script_with_image_async
@@ -176,7 +176,9 @@ def validate_r_code(r_code: str) -> tuple[bool, Optional[str]]:
         "properties": {
             "r_code": {
                 "type": "string",
-                "description": "R code to execute. Must use 'result' variable for output.",
+                "description": (
+                    "R code to execute. Must use 'result' variable for output."
+                ),
             },
             "data": {
                 "oneOf": [table_schema(), {"type": "null"}],
@@ -243,7 +245,9 @@ def validate_r_code(r_code: str) -> tuple[bool, Optional[str]]:
         },
         "required": ["success"],
     },
-    description="Execute custom R code for advanced statistical analyses with safety validation",
+    description=(
+        "Execute custom R code for advanced statistical analyses with safety validation"
+    ),
 )
 async def execute_r_analysis(context, params) -> dict[str, Any]:
     """Execute flexible R code with safety checks."""
@@ -297,7 +301,8 @@ async def execute_r_analysis(context, params) -> dict[str, Any]:
     # Ensure result exists
     script_parts.append("# Ensure result variable exists")
     script_parts.append(
-        "if (!exists('result')) { result <- list(error = 'No result variable defined') }"
+        "if (!exists('result')) { "
+        "result <- list(error = 'No result variable defined') }"
     )
 
     full_script = "\n".join(script_parts)

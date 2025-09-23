@@ -4,7 +4,6 @@ Comprehensive test runner for RMCP.
 Tests all 42 statistical analysis tools to ensure they work properly.
 """
 import asyncio
-import json
 import subprocess
 import sys
 import tempfile
@@ -237,9 +236,9 @@ async def run_all_tests():
     print(f"✅ Server created with {len(server.tools._tools)} tools")
 
     # Create temporary test files for file operations
-    import os
     import csv
     import json
+    import os
 
     try:
         import pandas as pd
@@ -441,7 +440,10 @@ async def run_all_tests():
                 (
                     "execute_r_analysis",
                     {
-                        "r_code": "result <- list(mean_x = mean(data$x), mean_y = mean(data$y))",
+                        "r_code": (
+                            "result <- list("
+                            "mean_x = mean(data$x), mean_y = mean(data$y))"
+                        ),
                         "data": sample_data,
                         "description": "Calculate means of x and y variables",
                         "packages": ["base"],
