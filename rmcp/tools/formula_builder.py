@@ -7,6 +7,7 @@ import re
 from typing import Any, List
 
 from ..core.schemas import table_schema
+from ..r_assets.loader import get_r_script
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
@@ -193,7 +194,7 @@ async def build_formula(context, params) -> dict[str, Any]:
         "validation": validation_result,
         "examples": examples,
         "interpretation": _interpret_formula(formula) if formula else None,
-        "suggestions": _get_improvement_suggestions(description, formula),
+        "suggestions": _get_improvement_suggestions(description, formula or ""),
     }
     await context.info("Formula built successfully", formula=formula)
     return result
@@ -201,7 +202,7 @@ async def build_formula(context, params) -> dict[str, Any]:
 
 def _generate_formula_alternatives(base_formula: str, analysis_type: str) -> List[str]:
     """Generate alternative formula specifications."""
-    alternatives = []
+    alternatives: List[str] = []
     if "~" not in base_formula:
         return alternatives
     outcome, predictors = base_formula.split("~", 1)
@@ -232,53 +233,11 @@ def _generate_formula_alternatives(base_formula: str, analysis_type: str) -> Lis
 
 async def _validate_formula(context, formula: str, data: dict) -> dict[str, Any]:
     """Validate formula against provided data."""
-    r_script = f"""
-    # Convert data to data frame
-    data <- as.data.frame(args$data)
-    formula_str <- "{formula}"
-    # Parse formula
-    tryCatch({{
-        parsed_formula <- as.formula(formula_str)
-        # Extract variable names
-        vars_in_formula <- all.vars(parsed_formula)
-        vars_in_data <- names(data)
-        # Check which variables exist
-        missing_vars <- vars_in_formula[!vars_in_formula %in% vars_in_data]
-        existing_vars <- vars_in_formula[vars_in_formula %in% vars_in_data]
-        # Get variable types for existing variables
-        var_types <- sapply(data[existing_vars], class)
-        # Check for potential issues
-        warnings <- c()
-        # Check for missing values
-        missing_counts <- sapply(data[existing_vars], function(x) sum(is.na(x)))
-        high_missing <- names(missing_counts[missing_counts > 0.1 * nrow(data)])
-        if (length(high_missing) > 0) {{
-            warnings <- c(warnings, paste("High missing values in:", paste(high_missing, collapse=", ")))
-        }}
-        # Check for character variables (might need factors)
-        char_vars <- names(var_types[var_types == "character"])
-        if (length(char_vars) > 0) {{
-            warnings <- c(warnings, paste("Character variables (consider converting to factors):", paste(char_vars, collapse=", ")))
-        }}
-        result <- list(
-            is_valid = length(missing_vars) == 0,
-            missing_variables = missing_vars,
-            existing_variables = existing_vars,
-            available_variables = vars_in_data,
-            variable_types = as.list(setNames(var_types, names(var_types))),
-            warnings = if(length(warnings) == 0) character(0) else warnings,
-            formula_parsed = TRUE
-        )
-    }}, error = function(e) {{
-        result <- list(
-            is_valid = FALSE,
-            error = e$message,
-            formula_parsed = FALSE
-        )
-    }})
-    """
+    r_script = get_r_script("formula_builder", "validate_formula")
     try:
-        validation = await execute_r_script_async(r_script, {"data": data})
+        validation = await execute_r_script_async(
+            r_script, {"data": data, "formula": formula}
+        )
         return validation
     except Exception as e:
         return {"is_valid": False, "error": str(e), "formula_parsed": False}

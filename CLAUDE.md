@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.10** includes 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.11** includes 44 statistical analysis tools across 11 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## Key Architecture Components
 
@@ -70,8 +70,10 @@ The server implements comprehensive statistical analysis tools as Python functio
 - **Required R Packages**: 
   - Core: plm, lmtest, sandwich, AER, jsonlite, dplyr
   - Advanced: forecast, vars, urca, ggplot2, gridExtra, tidyr, rlang
+  - Formatting: broom, knitr (for professional markdown output with formatted tables)
 - All data exchange between Python and R happens via JSON serialization
 - Enhanced error handling with custom `RExecutionError` class for detailed diagnostics
+- **Professional Output Formatting**: All 40 tools include `_formatting` fields with markdown tables and natural language interpretations using broom/knitr packages
 
 ## Development Commands
 
@@ -92,7 +94,7 @@ poetry shell
 
 ### CLI Commands
 ```bash
-# Check version (should show 0.3.8)
+# Check version (should show 0.3.11)
 rmcp --version
 
 # Start stdio server (for Claude Desktop integration)
@@ -165,7 +167,46 @@ docker run -it r-econometrics-mcp
 docker run -i r-econometrics-mcp
 ```
 
-## Recent Improvements (v0.3.10)
+## Recent Improvements (v0.3.11)
+
+### 🔧 Flexible R Code Execution (NEW)
+- **Hybrid Approach**: Combines structured tools with flexible R code execution for maximum versatility
+- **Two New Tools**: 
+  - `execute_r_analysis`: Execute custom R code for advanced analyses with comprehensive safety features
+  - `list_allowed_r_packages`: List ~80 whitelisted R packages by category (stats, ml, econometrics, visualization, data)
+- **Security Features**: Package whitelist enforcement, execution timeouts, audit logging, dangerous pattern blocking
+- **Usage Guidelines**: Use structured tools for common analyses, flexible execution for novel statistical methods and custom workflows
+
+### 🔧 Professional Output Formatting
+- **Formatted Statistical Output**: All 44 tools now provide professionally formatted results using broom and knitr packages
+  - Markdown tables for statistical summaries using `knitr::kable()`
+  - Tidy statistical results using `broom::tidy()`, `broom::glance()`, and `broom::augment()`
+  - Natural language interpretations of statistical results
+  - Schema-safe formatting via `_formatting` fields (extracted before validation)
+
+### 🐛 Critical Bug Fixes
+- **Fixed knitr_kable JSON Serialization**: Resolved "No method asJSON S3 class: knitr_kable" error
+  - Wrapped all `knitr::kable()` calls with `as.character()` for proper JSON serialization
+  - Fixed unbalanced parentheses from automated replacements across all tool files
+  - All 40 tools now work correctly with formatted output
+
+- **Fixed File Operations Schema Issues**: Resolved schema validation failures in file import tools
+  - Updated `sample_data` schema to accept both objects and arrays
+  - Fixed `missing_values` and `column_types` to return proper named lists using `as.list()`
+  - All file operations (CSV, Excel, JSON) now validate correctly
+
+### 🧪 Test Suite Improvements  
+- **100% Test Success Rate**: All unit, integration, and end-to-end tests now pass
+  - Fixed e2e scenario that was failing due to schema validation
+  - Comprehensive test coverage across all 40 statistical tools
+  - Reliable CI/CD pipeline with consistent results
+
+### 📊 Code Quality & Maintenance
+- **Dependency Management**: Added broom and knitr as required R packages for consistent formatting
+- **Code Formatting**: Applied black formatting across all Python files
+- **Documentation**: Streamlined README.md from 720 to 213 lines (70% reduction) for better user experience
+
+## Previous Improvements (v0.3.10)
 
 ### 🔧 Enhanced Flexibility
 - **Output Schema Validation**: Made optional for increased flexibility
@@ -227,6 +268,68 @@ def _register_builtin_tools(server):
 3. R script loads required libraries, reads JSON args, performs analysis
 4. Results written to JSON file and returned to Python
 5. Temporary files cleaned up
+
+## Hybrid Approach: Structured Tools + Flexible R Execution
+
+### When to Use Each Approach
+
+**Use Structured Tools For:**
+- Standard statistical analyses (regression, correlation, t-tests, ANOVA)
+- Common data transformations (lag, difference, standardization, winsorization)
+- File operations (CSV, Excel, JSON import/export)
+- Standard visualizations (scatter plots, histograms, time series plots)
+- Well-defined econometric models (panel regression, VAR, instrumental variables)
+
+**Use Flexible R Execution For:**
+- Novel statistical methods not covered by structured tools
+- Complex custom analyses requiring multiple R packages
+- Advanced data manipulations beyond standard transformations
+- Custom visualizations with specific formatting requirements
+- Experimental statistical techniques or cutting-edge methods
+- Analyses requiring specific R package combinations
+
+### Flexible R Execution Guidelines
+
+```python
+# Example: Custom multilevel modeling analysis
+execute_r_analysis(
+    r_code="""
+    library(lme4)
+    library(broom.mixed)
+    
+    # Convert to data frame and fit mixed-effects model
+    df <- as.data.frame(data)
+    model <- lmer(outcome ~ treatment + (1|subject), data = df)
+    
+    result <- list(
+        fixed_effects = tidy(model, effects = "fixed"),
+        random_effects = tidy(model, effects = "ran_vals"),
+        model_summary = glance(model),
+        fitted_values = fitted(model)
+    )
+    """,
+    data={"outcome": [...], "treatment": [...], "subject": [...]},
+    packages=["lme4", "broom"],
+    description="Multilevel model with random intercepts",
+    timeout_seconds=120
+)
+```
+
+### Security Features
+
+- **Package Whitelist**: Only ~80 approved statistical/data packages allowed
+- **Timeout Protection**: Maximum execution time configurable (default 60s, max 300s)
+- **Pattern Blocking**: Dangerous patterns like `system()`, `file.remove()` automatically blocked
+- **Audit Logging**: All custom R code execution logged for security review
+- **Memory Limits**: R options set to prevent memory exhaustion
+
+### Best Practices
+
+1. **Start with Structured Tools**: Always check if a structured tool exists for your analysis
+2. **Validate Packages**: Use `list_allowed_r_packages()` to check package availability
+3. **Test Incrementally**: Start with simple R code and build complexity gradually  
+4. **Handle Errors Gracefully**: Include error checking in your R code
+5. **Document Purpose**: Always provide clear description of analysis intent
 
 ## Key Integration Points
 

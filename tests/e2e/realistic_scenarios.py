@@ -87,7 +87,7 @@ async def test_business_analyst_scenario():
         r_squared = result["r_squared"]
         marketing_effect = result["coefficients"]["marketing"]
         marketing_pvalue = result["p_values"]["marketing"]
-        print(f"✅ Sales Model Results:")
+        print("✅ Sales Model Results:")
         print(f"   📈 Marketing ROI: ${marketing_effect:.2f} sales per $1 marketing")
         print(f"   📊 Model explains {r_squared:.1%} of sales variation")
         print(f"   🎯 Marketing effect p-value: {marketing_pvalue:.4f}")
@@ -145,7 +145,7 @@ async def test_economist_scenario():
         gdp_unemp_corr = corr_matrix["gdp_growth"][
             "unemployment"
         ]  # Access by variable name
-        print(f"✅ Macroeconomic Correlations:")
+        print("✅ Macroeconomic Correlations:")
         print(f"   📉 GDP-Unemployment: {gdp_unemp_corr:.3f} (Okun's Law)")
         print(f"   📊 Sample size: {corr_result['n_obs']} observations")
         print(f"   🔬 Variables analyzed: {', '.join(corr_result['variables'])}")
@@ -239,7 +239,7 @@ async def test_data_scientist_scenario():
         mcfadden_r2 = churn_model.get("mcfadden_r_squared", 0)
         tenure_coef = churn_model["coefficients"]["tenure_months"]
         support_coef = churn_model["coefficients"]["support_tickets"]
-        print(f"✅ Churn Prediction Model:")
+        print("✅ Churn Prediction Model:")
         print(f"   🎯 Accuracy: {accuracy:.1%}")
         print(f"   📊 McFadden R²: {mcfadden_r2:.3f}")
         print(f"   📉 Tenure effect: {tenure_coef:.4f} (longer tenure = less churn)")
@@ -319,7 +319,7 @@ async def test_researcher_scenario():
         treatment_pvalue = treatment_model["p_values"]["treatment"]
         baseline_coef = treatment_model["coefficients"]["baseline_score"]
         r_squared = treatment_model["r_squared"]
-        print(f"✅ Treatment Effect Results:")
+        print("✅ Treatment Effect Results:")
         print(f"   🧪 Treatment effect: {treatment_coef:.3f} points")
         print(f"   📊 Significance: p = {treatment_pvalue:.4f}")
         print(f"   📈 Baseline control: {baseline_coef:.3f}")

@@ -51,7 +51,7 @@ async def _run_server_with_transport(server, transport) -> None:
 @click.group()
 @click.version_option(version=__version__)
 def cli():
-    """RMCP MCP Server - Comprehensive statistical analysis with 40 tools across 9 categories."""
+    """RMCP MCP Server - Comprehensive statistical analysis with 44 tools across 11 categories."""
     pass
 
 
@@ -180,7 +180,8 @@ def serve_http(
         from .transport.http import HTTPTransport
     except ImportError:
         click.echo(
-            "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp[http]"
+            "HTTP transport requires 'fastapi' extras. "
+            "Install with: pip install rmcp[http]"
         )
         sys.exit(1)
     logger.info(f"Starting HTTP transport on {host}:{port}")
@@ -348,7 +349,6 @@ def setup(config_file: str | None):
 @cli.command("check-r-packages")
 def check_r_packages():
     """Check R package installation status."""
-    import json
     import subprocess
 
     # Define all required packages with their categories
@@ -366,6 +366,7 @@ def check_r_packages():
             "reshape2",
         ],
         "File Operations": ["readxl"],
+        "Reporting & Formatting": ["knitr"],
     }
     click.echo("🔍 Checking R Package Installation Status")
     click.echo("=" * 50)
@@ -475,7 +476,10 @@ def _register_builtin_tools(server):
         read_excel,
         read_json,
         write_csv,
+        write_excel,
+        write_json,
     )
+    from .tools.flexible_r import execute_r_analysis, list_allowed_r_packages
     from .tools.formula_builder import build_formula, validate_formula
     from .tools.helpers import load_example, suggest_fix, validate_data
     from .tools.machine_learning import decision_tree, kmeans_clustering, random_forest
@@ -527,7 +531,9 @@ def _register_builtin_tools(server):
         data_info,
         filter_data,
         read_excel,
+        write_excel,
         read_json,
+        write_json,
         # Econometrics
         panel_regression,
         instrumental_variables,
@@ -550,8 +556,11 @@ def _register_builtin_tools(server):
         suggest_fix,
         validate_data,
         load_example,
+        # Flexible R execution
+        execute_r_analysis,
+        list_allowed_r_packages,
     )
-    logger.info("Registered comprehensive statistical analysis tools (40 total)")
+    logger.info("Registered comprehensive statistical analysis tools (44 total)")
 
 
 if __name__ == "__main__":

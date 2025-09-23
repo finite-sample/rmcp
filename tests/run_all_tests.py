@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
 Comprehensive test runner for RMCP.
-Tests all 40 statistical analysis tools to ensure they work properly.
+Tests all 42 statistical analysis tools to ensure they work properly.
 """
 import asyncio
-import json
 import subprocess
 import sys
 import tempfile
@@ -25,7 +24,10 @@ from rmcp.tools.fileops import (
     read_excel,
     read_json,
     write_csv,
+    write_excel,
+    write_json,
 )
+from rmcp.tools.flexible_r import execute_r_analysis, list_allowed_r_packages
 from rmcp.tools.formula_builder import build_formula, validate_formula
 from rmcp.tools.helpers import load_example, suggest_fix, validate_data
 from rmcp.tools.machine_learning import decision_tree, kmeans_clustering, random_forest
@@ -45,6 +47,9 @@ from rmcp.tools.visualization import (
     scatter_plot,
     time_series_plot,
 )
+
+# Import test R script loader
+from test_r_loader import get_flexible_r_script
 
 
 def check_r_installation():
@@ -87,6 +92,7 @@ def check_r_packages():
         "rlang",
         "readxl",
         "reshape2",
+        "openxlsx",
     ]
     r_script = f"""
     packages <- c({', '.join([f'"{pkg}"' for pkg in required_packages])})
@@ -119,7 +125,7 @@ async def create_test_server():
     """Create server with all tools registered."""
     server = create_server()
     server.configure(allowed_paths=["/tmp"], read_only=False)
-    # Register ALL 40 tools
+    # Register ALL 44 tools
     register_tool_functions(
         server.tools,
         # Regression & Correlation (3 tools)
@@ -159,11 +165,13 @@ async def create_test_server():
         time_series_plot,
         correlation_heatmap,
         regression_plot,
-        # File Operations (6 tools)
+        # File Operations (8 tools)
         read_csv,
         read_excel,
         read_json,
         write_csv,
+        write_excel,
+        write_json,
         data_info,
         filter_data,
         # Natural Language & UX (5 tools)
@@ -172,6 +180,9 @@ async def create_test_server():
         suggest_fix,
         validate_data,
         load_example,
+        # Flexible R Execution (2 tools)
+        execute_r_analysis,
+        list_allowed_r_packages,
     )
     return server
 
@@ -226,6 +237,34 @@ async def run_all_tests():
     print("🚀 Creating test server...")
     server = await create_test_server()
     print(f"✅ Server created with {len(server.tools._tools)} tools")
+
+    # Create temporary test files for file operations
+    import csv
+    import json
+    import os
+
+    try:
+        import pandas as pd
+
+        # Create CSV file
+        with open("temp_test.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["x", "y", "group"])
+            writer.writerow([1, 2, "A"])
+            writer.writerow([2, 4, "A"])
+            writer.writerow([3, 1, "B"])
+
+        # Create Excel file
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [2, 4, 1], "group": ["A", "A", "B"]})
+        df.to_excel("temp_test.xlsx", index=False)
+
+        # Create JSON file
+        with open("temp_test.json", "w") as f:
+            json.dump({"x": [1, 2, 3], "y": [2, 4, 1], "group": ["A", "A", "B"]}, f)
+
+        print("✅ Test files created")
+    except ImportError:
+        print("⚠️ pandas not available, file tests may fail")
     # Test data for various tools
     sample_data = {
         "x": [1, 2, 3, 4, 5],
@@ -368,7 +407,12 @@ async def run_all_tests():
                         "conditions": [{"variable": "x", "operator": ">", "value": 2}],
                     },
                 ),
-                # Note: read_csv, read_excel, read_json, write_csv require actual files
+                ("read_csv", {"file_path": "temp_test.csv"}),
+                ("write_csv", {"data": sample_data, "file_path": "temp_output.csv"}),
+                ("read_excel", {"file_path": "temp_test.xlsx"}),
+                ("write_excel", {"data": sample_data, "file_path": "temp_output.xlsx"}),
+                ("read_json", {"file_path": "temp_test.json"}),
+                ("write_json", {"data": sample_data, "file_path": "temp_output.json"}),
             ],
         ),
         (
@@ -384,6 +428,31 @@ async def run_all_tests():
                 ("validate_formula", {"formula": "y ~ x", "data": sample_data}),
                 ("validate_data", {"data": sample_data}),
                 ("load_example", {"dataset_name": "economics"}),
+                (
+                    "suggest_fix",
+                    {
+                        "error_type": "model_fitting",
+                        "context": "R linear regression failed",
+                    },
+                ),
+            ],
+        ),
+        (
+            "🔧 Flexible R Execution",
+            [
+                (
+                    "execute_r_analysis",
+                    {
+                        "r_code": get_flexible_r_script("test_basic_analysis"),
+                        "data": sample_data,
+                        "description": "Calculate means of x and y variables",
+                        "packages": ["base"],
+                    },
+                ),
+                (
+                    "list_allowed_r_packages",
+                    {"category": "stats"},
+                ),
             ],
         ),
     ]
@@ -400,6 +469,22 @@ async def run_all_tests():
                 passed_tests += 1
                 category_passed += 1
         print(f"  Category result: {category_passed}/{len(tests)} passed")
+    # Cleanup temporary test files
+    try:
+        for filename in [
+            "temp_test.csv",
+            "temp_test.xlsx",
+            "temp_test.json",
+            "temp_output.csv",
+            "temp_output.xlsx",
+            "temp_output.json",
+        ]:
+            if os.path.exists(filename):
+                os.remove(filename)
+        print("✅ Test files cleaned up")
+    except Exception as e:
+        print(f"⚠️ Warning: Could not clean up test files: {e}")
+
     print(f"\n{'=' * 50}")
     print(f"🎯 FINAL RESULTS: {passed_tests}/{total_tests} tests passed")
     print(f"📊 Success rate: {passed_tests / total_tests * 100:.1f}%")
@@ -518,7 +603,7 @@ async def run_http_transport_tests():
 async def main():
     """Main test runner."""
     print("🚀 RMCP Comprehensive Test Runner")
-    print("Testing all 40 statistical analysis tools + HTTP transport")
+    print("Testing all 44 statistical analysis tools + HTTP transport")
     print("=" * 50)
     # Run all test categories
     results = []

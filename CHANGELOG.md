@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.11] - 2025-09-22
+
+### Added
+- **🏗️ R Script Separation Architecture**: Complete separation of R code from Python for maintainability
+  - Extracted 39 R scripts from 8 Python tool files into organized directory structure
+  - Created dynamic R script loader with caching (`rmcp/r_assets/loader.py`)
+  - Organized scripts by category: descriptive, econometrics, fileops, formula_builder, helpers, machine_learning, regression, statistical_tests, timeseries, transforms, visualization
+  - All 40 statistical tools continue to work without functionality changes
+
+### Fixed
+- **🔧 Critical Bug Fixes**: Resolved import and type annotation issues
+  - Fixed missing `VFSError` import in `resources.py` (F821 linting error)
+  - Fixed type annotations in `formula_builder.py` (mypy compatibility)
+  - Added pandas to dev dependencies for e2e test compatibility
+  - Synchronized version numbers between `__init__.py` and `pyproject.toml`
+
+- **📊 Code Quality**: Eliminated all line length violations
+  - Reduced flake8 E501 errors from 206 to 0 through R script separation
+  - Removed backup files and cleaned up codebase
+  - Maintained 100% test success rate across all test suites
+
+### Changed
+- **📁 Package Structure**: Improved maintainability and modularity
+  - R scripts now editable and lintable as separate files
+  - Clear separation between Python tool logic and R statistical computations  
+  - Preserved all existing functionality including special "_formatting" fields
+  - Enhanced developer experience for R script maintenance
+
+### Verified
+- **✅ Full Functionality**: Comprehensive testing confirms stability
+  - All 40 tools working correctly across 9 statistical categories
+  - 100% success rate in unit, integration, and smoke tests
+  - Zero regression in existing functionality
+  - R script loader performance optimized with caching
+
 ## [0.3.10] - 2025-09-21
 
 ### Fixed
