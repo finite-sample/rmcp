@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.11** includes 44 statistical analysis tools across 11 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. **Version 0.3.12** includes 44 statistical analysis tools across 11 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## Key Architecture Components
 
@@ -102,7 +102,7 @@ poetry shell
 
 ### CLI Commands
 ```bash
-# Check version (should show 0.3.11)
+# Check version (should show 0.3.12)
 rmcp --version
 
 # Start stdio server (for Claude Desktop integration)
@@ -175,7 +175,55 @@ docker run -it r-econometrics-mcp
 docker run -i r-econometrics-mcp
 ```
 
-## Recent Improvements (v0.3.11)
+## Recent Improvements (v0.3.12)
+
+### 🔧 MCP Specification Compliance
+- **Enhanced Instructions Field**: Updated server initialization to provide comprehensive 2,789-character tool descriptions instead of generic text
+  - Detailed descriptions of all 44 tools across 11 categories
+  - Specific capabilities, features, and use cases for each tool category
+  - Better LLM understanding and integration with AI assistants like Cursor IDE
+  - Covers regression, time series, machine learning, visualization, and advanced features
+
+- **HTTP Protocol Version Validation**: Enforced proper MCP-Protocol-Version header validation according to MCP specification
+  - Initialize requests: Optional header validation (version negotiated after connection)
+  - Non-initialize requests: **Mandatory** MCP-Protocol-Version header with proper 400 error responses
+  - Improved compliance with MCP specification requirements
+  - Better error messages for debugging integration issues
+
+- **StructuredContent Format Compliance**: Fixed JSON-RPC response format to match MCP specification
+  - Single content items: Return as object directly (not wrapped in array)
+  - Multiple content items: Return as object with `items` array and metadata
+  - Maintains backward compatibility for legacy array format
+  - Resolves JSON schema validation issues with Cursor IDE and other MCP clients
+
+### 🧪 CI/CD Test Improvements  
+- **Feature Verification Test Fix**: Updated CI workflow to handle new MCP-compliant response formats
+  - Enhanced `extract_json_content` function to parse both object and array formats
+  - Proper handling of single vs. multi-item `structuredContent` responses
+  - Maintains compatibility with legacy test expectations
+  - All GitHub Actions CI tests now pass consistently
+
+### 📊 Code Quality & Maintenance
+- **Single Source of Truth for Version**: Eliminated version duplication using `importlib.metadata`
+  - `pyproject.toml` is now the authoritative version source
+  - `rmcp/__init__.py` dynamically loads version from package metadata
+  - Prevents version inconsistencies between packaging and runtime
+  - Cleaner maintenance and release process
+
+- **Perfect Linting Compliance**: All code quality checks pass without errors
+  - ✅ **black**: Code formatting standards
+  - ✅ **isort**: Import sorting standards  
+  - ✅ **flake8**: Code quality and style standards
+  - Consistent code style across entire codebase
+
+### 🎯 Integration Improvements
+- **Cursor IDE Full Compatibility**: All MCP specification compliance issues resolved
+  - Proper JSON schema validation for `structuredContent`
+  - Correct protocol version header enforcement
+  - Enhanced tool discovery through detailed instructions
+  - Seamless integration with Cursor's MCP client implementation
+
+## Previous Improvements (v0.3.11)
 
 ### 🔧 Flexible R Code Execution (NEW)
 - **Hybrid Approach**: Combines structured tools with flexible R code execution for maximum versatility
@@ -510,4 +558,8 @@ RMCP also works with Cursor IDE through MCP. Recent fixes ensure full compatibil
 }
 ```
 
-**Note**: Version 0.3.11+ includes critical fixes for MCP specification compliance, ensuring `structuredContent` returns proper objects instead of arrays, which resolves JSON schema validation issues with Cursor and other MCP clients.
+**Note**: Version 0.3.12+ includes comprehensive MCP specification compliance improvements:
+- Enhanced instructions with detailed tool descriptions (2,789 characters)
+- Proper HTTP protocol version validation with MCP-Protocol-Version header enforcement  
+- Correct `structuredContent` object format (not arrays) resolving JSON schema validation issues
+- Full compatibility with Cursor IDE and other MCP clients
