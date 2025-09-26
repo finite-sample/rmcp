@@ -119,20 +119,20 @@ class TestChiSquareSchemaValidation:
         assert "is less than the minimum" in str(exc_info.value)
 
     def test_independence_missing_y_variable(self):
-        """Test that independence test requires y variable."""
-        invalid_input = {
+        """Test that independence test y variable validation happens at runtime."""
+        # With the flattened schema for Claude compatibility,
+        # the validation for y being required for independence test
+        # happens at runtime, not at schema validation time
+        input_with_missing_y = {
             "data": {"var1": ["A", "B"]},
             "test_type": "independence",
             "x": "var1",
-            # Missing "y" parameter required for independence
+            # Missing "y" parameter - will be caught at runtime
         }
         schema = chi_square_test._mcp_tool_input_schema
-        with pytest.raises(ValidationError) as exc_info:
-            validate(instance=invalid_input, schema=schema)
-        # The oneOf validation catches that this doesn't match any schema
-        assert "was expected" in str(
-            exc_info.value
-        ) or "'y' is a required property" in str(exc_info.value)
+        # This now passes schema validation (y is optional in flattened schema)
+        # The actual validation happens when the tool is executed
+        validate(instance=input_with_missing_y, schema=schema)
 
 
 class TestRegressionSchemaValidation:
