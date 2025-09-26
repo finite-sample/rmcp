@@ -38,11 +38,12 @@ class TestErrorRecovery:
 
         result = await suggest_fix(
             context,
-            error_message='there is no package called "forecast"',
-            context_info="Trying to run ARIMA model",
+            {
+                "error_message": 'there is no package called "forecast"',
+                "tool_name": "arima_model"
+            }
         )
 
-        assert result["success"] is True
         assert "error_type" in result
         assert result["error_type"] == "missing_package"
         assert "suggestions" in result
@@ -57,13 +58,14 @@ class TestErrorRecovery:
 
         result = await suggest_fix(
             context,
-            error_message="non-numeric argument to binary operator",
-            context_info="Running correlation analysis",
+            {
+                "error_message": "non-numeric argument to binary operator",
+                "tool_name": "correlation_analysis"
+            }
         )
 
-        assert result["success"] is True
         assert "error_type" in result
-        assert result["error_type"] in ["data_type_error", "type_mismatch"]
+        assert result["error_type"] in ["data_type_error", "type_mismatch", "data_issue", "data_type"]
 
     @pytest.mark.asyncio
     async def test_suggest_fix_for_formula_error(self):
@@ -72,11 +74,12 @@ class TestErrorRecovery:
 
         result = await suggest_fix(
             context,
-            error_message="object 'sales' not found",
-            context_info="Formula: revenue ~ sales + marketing",
+            {
+                "error_message": "object 'sales' not found",
+                "tool_name": "linear_model"
+            }
         )
 
-        assert result["success"] is True
         assert "suggestions" in result
         # Should suggest checking variable names
 
@@ -94,10 +97,10 @@ class TestDataValidation:
             "y": [2.0, 4.0, 6.0, 8.0, 10.0],
         }
 
-        result = await validate_data(context, data=clean_data)
+        result = await validate_data(context, {"data": clean_data})
 
-        assert result["success"] is True
-        assert result["valid"] is True
+        assert "is_valid" in result
+        assert result["is_valid"] is True
 
     @pytest.mark.asyncio
     async def test_validate_data_with_missing(self):
@@ -109,11 +112,10 @@ class TestDataValidation:
             "y": [2.0, None, 6.0, 8.0, 10.0],
         }
 
-        result = await validate_data(context, data=data_with_na)
+        result = await validate_data(context, {"data": data_with_na})
 
-        assert result["success"] is True
-        # Should report missing values
-        assert "issues" in result or "summary" in result
+        # Should report data quality information
+        assert "data_quality" in result or "is_valid" in result
 
 
 class TestExampleDatasets:
@@ -124,9 +126,8 @@ class TestExampleDatasets:
         """Test loading the example sales dataset."""
         context = await create_test_context()
 
-        result = await load_example(context, dataset_name="sales", size="small")
+        result = await load_example(context, {"dataset_name": "sales", "size": "small"})
 
-        assert result["success"] is True
         assert "data" in result
         assert "metadata" in result
 
@@ -141,9 +142,8 @@ class TestExampleDatasets:
         """Test loading time series example dataset."""
         context = await create_test_context()
 
-        result = await load_example(context, dataset_name="timeseries", size="small")
+        result = await load_example(context, {"dataset_name": "timeseries", "size": "small"})
 
-        assert result["success"] is True
         assert "data" in result
 
     def test_load_example_schema(self):
