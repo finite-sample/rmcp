@@ -156,44 +156,35 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
             "performance": {
                 "type": "object",
                 "description": "Model performance metrics",
-                "oneOf": [
-                    {
-                        "properties": {
-                            "accuracy": {
-                                "type": "number",
-                                "minimum": 0,
-                                "maximum": 1,
-                                "description": "Classification accuracy",
-                            },
-                            "confusion_matrix": {
-                                "type": "array",
-                                "items": {"type": "array", "items": {"type": "number"}},
-                                "description": "Confusion matrix for classification",
-                            },
-                        },
-                        "required": ["accuracy", "confusion_matrix"],
+                "properties": {
+                    "accuracy": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "description": "Classification accuracy (for classification trees)",
                     },
-                    {
-                        "properties": {
-                            "mse": {
-                                "type": "number",
-                                "minimum": 0,
-                                "description": "Mean squared error",
-                            },
-                            "rmse": {
-                                "type": "number",
-                                "minimum": 0,
-                                "description": "Root mean squared error",
-                            },
-                            "r_squared": {
-                                "type": "number",
-                                "maximum": 1,
-                                "description": "R-squared value",
-                            },
-                        },
-                        "required": ["mse", "rmse", "r_squared"],
+                    "confusion_matrix": {
+                        "type": "array",
+                        "items": {"type": "array", "items": {"type": "number"}},
+                        "description": "Confusion matrix (for classification trees)",
                     },
-                ],
+                    "mse": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Mean squared error (for regression trees)",
+                    },
+                    "rmse": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Root mean squared error (for regression trees)",
+                    },
+                    "r_squared": {
+                        "type": "number",
+                        "maximum": 1,
+                        "description": "R-squared value (for regression trees)",
+                    },
+                },
+                "additionalProperties": False,
             },
             "variable_importance": {
                 "type": "object",
@@ -279,53 +270,40 @@ async def decision_tree(context, params) -> dict[str, Any]:
             "performance": {
                 "type": "object",
                 "description": "Model performance metrics",
-                "oneOf": [
-                    {
-                        "properties": {
-                            "oob_error_rate": {
-                                "type": "number",
-                                "minimum": 0,
-                                "maximum": 1,
-                                "description": "Out-of-bag error rate",
-                            },
-                            "confusion_matrix": {
-                                "type": "array",
-                                "items": {"type": "array", "items": {"type": "number"}},
-                                "description": "Confusion matrix for classification",
-                            },
-                            "class_error": {
-                                "type": "object",
-                                "description": "Error rate by class",
-                                "additionalProperties": {"type": "number"},
-                            },
-                        },
-                        "required": [
-                            "oob_error_rate",
-                            "confusion_matrix",
-                            "class_error",
-                        ],
+                "properties": {
+                    "oob_error_rate": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "description": "Out-of-bag error rate (for classification)",
                     },
-                    {
-                        "properties": {
-                            "mse": {
-                                "type": "number",
-                                "minimum": 0,
-                                "description": "Mean squared error",
-                            },
-                            "rmse": {
-                                "type": "number",
-                                "minimum": 0,
-                                "description": "Root mean squared error",
-                            },
-                            "variance_explained": {
-                                "type": "number",
-                                "description": "Percentage of variance explained",
-                                "maximum": 100,
-                            },
-                        },
-                        "required": ["mse", "rmse", "variance_explained"],
+                    "confusion_matrix": {
+                        "type": "array",
+                        "items": {"type": "array", "items": {"type": "number"}},
+                        "description": "Confusion matrix (for classification)",
                     },
-                ],
+                    "class_error": {
+                        "type": "object",
+                        "description": "Error rate by class (for classification)",
+                        "additionalProperties": {"type": "number"},
+                    },
+                    "mse": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Mean squared error (for regression)",
+                    },
+                    "rmse": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Root mean squared error (for regression)",
+                    },
+                    "variance_explained": {
+                        "type": "number",
+                        "description": "Percentage of variance explained (for regression)",
+                        "maximum": 100,
+                    },
+                },
+                "additionalProperties": False,
             },
             "variable_importance": {
                 "type": ["object", "null"],

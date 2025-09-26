@@ -57,8 +57,8 @@ def test_basic_server_import():
     """Test that the server can be imported without errors."""
     print("\n🔍 Testing Server Import")
     print("-" * 40)
-    # Add rmcp to path
-    project_root = Path(__file__).parent.parent
+    # Add rmcp to path - adjusted for new location
+    project_root = Path(__file__).parent.parent.parent.parent
     sys.path.insert(0, str(project_root))
     try:
         # Try to import core components
@@ -91,7 +91,7 @@ def test_cli_basic():
             capture_output=True,
             text=True,
             timeout=10,
-            cwd=Path(__file__).parent.parent,
+            cwd=Path(__file__).parent.parent.parent.parent,
         )
         if result.returncode == 0:
             print(f"✅ CLI version: {result.stdout.strip()}")

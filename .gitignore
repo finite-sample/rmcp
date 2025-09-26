@@ -61,6 +61,7 @@ rmcp_test_env/
 
 # IDEs
 .vscode/
+.cursor/
 .idea/
 *.swp
 *.swo
@@ -86,6 +87,11 @@ Rplots.pdf
 test_*.log
 test_*.xlsx
 test_*.csv
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
 
 # MyPy
 .mypy_cache/
@@ -100,3 +106,6 @@ docs/_build/
 docs/.doctrees/
 *.doctree
 environment.pickle
+
+# Code Assistants
+.claude/
