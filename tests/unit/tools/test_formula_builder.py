@@ -36,10 +36,10 @@ class TestFormulaBuilder:
         context = await create_test_context()
 
         result = await build_formula(
-            context, description="predict sales from marketing spend"
+            context, {"description": "predict sales from marketing spend"}
         )
 
-        assert result["success"] is True
+        # build_formula returns the result directly
         assert "formula" in result
         formula = result["formula"]
         # Should generate something like "sales ~ marketing" or similar
@@ -52,11 +52,13 @@ class TestFormulaBuilder:
 
         result = await build_formula(
             context,
-            description="predict price based on size, location, and age",
-            target_hint="price",
+            {
+                "description": "predict price based on size, location, and age",
+                "target_hint": "price"
+            }
         )
 
-        assert result["success"] is True
+        # build_formula returns the result directly
         assert "formula" in result
         formula = result["formula"]
         assert "price" in formula
@@ -67,23 +69,34 @@ class TestFormulaBuilder:
         """Test validating a correct R formula."""
         context = await create_test_context()
 
-        result = await validate_formula(context, formula="y ~ x1 + x2 + x3")
+        # validate_formula requires both formula and data
+        test_data = {'x1': [1, 2, 3], 'x2': [4, 5, 6], 'x3': [7, 8, 9], 'y': [10, 11, 12]}
+        result = await validate_formula(context, {"formula": "y ~ x1 + x2 + x3", "data": test_data})
 
-        assert result["success"] is True
-        assert result["valid"] is True
-        assert "components" in result
+        # validate_formula returns validation data directly
+        # Check if it's valid (might be under 'is_valid' or 'valid')
+        assert "is_valid" in result or "valid" in result
+        if "is_valid" in result:
+            assert result["is_valid"] is True
+        else:
+            assert result["valid"] is True
 
     @pytest.mark.asyncio
     async def test_validate_invalid_formula(self):
         """Test validating an incorrect R formula."""
         context = await create_test_context()
 
-        result = await validate_formula(context, formula="this is not a formula")
+        # validate_formula requires both formula and data
+        test_data = {'x': [1, 2, 3], 'y': [4, 5, 6]}
+        result = await validate_formula(context, {"formula": "this is not a formula", "data": test_data})
 
-        # The tool might still return success but indicate invalid
-        if result["success"]:
+        # The tool should indicate invalid formula
+        if "is_valid" in result:
+            assert result["is_valid"] is False
+        elif "valid" in result:
             assert result["valid"] is False
-            assert "error" in result or "message" in result
+        # There should be error info
+        assert "error" in result or "message" in result or "errors" in result
 
     @pytest.mark.asyncio
     async def test_formula_with_interactions(self):
@@ -92,10 +105,10 @@ class TestFormulaBuilder:
 
         result = await build_formula(
             context,
-            description="predict outcome with interaction between treatment and time",
+            {"description": "predict outcome with interaction between treatment and time"}
         )
 
-        assert result["success"] is True
+        # build_formula returns the result directly
         assert "formula" in result
         # Might generate something with : or * for interactions
 

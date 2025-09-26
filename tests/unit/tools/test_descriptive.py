@@ -54,7 +54,7 @@ class TestDescriptiveSchemaValidation:
         """Test valid frequency table input."""
         valid_input = {
             "data": {"category": ["A", "B", "A", "C", "B", "A"]},
-            "variable": "category",
+            "variables": ["category"],  # Changed from 'variable' to 'variables'
         }
         schema = frequency_table._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)

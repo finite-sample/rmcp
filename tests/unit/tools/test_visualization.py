@@ -106,10 +106,7 @@ class TestVisualizationSchemaValidation:
                 "x": [1, 2, 3, 4, 5],
                 "y": [2, 4, 5, 8, 10],
             },
-            "x": "x",
-            "y": "y",
-            "add_regression_line": True,
-            "confidence_interval": True,
+            "formula": "y ~ x",  # regression_plot requires formula not x and y
         }
         schema = regression_plot._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
