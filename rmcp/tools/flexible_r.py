@@ -181,7 +181,7 @@ def validate_r_code(r_code: str) -> tuple[bool, Optional[str]]:
                 ),
             },
             "data": {
-                "oneOf": [table_schema(), {"type": "null"}],
+                **table_schema(),
                 "description": "Optional data to pass to R code as 'data' variable",
             },
             "packages": {

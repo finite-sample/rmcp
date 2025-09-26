@@ -257,32 +257,30 @@ async def anova(context, params) -> dict[str, Any]:
     name="chi_square_test",
     input_schema={
         "type": "object",
-        "oneOf": [
-            {
-                "properties": {
-                    "data": table_schema(),
-                    "test_type": {"const": "independence"},
-                    "x": {"type": "string"},
-                    "y": {"type": "string"},
-                },
-                "required": ["data", "test_type", "x", "y"],
-                "additionalProperties": False,
+        "properties": {
+            "data": table_schema(),
+            "test_type": {
+                "type": "string",
+                "enum": ["independence", "goodness_of_fit"],
+                "description": "Type of chi-square test",
             },
-            {
-                "properties": {
-                    "data": table_schema(),
-                    "test_type": {"const": "goodness_of_fit"},
-                    "x": {"type": "string"},
-                    "expected": {
-                        "type": "array",
-                        "items": {"type": "number", "minimum": 0},
-                        "minItems": 1,
-                    },
-                },
-                "required": ["data", "test_type", "x"],
-                "additionalProperties": False,
+            "x": {
+                "type": "string",
+                "description": "First variable (or only variable for goodness of fit)",
             },
-        ],
+            "y": {
+                "type": "string",
+                "description": "Second variable (required for independence test)",
+            },
+            "expected": {
+                "type": "array",
+                "items": {"type": "number", "minimum": 0},
+                "minItems": 1,
+                "description": "Expected frequencies (for goodness of fit test)",
+            },
+        },
+        "required": ["data", "test_type", "x"],
+        "additionalProperties": False,
     },
     output_schema={
         "type": "object",
