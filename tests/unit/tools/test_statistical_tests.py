@@ -5,9 +5,7 @@ Tests input schema validation and output shape compliance without R execution.
 """
 import sys
 from pathlib import Path
-from typing import Any
 
-import jsonschema
 import pytest
 from jsonschema import ValidationError, validate
 

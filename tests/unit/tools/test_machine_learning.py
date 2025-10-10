@@ -26,13 +26,13 @@ class TestMachineLearningSchemaValidation:
         output_schema = decision_tree._mcp_tool_output_schema
 
         # Verify the output schema performance field is flattened (no oneOf)
-        assert 'oneOf' not in str(output_schema)
+        assert "oneOf" not in str(output_schema)
 
         # Test valid classification input
         valid_classification = {
             "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": ["A", "B", "A"]},
             "formula": "y ~ x1 + x2",
-            "method": "class"
+            "method": "class",
         }
         validate(instance=valid_classification, schema=input_schema)
 
@@ -40,7 +40,7 @@ class TestMachineLearningSchemaValidation:
         valid_regression = {
             "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": [10, 20, 30]},
             "formula": "y ~ x1 + x2",
-            "method": "anova"
+            "method": "anova",
         }
         validate(instance=valid_regression, schema=input_schema)
 
@@ -50,14 +50,14 @@ class TestMachineLearningSchemaValidation:
         output_schema = random_forest._mcp_tool_output_schema
 
         # Verify the output schema performance field is flattened (no oneOf)
-        assert 'oneOf' not in str(output_schema)
+        assert "oneOf" not in str(output_schema)
 
         # Test valid classification input
         valid_classification = {
             "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": ["A", "B", "A"]},
             "formula": "y ~ x1 + x2",
             "n_trees": 100,
-            "mtry": 2
+            "mtry": 2,
         }
         validate(instance=valid_classification, schema=input_schema)
 
@@ -65,7 +65,7 @@ class TestMachineLearningSchemaValidation:
         valid_regression = {
             "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": [10, 20, 30]},
             "formula": "y ~ x1 + x2",
-            "n_trees": 50
+            "n_trees": 50,
         }
         validate(instance=valid_regression, schema=input_schema)
 
@@ -97,7 +97,7 @@ class TestMachineLearningSchemaValidation:
         dt_class_input = {
             "data": {"x": [1, 2, 3], "y": ["A", "B", "A"]},
             "formula": "y ~ x",
-            "method": "class"
+            "method": "class",
         }
         validate(instance=dt_class_input, schema=decision_tree._mcp_tool_input_schema)
 
@@ -107,7 +107,7 @@ class TestMachineLearningSchemaValidation:
             "formula": "y ~ x1 + x2",
             "n_trees": 100,
             "mtry": 2,
-            "min_node_size": 5
+            "min_node_size": 5,
         }
         validate(instance=rf_input, schema=random_forest._mcp_tool_input_schema)
 

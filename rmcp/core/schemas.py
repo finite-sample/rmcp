@@ -43,7 +43,7 @@ def validate_schema(data: Any, schema: dict[str, Any], context: str = "") -> Non
 # Common schema patterns for statistical tools
 def table_schema(required_columns: list[str] | None = None) -> dict[str, Any]:
     """Schema for tabular data (dict with column arrays)."""
-    schema = {
+    schema: dict[str, Any] = {
         "type": "object",
         "properties": {},
         "additionalProperties": {
@@ -53,8 +53,9 @@ def table_schema(required_columns: list[str] | None = None) -> dict[str, Any]:
     }
     if required_columns:
         schema["required"] = required_columns
+        properties = schema["properties"]
         for col in required_columns:
-            schema["properties"][col] = {
+            properties[col] = {
                 "type": "array",
                 "items": {"type": ["number", "string", "null"]},
             }

@@ -4,7 +4,6 @@ Unit tests for helper tools.
 Tests error recovery, data validation, and example dataset loading.
 """
 
-import asyncio
 import sys
 from pathlib import Path
 from shutil import which
@@ -17,8 +16,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-from rmcp.core.context import Context, LifespanState
-from rmcp.tools.helpers import load_example, suggest_fix, validate_data
+from rmcp.core.context import Context, LifespanState  # noqa: E402
+from rmcp.tools.helpers import load_example, suggest_fix, validate_data  # noqa: E402
 
 
 async def create_test_context():
@@ -40,8 +39,8 @@ class TestErrorRecovery:
             context,
             {
                 "error_message": 'there is no package called "forecast"',
-                "tool_name": "arima_model"
-            }
+                "tool_name": "arima_model",
+            },
         )
 
         assert "error_type" in result
@@ -60,12 +59,17 @@ class TestErrorRecovery:
             context,
             {
                 "error_message": "non-numeric argument to binary operator",
-                "tool_name": "correlation_analysis"
-            }
+                "tool_name": "correlation_analysis",
+            },
         )
 
         assert "error_type" in result
-        assert result["error_type"] in ["data_type_error", "type_mismatch", "data_issue", "data_type"]
+        assert result["error_type"] in [
+            "data_type_error",
+            "type_mismatch",
+            "data_issue",
+            "data_type",
+        ]
 
     @pytest.mark.asyncio
     async def test_suggest_fix_for_formula_error(self):
@@ -74,10 +78,7 @@ class TestErrorRecovery:
 
         result = await suggest_fix(
             context,
-            {
-                "error_message": "object 'sales' not found",
-                "tool_name": "linear_model"
-            }
+            {"error_message": "object 'sales' not found", "tool_name": "linear_model"},
         )
 
         assert "suggestions" in result
@@ -142,7 +143,9 @@ class TestExampleDatasets:
         """Test loading time series example dataset."""
         context = await create_test_context()
 
-        result = await load_example(context, {"dataset_name": "timeseries", "size": "small"})
+        result = await load_example(
+            context, {"dataset_name": "timeseries", "size": "small"}
+        )
 
         assert "data" in result
 
@@ -151,10 +154,7 @@ class TestExampleDatasets:
         schema = load_example._mcp_tool_input_schema
 
         # Valid input
-        valid_input = {
-            "dataset_name": "sales",
-            "size": "small"
-        }
+        valid_input = {"dataset_name": "sales", "size": "small"}
         validate(instance=valid_input, schema=schema)
 
         # Check dataset options
@@ -168,9 +168,7 @@ class TestExampleDatasets:
         schema = validate_data._mcp_tool_input_schema
 
         # Valid input
-        valid_input = {
-            "data": {"col1": [1, 2, 3], "col2": [4, 5, 6]}
-        }
+        valid_input = {"data": {"col1": [1, 2, 3], "col2": [4, 5, 6]}}
         validate(instance=valid_input, schema=schema)
 
         # Check required fields

@@ -12,7 +12,6 @@ This test suite verifies that:
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict
 
 import pytest
 from jsonschema import ValidationError, validate
@@ -22,9 +21,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from rmcp.cli import _register_builtin_tools
 from rmcp.core.server import create_server
+from rmcp.tools.flexible_r import execute_r_analysis
 from rmcp.tools.machine_learning import decision_tree, random_forest
 from rmcp.tools.statistical_tests import chi_square_test
-from rmcp.tools.flexible_r import execute_r_analysis
 
 
 class TestClaudeAPISchemaCompliance:
@@ -51,11 +50,13 @@ class TestClaudeAPISchemaCompliance:
             if isinstance(schema, dict):
                 schema_str = json.dumps(schema)
                 # Check for these keywords at the top level of the schema
-                if any(key in schema for key in ['oneOf', 'allOf', 'anyOf']):
-                    problematic_tools.append({
-                        'name': tool_name,
-                        'issue': 'Contains oneOf/allOf/anyOf at top level'
-                    })
+                if any(key in schema for key in ["oneOf", "allOf", "anyOf"]):
+                    problematic_tools.append(
+                        {
+                            "name": tool_name,
+                            "issue": "Contains oneOf/allOf/anyOf at top level",
+                        }
+                    )
 
         # Report findings
         print(f"\n✅ Checked {tools_checked} tools for Claude API compatibility")
@@ -64,10 +65,14 @@ class TestClaudeAPISchemaCompliance:
             print("\n❌ Found tools with schema issues:")
             for tool in problematic_tools:
                 print(f"  - {tool['name']}: {tool['issue']}")
-            pytest.fail(f"Found {len(problematic_tools)} tools with Claude-incompatible schemas")
+            pytest.fail(
+                f"Found {len(problematic_tools)} tools with Claude-incompatible schemas"
+            )
         else:
             print("✅ All tools have Claude-compatible schemas")
-            assert tools_checked >= 44, f"Expected at least 44 tools, found {tools_checked}"
+            assert (
+                tools_checked >= 44
+            ), f"Expected at least 44 tools, found {tools_checked}"
 
     def test_decision_tree_flattened_schema(self):
         """Test that decision_tree's flattened schema still validates properly."""
@@ -75,13 +80,13 @@ class TestClaudeAPISchemaCompliance:
         output_schema = decision_tree._mcp_tool_output_schema
 
         # Verify the output schema performance field is flattened (no oneOf)
-        assert 'oneOf' not in str(output_schema)
+        assert "oneOf" not in str(output_schema)
 
         # Test valid classification input
         valid_classification = {
             "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": ["A", "B", "A"]},
             "formula": "y ~ x1 + x2",
-            "method": "class"
+            "method": "class",
         }
         validate(instance=valid_classification, schema=input_schema)
 
@@ -89,7 +94,7 @@ class TestClaudeAPISchemaCompliance:
         valid_regression = {
             "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": [10, 20, 30]},
             "formula": "y ~ x1 + x2",
-            "method": "anova"
+            "method": "anova",
         }
         validate(instance=valid_regression, schema=input_schema)
 
@@ -101,14 +106,14 @@ class TestClaudeAPISchemaCompliance:
         output_schema = random_forest._mcp_tool_output_schema
 
         # Verify the output schema performance field is flattened (no oneOf)
-        assert 'oneOf' not in str(output_schema)
+        assert "oneOf" not in str(output_schema)
 
         # Test valid classification input
         valid_classification = {
             "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": ["A", "B", "A"]},
             "formula": "y ~ x1 + x2",
             "n_trees": 100,
-            "mtry": 2
+            "mtry": 2,
         }
         validate(instance=valid_classification, schema=input_schema)
 
@@ -116,7 +121,7 @@ class TestClaudeAPISchemaCompliance:
         valid_regression = {
             "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": [10, 20, 30]},
             "formula": "y ~ x1 + x2",
-            "n_trees": 50
+            "n_trees": 50,
         }
         validate(instance=valid_regression, schema=input_schema)
 
@@ -127,14 +132,14 @@ class TestClaudeAPISchemaCompliance:
         schema = chi_square_test._mcp_tool_input_schema
 
         # Verify no oneOf at top level
-        assert 'oneOf' not in schema
+        assert "oneOf" not in schema
 
         # Test valid independence test
         valid_independence = {
             "data": {"var1": ["A", "B", "A"], "var2": ["X", "Y", "X"]},
             "test_type": "independence",
             "x": "var1",
-            "y": "var2"
+            "y": "var2",
         }
         validate(instance=valid_independence, schema=schema)
 
@@ -143,7 +148,7 @@ class TestClaudeAPISchemaCompliance:
             "data": {"category": ["A", "B", "C"]},
             "test_type": "goodness_of_fit",
             "x": "category",
-            "expected": [0.3, 0.4, 0.3]
+            "expected": [0.3, 0.4, 0.3],
         }
         validate(instance=valid_goodness, schema=schema)
 
@@ -154,26 +159,28 @@ class TestClaudeAPISchemaCompliance:
         schema = execute_r_analysis._mcp_tool_input_schema
 
         # Check data field doesn't have oneOf
-        if 'data' in schema['properties']:
-            assert 'oneOf' not in str(schema['properties']['data'])
+        if "data" in schema["properties"]:
+            assert "oneOf" not in str(schema["properties"]["data"])
 
         # Test valid input with data
         valid_with_data = {
             "r_code": "result <- mean(data$values)",
             "data": {"values": [1, 2, 3, 4, 5]},
-            "description": "Calculate mean"
+            "description": "Calculate mean",
         }
         validate(instance=valid_with_data, schema=schema)
 
         # Test valid input without data (if allowed)
         valid_without_data = {
             "r_code": "result <- 1:10",
-            "description": "Generate sequence"
+            "description": "Generate sequence",
         }
         # This should validate if data is optional
         try:
             validate(instance=valid_without_data, schema=schema)
-            print("✅ execute_r_analysis schema validated correctly (with optional data)")
+            print(
+                "✅ execute_r_analysis schema validated correctly (with optional data)"
+            )
         except ValidationError:
             # If data is required, that's fine too
             print("✅ execute_r_analysis schema validated correctly (data required)")
@@ -207,10 +214,7 @@ class TestClaudeAPISchemaCompliance:
                 # Validate that the schema itself is a valid JSON schema
                 jsonschema.Draft7Validator.check_schema(tool.input_schema)
             except jsonschema.SchemaError as e:
-                invalid_schemas.append({
-                    'name': tool_name,
-                    'error': str(e)
-                })
+                invalid_schemas.append({"name": tool_name, "error": str(e)})
 
         if invalid_schemas:
             print("\n❌ Found invalid schemas:")
@@ -218,7 +222,9 @@ class TestClaudeAPISchemaCompliance:
                 print(f"  - {item['name']}: {item['error']}")
             pytest.fail(f"Found {len(invalid_schemas)} invalid schemas")
         else:
-            print(f"✅ All {len(server_with_all_tools.tools._tools)} tool schemas are valid")
+            print(
+                f"✅ All {len(server_with_all_tools.tools._tools)} tool schemas are valid"
+            )
 
     def test_tools_maintain_backward_compatibility(self):
         """Test that modified tools still accept the same inputs as before."""
@@ -228,7 +234,7 @@ class TestClaudeAPISchemaCompliance:
         dt_class_input = {
             "data": {"x": [1, 2, 3], "y": ["A", "B", "A"]},
             "formula": "y ~ x",
-            "method": "class"
+            "method": "class",
         }
         validate(instance=dt_class_input, schema=decision_tree._mcp_tool_input_schema)
 
@@ -238,7 +244,7 @@ class TestClaudeAPISchemaCompliance:
             "formula": "y ~ x1 + x2",
             "n_trees": 100,
             "mtry": 2,
-            "min_node_size": 5
+            "min_node_size": 5,
         }
         validate(instance=rf_input, schema=random_forest._mcp_tool_input_schema)
 
@@ -247,7 +253,7 @@ class TestClaudeAPISchemaCompliance:
             "data": {"a": ["X", "Y", "X"], "b": ["M", "N", "M"]},
             "test_type": "independence",
             "x": "a",
-            "y": "b"
+            "y": "b",
         }
         validate(instance=chi_sq_indep, schema=chi_square_test._mcp_tool_input_schema)
 
@@ -255,9 +261,11 @@ class TestClaudeAPISchemaCompliance:
             "data": {"obs": ["A", "B", "C", "A", "B"]},
             "test_type": "goodness_of_fit",
             "x": "obs",
-            "expected": [0.4, 0.4, 0.2]
+            "expected": [0.4, 0.4, 0.2],
         }
-        validate(instance=chi_sq_goodness, schema=chi_square_test._mcp_tool_input_schema)
+        validate(
+            instance=chi_sq_goodness, schema=chi_square_test._mcp_tool_input_schema
+        )
 
         print("✅ All modified tools maintain backward compatibility")
 
@@ -277,25 +285,25 @@ class TestClaudeCodeIntegration:
         import asyncio
 
         async def test_list_tools():
-            ctx = server_with_all_tools.create_context('test', 'tools/list')
+            ctx = server_with_all_tools.create_context("test", "tools/list")
             result = await server_with_all_tools.tools.list_tools(ctx)
 
             # Verify structure
-            assert 'tools' in result
-            assert len(result['tools']) >= 44
+            assert "tools" in result
+            assert len(result["tools"]) >= 44
 
             # Check each tool has required fields for Claude
-            for tool in result['tools']:
-                assert 'name' in tool
-                assert 'inputSchema' in tool
+            for tool in result["tools"]:
+                assert "name" in tool
+                assert "inputSchema" in tool
 
                 # Verify no top-level oneOf/allOf/anyOf
-                schema = tool['inputSchema']
-                assert 'oneOf' not in schema
-                assert 'allOf' not in schema
-                assert 'anyOf' not in schema
+                schema = tool["inputSchema"]
+                assert "oneOf" not in schema
+                assert "allOf" not in schema
+                assert "anyOf" not in schema
 
-            return len(result['tools'])
+            return len(result["tools"])
 
         tool_count = asyncio.run(test_list_tools())
         print(f"✅ Tool discovery returns {tool_count} Claude-compatible tools")
@@ -310,10 +318,7 @@ class TestClaudeCodeIntegration:
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "initialize",
-                "params": {
-                    "protocolVersion": "0.1.0",
-                    "capabilities": {"tools": {}}
-                }
+                "params": {"protocolVersion": "0.1.0", "capabilities": {"tools": {}}},
             }
 
             init_resp = await server_with_all_tools.handle_request(init_req)
@@ -328,10 +333,8 @@ class TestClaudeCodeIntegration:
                 "method": "tools/call",
                 "params": {
                     "name": "summary_stats",
-                    "arguments": {
-                        "data": {"values": [1, 2, 3, 4, 5]}
-                    }
-                }
+                    "arguments": {"data": {"values": [1, 2, 3, 4, 5]}},
+                },
             }
 
             tool_resp = await server_with_all_tools.handle_request(tool_req)

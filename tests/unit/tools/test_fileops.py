@@ -3,7 +3,6 @@
 Schema validation and functional tests for file operation tools.
 Tests input schema validation and file operations without R execution where possible.
 """
-import asyncio
 import json
 import os
 import sys
@@ -11,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from jsonschema import ValidationError, validate
+from jsonschema import validate
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from rmcp.core.context import Context, LifespanState
@@ -121,8 +120,7 @@ class TestEnhancedFileOps:
             # Test writing JSON data
             test_data = {"test": "data", "numbers": [1, 2, 3]}
             result = await write_json(
-                context,
-                {"data": test_data, "file_path": temp_path}
+                context, {"data": test_data, "file_path": temp_path}
             )
 
             # Verify write was successful

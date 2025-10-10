@@ -25,11 +25,11 @@ class Transport(ABC):
         self.name = name
         self._running = False
         self._message_handler: Optional[
-            Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]]
+            Callable[[Dict[str, Any]], Awaitable[Dict[str, Any] | None]]
         ] = None
 
     def set_message_handler(
-        self, handler: Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]]
+        self, handler: Callable[[Dict[str, Any]], Awaitable[Dict[str, Any] | None]]
     ) -> None:
         """Set the message handler that will process incoming messages."""
         self._message_handler = handler
@@ -47,7 +47,7 @@ class Transport(ABC):
         self._running = False
 
     @abstractmethod
-    async def receive_messages(self) -> AsyncIterator[Dict[str, Any]]:
+    def receive_messages(self) -> AsyncIterator[Dict[str, Any]]:
         """
         Async iterator that yields incoming messages.
         Messages are already parsed from transport format (JSON-RPC).

@@ -21,21 +21,21 @@ class TestFlexibleRSchemaValidation:
         schema = execute_r_analysis._mcp_tool_input_schema
 
         # Check data field doesn't have oneOf
-        if 'data' in schema['properties']:
-            assert 'oneOf' not in str(schema['properties']['data'])
+        if "data" in schema["properties"]:
+            assert "oneOf" not in str(schema["properties"]["data"])
 
         # Test valid input with data
         valid_with_data = {
             "r_code": "result <- mean(data$values)",
             "data": {"values": [1, 2, 3, 4, 5]},
-            "description": "Calculate mean"
+            "description": "Calculate mean",
         }
         validate(instance=valid_with_data, schema=schema)
 
         # Test valid input without data (if allowed)
         valid_without_data = {
             "r_code": "result <- 1:10",
-            "description": "Generate sequence"
+            "description": "Generate sequence",
         }
         # This should validate if data is optional
         try:
@@ -52,7 +52,7 @@ class TestFlexibleRSchemaValidation:
             "r_code": "library(dplyr)\nresult <- data %>% summarize(mean = mean(values))",
             "data": {"values": [1, 2, 3, 4, 5]},
             "packages": ["dplyr"],
-            "description": "Calculate mean using dplyr"
+            "description": "Calculate mean using dplyr",
         }
         validate(instance=valid_input, schema=schema)
 
@@ -63,7 +63,7 @@ class TestFlexibleRSchemaValidation:
         valid_input = {
             "r_code": "result <- complex_calculation()",
             "description": "Long running calculation",
-            "timeout_seconds": 300  # 5 minutes
+            "timeout_seconds": 300,  # 5 minutes
         }
         validate(instance=valid_input, schema=schema)
 
@@ -79,7 +79,7 @@ class TestFlexibleRSchemaValidation:
         valid_input = {
             "r_code": "plot(1:10)\nresult <- 'Plot created'",
             "description": "Create a plot",
-            "return_image": True
+            "return_image": True,
         }
         validate(instance=valid_input, schema=schema)
 
@@ -92,9 +92,7 @@ class TestFlexibleRSchemaValidation:
         validate(instance=valid_input, schema=schema)
 
         # Or might accept optional category filter
-        valid_with_filter = {
-            "category": "statistics"
-        }
+        valid_with_filter = {"category": "statistics"}
         try:
             validate(instance=valid_with_filter, schema=schema)
         except ValidationError:

@@ -66,12 +66,15 @@ def start(log_level: str):
     """Start RMCP MCP server (default stdio transport)."""
     # Set logging level
     logging.getLogger().setLevel(getattr(logging, log_level))
-    logger.info("Starting RMCP MCP Server")
+    logger.info(f"Starting RMCP MCP Server v{__version__}")
+    if sys.platform == "win32":
+        logger.info(
+            "Windows platform detected - using Windows-compatible stdio transport"
+        )
     try:
         # Create and configure server
         server = create_server()
-        config = {"allowed_paths": [str(Path.cwd())], "read_only": True}
-        server.configure(**config)
+        server.configure(allowed_paths=[str(Path.cwd())], read_only=True)
         # Register built-in statistical tools
         _register_builtin_tools(server)
         # Register built-in prompts
@@ -128,7 +131,7 @@ def serve(
     """Run MCP server with advanced configuration options."""
     # Set logging level
     logging.getLogger().setLevel(getattr(logging, log_level))
-    logger.info("Starting RMCP MCP Server")
+    logger.info(f"Starting RMCP MCP Server v{__version__}")
     try:
         # Load configuration
         config = _load_config(config_file) if config_file else {}

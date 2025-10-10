@@ -4,7 +4,6 @@ Tests everything that would happen in the Docker container to ensure the build s
 """
 
 import subprocess
-import sys
 from pathlib import Path
 
 

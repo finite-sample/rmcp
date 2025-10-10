@@ -292,10 +292,48 @@ All tools provide professionally formatted output with markdown tables, statisti
         Raises:
             Exception: If any startup callback fails, the exception propagates.
         """
-        logger.info(f"Starting {self.name} v{self.version}")
+        import platform
+        import sys
+
+        # Emit prominent version and system information
+        logger.info("=" * 60)
+        logger.info(f"🚀 {self.name} v{self.version}")
+        logger.info("=" * 60)
+        logger.info(
+            f"Python {sys.version.split()[0]} on {platform.system()} {platform.release()}"
+        )
+
+        # Log configuration summary
+        if self.lifespan_state.allowed_paths:
+            paths_str = ", ".join(str(p) for p in self.lifespan_state.allowed_paths[:3])
+            if len(self.lifespan_state.allowed_paths) > 3:
+                paths_str += f" (and {len(self.lifespan_state.allowed_paths) - 3} more)"
+            logger.info(f"Allowed paths: {paths_str}")
+
+        logger.info(
+            f"Access mode: {'read-only' if self.lifespan_state.read_only else 'read-write'}"
+        )
+
+        if self.lifespan_state.cache_root:
+            logger.info(f"Cache root: {self.lifespan_state.cache_root}")
+
+        # Execute startup callbacks
+        logger.info("Executing startup callbacks...")
         for callback in self._startup_callbacks:
             await callback()
-        logger.info("Server startup complete")
+
+        # Log registry summary
+        tools_count = len(getattr(self.tools, "_tools", {}))
+        resources_count = len(getattr(self.resources, "_static_resources", {})) + len(
+            getattr(self.resources, "_templates", {})
+        )
+        prompts_count = len(getattr(self.prompts, "_prompts", {}))
+
+        logger.info(
+            f"Registered: {tools_count} tools, {resources_count} resources, {prompts_count} prompts"
+        )
+        logger.info("✅ Server startup complete - ready to handle requests")
+        logger.info("=" * 60)
 
     async def shutdown(self) -> None:
         """
@@ -559,26 +597,25 @@ All tools provide professionally formatted output with markdown tables, statisti
         elif completion_type == "tool_parameters":
             # Complete parameter names for specific tools
             tool_name = ref.get("toolName")
-            if tool_name and tool_name in self.tools._registry:
-                tool_func = self.tools._registry[tool_name]
-                if hasattr(tool_func, "_rmcp_input_schema"):
-                    schema = tool_func._rmcp_input_schema
-                    properties = schema.get("properties", {})
-                    if name:
-                        matching_params = [
-                            p for p in properties.keys() if p.startswith(name)
-                        ]
-                    else:
-                        matching_params = list(properties.keys())
-                    completions = [
-                        {
-                            "type": "parameter",
-                            "value": param,
-                            "label": param,
-                            "detail": properties[param].get("description", "Parameter"),
-                        }
-                        for param in matching_params[:10]
+            if tool_name and tool_name in self.tools._tools:
+                tool_def = self.tools._tools[tool_name]
+                schema = tool_def.input_schema
+                properties = schema.get("properties", {})
+                if name:
+                    matching_params = [
+                        p for p in properties.keys() if p.startswith(name)
                     ]
+                else:
+                    matching_params = list(properties.keys())
+                completions = [
+                    {
+                        "type": "parameter",
+                        "value": param,
+                        "label": param,
+                        "detail": properties[param].get("description", "Parameter"),
+                    }
+                    for param in matching_params[:10]
+                ]
         elif completion_type == "formula":
             # Complete R formula syntax
             formula_suggestions = [
@@ -769,6 +806,8 @@ All tools provide professionally formatted output with markdown tables, statisti
                 )
             elif method == "tools/call":
                 tool_name = params.get("name")
+                if not isinstance(tool_name, str):
+                    raise ValueError("tools/call requires 'name' parameter")
                 arguments = params.get("arguments", {})
                 result = await self.tools.call_tool(context, tool_name, arguments)
             elif method == "resources/list":
@@ -779,6 +818,8 @@ All tools provide professionally formatted output with markdown tables, statisti
                 )
             elif method == "resources/read":
                 uri = params.get("uri")
+                if not isinstance(uri, str):
+                    raise ValueError("resources/read requires 'uri' parameter")
                 result = await self.resources.read_resource(context, uri)
             elif method == "resources/subscribe":
                 result = await self._handle_resources_subscribe(context)
@@ -792,10 +833,14 @@ All tools provide professionally formatted output with markdown tables, statisti
                 )
             elif method == "prompts/get":
                 name = params.get("name")
+                if not isinstance(name, str):
+                    raise ValueError("prompts/get requires 'name' parameter")
                 arguments = params.get("arguments", {})
                 result = await self.prompts.get_prompt(context, name, arguments)
             elif method == "logging/setLevel":
                 level = params.get("level")
+                if not isinstance(level, str):
+                    raise ValueError("logging/setLevel requires 'level' parameter")
                 result = await self._handle_set_log_level(level)
             elif method == "completion/complete":
                 result = await self._handle_completion(params)

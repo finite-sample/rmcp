@@ -10,18 +10,16 @@ Tests the HTTPTransport class functionality including:
 """
 
 import asyncio
-import json
 import queue
-import unittest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 # Skip tests if FastAPI not available
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 uvicorn = pytest.importorskip("uvicorn", reason="uvicorn not available")
-from rmcp.core.server import create_server
-from rmcp.transport.http import HTTPTransport
+from rmcp.core.server import create_server  # noqa: E402
+from rmcp.transport.http import HTTPTransport  # noqa: E402
 
 
 class TestHTTPTransportInitialization:

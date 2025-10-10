@@ -12,7 +12,7 @@ from shutil import which
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import pytest
 
-from rmcp.core.context import Context, LifespanState
+from rmcp.core.context import Context
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.descriptive import frequency_table, outlier_detection, summary_stats

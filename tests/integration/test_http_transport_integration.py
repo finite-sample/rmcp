@@ -11,15 +11,14 @@ Tests the complete HTTP transport functionality in a real server environment:
 import asyncio
 import json
 import time
-from typing import AsyncGenerator
 
 import pytest
 
 # Skip tests if FastAPI not available
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 httpx = pytest.importorskip("httpx", reason="httpx not available")
-from rmcp.core.server import create_server
-from rmcp.transport.http import HTTPTransport
+from rmcp.core.server import create_server  # noqa: E402
+from rmcp.transport.http import HTTPTransport  # noqa: E402
 
 
 @pytest.fixture

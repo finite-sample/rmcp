@@ -9,13 +9,13 @@ import sys
 from contextlib import ExitStack
 from pathlib import Path
 from shutil import which
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from rmcp.core.context import Context, LifespanState
+from rmcp.core.context import Context
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 
@@ -43,10 +43,10 @@ from tests.utils import extract_json_content, extract_text_summary
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for comprehensive tool smoke tests"
 )
-from rmcp.tools.statistical_tests import anova, chi_square_test, normality_test, t_test
-from rmcp.tools.timeseries import arima_model, decompose_timeseries, stationarity_test
-from rmcp.tools.transforms import difference, lag_lead, standardize, winsorize
-from rmcp.tools.visualization import (
+from rmcp.tools.statistical_tests import anova, chi_square_test, normality_test, t_test  # noqa: E402
+from rmcp.tools.timeseries import arima_model, decompose_timeseries, stationarity_test  # noqa: E402
+from rmcp.tools.transforms import difference, lag_lead, standardize, winsorize  # noqa: E402
+from rmcp.tools.visualization import (  # noqa: E402
     boxplot,
     correlation_heatmap,
     histogram,

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from jsonschema import ValidationError, validate
+from jsonschema import validate
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from rmcp.tools.regression import (

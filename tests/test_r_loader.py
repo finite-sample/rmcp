@@ -4,7 +4,6 @@ Provides utilities for loading R scripts from the tests/r_scripts directory
 for use in test cases.
 """
 
-import os
 from pathlib import Path
 from typing import Dict
 

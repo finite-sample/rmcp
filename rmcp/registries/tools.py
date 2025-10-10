@@ -13,12 +13,27 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Sequence
+from typing import Any, Awaitable, Callable, Protocol, Sequence
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, validate_schema
 
 logger = logging.getLogger(__name__)
+
+
+class ToolHandler(Protocol):
+    """Protocol for tool handler functions with MCP metadata."""
+
+    _mcp_tool_name: str
+    _mcp_tool_input_schema: dict[str, Any]
+    _mcp_tool_output_schema: dict[str, Any] | None
+    _mcp_tool_title: str | None
+    _mcp_tool_description: str | None
+    _mcp_tool_annotations: dict[str, Any] | None
+
+    def __call__(
+        self, context: Context, params: dict[str, Any]
+    ) -> Awaitable[dict[str, Any]]: ...
 
 
 def _paginate_items(
@@ -288,7 +303,7 @@ class ToolsRegistry:
             content.append(image_block)
             structured_content.append(image_block)
         # Prepare response
-        response = {"content": content}
+        response: dict[str, Any] = {"content": content}
         if structured_content:
             # MCP specification requires structuredContent to be an object, not an array
             if len(structured_content) == 1:
@@ -511,36 +526,33 @@ def tool(
             return {"result": "analysis complete"}
     """
 
-    def decorator(func: Callable[[Context, dict[str, Any]], Awaitable[dict[str, Any]]]):
+    def decorator(
+        func: Callable[[Context, dict[str, Any]], Awaitable[dict[str, Any]]],
+    ) -> ToolHandler:
         # Ensure function is async
         if not inspect.iscoroutinefunction(func):
             raise ValueError(f"Tool handler '{name}' must be an async function")
         # Store tool metadata on function for registration
-        func._mcp_tool_name = name
-        func._mcp_tool_input_schema = input_schema
-        func._mcp_tool_output_schema = output_schema
-        func._mcp_tool_title = title
-        func._mcp_tool_description = description
-        func._mcp_tool_annotations = annotations
-        return func
+        setattr(func, "_mcp_tool_name", name)
+        setattr(func, "_mcp_tool_input_schema", input_schema)
+        setattr(func, "_mcp_tool_output_schema", output_schema)
+        setattr(func, "_mcp_tool_title", title)
+        setattr(func, "_mcp_tool_description", description)
+        setattr(func, "_mcp_tool_annotations", annotations)
+        return func  # type: ignore
 
     return decorator
 
 
-def register_tool_functions(registry: ToolsRegistry, *functions) -> None:
+def register_tool_functions(registry: ToolsRegistry, *functions: ToolHandler) -> None:
     """Register multiple functions decorated with @tool."""
     for func in functions:
-        if hasattr(func, "_mcp_tool_name"):
-            registry.register(
-                name=func._mcp_tool_name,
-                handler=func,
-                input_schema=func._mcp_tool_input_schema,
-                output_schema=func._mcp_tool_output_schema,
-                title=func._mcp_tool_title,
-                description=func._mcp_tool_description,
-                annotations=func._mcp_tool_annotations,
-            )
-        else:
-            logger.warning(
-                f"Function {func.__name__} not decorated with @tool, skipping"
-            )
+        registry.register(
+            name=func._mcp_tool_name,
+            handler=func,
+            input_schema=func._mcp_tool_input_schema,
+            output_schema=func._mcp_tool_output_schema,
+            title=func._mcp_tool_title,
+            description=func._mcp_tool_description,
+            annotations=func._mcp_tool_annotations,
+        )

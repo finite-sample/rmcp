@@ -83,6 +83,9 @@ temp_*.json
 *.log
 Rplots.pdf
 
+# Prevent standalone test files at root
+/test_*.py
+
 # Test output files
 test_*.log
 test_*.xlsx

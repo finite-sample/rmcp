@@ -176,7 +176,7 @@ class JSONRPCEnvelope:
         request_id: Union[str, int] = "1",
     ) -> Dict[str, Any]:
         """Create a JSON-RPC 2.0 request."""
-        request = {"jsonrpc": "2.0", "method": method, "id": request_id}
+        request: Dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": request_id}
         if params is not None:
             request["params"] = params
         return request
@@ -186,7 +186,7 @@ class JSONRPCEnvelope:
         method: str, params: Optional[Union[Dict[str, Any], list]] = None
     ) -> Dict[str, Any]:
         """Create a JSON-RPC 2.0 notification."""
-        notification = {"jsonrpc": "2.0", "method": method}
+        notification: Dict[str, Any] = {"jsonrpc": "2.0", "method": method}
         if params is not None:
             notification["params"] = params
         return notification

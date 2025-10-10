@@ -12,9 +12,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from rmcp.core.context import Context
-from rmcp.core.server import create_server
-from rmcp.registries.tools import register_tool_functions
+from rmcp.core.context import Context  # noqa: E402
+from rmcp.core.server import create_server  # noqa: E402
+from rmcp.registries.tools import register_tool_functions  # noqa: E402
 
 
 @pytest.fixture

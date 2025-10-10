@@ -9,12 +9,25 @@ Following the principle: "Ship prompts as workflows."
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Protocol
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, validate_schema
 
 logger = logging.getLogger(__name__)
+
+
+class PromptHandler(Protocol):
+    """Protocol for prompt handler functions with MCP metadata."""
+
+    _mcp_prompt_name: str
+    _mcp_prompt_title: str | None
+    _mcp_prompt_description: str | None
+    _mcp_prompt_template: str
+    _mcp_prompt_arguments_schema: dict[str, Any] | None
+    _mcp_prompt_annotations: dict[str, Any] | None
+
+    def __call__(self) -> str: ...
 
 
 def _paginate_items(
@@ -102,7 +115,7 @@ class PromptsRegistry:
         page, next_cursor = _paginate_items(ordered_prompts, cursor, limit)
         prompts: List[Dict[str, Any]] = []
         for prompt_def in page:
-            prompt_info = {
+            prompt_info: Dict[str, Any] = {
                 "name": prompt_def.name,
                 "title": prompt_def.title,
                 "description": prompt_def.description,
@@ -206,37 +219,35 @@ def prompt(
             '''
     """
 
-    def decorator(func: Callable[[], str]):
+    def decorator(func: Callable[[], str]) -> PromptHandler:
         # Extract template content from function
         template_content = func()
         # Store prompt metadata on function
-        func._mcp_prompt_name = name
-        func._mcp_prompt_title = title
-        func._mcp_prompt_description = description
-        func._mcp_prompt_template = template_content
-        func._mcp_prompt_arguments_schema = arguments_schema
-        func._mcp_prompt_annotations = annotations
-        return func
+        setattr(func, "_mcp_prompt_name", name)
+        setattr(func, "_mcp_prompt_title", title)
+        setattr(func, "_mcp_prompt_description", description)
+        setattr(func, "_mcp_prompt_template", template_content)
+        setattr(func, "_mcp_prompt_arguments_schema", arguments_schema)
+        setattr(func, "_mcp_prompt_annotations", annotations)
+        return func  # type: ignore
 
     return decorator
 
 
-def register_prompt_functions(registry: PromptsRegistry, *functions) -> None:
+def register_prompt_functions(
+    registry: PromptsRegistry, *functions: PromptHandler
+) -> None:
     """Register multiple functions decorated with @prompt."""
     for func in functions:
-        if hasattr(func, "_mcp_prompt_name"):
-            registry.register(
-                name=func._mcp_prompt_name,
-                title=func._mcp_prompt_title,
-                description=func._mcp_prompt_description,
-                template=func._mcp_prompt_template,
-                arguments_schema=func._mcp_prompt_arguments_schema,
-                annotations=func._mcp_prompt_annotations,
-            )
-        else:
-            logger.warning(
-                f"Function {func.__name__} not decorated with @prompt, skipping"
-            )
+        registry.register(
+            name=func._mcp_prompt_name,
+            title=func._mcp_prompt_title or func._mcp_prompt_name,
+            description=func._mcp_prompt_description
+            or f"Prompt template for {func._mcp_prompt_name}",
+            template=func._mcp_prompt_template,
+            arguments_schema=func._mcp_prompt_arguments_schema,
+            annotations=func._mcp_prompt_annotations,
+        )
 
 
 # Built-in statistical analysis workflow prompts
