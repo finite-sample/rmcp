@@ -89,7 +89,7 @@ from ..registries.tools import tool
         },
         "required": ["plot_type", "variables"],
     },
-    description="Create scatter plot with optional grouping and trend lines",
+    description="Creates scatter plots to visualize relationships between two continuous variables with optional grouping by categorical variables. Supports trend lines, confidence bands, correlation annotations, and custom styling. Returns base64-encoded images for inline display. Use for exploring correlations, identifying patterns, detecting outliers, comparing groups, or presenting bivariate relationships in reports and presentations.",
 )
 async def scatter_plot(context, params) -> dict[str, Any]:
     """Create scatter plot."""
@@ -194,7 +194,7 @@ async def scatter_plot(context, params) -> dict[str, Any]:
         },
         "required": ["plot_type", "variable", "bins", "statistics", "n_obs"],
     },
-    description="Create histogram with optional grouping and density overlay",
+    description="Creates histograms to visualize distributions of continuous variables with optional density overlays, grouping, and statistical annotations. Supports customizable bins, multiple groups with transparency, and normal distribution overlay. Use for understanding data distributions, checking normality assumptions, comparing group distributions, identifying skewness or multimodality, or initial data exploration.",
 )
 async def histogram(context, params) -> dict[str, Any]:
     """Create histogram."""
@@ -293,7 +293,7 @@ async def histogram(context, params) -> dict[str, Any]:
         },
         "required": ["plot_type", "variable", "summary_statistics"],
     },
-    description="Create box plot with optional grouping",
+    description="Creates box plots (box-and-whisker plots) to display distribution summaries showing median, quartiles, and outliers with optional grouping by categorical variables. Includes notches for median confidence intervals and customizable outlier detection. Use for comparing distributions between groups, identifying outliers, understanding data spread, or presenting distribution summaries in a compact visual format.",
 )
 async def boxplot(context, params) -> dict[str, Any]:
     """Create box plot."""
@@ -395,7 +395,7 @@ async def boxplot(context, params) -> dict[str, Any]:
         },
         "required": ["plot_type", "statistics", "has_dates", "show_trend"],
     },
-    description="Create time series plot with optional trend line",
+    description="Creates time series plots to visualize temporal patterns in data with optional trend lines, seasonal decomposition overlays, and forecasting extensions. Supports multiple series, custom date formatting, and trend analysis. Use for identifying temporal patterns, detecting seasonality, visualizing forecasts, monitoring trends over time, or presenting time-dependent data in business and research contexts.",
 )
 async def time_series_plot(context, params) -> dict[str, Any]:
     """Create time series plot."""
@@ -501,7 +501,7 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             "n_variables",
         ],
     },
-    description="Create correlation heatmap matrix",
+    description="Creates correlation heatmap matrices to visualize pairwise correlations between multiple variables using color-coded cells. Supports hierarchical clustering of variables, customizable color schemes, correlation coefficient annotations, and significance indicators. Use for exploring multicollinearity, understanding variable relationships, feature selection, or presenting correlation structure in multivariate data analysis.",
 )
 async def correlation_heatmap(context, params) -> dict[str, Any]:
     """Create correlation heatmap."""
@@ -611,7 +611,7 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             "n_obs",
         ],
     },
-    description="Create regression diagnostic plots (fitted vs residuals, Q-Q plot, etc.)",
+    description="Creates comprehensive regression diagnostic plots including residuals vs fitted values, Q-Q plots for normality, scale-location plots for homoscedasticity, and Cook's distance for influential observations. Essential for validating regression assumptions and identifying model problems. Use after fitting regression models to check assumptions, identify outliers, detect heteroscedasticity, or validate model appropriateness for the data."
 )
 async def regression_plot(context, params) -> dict[str, Any]:
     """Create regression diagnostic plots."""

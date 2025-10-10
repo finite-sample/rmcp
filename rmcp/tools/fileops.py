@@ -93,7 +93,7 @@ from ..registries.tools import tool
         "required": ["data", "file_info", "parsing_info", "summary"],
         "additionalProperties": False,
     },
-    description="Read CSV files with flexible parsing options",
+    description="Reads CSV (Comma-Separated Values) files with flexible parsing options including custom separators, header handling, missing value specifications, and row/column selection. Automatically detects data types and handles various CSV formats. Use for importing datasets, loading experimental data, processing survey results, or reading any tabular data stored in CSV format. Essential first step in most data analysis workflows.",
 )
 async def read_csv(context, params) -> dict[str, Any]:
     """Read CSV file and return data."""
@@ -169,7 +169,7 @@ async def read_csv(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Write data to CSV file with formatting options",
+    description="Writes data to CSV files with customizable formatting options including separators, missing value representations, decimal precision, and column selection. Preserves data types and handles special characters appropriately. Use for exporting analysis results, sharing datasets, creating backups, or preparing data for other applications. Standard format for data interchange and archival.",
 )
 async def write_csv(context, params) -> dict[str, Any]:
     """Write data to CSV file."""
@@ -245,7 +245,7 @@ async def write_csv(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Write data to Excel file with worksheet and formatting options",
+    description="Writes data to Excel files (.xlsx) with advanced formatting including multiple worksheets, custom sheet names, cell formatting, and metadata. Preserves data types and provides professional presentation options. Use for business reports, stakeholder presentations, multi-table datasets, or when advanced formatting and multiple sheets are required for data delivery.",
 )
 async def write_excel(context, params) -> dict[str, Any]:
     """Write data to Excel file."""
@@ -343,7 +343,7 @@ async def write_excel(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Get comprehensive information about a dataset",
+    description="Provides comprehensive dataset information including dimensions, column names, data types, missing value counts, memory usage, and basic statistics summary. Essential for initial data exploration and quality assessment. Use to understand dataset structure, identify data quality issues, check for missing values, or generate data documentation and metadata reports.",
 )
 async def data_info(context, params) -> dict[str, Any]:
     """Get comprehensive dataset information."""
@@ -432,7 +432,7 @@ async def data_info(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Filter data based on multiple conditions",
+    description="Filters datasets using multiple logical conditions with support for numeric comparisons, string matching, date ranges, and complex boolean logic. Supports AND/OR operations and missing value handling. Use for data subsetting, creating analysis samples, removing outliers, selecting specific time periods, or preparing data for focused analysis on particular subgroups.",
 )
 async def filter_data(context, params) -> dict[str, Any]:
     """Filter data based on conditions."""
@@ -523,7 +523,7 @@ async def filter_data(context, params) -> dict[str, Any]:
         "required": ["data", "file_info", "summary"],
         "additionalProperties": False,
     },
-    description="Read Excel files (.xlsx, .xls) with flexible sheet and range selection",
+    description="Reads Excel files (.xlsx, .xls) with flexible options for sheet selection, cell ranges, header detection, and data type specification. Handles multiple worksheets and complex Excel formatting. Use for importing business data, reading formatted reports, processing multi-sheet workbooks, or accessing data stored in Excel's native format with preserving original structure.",
 )
 async def read_excel(context, params) -> dict[str, Any]:
     """Read Excel file and return data."""
@@ -617,7 +617,7 @@ async def read_excel(context, params) -> dict[str, Any]:
         "required": ["data", "file_info", "summary"],
         "additionalProperties": False,
     },
-    description="Read JSON files and convert to tabular format",
+    description="Reads JSON files and intelligently converts nested structures to tabular format suitable for statistical analysis. Handles nested objects, arrays, and mixed data types with flexible flattening options. Use for importing API responses, web scraping results, NoSQL database exports, or any hierarchical data that needs conversion to rectangular format for analysis.",
 )
 async def read_json(context, params) -> dict[str, Any]:
     """Read JSON file and return data."""
@@ -703,7 +703,7 @@ async def read_json(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Write data to JSON file with column-wise format and formatting options",
+    description="Writes data to JSON files using column-wise format optimized for statistical software with customizable formatting and compression options. Maintains data type information and handles missing values appropriately. Use for creating web API responses, exporting data for JavaScript applications, archiving datasets, or preparing data for JSON-based analytics platforms."
 )
 async def write_json(context, params) -> dict[str, Any]:
     """Write data to JSON file."""

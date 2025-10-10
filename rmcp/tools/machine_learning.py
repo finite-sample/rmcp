@@ -112,7 +112,7 @@ from ..registries.tools import tool
         ],
         "additionalProperties": False,
     },
-    description="K-means clustering analysis with cluster validation",
+    description="Performs K-means clustering to partition data into k clusters based on feature similarity. Uses multiple random starts for optimal clustering and provides cluster assignments, centroids, within-cluster sum of squares, and silhouette analysis for cluster quality assessment. Use for customer segmentation, market research, data exploration, pattern recognition, or reducing data complexity by grouping similar observations.",
 )
 async def kmeans_clustering(context, params) -> dict[str, Any]:
     """Perform K-means clustering."""
@@ -225,7 +225,7 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Decision tree classification and regression",
+    description="Builds decision tree models for classification (categorical outcomes) or regression (continuous outcomes) using recursive binary splitting. Provides tree structure, variable importance rankings, prediction rules, and cross-validation accuracy. Trees are interpretable and handle mixed data types naturally. Use for rule-based modeling, feature selection, understanding decision processes, or when interpretability is more important than maximum accuracy.",
 )
 async def decision_tree(context, params) -> dict[str, Any]:
     """Build decision tree model."""
@@ -344,7 +344,7 @@ async def decision_tree(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Random Forest ensemble model for classification and regression",
+    description="Constructs Random Forest ensemble models combining multiple decision trees with bootstrap sampling and random feature selection. Provides predictions, variable importance rankings, out-of-bag error estimates, and partial dependence plots. More accurate and robust than single trees while maintaining interpretability through variable importance. Use for high-accuracy prediction, feature selection, handling missing data, or non-linear relationships."
 )
 async def random_forest(context, params) -> dict[str, Any]:
     """Build Random Forest model."""

@@ -245,9 +245,7 @@ def validate_r_code(r_code: str) -> tuple[bool, Optional[str]]:
         },
         "required": ["success"],
     },
-    description=(
-        "Execute custom R code for advanced statistical analyses with safety validation"
-    ),
+    description="Executes custom R code for advanced statistical analyses beyond the built-in tools, with comprehensive safety validation including package whitelisting, timeout protection, and audit logging. Supports complex statistical procedures, custom visualizations, and specialized analyses not covered by structured tools. Use for cutting-edge statistical methods, custom modeling approaches, research-specific analyses, or when existing tools don't meet specific analytical requirements. Essential for advanced users needing R's full statistical capabilities.",
 )
 async def execute_r_analysis(context, params) -> dict[str, Any]:
     """Execute flexible R code with safety checks."""
@@ -368,7 +366,7 @@ async def execute_r_analysis(context, params) -> dict[str, Any]:
         },
         "required": ["packages", "total_count", "category"],
     },
-    description="List R packages allowed for use in flexible R execution",
+    description="Lists all R packages whitelisted for safe execution in flexible R code including statistical analysis, data manipulation, visualization, and specialized econometric packages. Provides package categories and brief descriptions to help users understand available functionality. Use to discover available packages, plan complex analyses, understand system capabilities, or verify that required packages are available before writing custom R code."
 )
 async def list_allowed_r_packages(context, params) -> dict[str, Any]:
     """List allowed R packages by category."""

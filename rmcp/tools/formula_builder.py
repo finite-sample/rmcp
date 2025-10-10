@@ -111,7 +111,7 @@ from ..registries.tools import tool
         ],
         "additionalProperties": False,
     },
-    description="Convert natural language descriptions to R formulas",
+    description="Converts natural language descriptions into proper R statistical formulas using intelligent pattern matching and variable name recognition. Handles complex relationships including interactions, transformations, and nested terms. Validates variable names against provided datasets and suggests corrections for typos. Use when users describe statistical relationships in plain English rather than formal formula syntax, or to help non-technical users specify models correctly.",
 )
 async def build_formula(context, params) -> dict[str, Any]:
     """Convert natural language to R formula."""
@@ -459,7 +459,7 @@ def _get_formula_examples(analysis_type: str) -> List[dict[str, str]]:
         "required": ["is_valid", "formula_parsed", "suggestions", "analysis_type"],
         "additionalProperties": False,
     },
-    description="Validate R formula syntax and check against data",
+    description="Validates R formula syntax and checks compatibility with provided datasets including variable existence, data type appropriateness, and formula structure correctness. Identifies missing variables, type mismatches, and syntax errors with specific suggestions for fixes. Essential quality control before running statistical analyses. Use to catch formula errors early, ensure model specifications are valid, or verify that formulas match intended analytical objectives."
 )
 async def validate_formula(context, params) -> dict[str, Any]:
     """Validate R formula against data."""

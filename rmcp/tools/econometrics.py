@@ -115,7 +115,7 @@ from ..registries.tools import tool
         ],
         "additionalProperties": False,
     },
-    description="Panel data regression with fixed/random effects",
+    description="Performs panel data regression analysis with fixed effects, random effects, or between/pooling estimators for longitudinal data. Handles unbalanced panels, robust standard errors, and provides Hausman tests for model selection. Essential for analyzing repeated observations on same units over time. Use for causal inference, policy evaluation, individual heterogeneity control, or any analysis with cross-sectional time series data.",
 )
 async def panel_regression(context, params) -> dict[str, Any]:
     """Perform panel data regression."""
@@ -253,7 +253,7 @@ async def panel_regression(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Two-stage least squares (2SLS) instrumental variables regression",
+    description="Performs Two-Stage Least Squares (2SLS) instrumental variables regression to address endogeneity bias when explanatory variables are correlated with error terms. Provides first-stage statistics, weak instrument tests, and overidentification tests. Critical for causal inference when randomized experiments are not possible. Use for addressing simultaneity, measurement error, omitted variable bias, or establishing causal relationships in observational data.",
 )
 async def instrumental_variables(context, params) -> dict[str, Any]:
     """Perform instrumental variables regression."""
@@ -377,7 +377,7 @@ async def instrumental_variables(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Vector Autoregression (VAR) model for multivariate time series",
+    description="Estimates Vector Autoregression (VAR) models for analyzing dynamic relationships among multiple time series variables. Each variable is modeled as linear function of its own lags and lags of all other variables. Provides impulse response functions, variance decomposition, and Granger causality tests. Use for macroeconomic modeling, forecasting multiple related time series, understanding dynamic interdependencies, or analyzing shock transmission between variables."
 )
 async def var_model(context, params) -> dict[str, Any]:
     """Fit Vector Autoregression model."""

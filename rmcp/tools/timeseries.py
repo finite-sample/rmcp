@@ -125,7 +125,7 @@ from ..registries.tools import tool
         ],
         "additionalProperties": False,
     },
-    description="Fit ARIMA time series model with forecasting",
+    description="Fits ARIMA (AutoRegressive Integrated Moving Average) models for time series forecasting and analysis. Automatically selects optimal model parameters or uses specified orders, generates point forecasts with confidence intervals, and provides model diagnostics including AIC/BIC. Use for forecasting future values, understanding temporal patterns, or modeling autocorrelated data. Handles both non-seasonal and seasonal ARIMA models with integrated differencing for non-stationary series.",
 )
 async def arima_model(context, params) -> dict[str, Any]:
     """Fit ARIMA model and generate forecasts."""
@@ -217,7 +217,7 @@ async def arima_model(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Decompose time series into trend, seasonal, and remainder components",
+    description="Decomposes time series into constituent components: trend (long-term movement), seasonal (repeating patterns), and remainder (irregular fluctuations). Supports both additive and multiplicative decomposition methods. Use to understand underlying patterns, identify seasonal effects, detect structural changes, or prepare data for forecasting. Essential for exploratory time series analysis and identifying appropriate modeling approaches.",
 )
 async def decompose_timeseries(context, params) -> dict[str, Any]:
     """Decompose time series into components."""
@@ -297,7 +297,7 @@ async def decompose_timeseries(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Test time series for stationarity (ADF, KPSS, Phillips-Perron)",
+    description="Tests time series for stationarity using Augmented Dickey-Fuller (ADF), Kwiatkowski-Phillips-Schmidt-Shin (KPSS), or Phillips-Perron tests. Stationarity is required for many time series models like ARIMA. Returns test statistics, p-values, critical values, and clear interpretation. Use before time series modeling to determine if differencing is needed, or to verify model assumptions. ADF tests for unit roots, KPSS tests trend stationarity.",
 )
 async def stationarity_test(context, params) -> dict[str, Any]:
     """Test time series stationarity."""
