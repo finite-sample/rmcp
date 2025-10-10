@@ -450,7 +450,7 @@ async def chi_square_test(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Tests variables for normal distribution using multiple methods: Shapiro-Wilk (most powerful for small samples), Kolmogorov-Smirnov, Anderson-Darling, or Jarque-Bera tests. Returns test statistics, p-values, and clear interpretation for each test. Use before parametric statistical analyses, to validate model assumptions, or to choose appropriate statistical methods. Critical for regression diagnostics and assumption checking."
+    description="Tests variables for normal distribution using multiple methods: Shapiro-Wilk (most powerful for small samples), Kolmogorov-Smirnov, Anderson-Darling, or Jarque-Bera tests. Returns test statistics, p-values, and clear interpretation for each test. Use before parametric statistical analyses, to validate model assumptions, or to choose appropriate statistical methods. Critical for regression diagnostics and assumption checking.",
 )
 async def normality_test(context, params) -> dict[str, Any]:
     """Test for normality."""

@@ -43,9 +43,23 @@ from tests.utils import extract_json_content, extract_text_summary
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for comprehensive tool smoke tests"
 )
-from rmcp.tools.statistical_tests import anova, chi_square_test, normality_test, t_test  # noqa: E402
-from rmcp.tools.timeseries import arima_model, decompose_timeseries, stationarity_test  # noqa: E402
-from rmcp.tools.transforms import difference, lag_lead, standardize, winsorize  # noqa: E402
+from rmcp.tools.statistical_tests import (  # noqa: E402
+    anova,
+    chi_square_test,
+    normality_test,
+    t_test,
+)
+from rmcp.tools.timeseries import (  # noqa: E402
+    arima_model,
+    decompose_timeseries,
+    stationarity_test,
+)
+from rmcp.tools.transforms import (  # noqa: E402
+    difference,
+    lag_lead,
+    standardize,
+    winsorize,
+)
 from rmcp.tools.visualization import (  # noqa: E402
     boxplot,
     correlation_heatmap,

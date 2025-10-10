@@ -344,7 +344,7 @@ async def decision_tree(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Constructs Random Forest ensemble models combining multiple decision trees with bootstrap sampling and random feature selection. Provides predictions, variable importance rankings, out-of-bag error estimates, and partial dependence plots. More accurate and robust than single trees while maintaining interpretability through variable importance. Use for high-accuracy prediction, feature selection, handling missing data, or non-linear relationships."
+    description="Constructs Random Forest ensemble models combining multiple decision trees with bootstrap sampling and random feature selection. Provides predictions, variable importance rankings, out-of-bag error estimates, and partial dependence plots. More accurate and robust than single trees while maintaining interpretability through variable importance. Use for high-accuracy prediction, feature selection, handling missing data, or non-linear relationships.",
 )
 async def random_forest(context, params) -> dict[str, Any]:
     """Build Random Forest model."""

@@ -280,7 +280,7 @@ async def difference(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Standardizes variables using multiple scaling methods: z-score normalization (mean=0, sd=1), min-max scaling (range 0-1), or robust scaling (median=0, MAD=1). Essential for machine learning algorithms, principal component analysis, or when combining variables with different units. Handles missing values and provides scaling parameters for inverse transformation. Use before clustering, neural networks, or any analysis requiring comparable variable scales."
+    description="Standardizes variables using multiple scaling methods: z-score normalization (mean=0, sd=1), min-max scaling (range 0-1), or robust scaling (median=0, MAD=1). Essential for machine learning algorithms, principal component analysis, or when combining variables with different units. Handles missing values and provides scaling parameters for inverse transformation. Use before clustering, neural networks, or any analysis requiring comparable variable scales.",
 )
 async def standardize(context, params) -> dict[str, Any]:
     """Standardize variables."""

@@ -377,7 +377,7 @@ async def instrumental_variables(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Estimates Vector Autoregression (VAR) models for analyzing dynamic relationships among multiple time series variables. Each variable is modeled as linear function of its own lags and lags of all other variables. Provides impulse response functions, variance decomposition, and Granger causality tests. Use for macroeconomic modeling, forecasting multiple related time series, understanding dynamic interdependencies, or analyzing shock transmission between variables."
+    description="Estimates Vector Autoregression (VAR) models for analyzing dynamic relationships among multiple time series variables. Each variable is modeled as linear function of its own lags and lags of all other variables. Provides impulse response functions, variance decomposition, and Granger causality tests. Use for macroeconomic modeling, forecasting multiple related time series, understanding dynamic interdependencies, or analyzing shock transmission between variables.",
 )
 async def var_model(context, params) -> dict[str, Any]:
     """Fit Vector Autoregression model."""

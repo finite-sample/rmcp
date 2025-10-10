@@ -366,7 +366,7 @@ async def execute_r_analysis(context, params) -> dict[str, Any]:
         },
         "required": ["packages", "total_count", "category"],
     },
-    description="Lists all R packages whitelisted for safe execution in flexible R code including statistical analysis, data manipulation, visualization, and specialized econometric packages. Provides package categories and brief descriptions to help users understand available functionality. Use to discover available packages, plan complex analyses, understand system capabilities, or verify that required packages are available before writing custom R code."
+    description="Lists all R packages whitelisted for safe execution in flexible R code including statistical analysis, data manipulation, visualization, and specialized econometric packages. Provides package categories and brief descriptions to help users understand available functionality. Use to discover available packages, plan complex analyses, understand system capabilities, or verify that required packages are available before writing custom R code.",
 )
 async def list_allowed_r_packages(context, params) -> dict[str, Any]:
     """List allowed R packages by category."""

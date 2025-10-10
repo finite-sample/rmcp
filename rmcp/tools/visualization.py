@@ -611,7 +611,7 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             "n_obs",
         ],
     },
-    description="Creates comprehensive regression diagnostic plots including residuals vs fitted values, Q-Q plots for normality, scale-location plots for homoscedasticity, and Cook's distance for influential observations. Essential for validating regression assumptions and identifying model problems. Use after fitting regression models to check assumptions, identify outliers, detect heteroscedasticity, or validate model appropriateness for the data."
+    description="Creates comprehensive regression diagnostic plots including residuals vs fitted values, Q-Q plots for normality, scale-location plots for homoscedasticity, and Cook's distance for influential observations. Essential for validating regression assumptions and identifying model problems. Use after fitting regression models to check assumptions, identify outliers, detect heteroscedasticity, or validate model appropriateness for the data.",
 )
 async def regression_plot(context, params) -> dict[str, Any]:
     """Create regression diagnostic plots."""

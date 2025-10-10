@@ -703,7 +703,7 @@ async def read_json(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Writes data to JSON files using column-wise format optimized for statistical software with customizable formatting and compression options. Maintains data type information and handles missing values appropriately. Use for creating web API responses, exporting data for JavaScript applications, archiving datasets, or preparing data for JSON-based analytics platforms."
+    description="Writes data to JSON files using column-wise format optimized for statistical software with customizable formatting and compression options. Maintains data type information and handles missing values appropriately. Use for creating web API responses, exporting data for JavaScript applications, archiving datasets, or preparing data for JSON-based analytics platforms.",
 )
 async def write_json(context, params) -> dict[str, Any]:
     """Write data to JSON file."""

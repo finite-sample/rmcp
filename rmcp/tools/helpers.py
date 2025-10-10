@@ -629,7 +629,7 @@ def _get_analysis_recommendations(
         ],
         "additionalProperties": False,
     },
-    description="Loads curated example datasets suitable for demonstrating statistical techniques, testing analysis workflows, or learning RMCP functionality. Includes classic datasets (iris, mtcars, economics) with documentation and suggested analyses. Use for tutorials, testing new analytical approaches, teaching statistical concepts, or exploring RMCP capabilities with known datasets that have well-understood properties and expected results."
+    description="Loads curated example datasets suitable for demonstrating statistical techniques, testing analysis workflows, or learning RMCP functionality. Includes classic datasets (iris, mtcars, economics) with documentation and suggested analyses. Use for tutorials, testing new analytical approaches, teaching statistical concepts, or exploring RMCP capabilities with known datasets that have well-understood properties and expected results.",
 )
 async def load_example(context, params) -> dict[str, Any]:
     """Load example datasets for analysis and testing."""

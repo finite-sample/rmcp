@@ -253,7 +253,7 @@ async def outlier_detection(context, params) -> dict[str, Any]:
         "required": ["frequency_tables", "variables", "total_observations"],
         "additionalProperties": False,
     },
-    description="Creates frequency tables for categorical variables showing counts, percentages, cumulative frequencies, and missing value summaries. Supports multiple variables simultaneously and optional sorting by frequency or value. Provides chi-square goodness-of-fit tests when expected frequencies are specified. Use for categorical data exploration, survey analysis, market research, or understanding distribution of discrete variables."
+    description="Creates frequency tables for categorical variables showing counts, percentages, cumulative frequencies, and missing value summaries. Supports multiple variables simultaneously and optional sorting by frequency or value. Provides chi-square goodness-of-fit tests when expected frequencies are specified. Use for categorical data exploration, survey analysis, market research, or understanding distribution of discrete variables.",
 )
 async def frequency_table(context, params) -> dict[str, Any]:
     """Generate frequency tables."""
