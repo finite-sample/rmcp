@@ -17,7 +17,7 @@ try:
     import uvicorn
     from fastapi import FastAPI, HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import Response, StreamingResponse
+    from fastapi.responses import Response
     from sse_starlette import EventSourceResponse
 except ImportError as e:
     raise ImportError(
@@ -220,7 +220,7 @@ class HTTPTransport(Transport):
             return await handle_options(request)
 
         @self.app.get("/mcp/sse")
-        async def handle_sse() -> StreamingResponse:
+        async def handle_sse() -> EventSourceResponse:
             """Handle Server-Sent Events for notifications."""
 
             async def event_generator():
@@ -257,7 +257,7 @@ class HTTPTransport(Transport):
 
         # Backward compatibility: redirect /sse to /mcp/sse
         @self.app.get("/sse")
-        async def redirect_sse() -> StreamingResponse:
+        async def redirect_sse() -> EventSourceResponse:
             """Redirect GET /sse to GET /mcp/sse for backward compatibility."""
             logger.info(
                 "Redirecting GET /sse to GET /mcp/sse for backward compatibility"

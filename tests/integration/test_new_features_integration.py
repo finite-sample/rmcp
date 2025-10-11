@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 from shutil import which
 from typing import Any, Dict
 

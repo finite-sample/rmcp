@@ -6,7 +6,6 @@ Tests all 42 statistical analysis tools to ensure they work properly.
 import asyncio
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 # Add rmcp to path

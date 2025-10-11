@@ -61,6 +61,7 @@ rmcp_test_env/
 
 # IDEs
 .vscode/
+.cursor/
 .idea/
 *.swp
 *.swo
@@ -82,10 +83,18 @@ temp_*.json
 *.log
 Rplots.pdf
 
+# Prevent standalone test files at root
+/test_*.py
+
 # Test output files
 test_*.log
 test_*.xlsx
 test_*.csv
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
 
 # MyPy
 .mypy_cache/
@@ -100,3 +109,6 @@ docs/_build/
 docs/.doctrees/
 *.doctree
 environment.pickle
+
+# Code Assistants
+.claude/

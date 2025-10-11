@@ -127,7 +127,7 @@ from ..registries.tools import tool
         ],
         "additionalProperties": False,
     },
-    description="Perform t-tests (one-sample, two-sample, paired)",
+    description="Performs Student's t-tests to compare means: one-sample (test if mean equals hypothesized value), two-sample (compare means between groups), or paired (compare before/after measurements). Returns t-statistic, degrees of freedom, p-value, confidence intervals, and effect size. Use for hypothesis testing about population means, comparing group differences, or analyzing experimental results. Handles equal/unequal variances and provides Cohen's d effect size.",
 )
 async def t_test(context, params) -> dict[str, Any]:
     """Perform t-test analysis."""
@@ -236,7 +236,7 @@ async def t_test(context, params) -> dict[str, Any]:
         "required": ["anova_table", "model_summary", "formula", "anova_type"],
         "additionalProperties": False,
     },
-    description="Analysis of Variance (ANOVA) with multiple types",
+    description="Performs Analysis of Variance (ANOVA) to test for significant differences between group means. Supports one-way ANOVA (single factor), two-way ANOVA (two factors with interaction), and repeated measures designs. Returns F-statistics, p-values, effect sizes (eta-squared), and post-hoc comparisons when significant. Use when comparing means across 3+ groups, testing factorial designs, or analyzing experimental data with multiple conditions.",
 )
 async def anova(context, params) -> dict[str, Any]:
     """Perform ANOVA analysis."""
@@ -257,32 +257,30 @@ async def anova(context, params) -> dict[str, Any]:
     name="chi_square_test",
     input_schema={
         "type": "object",
-        "oneOf": [
-            {
-                "properties": {
-                    "data": table_schema(),
-                    "test_type": {"const": "independence"},
-                    "x": {"type": "string"},
-                    "y": {"type": "string"},
-                },
-                "required": ["data", "test_type", "x", "y"],
-                "additionalProperties": False,
+        "properties": {
+            "data": table_schema(),
+            "test_type": {
+                "type": "string",
+                "enum": ["independence", "goodness_of_fit"],
+                "description": "Type of chi-square test",
             },
-            {
-                "properties": {
-                    "data": table_schema(),
-                    "test_type": {"const": "goodness_of_fit"},
-                    "x": {"type": "string"},
-                    "expected": {
-                        "type": "array",
-                        "items": {"type": "number", "minimum": 0},
-                        "minItems": 1,
-                    },
-                },
-                "required": ["data", "test_type", "x"],
-                "additionalProperties": False,
+            "x": {
+                "type": "string",
+                "description": "First variable (or only variable for goodness of fit)",
             },
-        ],
+            "y": {
+                "type": "string",
+                "description": "Second variable (required for independence test)",
+            },
+            "expected": {
+                "type": "array",
+                "items": {"type": "number", "minimum": 0},
+                "minItems": 1,
+                "description": "Expected frequencies (for goodness of fit test)",
+            },
+        },
+        "required": ["data", "test_type", "x"],
+        "additionalProperties": False,
     },
     output_schema={
         "type": "object",
@@ -357,7 +355,7 @@ async def anova(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Chi-square tests for independence and goodness of fit",
+    description="Performs chi-square tests for categorical data analysis: test of independence (relationship between two categorical variables) and goodness-of-fit (whether data follows expected distribution). Returns chi-square statistic, degrees of freedom, p-value, expected frequencies, and standardized residuals. Use for analyzing contingency tables, testing associations between categorical variables, or validating theoretical distributions against observed data.",
 )
 async def chi_square_test(context, params) -> dict[str, Any]:
     """Perform chi-square tests."""
@@ -452,7 +450,7 @@ async def chi_square_test(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Test variables for normality (Shapiro-Wilk, Jarque-Bera, Anderson-Darling)",
+    description="Tests variables for normal distribution using multiple methods: Shapiro-Wilk (most powerful for small samples), Kolmogorov-Smirnov, Anderson-Darling, or Jarque-Bera tests. Returns test statistics, p-values, and clear interpretation for each test. Use before parametric statistical analyses, to validate model assumptions, or to choose appropriate statistical methods. Critical for regression diagnostics and assumption checking.",
 )
 async def normality_test(context, params) -> dict[str, Any]:
     """Test for normality."""

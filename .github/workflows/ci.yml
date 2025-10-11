@@ -53,7 +53,7 @@ jobs:
         "
         
         # Test non-R dependent unit tests
-        python -m pytest tests/unit/test_server_basic.py -v
+        python -m pytest tests/unit/core/test_server.py -v
 
   # Build Docker image with all R packages for faster testing
   docker-build:

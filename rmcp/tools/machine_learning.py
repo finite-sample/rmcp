@@ -112,7 +112,7 @@ from ..registries.tools import tool
         ],
         "additionalProperties": False,
     },
-    description="K-means clustering analysis with cluster validation",
+    description="Performs K-means clustering to partition data into k clusters based on feature similarity. Uses multiple random starts for optimal clustering and provides cluster assignments, centroids, within-cluster sum of squares, and silhouette analysis for cluster quality assessment. Use for customer segmentation, market research, data exploration, pattern recognition, or reducing data complexity by grouping similar observations.",
 )
 async def kmeans_clustering(context, params) -> dict[str, Any]:
     """Perform K-means clustering."""
@@ -156,44 +156,35 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
             "performance": {
                 "type": "object",
                 "description": "Model performance metrics",
-                "oneOf": [
-                    {
-                        "properties": {
-                            "accuracy": {
-                                "type": "number",
-                                "minimum": 0,
-                                "maximum": 1,
-                                "description": "Classification accuracy",
-                            },
-                            "confusion_matrix": {
-                                "type": "array",
-                                "items": {"type": "array", "items": {"type": "number"}},
-                                "description": "Confusion matrix for classification",
-                            },
-                        },
-                        "required": ["accuracy", "confusion_matrix"],
+                "properties": {
+                    "accuracy": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "description": "Classification accuracy (for classification trees)",
                     },
-                    {
-                        "properties": {
-                            "mse": {
-                                "type": "number",
-                                "minimum": 0,
-                                "description": "Mean squared error",
-                            },
-                            "rmse": {
-                                "type": "number",
-                                "minimum": 0,
-                                "description": "Root mean squared error",
-                            },
-                            "r_squared": {
-                                "type": "number",
-                                "maximum": 1,
-                                "description": "R-squared value",
-                            },
-                        },
-                        "required": ["mse", "rmse", "r_squared"],
+                    "confusion_matrix": {
+                        "type": "array",
+                        "items": {"type": "array", "items": {"type": "number"}},
+                        "description": "Confusion matrix (for classification trees)",
                     },
-                ],
+                    "mse": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Mean squared error (for regression trees)",
+                    },
+                    "rmse": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Root mean squared error (for regression trees)",
+                    },
+                    "r_squared": {
+                        "type": "number",
+                        "maximum": 1,
+                        "description": "R-squared value (for regression trees)",
+                    },
+                },
+                "additionalProperties": False,
             },
             "variable_importance": {
                 "type": "object",
@@ -234,7 +225,7 @@ async def kmeans_clustering(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Decision tree classification and regression",
+    description="Builds decision tree models for classification (categorical outcomes) or regression (continuous outcomes) using recursive binary splitting. Provides tree structure, variable importance rankings, prediction rules, and cross-validation accuracy. Trees are interpretable and handle mixed data types naturally. Use for rule-based modeling, feature selection, understanding decision processes, or when interpretability is more important than maximum accuracy.",
 )
 async def decision_tree(context, params) -> dict[str, Any]:
     """Build decision tree model."""
@@ -279,53 +270,40 @@ async def decision_tree(context, params) -> dict[str, Any]:
             "performance": {
                 "type": "object",
                 "description": "Model performance metrics",
-                "oneOf": [
-                    {
-                        "properties": {
-                            "oob_error_rate": {
-                                "type": "number",
-                                "minimum": 0,
-                                "maximum": 1,
-                                "description": "Out-of-bag error rate",
-                            },
-                            "confusion_matrix": {
-                                "type": "array",
-                                "items": {"type": "array", "items": {"type": "number"}},
-                                "description": "Confusion matrix for classification",
-                            },
-                            "class_error": {
-                                "type": "object",
-                                "description": "Error rate by class",
-                                "additionalProperties": {"type": "number"},
-                            },
-                        },
-                        "required": [
-                            "oob_error_rate",
-                            "confusion_matrix",
-                            "class_error",
-                        ],
+                "properties": {
+                    "oob_error_rate": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "description": "Out-of-bag error rate (for classification)",
                     },
-                    {
-                        "properties": {
-                            "mse": {
-                                "type": "number",
-                                "minimum": 0,
-                                "description": "Mean squared error",
-                            },
-                            "rmse": {
-                                "type": "number",
-                                "minimum": 0,
-                                "description": "Root mean squared error",
-                            },
-                            "variance_explained": {
-                                "type": "number",
-                                "description": "Percentage of variance explained",
-                                "maximum": 100,
-                            },
-                        },
-                        "required": ["mse", "rmse", "variance_explained"],
+                    "confusion_matrix": {
+                        "type": "array",
+                        "items": {"type": "array", "items": {"type": "number"}},
+                        "description": "Confusion matrix (for classification)",
                     },
-                ],
+                    "class_error": {
+                        "type": "object",
+                        "description": "Error rate by class (for classification)",
+                        "additionalProperties": {"type": "number"},
+                    },
+                    "mse": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Mean squared error (for regression)",
+                    },
+                    "rmse": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Root mean squared error (for regression)",
+                    },
+                    "variance_explained": {
+                        "type": "number",
+                        "description": "Percentage of variance explained (for regression)",
+                        "maximum": 100,
+                    },
+                },
+                "additionalProperties": False,
             },
             "variable_importance": {
                 "type": ["object", "null"],
@@ -366,7 +344,7 @@ async def decision_tree(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Random Forest ensemble model for classification and regression",
+    description="Constructs Random Forest ensemble models combining multiple decision trees with bootstrap sampling and random feature selection. Provides predictions, variable importance rankings, out-of-bag error estimates, and partial dependence plots. More accurate and robust than single trees while maintaining interpretability through variable importance. Use for high-accuracy prediction, feature selection, handling missing data, or non-linear relationships.",
 )
 async def random_forest(context, params) -> dict[str, Any]:
     """Build Random Forest model."""
