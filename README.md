@@ -3,7 +3,7 @@
 [![Python application](https://github.com/finite-sample/rmcp/actions/workflows/ci.yml/badge.svg)](https://github.com/finite-sample/rmcp/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/rmcp.svg)](https://pypi.org/project/rmcp/)
 [![Downloads](https://pepy.tech/badge/rmcp)](https://pepy.tech/project/rmcp)
-[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://finite-sample.github.io/rmcp/)
+[![Documentation](https://github.com/finite-sample/rmcp/actions/workflows/docs.yml/badge.svg)](https://finite-sample.github.io/rmcp/)
 [![License](https://img.shields.io/github/license/finite-sample/rmcp)](https://github.com/finite-sample/rmcp/blob/main/LICENSE)
 
 **Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with 44 statistical analysis tools across 11 categories. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
