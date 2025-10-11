@@ -453,7 +453,14 @@ async def run_tool_integration_test(server, tool_name, test_data):
     }
     try:
         # Mock R execution to return expected response
-        mock_response = MOCK_RESPONSES.get(tool_name, {"status": "mocked"})
+        # Try to use actual R fixture first, fallback to hand-crafted mock
+        try:
+            from tests.fixtures import load_r_fixture
+
+            mock_response = load_r_fixture(tool_name)
+        except (FileNotFoundError, ImportError):
+            # Fallback to hand-crafted mock if fixture not available
+            mock_response = MOCK_RESPONSES.get(tool_name, {"status": "mocked"})
 
         # Create async mock functions that handle different parameter signatures
         async def mock_execute_r_script_async(*args, **kwargs):

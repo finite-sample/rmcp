@@ -90,7 +90,7 @@ class TestDataValidation:
 
     @pytest.mark.asyncio
     async def test_validate_clean_data(self):
-        """Test validating clean data without issues."""
+        """Test validating clean data without issues using actual R execution."""
         context = await create_test_context()
 
         clean_data = {

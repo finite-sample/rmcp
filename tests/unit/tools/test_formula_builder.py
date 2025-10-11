@@ -65,7 +65,7 @@ class TestFormulaBuilder:
 
     @pytest.mark.asyncio
     async def test_validate_valid_formula(self):
-        """Test validating a correct R formula."""
+        """Test validating a correct R formula using actual R execution."""
         context = await create_test_context()
 
         # validate_formula requires both formula and data

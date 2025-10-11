@@ -18,15 +18,14 @@ def test_dependencies():
         print("✅ click available")
     except ImportError:
         print("❌ click missing - install with: pip install click")
-        return False
+        assert False, "click missing"
     try:
         import jsonschema
 
         print("✅ jsonschema available")
     except ImportError:
         print("❌ jsonschema missing - install with: pip install jsonschema")
-        return False
-    return True
+        assert False, "jsonschema missing"
 
 
 def test_r_availability():
@@ -40,16 +39,15 @@ def test_r_availability():
         if result.returncode == 0:
             version_line = result.stdout.split("\n")[0]
             print(f"✅ R is available: {version_line}")
-            return True
         else:
             print("❌ R not working properly")
-            return False
+            assert False, "R not working properly"
     except subprocess.TimeoutExpired:
         print("❌ R command timed out")
-        return False
+        assert False, "R command timed out"
     except FileNotFoundError:
         print("❌ R not found - install R to use RMCP")
-        return False
+        assert False, "R not found"
 
 
 def test_basic_server_import():
@@ -70,13 +68,12 @@ def test_basic_server_import():
         # Try to create basic server
         server = create_server()
         print("✅ Server created successfully")
-        return True
     except ImportError as e:
         print(f"❌ Import error: {e}")
-        return False
+        assert False, f"Import error: {e}"
     except Exception as e:
         print(f"❌ Server creation failed: {e}")
-        return False
+        assert False, f"Server creation failed: {e}"
 
 
 def test_cli_basic():
@@ -84,9 +81,9 @@ def test_cli_basic():
     print("\n🔍 Testing CLI")
     print("-" * 40)
     try:
-        # Test version command
+        # Test version command using poetry run
         result = subprocess.run(
-            [sys.executable, "-m", "rmcp", "version"],
+            ["poetry", "run", "rmcp", "--version"],
             capture_output=True,
             text=True,
             timeout=10,
@@ -94,16 +91,15 @@ def test_cli_basic():
         )
         if result.returncode == 0:
             print(f"✅ CLI version: {result.stdout.strip()}")
-            return True
         else:
             print(f"❌ CLI failed: {result.stderr}")
-            return False
+            assert False, f"CLI failed: {result.stderr}"
     except subprocess.TimeoutExpired:
         print("❌ CLI command timed out")
-        return False
+        assert False, "CLI command timed out"
     except Exception as e:
         print(f"❌ CLI test failed: {e}")
-        return False
+        assert False, f"CLI test failed: {e}"
 
 
 def main():
