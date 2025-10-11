@@ -155,10 +155,15 @@ jobs:
     - name: Set up R (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        choco install r.project -y
-        refreshenv
-        $env:PATH += ";C:\Program Files\R\R-4.3.0\bin"
-        R -e "install.packages(c('jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', 'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', 'rlang', 'knitr', 'broom'), repos='https://cran.rstudio.com/')"
+        # R is usually pre-installed on GitHub Windows runners
+        $rPath = Get-Command Rscript.exe -ErrorAction SilentlyContinue
+        if (-not $rPath) {
+          choco install r.project -y --force
+          refreshenv
+        }
+        
+        # Install R packages using Rscript which handles parameters better
+        Rscript.exe -e "install.packages(c('jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', 'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', 'rlang', 'knitr', 'broom'), repos='https://cran.rstudio.com/')"
       shell: powershell
     
     - name: Install Python dependencies
