@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.13] - 2025-10-11
+
+### Fixed
+- **🔧 Claude Code Compatibility**: Fixed schema validation issues for improved compatibility with Claude Code
+  - Resolved JSON schema validation errors that prevented proper tool execution
+  - Enhanced error handling for better debugging experience
+
+### Improved
+- **📖 Tool Discoverability**: Enhanced tool descriptions for better AI assistant integration
+  - Improved natural language descriptions for all 44 statistical tools
+  - Better context for AI assistants to select appropriate tools
+
+- **🖥️ Windows Compatibility**: Fixed platform-specific issues for Windows users
+  - Resolved subprocess execution problems on Windows systems
+  - Enhanced cross-platform reliability
+
+- **🎨 Code Quality**: Comprehensive formatting and linting improvements
+  - Applied black code formatting across entire codebase
+  - Fixed ruff linting issues for better code quality
+  - Enhanced type hints and documentation
+
+### Added
+- **📦 Reproducible Builds**: Added poetry.lock for consistent dependency versions
+  - Ensures identical builds across different environments
+  - Improved development and deployment reliability
+
 ## [0.3.11] - 2025-09-22
 
 ### Added
