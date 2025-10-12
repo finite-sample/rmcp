@@ -1,64 +1,46 @@
-# CI/CD optimized Docker image for RMCP
-# Pre-installs all R packages and Python dependencies for faster CI runs
-FROM python:3.11-slim
+# Fast CRAN binaries (via r2u) + Python 3.12, multi-arch (amd64/arm64)
+FROM rocker/r2u:noble
 
-# Prevent interactive prompts
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Install R 4.4+ and required system dependencies
-RUN apt-get update && apt-get install -y \
-    gnupg2 \
-    wget \
-    ca-certificates \
-    lsb-release \
-    && wget -O- https://cloud.r-project.org/bin/linux/debian/marutter_pubkey.asc | \
-       gpg --dearmor | \
-       tee /usr/share/keyrings/r-project.gpg > /dev/null \
-    && echo "deb [signed-by=/usr/share/keyrings/r-project.gpg] https://cloud.r-project.org/bin/linux/debian $(lsb_release -cs)-cran40/" | \
-       tee /etc/apt/sources.list.d/r-project.list \
-    && apt-get update && apt-get install -y \
-    r-base \
-    r-base-dev \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    libxml2-dev \
-    git \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# System deps: Python toolchain, occasional build tools, common libs
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        python3 python3-pip python3-venv python3-dev \
+        build-essential git \
+        libcurl4-openssl-dev libssl-dev libxml2-dev \
+        ca-certificates wget; \
+    rm -rf /var/lib/apt/lists/*
 
-# Install all required R packages for RMCP (45+ packages)
-# This is the time-consuming step that we want to cache
-# Includes core structured tools + commonly used flexible_r packages
-RUN R -e "install.packages(c(\
-    # Core structured tools packages \
-    'jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', \
-    'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', \
-    'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', \
-    'rlang', 'readxl', 'openxlsx', 'base64enc', 'reshape2', 'knitr', 'broom', \
-    # Common flexible_r packages for advanced statistics \
-    'MASS', 'boot', 'survival', 'nlme', 'mgcv', 'lme4', 'glmnet', \
-    'e1071', 'caret', 'nnet', 'gbm', 'xgboost', 'kernlab', 'cluster', \
-    'zoo', 'xts', 'TTR', 'quantmod', 'data.table', 'lattice', \
-    'corrplot', 'viridis', 'RColorBrewer', 'lavaan'\
-    ), repos='https://cran.rstudio.com/', quiet=TRUE)"
+# (r2u already wires R→APT via bspm; this just makes it explicit/quiet for scripts)
+RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
 
-# Install Python dependencies needed for CI
-RUN pip install --no-cache-dir \
-    black>=23.0.0 \
-    isort>=5.12.0 \
-    flake8>=6.0.0 \
-    pytest>=8.0.0 \
-    pytest-asyncio>=0.21.0 \
-    click>=8.1.0 \
-    jsonschema>=4.0.0
+# Preinstall your R stack (binary where available ⇒ fast, reproducible)
+RUN R -q -e "install.packages(c( \
+  'jsonlite','plm','lmtest','sandwich','AER','dplyr', \
+  'forecast','vars','urca','tseries','nortest','car', \
+  'rpart','randomForest','ggplot2','gridExtra','tidyr', \
+  'rlang','readxl','openxlsx','base64enc','reshape2','knitr','broom', \
+  'MASS','boot','survival','nlme','mgcv','lme4','glmnet', \
+  'e1071','caret','nnet','gbm','xgboost','kernlab','cluster', \
+  'zoo','xts','TTR','quantmod','data.table','lattice', \
+  'corrplot','viridis','RColorBrewer','lavaan' \
+))"
 
-# Set working directory for CI
+# Python tooling for CI
+RUN python3 -m pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+      "black>=23.0.0" \
+      "isort>=5.12.0" \
+      "flake8>=6.0.0" \
+      "pytest>=8.0.0" \
+      "pytest-asyncio>=0.21.0" \
+      "click>=8.1.0" \
+      "jsonschema>=4.0.0"
+
 WORKDIR /workspace
-
-# Ensure stdout is unbuffered for CI logs
-ENV PYTHONUNBUFFERED=1
-
-# Set Python path to workspace for package installation
 ENV PYTHONPATH=/workspace
-
-# Default command for CI (will be overridden in workflows)
 CMD ["bash"]
