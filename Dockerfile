@@ -7,12 +7,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install R 4.4+ and required system dependencies
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    dirmngr \
+    gnupg2 \
     wget \
     ca-certificates \
-    && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
-    && add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" \
+    && wget -qO- https://cloud.r-project.org/bin/linux/debian/marutter_pubkey.asc | \
+       tee /etc/apt/trusted.gpg.d/cran_debian_key.asc \
+    && echo "deb https://cloud.r-project.org/bin/linux/debian bookworm-cran40/" >> /etc/apt/sources.list \
     && apt-get update && apt-get install -y \
     r-base \
     r-base-dev \
