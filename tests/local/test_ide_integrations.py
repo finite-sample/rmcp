@@ -27,7 +27,7 @@ import pytest
 # Add rmcp to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from rmcp.cli import start_stdio_server
+# Import removed - this function doesn't exist in the CLI module
 
 
 @pytest.mark.local

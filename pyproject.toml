@@ -89,6 +89,7 @@ addopts = [
 ]
 markers = [
     "asyncio: marks tests as async",
+    "local: marks tests that require local IDE setup (not run in CI)",
 ]
 
 [tool.black]
