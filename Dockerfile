@@ -10,9 +10,12 @@ RUN apt-get update && apt-get install -y \
     gnupg2 \
     wget \
     ca-certificates \
-    && wget -qO- https://cloud.r-project.org/bin/linux/debian/marutter_pubkey.asc | \
-       tee /etc/apt/trusted.gpg.d/cran_debian_key.asc \
-    && echo "deb https://cloud.r-project.org/bin/linux/debian bookworm-cran40/" >> /etc/apt/sources.list \
+    lsb-release \
+    && wget -O- https://cloud.r-project.org/bin/linux/debian/marutter_pubkey.asc | \
+       gpg --dearmor | \
+       tee /usr/share/keyrings/r-project.gpg > /dev/null \
+    && echo "deb [signed-by=/usr/share/keyrings/r-project.gpg] https://cloud.r-project.org/bin/linux/debian $(lsb_release -cs)-cran40/" | \
+       tee /etc/apt/sources.list.d/r-project.list \
     && apt-get update && apt-get install -y \
     r-base \
     r-base-dev \
