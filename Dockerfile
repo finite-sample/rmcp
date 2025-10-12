@@ -1,11 +1,10 @@
-# Fast CRAN binaries (via r2u) + Python 3.12, multi-arch (amd64/arm64)
 FROM rocker/r2u:noble
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# System deps: Python toolchain, occasional build tools, common libs
+# System deps (Python + build tools + common libs)
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
@@ -15,10 +14,10 @@ RUN set -eux; \
         ca-certificates wget; \
     rm -rf /var/lib/apt/lists/*
 
-# (r2u already wires R→APT via bspm; this just makes it explicit/quiet for scripts)
+# Make r2u behavior explicit for scripts
 RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
 
-# Preinstall your R stack (binary where available ⇒ fast, reproducible)
+# Preinstall R stack (binaries via r2u/bspm => fast)
 RUN R -q -e "install.packages(c( \
   'jsonlite','plm','lmtest','sandwich','AER','dplyr', \
   'forecast','vars','urca','tseries','nortest','car', \
@@ -30,17 +29,25 @@ RUN R -q -e "install.packages(c( \
   'corrplot','viridis','RColorBrewer','lavaan' \
 ))"
 
-# Python tooling for CI
-RUN python3 -m pip install --no-cache-dir --upgrade pip && \
+# ---- Python: create a venv to avoid PEP 668 issues ----
+ENV VENV=/opt/venv
+RUN set -eux; \
+    python3 -m venv "$VENV"; \
+    . "$VENV/bin/activate"; \
+    pip install --upgrade pip; \
     pip install --no-cache-dir \
-      "black>=23.0.0" \
-      "isort>=5.12.0" \
-      "flake8>=6.0.0" \
-      "pytest>=8.0.0" \
-      "pytest-asyncio>=0.21.0" \
-      "click>=8.1.0" \
-      "jsonschema>=4.0.0"
+        "black>=23.0.0" \
+        "isort>=5.12.0" \
+        "flake8>=6.0.0" \
+        "pytest>=8.0.0" \
+        "pytest-asyncio>=0.21.0" \
+        "click>=8.1.0" \
+        "jsonschema>=4.0.0"
+
+# Ensure venv tools are first on PATH for subsequent steps/CI
+ENV PATH="$VENV/bin:$PATH"
 
 WORKDIR /workspace
 ENV PYTHONPATH=/workspace
+
 CMD ["bash"]
