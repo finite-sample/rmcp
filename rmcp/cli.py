@@ -72,6 +72,24 @@ def start(log_level: str):
             "Windows platform detected - using Windows-compatible stdio transport"
         )
     try:
+        # Check R version compatibility
+        from .r_integration import check_r_version
+
+        try:
+            is_compatible, version_string = check_r_version()
+            logger.info(f"R version check: {version_string}")
+            if not is_compatible:
+                logger.error(
+                    "RMCP requires R 4.4.0 or higher for full compatibility. "
+                    "Some features may not work correctly with older R versions. "
+                    "Please upgrade R to 4.4.0+ for best experience."
+                )
+        except Exception as e:
+            logger.error(f"R version check failed: {e}")
+            logger.error(
+                "R may not be properly installed. Please ensure R 4.4.0+ is installed and available in PATH."
+            )
+
         # Create and configure server
         server = create_server()
         server.configure(allowed_paths=[str(Path.cwd())], read_only=True)
@@ -133,6 +151,24 @@ def serve(
     logging.getLogger().setLevel(getattr(logging, log_level))
     logger.info(f"Starting RMCP MCP Server v{__version__}")
     try:
+        # Check R version compatibility
+        from .r_integration import check_r_version
+
+        try:
+            is_compatible, version_string = check_r_version()
+            logger.info(f"R version check: {version_string}")
+            if not is_compatible:
+                logger.error(
+                    "RMCP requires R 4.4.0 or higher for full compatibility. "
+                    "Some features may not work correctly with older R versions. "
+                    "Please upgrade R to 4.4.0+ for best experience."
+                )
+        except Exception as e:
+            logger.error(f"R version check failed: {e}")
+            logger.error(
+                "R may not be properly installed. Please ensure R 4.4.0+ is installed and available in PATH."
+            )
+
         # Load configuration
         config = _load_config(config_file) if config_file else {}
         # Override with CLI options

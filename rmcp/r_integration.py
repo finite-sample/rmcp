@@ -24,6 +24,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import subprocess
 import tempfile
 from typing import Any
@@ -66,6 +67,64 @@ class RExecutionError(Exception):
         self.stdout = stdout
         self.stderr = stderr
         self.returncode = returncode
+
+
+def check_r_version() -> tuple[bool, str]:
+    """
+    Check if R version is 4.4.0 or higher.
+
+    Returns:
+        Tuple of (is_compatible, version_string)
+        - is_compatible: True if R version >= 4.4.0
+        - version_string: Full R version string for logging
+
+    Raises:
+        RExecutionError: If R is not available or version check fails
+    """
+    try:
+        result = subprocess.run(
+            ["R", "--version"], capture_output=True, text=True, timeout=10
+        )
+
+        if result.returncode != 0:
+            raise RExecutionError(
+                "R version check failed - R is not working properly",
+                stdout=result.stdout,
+                stderr=result.stderr,
+                returncode=result.returncode,
+            )
+
+        # Parse version from first line: "R version 4.4.0 (2024-04-24) -- ..."
+        version_line = result.stdout.split("\n")[0]
+
+        # Extract version number using regex
+        version_match = re.search(r"R version (\d+)\.(\d+)\.(\d+)", version_line)
+
+        if not version_match:
+            raise RExecutionError(
+                f"Could not parse R version from output: {version_line}",
+                stdout=result.stdout,
+                stderr=result.stderr,
+                returncode=0,
+            )
+
+        major, minor, patch = map(int, version_match.groups())
+
+        # Check if version >= 4.4.0
+        is_compatible = (major > 4) or (major == 4 and minor >= 4)
+
+        if not is_compatible:
+            logger.warning(
+                f"R version {major}.{minor}.{patch} detected. "
+                f"RMCP requires R 4.4.0+ for full compatibility."
+            )
+
+        return is_compatible, version_line.strip()
+
+    except subprocess.TimeoutExpired:
+        raise RExecutionError("R version check timed out", "", "", None)
+    except FileNotFoundError:
+        raise RExecutionError("R is not installed or not in PATH", "", "", None)
 
 
 def execute_r_script(script: str, args: dict[str, Any]) -> dict[str, Any]:
