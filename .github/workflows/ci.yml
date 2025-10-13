@@ -78,7 +78,7 @@ jobs:
       working-directory: rmcp/r_assets
       run: |
         # Install essential packages
-        R -e "install.packages(c('jsonlite', 'dplyr', 'ggplot2', 'knitr', 'testthat', 'lintr', 'styler', 'covr'), repos='https://cran.r-project.org')"
+        R -e "install.packages(c('jsonlite', 'dplyr', 'ggplot2', 'knitr', 'testthat', 'lintr', 'styler', 'roxygen2', 'covr'), repos='https://cran.r-project.org')"
         # Install additional statistical packages for full testing
         R -e "install.packages(c('broom', 'forecast', 'cluster', 'rpart', 'randomForest'), repos='https://cran.r-project.org')"
     
