@@ -90,26 +90,40 @@ def test_cli_basic():
     """Test basic CLI functionality."""
     print("\n🔍 Testing CLI")
     print("-" * 40)
-    try:
-        # Test version command using poetry run
-        result = subprocess.run(
-            ["poetry", "run", "rmcp", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            cwd=Path(__file__).parent.parent.parent.parent,
-        )
-        if result.returncode == 0:
-            print(f"✅ CLI version: {result.stdout.strip()}")
-        else:
-            print(f"❌ CLI failed: {result.stderr}")
-            assert False, f"CLI failed: {result.stderr}"
-    except subprocess.TimeoutExpired:
-        print("❌ CLI command timed out")
-        assert False, "CLI command timed out"
-    except Exception as e:
-        print(f"❌ CLI test failed: {e}")
-        assert False, f"CLI test failed: {e}"
+    
+    # Try direct command first (works in Docker/CI), then fallback to poetry (local dev)
+    commands_to_try = [
+        (["rmcp", "--version"], "direct command"),
+        (["poetry", "run", "rmcp", "--version"], "poetry run command")
+    ]
+    
+    for command, description in commands_to_try:
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                cwd=Path(__file__).parent.parent.parent.parent,
+            )
+            if result.returncode == 0:
+                print(f"✅ CLI version ({description}): {result.stdout.strip()}")
+                return  # Success, exit the test
+            else:
+                print(f"⚠️  {description} failed: {result.stderr}")
+                continue  # Try next command
+        except FileNotFoundError:
+            print(f"⚠️  {description} not available (command not found)")
+            continue  # Try next command
+        except subprocess.TimeoutExpired:
+            print(f"❌ {description} timed out")
+            assert False, f"{description} timed out"
+        except Exception as e:
+            print(f"⚠️  {description} failed: {e}")
+            continue  # Try next command
+    
+    # If we get here, none of the commands worked
+    assert False, "All CLI test commands failed - neither 'rmcp --version' nor 'poetry run rmcp --version' worked"
 
 
 def main():

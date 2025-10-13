@@ -302,20 +302,20 @@ jobs:
     
     - name: Run unit tests
       run: |
-        poetry run pytest tests/unit/ -v --tb=short
+        pytest tests/unit/ -v --tb=short
     
     - name: Run MCP protocol compliance tests
       run: |
-        poetry run pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short
+        pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short
     
     - name: Test RMCP CLI
       run: |
-        poetry run rmcp --version
-        poetry run rmcp list-capabilities
+        rmcp --version
+        rmcp list-capabilities
     
     - name: Test basic tool execution
       run: |
-        echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | poetry run rmcp start --quiet | head -10
+        echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -10
 
   # Feature verification (using freshly built Docker image)
   feature-verification:
