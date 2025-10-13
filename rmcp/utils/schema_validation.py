@@ -7,6 +7,31 @@ detecting schema drift, and analyzing schema consistency across tools.
 
 These utilities help maintain schema-R output consistency and provide
 detailed diagnostics for schema validation failures.
+
+Main Components:
+    SchemaDriftDetector: Detects when R scripts evolve but schemas don't
+    SchemaConsistencyChecker: Analyzes consistency across tool schemas
+    validate_tool_output_with_diagnostics: Comprehensive validation with diagnostics
+    generate_schema_validation_report: Creates human-readable validation reports
+
+Usage Examples:
+    # Detect schema drift for a single tool
+    >>> detector = SchemaDriftDetector()
+    >>> analysis = detector.analyze_output(tool_name, r_output, schema)
+    >>> if not analysis["is_compliant"]:
+    ...     print("Schema drift detected!")
+
+    # Check consistency across all tools
+    >>> checker = SchemaConsistencyChecker()
+    >>> for name, schema in all_schemas.items():
+    ...     checker.add_tool_schema(name, schema)
+    >>> consistency = checker.analyze_consistency()
+
+    # Validate with detailed diagnostics
+    >>> report = validate_tool_output_with_diagnostics(
+    ...     "linear_model", actual_output, declared_schema
+    ... )
+    >>> print(report["summary"])
 """
 
 import json
@@ -19,7 +44,28 @@ logger = logging.getLogger(__name__)
 
 
 class SchemaDriftDetector:
-    """Detects drift between R script output and declared schemas."""
+    """
+    Detects drift between R script output and declared schemas.
+
+    Analyzes actual R script output against declared Python schemas to identify
+    when R scripts evolve but schemas don't get updated, preventing runtime
+    validation errors.
+
+    Attributes:
+        violations: List of critical schema violations found during analysis
+        warnings: List of potential drift indicators and warnings
+
+    Example:
+        >>> detector = SchemaDriftDetector()
+        >>> analysis = detector.analyze_output(
+        ...     "linear_model",
+        ...     actual_r_output,
+        ...     declared_schema
+        ... )
+        >>> if not analysis["is_compliant"]:
+        ...     for rec in analysis["recommendations"]:
+        ...         print(f"💡 {rec}")
+    """
 
     def __init__(self):
         self.violations: List[Dict[str, Any]] = []
@@ -40,7 +86,28 @@ class SchemaDriftDetector:
             declared_schema: Tool's declared output schema
 
         Returns:
-            Analysis report with violations, warnings, and recommendations
+            Analysis report dictionary containing:
+            - tool_name (str): Name of analyzed tool
+            - violations (List[Dict]): Critical schema violations
+            - warnings (List[Dict]): Potential drift indicators
+            - recommendations (List[str]): Actionable fix suggestions
+            - is_compliant (bool): Whether output matches schema
+            - extra_fields (List[str]): Fields in output but not schema
+            - missing_fields (List[str]): Required fields missing from output
+            - type_mismatches (List[Dict]): Fields with incorrect types
+            - strict_validation (str): "PASSED" or "FAILED"
+
+        Example:
+            >>> detector = SchemaDriftDetector()
+            >>> analysis = detector.analyze_output(
+            ...     "linear_model",
+            ...     {"r_squared": 0.85, "new_field": 123},
+            ...     {"properties": {"r_squared": {"type": "number"}}}
+            ... )
+            >>> print(analysis["extra_fields"])
+            ['new_field']
+            >>> for rec in analysis["recommendations"]:
+            ...     print(f"💡 {rec}")
         """
         analysis = {
             "tool_name": tool_name,
@@ -84,7 +151,26 @@ class SchemaDriftDetector:
         declared_schema: Dict[str, Any],
         analysis: Dict[str, Any],
     ) -> None:
-        """Analyze object schema for field and type drift."""
+        """
+        Analyze object schema for field and type drift.
+
+        Performs detailed comparison between actual R output and declared schema,
+        identifying missing required fields, unexpected extra fields, and type
+        mismatches that indicate schema drift.
+
+        Args:
+            actual_output: Dictionary containing actual R script output
+            declared_schema: JSON Schema object definition with properties
+            analysis: Analysis dictionary to populate with findings
+
+        Side Effects:
+            Modifies analysis dict by adding to:
+            - violations: Critical schema violations
+            - warnings: Potential drift indicators
+            - missing_fields: Required fields not in output
+            - extra_fields: Output fields not in schema
+            - type_mismatches: Fields with wrong data types
+        """
         properties = declared_schema["properties"]
         required_fields = declared_schema.get("required", [])
         allows_additional = declared_schema.get("additionalProperties", True)
@@ -139,7 +225,25 @@ class SchemaDriftDetector:
                         )
 
     def _get_json_type(self, value: Any) -> str:
-        """Convert Python type to JSON Schema type."""
+        """
+        Convert Python type to JSON Schema type.
+
+        Maps Python runtime types to their corresponding JSON Schema type names
+        for accurate schema validation and drift detection.
+
+        Args:
+            value: Python value of any type
+
+        Returns:
+            JSON Schema type string ("string", "number", "integer", "boolean",
+            "array", "object", "null", or "unknown" for unmapped types)
+
+        Example:
+            >>> detector._get_json_type(42)
+            'integer'
+            >>> detector._get_json_type([1, 2, 3])
+            'array'
+        """
         type_mapping = {
             str: "string",
             int: "integer",
@@ -152,7 +256,26 @@ class SchemaDriftDetector:
         return type_mapping.get(type(value), "unknown")
 
     def _types_compatible(self, actual_type: str, expected_type: str) -> bool:
-        """Check if actual type is compatible with expected type."""
+        """
+        Check if actual type is compatible with expected type.
+
+        Handles JSON Schema type compatibility rules, including number/integer
+        interoperability and union types. More permissive than strict equality
+        to account for valid type coercions.
+
+        Args:
+            actual_type: JSON Schema type from actual output
+            expected_type: JSON Schema type from declared schema
+
+        Returns:
+            True if types are compatible, False otherwise
+
+        Examples:
+            >>> detector._types_compatible("integer", "number")
+            True  # integers are valid numbers
+            >>> detector._types_compatible("string", "number")
+            False  # incompatible types
+        """
         # Handle number/integer compatibility
         if expected_type == "number" and actual_type in ["integer", "number"]:
             return True
@@ -166,7 +289,23 @@ class SchemaDriftDetector:
         return actual_type == expected_type
 
     def _generate_recommendations(self, analysis: Dict[str, Any]) -> None:
-        """Generate actionable recommendations based on analysis."""
+        """
+        Generate actionable recommendations based on analysis.
+
+        Creates human-readable recommendations for fixing schema drift issues
+        based on the violations and warnings found during analysis.
+
+        Args:
+            analysis: Analysis dictionary containing drift findings
+
+        Side Effects:
+            Adds 'recommendations' list to analysis dict with actionable
+            suggestions for resolving schema mismatches
+
+        Note:
+            Recommendations are prioritized by severity: missing required fields,
+            extra fields, type mismatches, then general compliance status.
+        """
         recommendations = []
 
         if analysis["missing_fields"]:
@@ -195,7 +334,25 @@ class SchemaDriftDetector:
 
 
 class SchemaConsistencyChecker:
-    """Checks schema consistency across multiple tools."""
+    """
+    Checks schema consistency across multiple tools.
+
+    Analyzes schema definitions across the entire tool ecosystem to identify
+    inconsistencies in field naming, type usage, and structural patterns
+    that could confuse users or indicate design issues.
+
+    Attributes:
+        tool_schemas: Dictionary mapping tool names to their schema definitions
+        common_patterns: Analysis of field usage patterns across tools
+
+    Example:
+        >>> checker = SchemaConsistencyChecker()
+        >>> for tool_name, schema in all_tool_schemas.items():
+        ...     checker.add_tool_schema(tool_name, schema)
+        >>> analysis = checker.analyze_consistency()
+        >>> if analysis["type_inconsistencies"]:
+        ...     print("Found type inconsistencies across tools")
+    """
 
     def __init__(self):
         self.tool_schemas: Dict[str, Dict[str, Any]] = {}
@@ -206,7 +363,27 @@ class SchemaConsistencyChecker:
         self.tool_schemas[tool_name] = schema
 
     def analyze_consistency(self) -> Dict[str, Any]:
-        """Analyze schemas for consistency patterns and violations."""
+        """
+        Analyze schemas for consistency patterns and violations.
+
+        Returns:
+            Consistency analysis dictionary containing:
+            - total_tools (int): Number of tools analyzed
+            - common_field_patterns (Dict): Field usage patterns across tools
+            - type_inconsistencies (List[Dict]): Fields with inconsistent types
+            - naming_inconsistencies (List[Dict]): Similar field names
+            - recommendations (List[str]): Suggestions for standardization
+
+        Example:
+            >>> checker = SchemaConsistencyChecker()
+            >>> checker.add_tool_schema("tool1", schema1)
+            >>> checker.add_tool_schema("tool2", schema2)
+            >>> analysis = checker.analyze_consistency()
+            >>> if analysis["type_inconsistencies"]:
+            ...     print("Found inconsistent field types:")
+            ...     for issue in analysis["type_inconsistencies"]:
+            ...         print(f"  {issue['field']}: {issue['type_variations']}")
+        """
         analysis = {
             "total_tools": len(self.tool_schemas),
             "common_field_patterns": {},
@@ -255,7 +432,24 @@ class SchemaConsistencyChecker:
     def _detect_naming_inconsistencies(
         self, field_types: Dict[str, Dict[str, List[str]]], analysis: Dict[str, Any]
     ) -> None:
-        """Detect potential naming inconsistencies."""
+        """
+        Detect potential naming inconsistencies across tool schemas.
+
+        Uses edit distance similarity to identify field names that might
+        represent the same concept but use different naming conventions.
+
+        Args:
+            field_types: Mapping of field names to their type usage across tools
+            analysis: Analysis dictionary to populate with findings
+
+        Side Effects:
+            Adds 'naming_inconsistencies' list to analysis with similar field
+            pairs that might benefit from standardization
+
+        Note:
+            Uses 0.7 similarity threshold to balance false positives with
+            meaningful suggestions (e.g., "p_value" vs "pvalue")
+        """
         # Group similar field names (simple similarity check)
         field_names = list(field_types.keys())
         similar_groups = []
@@ -277,10 +471,39 @@ class SchemaConsistencyChecker:
         analysis["naming_inconsistencies"] = similar_groups
 
     def _calculate_field_similarity(self, field1: str, field2: str) -> float:
-        """Calculate similarity between two field names."""
+        """
+        Calculate similarity between two field names using edit distance.
+
+        Computes normalized edit distance (Levenshtein distance) to measure
+        how similar two field names are, useful for detecting potential
+        naming inconsistencies across schemas.
+
+        Args:
+            field1: First field name to compare
+            field2: Second field name to compare
+
+        Returns:
+            Similarity score from 0.0 (completely different) to 1.0 (identical)
+
+        Example:
+            >>> checker._calculate_field_similarity("p_value", "pvalue")
+            0.875  # High similarity
+            >>> checker._calculate_field_similarity("name", "coefficient")
+            0.1    # Low similarity
+        """
 
         # Simple edit distance based similarity
         def edit_distance(s1, s2):
+            """
+            Calculate Levenshtein edit distance between two strings.
+
+            Args:
+                s1: First string
+                s2: Second string
+
+            Returns:
+                Minimum number of single-character edits needed to transform s1 into s2
+            """
             if len(s1) < len(s2):
                 return edit_distance(s2, s1)
             if len(s2) == 0:
@@ -306,7 +529,23 @@ class SchemaConsistencyChecker:
         return 1 - (distance / max_len)
 
     def _generate_consistency_recommendations(self, analysis: Dict[str, Any]) -> None:
-        """Generate recommendations for improving schema consistency."""
+        """
+        Generate recommendations for improving schema consistency.
+
+        Creates actionable suggestions for standardizing schemas across tools
+        based on detected type inconsistencies and naming variations.
+
+        Args:
+            analysis: Analysis dictionary containing consistency findings
+
+        Side Effects:
+            Adds 'recommendations' list to analysis with suggestions for
+            improving schema standardization across the tool ecosystem
+
+        Note:
+            Limits recommendations to top 3 issues per category to avoid
+            overwhelming output while highlighting the most impactful changes.
+        """
         recommendations = []
 
         if analysis["type_inconsistencies"]:
@@ -352,7 +591,31 @@ def validate_tool_output_with_diagnostics(
         include_drift_analysis: Whether to include schema drift analysis
 
     Returns:
-        Comprehensive validation report
+        Validation report dictionary containing:
+        - tool_name (str): Name of validated tool
+        - validation_passed (bool): Whether validation succeeded
+        - validation_errors (List[Dict]): Detailed error information
+        - drift_analysis (Dict): Schema drift analysis (if enabled)
+        - summary (str): Human-readable validation summary
+
+        Each validation error contains:
+        - message (str): Error description
+        - path (List): JSON path to problematic field
+        - value (str): Actual value (truncated if long)
+        - schema_path (List): JSON Schema path that failed
+
+    Example:
+        >>> report = validate_tool_output_with_diagnostics(
+        ...     "correlation_analysis",
+        ...     r_script_output,
+        ...     correlation_analysis._mcp_tool_output_schema
+        ... )
+        >>> if not report["validation_passed"]:
+        ...     print(report["summary"])
+        ...     for error in report["validation_errors"]:
+        ...         print(f"  ❌ {error['message']}")
+        >>> if report["drift_analysis"] and report["drift_analysis"]["extra_fields"]:
+        ...     print(f"New fields detected: {report['drift_analysis']['extra_fields']}")
     """
     report = {
         "tool_name": tool_name,
@@ -411,7 +674,32 @@ def validate_tool_output_with_diagnostics(
 
 
 def generate_schema_validation_report(validation_results: List[Dict[str, Any]]) -> str:
-    """Generate a human-readable schema validation report."""
+    """
+    Generate a human-readable schema validation report.
+
+    Creates a comprehensive markdown-formatted report summarizing schema
+    validation results across multiple tools, including failure analysis
+    and actionable recommendations.
+
+    Args:
+        validation_results: List of validation result dictionaries from
+                          validate_tool_output_with_diagnostics()
+
+    Returns:
+        Multi-line markdown string containing:
+        - Summary statistics (passed/failed counts)
+        - Common issues grouped by error type
+        - Detailed failure analysis for failed tools
+        - Prioritized recommendations for fixes
+
+    Example:
+        >>> results = [validate_tool_output_with_diagnostics(...)]
+        >>> report = generate_schema_validation_report(results)
+        >>> print(report)
+        # RMCP Schema Validation Report
+        📊 **Summary**: 8/10 tools passed validation
+        ...
+    """
 
     total_tools = len(validation_results)
     passed_tools = sum(

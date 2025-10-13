@@ -54,13 +54,25 @@ class SchemaValidationError(Exception):
 @pytest_asyncio.fixture
 async def context():
     """Create a test context for tool execution."""
-    ctx = Context(state=LifespanState.READY)
+    lifespan_state = LifespanState()
+    ctx = Context.create("test", "test_schema_validation", lifespan_state)
     yield ctx
-    await ctx.cleanup()
 
 
 class TestSchemaValidation:
-    """Test actual R output against declared schemas for all tools."""
+    """
+    Test actual R output against declared schemas for all tools.
+
+    Integration tests that execute real R statistical tools with sample data
+    and validate the JSON output against declared Python schemas. These tests
+    catch schema drift where R scripts evolve but schemas aren't updated.
+
+    Each test method:
+    1. Executes a real statistical tool with meaningful sample data
+    2. Validates JSON output structure against declared schema
+    3. Performs semantic validation of statistical results
+    4. Ensures type correctness and value constraints
+    """
 
     # Sample datasets for testing different tool categories
     SAMPLE_DATA = {
@@ -148,7 +160,14 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_linear_model_schema(self, context):
-        """Test linear regression output schema."""
+        """
+        Test linear regression output schema validation.
+
+        Validates that the linear_model tool produces R output matching its
+        declared schema, including coefficient dictionary structure, R-squared
+        values within valid range (0-1), and all required statistical fields.
+        Also verifies semantic correctness of statistical results.
+        """
         params = {
             "data": self.SAMPLE_DATA["regression"]["data"],
             "formula": "sales ~ advertising + price",
@@ -167,7 +186,13 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_correlation_analysis_schema(self, context):
-        """Test correlation analysis output schema."""
+        """
+        Test correlation analysis output schema validation.
+
+        Validates that correlation_analysis tool produces properly structured
+        correlation matrix output with correct variable names and symmetric
+        correlation coefficients. Ensures matrix dimensions match input data.
+        """
         params = {"data": self.SAMPLE_DATA["regression"]["data"], "method": "pearson"}
 
         result = await self._validate_tool_output(
@@ -182,7 +207,13 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_logistic_regression_schema(self, context):
-        """Test logistic regression output schema."""
+        """
+        Test logistic regression output schema validation.
+
+        Validates that logistic_regression tool produces correct GLM output
+        including odds ratios, McFadden's R-squared, and binary classification
+        metrics. Ensures family and link function are properly reported.
+        """
         params = {
             "data": self.SAMPLE_DATA["regression"]["binary_outcome"],
             "formula": "outcome ~ predictor",
@@ -201,7 +232,13 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_arima_model_schema(self, context):
-        """Test ARIMA model output schema."""
+        """
+        Test ARIMA model output schema validation.
+
+        Validates that arima_model tool produces time series model output
+        with correct coefficient structure, model order specification,
+        and time series diagnostics matching the declared schema.
+        """
         params = {"data": self.SAMPLE_DATA["timeseries"]["ts_data"], "order": [1, 1, 1]}
 
         result = await self._validate_tool_output(
@@ -216,7 +253,13 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_summary_stats_schema(self, context):
-        """Test summary statistics output schema."""
+        """
+        Test summary statistics output schema validation.
+
+        Validates that summary_stats tool produces descriptive statistics
+        with correct numeric types (mean, sd, etc.) and observation counts
+        matching the input data structure and declared schema.
+        """
         params = {
             "data": self.SAMPLE_DATA["descriptive"]["numeric_data"],
             "variables": ["values"],
@@ -236,7 +279,13 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_t_test_schema(self, context):
-        """Test t-test output schema."""
+        """
+        Test t-test output schema validation.
+
+        Validates that t_test tool produces statistical test results with
+        correct p-value range (0-1), test statistic types, and test type
+        classification matching the declared schema structure.
+        """
         params = {
             "data": {
                 "group1": self.SAMPLE_DATA["statistical_tests"]["group1"],
@@ -256,7 +305,13 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_kmeans_clustering_schema(self, context):
-        """Test k-means clustering output schema."""
+        """
+        Test k-means clustering output schema validation.
+
+        Validates that kmeans_clustering tool produces clustering results
+        with correct cluster assignment arrays, centroid structures, and
+        k-value matching input parameters and declared schema.
+        """
         params = {
             "data": self.SAMPLE_DATA["machine_learning"]["features"],
             "k": 2,
@@ -276,7 +331,13 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_data_standardization_schema(self, context):
-        """Test data standardization output schema."""
+        """
+        Test data standardization output schema validation.
+
+        Validates that standardize tool produces transformed data with
+        correct column structure, maintained data dimensions, and proper
+        standardization method reporting matching the declared schema.
+        """
         params = {
             "data": self.SAMPLE_DATA["machine_learning"]["features"],
             "variables": ["feature1", "feature2"],
@@ -297,7 +358,13 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_load_example_schema(self, context):
-        """Test example data loading output schema."""
+        """
+        Test example data loading output schema validation.
+
+        Validates that load_example tool produces dataset output with
+        correct data structure, metadata fields, and size specifications
+        matching the requested parameters and declared schema.
+        """
         params = {"dataset_name": "sales", "size": "small"}
 
         result = await self._validate_tool_output(helpers.load_example, params, context)
@@ -310,7 +377,13 @@ class TestSchemaValidation:
 
     @pytest.mark.asyncio
     async def test_suggest_fix_schema(self, context):
-        """Test error suggestion output schema."""
+        """
+        Test error suggestion output schema validation.
+
+        Validates that suggest_fix tool produces error analysis with
+        correct error type classification, suggestion list structure,
+        and diagnostic information matching the declared schema.
+        """
         params = {"error_message": "there is no package called 'forecast'"}
 
         result = await self._validate_tool_output(helpers.suggest_fix, params, context)
@@ -328,10 +401,22 @@ class TestSchemaValidation:
 
 
 class TestSchemaConsistency:
-    """Test schema consistency across tool definitions."""
+    """
+    Test schema consistency across tool definitions.
+
+    Validates that all tool schemas follow consistent structural patterns
+    and use valid JSON Schema types. Helps maintain schema quality and
+    consistency across the entire statistical tool ecosystem.
+    """
 
     def test_all_tools_have_consistent_schema_structure(self):
-        """Verify all output schemas follow consistent structure."""
+        """
+        Verify all output schemas follow consistent structure.
+
+        Checks that every tool's output schema has required fields (type,
+        properties), follows object schema pattern, and declares required
+        fields that actually exist in the properties definition.
+        """
         tool_modules = [
             regression,
             descriptive,
@@ -388,7 +473,13 @@ class TestSchemaConsistency:
             )
 
     def test_schema_field_types_are_valid(self):
-        """Verify all schema field types are valid JSON Schema types."""
+        """
+        Verify all schema field types are valid JSON Schema types.
+
+        Recursively validates that all type declarations in tool schemas
+        use only valid JSON Schema type names (string, number, integer,
+        boolean, array, object, null) and proper union type syntax.
+        """
         valid_types = {
             "string",
             "number",
@@ -458,7 +549,28 @@ class TestSchemaConsistency:
 def analyze_schema_mismatch(
     actual_output: Dict[str, Any], expected_schema: Dict[str, Any]
 ) -> str:
-    """Analyze and provide detailed information about schema mismatches."""
+    """
+    Analyze and provide detailed information about schema mismatches.
+
+    Debugging utility that examines actual tool output against expected schema
+    and generates human-readable explanations of validation failures.
+
+    Args:
+        actual_output: Dictionary containing actual tool output
+        expected_schema: JSON Schema definition for expected output
+
+    Returns:
+        Human-readable string describing specific mismatches found,
+        or "No obvious issues detected" if no problems identified
+
+    Example:
+        >>> mismatch_info = analyze_schema_mismatch(
+        ...     {"r_squared": "0.85"},  # string instead of number
+        ...     {"properties": {"r_squared": {"type": "number"}}}
+        ... )
+        >>> print(mismatch_info)
+        "Field 'r_squared': expected number, got string"
+    """
     issues = []
 
     if expected_schema.get("type") == "object" and "properties" in expected_schema:
