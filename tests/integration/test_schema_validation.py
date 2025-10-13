@@ -239,7 +239,10 @@ class TestSchemaValidation:
         with correct coefficient structure, model order specification,
         and time series diagnostics matching the declared schema.
         """
-        params = {"data": {"values": self.SAMPLE_DATA["timeseries"]["ts_data"]}, "order": [1, 1, 1]}
+        params = {
+            "data": {"values": self.SAMPLE_DATA["timeseries"]["ts_data"]},
+            "order": [1, 1, 1],
+        }
 
         result = await self._validate_tool_output(
             timeseries.arima_model, params, context
@@ -304,10 +307,10 @@ class TestSchemaValidation:
 
         # Additional semantic validation
         assert result["test_type"] in [
-            "One-sample t-test", 
-            "Paired t-test", 
-            "Two-sample t-test (equal variances)", 
-            "Welch's t-test"
+            "One-sample t-test",
+            "Paired t-test",
+            "Two-sample t-test (equal variances)",
+            "Welch's t-test",
         ]
         assert 0 <= result["p_value"] <= 1
         assert isinstance(result["statistic"], (int, float))
