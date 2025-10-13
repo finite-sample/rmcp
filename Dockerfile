@@ -42,7 +42,8 @@ RUN set -eux; \
         "pytest>=8.0.0" \
         "pytest-asyncio>=0.21.0" \
         "click>=8.1.0" \
-        "jsonschema>=4.0.0"
+        "jsonschema>=4.0.0" \
+        "build>=0.10.0"
 
 # Ensure venv tools are first on PATH for subsequent steps/CI
 ENV PATH="$VENV/bin:$PATH"
