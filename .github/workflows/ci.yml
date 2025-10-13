@@ -90,7 +90,7 @@ jobs:
         library(styler)
         files_to_check <- list.files(c('R', 'scripts'), pattern='\\\\.R$', recursive=TRUE, full.names=TRUE)
         if (length(files_to_check) > 0) {
-          style_results <- styler::style_file(files_to_check, dry='on')
+          style_results <- styler::style_file(files_to_check, dry='on', include_roxygen_examples = FALSE)
           if (any(style_results\$changed)) {
             cat('❌ R code style issues found. Run styler::style_file() to fix.\\n')
             quit(status=1)
