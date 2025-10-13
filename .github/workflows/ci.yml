@@ -100,27 +100,25 @@ jobs:
         }
         "
     
-    # Temporarily skip R linting due to DCF parsing issues in lintr
-    # R code quality is ensured through styler formatting (above) and Python tests
-    # - name: R Code linting
-    #   working-directory: rmcp/r_assets
-    #   run: |
-    #     R -e "
-    #     # Lint R code
-    #     library(lintr)
-    #     files_to_lint <- list.files(c('R', 'scripts'), pattern='\\\\.R$', recursive=TRUE, full.names=TRUE)
-    #     if (length(files_to_lint) > 0) {
-    #       lint_results <- lapply(files_to_lint, lintr::lint)
-    #       all_lints <- unlist(lint_results, recursive=FALSE)
-    #       if (length(all_lints) > 0) {
-    #         print(all_lints)
-    #         cat('❌ R linting issues found\\n')
-    #         quit(status=1)
-    #       } else {
-    #         cat('✅ R linting passed\\n')
-    #       }
-    #     }
-    #     "
+    - name: R Code linting
+      working-directory: rmcp/r_assets
+      run: |
+        R -e "
+        # Lint R code
+        library(lintr)
+        files_to_lint <- list.files(c('R', 'scripts'), pattern='\\\\.R$', recursive=TRUE, full.names=TRUE)
+        if (length(files_to_lint) > 0) {
+          lint_results <- lapply(files_to_lint, lintr::lint)
+          all_lints <- unlist(lint_results, recursive=FALSE)
+          if (length(all_lints) > 0) {
+            print(all_lints)
+            cat('❌ R linting issues found\\n')
+            quit(status=1)
+          } else {
+            cat('✅ R linting passed\\n')
+          }
+        }
+        "
     
     - name: R Package validation
       working-directory: rmcp/r_assets
