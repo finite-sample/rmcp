@@ -118,9 +118,9 @@ jobs:
       id: image
       run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
 
-  # Cross-platform tests
-  cross-platform-tests:
-    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+  # Cross-platform Python-only tests (fast, no R installation)
+  cross-platform-python:
+    name: Python tests on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     needs: lint-and-smoke
     
@@ -139,88 +139,75 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     
-    - name: Set up R (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: '4.4'
-        
-    - name: Install R packages (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        R -e "install.packages(c('jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', 'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', 'rlang', 'knitr', 'broom'), repos='https://cran.rstudio.com/')"
-    
-    - name: Set up R (macOS)
-      if: matrix.os == 'macos-latest'
-      uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: '4.4'
-        
-    - name: Install R packages (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        R -e "install.packages(c('jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', 'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', 'rlang', 'knitr', 'broom'), repos='https://cran.rstudio.com/')"
-    
-    - name: Set up R (Windows)
-      if: matrix.os == 'windows-latest'
-      uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: '4.4'
-        
-    - name: Install R packages (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        Rscript.exe -e "install.packages(c('jsonlite', 'plm', 'lmtest', 'sandwich', 'AER', 'dplyr', 'forecast', 'vars', 'urca', 'tseries', 'nortest', 'car', 'rpart', 'randomForest', 'ggplot2', 'gridExtra', 'tidyr', 'rlang', 'knitr', 'broom'), repos='https://cran.rstudio.com/')"
-      shell: powershell
-    
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install poetry
         poetry install --with dev
     
-    - name: Verify R installation
+    # Test Python-only functionality (no R required)
+    - name: Test Python imports and basic functionality
       run: |
-        R --version
-        poetry run python -c "import subprocess; subprocess.run(['R', '--version'], check=True)"
+        poetry run python -c "from rmcp.core.server import create_server; print('✅ Server creation works')"
+        poetry run rmcp --version
+        poetry run rmcp list-capabilities
+
+  # R-dependent tests using Docker (Ubuntu only, all R packages pre-installed)
+  integration-tests-docker:
+    name: R Integration Tests (Docker)
+    runs-on: ubuntu-latest
+    needs: [lint-and-smoke, docker-build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    container:
+      image: ${{ needs.docker-build.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    # All R packages and Python environment pre-installed in Docker image
+    - name: Install RMCP in development mode
+      run: pip install -e .
+    
+    - name: Verify R and Python environment
+      run: |
+        python --version
+        R --version | head -1
+        python -c "from rmcp.r_integration import diagnose_r_installation; import json; print(json.dumps(diagnose_r_installation(), indent=2))"
     
     - name: Run unit tests
       run: |
-        poetry run pytest tests/unit/ -v --tb=short
+        pytest tests/unit/ -v --tb=short
     
     - name: Run MCP protocol compliance tests
       run: |
-        poetry run pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short
+        pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short
     
     - name: Run integration tests
       run: |
-        poetry run pytest tests/integration/test_mcp_interface.py -v --tb=short
+        pytest tests/integration/test_mcp_interface.py -v --tb=short
     
     - name: Test RMCP CLI
       run: |
-        poetry run rmcp --version
-        poetry run rmcp list-capabilities
+        rmcp --version
+        rmcp list-capabilities
     
-    - name: Test basic tool execution (Unix)
-      if: matrix.os != 'windows-latest'
+    - name: Test basic tool execution
       run: |
-        echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | poetry run rmcp start --quiet | head -20
-    
-    - name: Test basic tool execution (Windows)
-      if: matrix.os == 'windows-latest'
-      shell: powershell
-      run: |
-        echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | poetry run rmcp start --quiet
+        echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -20
     
     - name: Test package installation
       run: |
-        poetry build
+        python -m build
         pip install dist/*.whl
         rmcp --version
     
-    - name: Run platform-specific tests
+    - name: Test subprocess integration  
       run: |
-        poetry run python -c "
+        python -c "
         import platform
         import subprocess
         import sys
@@ -237,12 +224,12 @@ jobs:
         assert result.returncode == 0, 'R subprocess test failed'
         print('✅ R subprocess works')
         
-        print('✅ Platform-specific tests passed')
+        print('✅ Subprocess integration tests passed')
         "
     
     - name: Test MCP Protocol stdio communication
       run: |
-        poetry run python -c "
+        python -c "
         import subprocess
         import json
         import sys
@@ -259,7 +246,7 @@ jobs:
             }
         }
         
-        process = subprocess.Popen([sys.executable, '-m', 'rmcp.cli', 'start'],
+        process = subprocess.Popen(['rmcp', 'start'],
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
                                  stderr=subprocess.PIPE, text=True)
         
@@ -287,35 +274,31 @@ jobs:
         "
 
 
-  # Test Python 3.12 compatibility (Ubuntu only)
-  test-python-312:
-    name: Test Python 3.12 Compatibility
+  # Test using Docker environment (all R packages pre-installed)
+  test-docker-env:
+    name: Test with Docker Environment
     runs-on: ubuntu-latest
-    needs: lint-and-smoke
+    needs: [lint-and-smoke, docker-build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    container:
+      image: ${{ needs.docker-build.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.12"
+    # All R packages and Python environment pre-installed in Docker image
+    - name: Install RMCP in development mode
+      run: pip install -e .
     
-    - name: Set up R
-      uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: '4.4'
-        
-    - name: Install R packages
+    - name: Verify Python environment
       run: |
-        R -e "install.packages(c('jsonlite', 'dplyr', 'ggplot2', 'broom'), repos='https://cran.rstudio.com/')"
-    
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry
-        poetry install --with dev
+        python --version
+        python -c "import sys; print(f'Python version: {sys.version}')"
+        R --version | head -1
     
     - name: Run unit tests
       run: |
