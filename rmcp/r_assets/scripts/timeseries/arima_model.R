@@ -54,7 +54,7 @@ result <- list(
     forecasts = as.numeric(forecasts$mean),
     forecast_lower = as.numeric(forecasts$lower[,2]),  # 95% CI
     forecast_upper = as.numeric(forecasts$upper[,2]),
-    accuracy = accuracy(model),
+    accuracy = Filter(function(x) !is.na(x) && !is.null(x), as.list(as.data.frame(accuracy(model))[1,])),  # Convert to named list, remove NAs
     n_obs = length(values),
 
     # Special non-validated field for formatting

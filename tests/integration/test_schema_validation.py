@@ -118,11 +118,11 @@ class TestSchemaValidation:
         },
         "machine_learning": {
             "features": {
-                "feature1": [1, 2, 3, 4, 5, 6, 7, 8],
-                "feature2": [2, 4, 6, 8, 10, 12, 14, 16],
-                "feature3": [1, 3, 5, 7, 9, 11, 13, 15],
+                "feature1": [1.2, 2.8, 3.1, 4.7, 5.3, 6.9, 7.2, 8.5],
+                "feature2": [2.3, 4.1, 6.7, 8.2, 10.8, 12.1, 14.6, 16.3],
+                "feature3": [1.8, 3.2, 5.9, 7.4, 9.1, 11.7, 13.2, 15.6],
             },
-            "target_numeric": [10, 20, 30, 40, 50, 60, 70, 80],
+            "target_numeric": [10.5, 20.2, 30.8, 40.1, 50.7, 60.3, 70.9, 80.4],
             "target_categorical": ["A", "B", "A", "B", "A", "B", "A", "B"],
         },
     }
@@ -239,7 +239,7 @@ class TestSchemaValidation:
         with correct coefficient structure, model order specification,
         and time series diagnostics matching the declared schema.
         """
-        params = {"data": self.SAMPLE_DATA["timeseries"]["ts_data"], "order": [1, 1, 1]}
+        params = {"data": {"values": self.SAMPLE_DATA["timeseries"]["ts_data"]}, "order": [1, 1, 1]}
 
         result = await self._validate_tool_output(
             timeseries.arima_model, params, context
@@ -286,12 +286,16 @@ class TestSchemaValidation:
         correct p-value range (0-1), test statistic types, and test type
         classification matching the declared schema structure.
         """
+        # Create single dataset with grouping variable for t-test
+        group1_data = self.SAMPLE_DATA["statistical_tests"]["group1"]
+        group2_data = self.SAMPLE_DATA["statistical_tests"]["group2"]
         params = {
             "data": {
-                "group1": self.SAMPLE_DATA["statistical_tests"]["group1"],
-                "group2": self.SAMPLE_DATA["statistical_tests"]["group2"],
+                "value": group1_data + group2_data,
+                "group": ["group1"] * len(group1_data) + ["group2"] * len(group2_data),
             },
-            "test_type": "two_sample",
+            "variable": "value",
+            "group": "group",
         }
 
         result = await self._validate_tool_output(
@@ -299,7 +303,12 @@ class TestSchemaValidation:
         )
 
         # Additional semantic validation
-        assert result["test_type"] in ["one_sample", "two_sample", "paired"]
+        assert result["test_type"] in [
+            "One-sample t-test", 
+            "Paired t-test", 
+            "Two-sample t-test (equal variances)", 
+            "Welch's t-test"
+        ]
         assert 0 <= result["p_value"] <= 1
         assert isinstance(result["statistic"], (int, float))
 
@@ -314,8 +323,8 @@ class TestSchemaValidation:
         """
         params = {
             "data": self.SAMPLE_DATA["machine_learning"]["features"],
+            "variables": ["feature1", "feature2"],  # Specify which variables to use
             "k": 2,
-            "algorithm": "Lloyd",
         }
 
         result = await self._validate_tool_output(
@@ -327,7 +336,7 @@ class TestSchemaValidation:
         assert len(result["cluster_assignments"]) == len(
             self.SAMPLE_DATA["machine_learning"]["features"]["feature1"]
         )
-        assert len(result["centers"]) == 2
+        assert len(result["cluster_centers"]) == 2
 
     @pytest.mark.asyncio
     async def test_data_standardization_schema(self, context):

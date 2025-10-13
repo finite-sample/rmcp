@@ -57,7 +57,7 @@ if (is.null(group_by)) {
     }
     result <- list(
         statistics = stats_list,
-        variables = variables,
+        variables = I(as.character(variables)),  # I() preserves vector structure in JSON
         n_obs = nrow(data),
         grouped = FALSE
     )
@@ -92,9 +92,9 @@ if (is.null(group_by)) {
     }
     result <- list(
         statistics = grouped_stats,
-        variables = variables,
+        variables = I(as.character(variables)),  # I() preserves vector structure in JSON
         group_by = group_by,
-        groups = as.character(groups),
+        groups = I(as.character(groups)),  # Also preserve groups as array
         n_obs = nrow(data),
         grouped = TRUE
     )
