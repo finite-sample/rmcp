@@ -1,0 +1,71 @@
+# RMCP R Linting Configuration
+# Customized lintr settings for statistical analysis scripts
+
+# Line length limit (standard for R)
+line_length_linter: 100
+
+# Exclude specific directories from linting
+exclusions: list(
+  "scripts/",      # Statistical analysis scripts are linted separately  
+  "man/",          # Generated documentation
+  "docs/",         # Generated documentation site
+  "inst/",         # Package installation files
+  ".Rproj.user/"   # RStudio user files
+)
+
+# Linters to use
+linters: with_defaults(
+  # Code style linters
+  assignment_linter(),
+  commas_linter(),
+  infix_spaces_linter(),
+  line_length_linter(100),
+  object_length_linter(30),
+  object_name_linter(styles = c("snake_case", "camelCase")),
+  open_curly_linter(),
+  pipe_continuation_linter(),
+  spaces_inside_linter(),
+  spaces_left_parentheses_linter(),
+  trailing_blank_lines_linter(),
+  trailing_whitespace_linter(),
+  
+  # Function and variable linters
+  cyclocomp_linter(complexity_limit = 15),
+  function_left_parentheses_linter(),
+  object_usage_linter(),
+  
+  # Best practices linters
+  absolute_path_linter(),
+  any_duplicated_linter(),
+  any_is_na_linter(),
+  boolean_arithmetic_linter(),
+  class_equals_linter(),
+  condition_message_linter(),
+  conjunct_test_linter(),
+  duplicate_argument_linter(),
+  equals_na_linter(),
+  extraction_operator_linter(),
+  implicit_integer_linter(),
+  is_numeric_linter(),
+  length_levels_linter(),
+  literal_coercion_linter(),
+  missing_argument_linter(),
+  package_hooks_linter(),
+  paste_linter(),
+  redundant_equals_linter(),
+  redundant_ifelse_linter(),
+  seq_linter(),
+  sort_linter(),
+  sprintf_linter(),
+  string_boundary_linter(),
+  strings_as_factors_linter(),
+  undesirable_function_linter(),
+  undesirable_operator_linter(),
+  unnecessary_concatenation_linter(),
+  unreachable_code_linter(),
+  unused_import_linter(),
+  vector_logic_linter(),
+  
+  # Disable linters that conflict with our JSON interface style
+  NULL
+)

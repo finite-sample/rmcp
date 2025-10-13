@@ -5,6 +5,46 @@
 # with support for grouped analysis and customizable percentiles.
 
 library(dplyr)
+library(jsonlite)
+
+# Determine script directory for path resolution
+script_dir <- if (exists("testthat_testing") && testthat_testing) {
+    # Running under testthat - use relative path from test directory
+    file.path("..", "..", "R")
+} else {
+    # Running normally - use relative path from script location
+    file.path("..", "..", "R")
+}
+
+# Load RMCP utilities
+utils_path <- file.path(script_dir, "utils.R")
+if (file.exists(utils_path)) {
+    source(utils_path)
+} else {
+    stop("Cannot find RMCP utilities at: ", utils_path)
+}
+
+# Parse command line arguments
+args <- if (exists("test_args")) {
+    # Use test arguments if provided (for testthat)
+    test_args
+} else {
+    # Parse from command line
+    cmd_args <- commandArgs(trailingOnly = TRUE)
+    if (length(cmd_args) == 0) {
+        stop("No JSON arguments provided")
+    }
+    
+    # Parse JSON input
+    tryCatch({
+        fromJSON(cmd_args[1])
+    }, error = function(e) {
+        stop("Failed to parse JSON arguments: ", e$message)
+    })
+}
+
+# Validate input
+args <- validate_json_input(args, required = c("data"))
 
 # Prepare data and parameters
 data <- as.data.frame(args$data)
@@ -114,3 +154,6 @@ if (is.null(group_by)) {
         interpretation = paste0("Summary statistics for ", length(variables), " variables across ", length(groups), " groups.")
     )
 }
+
+# Output results in standard JSON format
+cat(safe_json(format_json_output(result)))

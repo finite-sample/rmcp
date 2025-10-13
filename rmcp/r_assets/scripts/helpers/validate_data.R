@@ -4,6 +4,84 @@
 # This script validates data quality and identifies potential issues
 # before statistical analysis, with analysis-specific checks.
 
+
+# Load required libraries
+library(jsonlite)
+
+# Determine script directory for path resolution
+script_dir <- if (exists("testthat_testing") && testthat_testing) {
+    # Running under testthat - use relative path from test directory
+    file.path("..", "..", "R")
+} else {
+    # Try multiple possible paths for utils.R
+    possible_paths <- c(
+        file.path("..", "..", "R"),  # Normal relative path
+        file.path(getwd(), "rmcp", "r_assets", "R"),  # From project root
+        file.path(getwd(), "R"),  # Direct R directory
+        "/workspace/rmcp/r_assets/R"  # Docker path
+    )
+    
+    # Try to add script-relative path if possible
+    tryCatch({
+        script_location <- sys.frame(1)$ofile
+        if (!is.null(script_location)) {
+            script_based_path <- file.path(dirname(script_location), "..", "..", "R")
+            possible_paths <- c(possible_paths, script_based_path)
+        }
+    }, error = function(e) {
+        # sys.frame() not available or no calling frame - continue without it
+    })
+    
+    # Find the first path that contains utils.R
+    found_path <- NULL
+    for (path in possible_paths) {
+        if (file.exists(file.path(path, "utils.R"))) {
+            found_path <- path
+            break
+        }
+    }
+    
+    if (is.null(found_path)) {
+        file.path("..", "..", "R")  # Fallback to default
+    } else {
+        found_path
+    }
+}
+
+# Load RMCP utilities
+utils_path <- file.path(script_dir, "utils.R")
+if (file.exists(utils_path)) {
+    source(utils_path)
+} else {
+    stop("Cannot find RMCP utilities at: ", utils_path)
+}
+
+# Parse command line arguments
+if (!exists("args")) {
+    args <- if (exists("test_args")) {
+        # Use test arguments if provided (for testthat)
+        test_args
+    } else {
+        # Parse from command line
+        cmd_args <- commandArgs(trailingOnly = TRUE)
+        if (length(cmd_args) == 0) {
+            stop("No JSON arguments provided")
+        }
+        
+        # Parse JSON input
+        tryCatch({
+            fromJSON(cmd_args[1])
+        }, error = function(e) {
+            stop("Failed to parse JSON arguments: ", e$message)
+        })
+    }
+}
+
+
+# Validate input
+args <- validate_json_input(args, required = c("data"))
+
+# Main script logic
 library(dplyr)
 
 # Prepare data and parameters
@@ -208,3 +286,9 @@ validation_results$errors <- if(length(validation_results$errors) == 0) characte
 validation_results$suggestions <- if(length(validation_results$suggestions) == 0) character(0) else validation_results$suggestions
 
 result <- validation_results
+# Output results in standard JSON format
+if (exists("result")) {
+    cat(safe_json(format_json_output(result)))
+} else {
+    cat(safe_json(list(error = "No result generated", success = FALSE)))
+}

@@ -55,11 +55,179 @@ jobs:
         # Test non-R dependent unit tests
         python -m pytest tests/unit/core/test_server.py -v
 
+  # R linting and testing
+  r-lint-and-test:
+    name: R Lint & Test
+    runs-on: ubuntu-latest
+    needs: lint-and-smoke
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: '4.4'
+        use-public-rspm: true
+    
+    - name: Install R system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+    
+    - name: Install R dependencies
+      working-directory: rmcp/r_assets
+      run: |
+        # Install essential packages
+        R -e "install.packages(c('jsonlite', 'dplyr', 'ggplot2', 'knitr', 'testthat', 'lintr', 'styler', 'covr'), repos='https://cran.r-project.org')"
+        # Install additional statistical packages for full testing
+        R -e "install.packages(c('broom', 'forecast', 'cluster', 'rpart', 'randomForest'), repos='https://cran.r-project.org')"
+    
+    - name: R Code formatting check
+      working-directory: rmcp/r_assets
+      run: |
+        R -e "
+        # Check R code style
+        library(styler)
+        files_to_check <- list.files(c('R', 'scripts'), pattern='\\\\.R$', recursive=TRUE, full.names=TRUE)
+        if (length(files_to_check) > 0) {
+          style_results <- styler::style_file(files_to_check, dry='on')
+          if (any(style_results\$changed)) {
+            cat('❌ R code style issues found. Run styler::style_file() to fix.\\n')
+            quit(status=1)
+          } else {
+            cat('✅ R code style check passed\\n')
+          }
+        }
+        "
+    
+    - name: R Code linting
+      working-directory: rmcp/r_assets
+      run: |
+        R -e "
+        # Lint R code
+        library(lintr)
+        files_to_lint <- list.files(c('R', 'scripts'), pattern='\\\\.R$', recursive=TRUE, full.names=TRUE)
+        if (length(files_to_lint) > 0) {
+          lint_results <- lapply(files_to_lint, lintr::lint)
+          all_lints <- unlist(lint_results, recursive=FALSE)
+          if (length(all_lints) > 0) {
+            print(all_lints)
+            cat('❌ R linting issues found\\n')
+            quit(status=1)
+          } else {
+            cat('✅ R linting passed\\n')
+          }
+        }
+        "
+    
+    - name: R Package validation
+      working-directory: rmcp/r_assets
+      run: |
+        # Validate R package structure
+        R -e "
+        if (file.exists('DESCRIPTION')) {
+          # Basic package structure check
+          desc <- read.dcf('DESCRIPTION')
+          required_fields <- c('Package', 'Title', 'Version', 'Description')
+          missing_fields <- required_fields[!required_fields %in% colnames(desc)]
+          if (length(missing_fields) > 0) {
+            cat('❌ Missing required DESCRIPTION fields:', paste(missing_fields, collapse=', '), '\\n')
+            quit(status=1)
+          }
+          cat('✅ R package structure validation passed\\n')
+        }
+        "
+    
+    - name: R Unit tests
+      working-directory: rmcp/r_assets
+      run: |
+        # Run R utility tests
+        R -e "
+        library(testthat)
+        # Set testing flag for scripts
+        testthat_testing <- TRUE
+        
+        # Test just the utilities first
+        result <- test_file('tests/testthat/test-utilities.R', reporter='summary')
+        
+        if (length(result) > 0 && any(sapply(result, function(x) x\$failed > 0))) {
+          cat('❌ R utility tests failed\\n')
+          quit(status=1)
+        } else {
+          cat('✅ R utility tests passed\\n')
+        }
+        "
+    
+    - name: R Script validation
+      working-directory: rmcp/r_assets
+      run: |
+        # Test that key R scripts can be parsed without errors
+        R -e "
+        # Test a few key scripts to ensure they can be parsed
+        key_scripts <- c(
+          'scripts/descriptive/summary_stats.R',
+          'scripts/regression/linear_model.R',
+          'scripts/fileops/read_csv.R'
+        )
+        
+        for (script in key_scripts) {
+          if (file.exists(script)) {
+            tryCatch({
+              parse(script)
+              cat('✅ Script parsed successfully:', script, '\\n')
+            }, error = function(e) {
+              cat('❌ Script parse error in', script, ':', e\$message, '\\n')
+              quit(status=1)
+            })
+          }
+        }
+        cat('✅ R script validation passed\\n')
+        "
+    
+    - name: Generate R coverage report
+      working-directory: rmcp/r_assets
+      run: |
+        R -e "
+        library(covr)
+        library(testthat)
+        
+        # Set testing flag
+        testthat_testing <- TRUE
+        
+        # Generate coverage for R utilities
+        cov <- tryCatch({
+          package_coverage('.', type='tests', quiet=FALSE)
+        }, error = function(e) {
+          cat('⚠️ R coverage generation failed:', e\$message, '\\n')
+          NULL
+        })
+        
+        if (!is.null(cov)) {
+          # Generate coverage report
+          report_coverage <- coverage_to_cobertura(cov, filename='coverage.xml')
+          cat('✅ R coverage report generated\\n')
+          
+          # Print coverage summary
+          print(cov)
+        } else {
+          cat('⚠️ Skipping R coverage due to test issues\\n')
+        }
+        "
+    
+    - name: Upload R coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./rmcp/r_assets/coverage.xml
+        flags: r
+        name: r-coverage
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
   # Build Docker image with all R packages for faster testing (only on main branch)
   docker-build:
     name: Build CI Docker Image
     runs-on: ubuntu-latest
-    needs: lint-and-smoke
+    needs: [lint-and-smoke, r-lint-and-test]
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     permissions:
       contents: read
@@ -122,7 +290,7 @@ jobs:
   cross-platform-python:
     name: Python tests on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    needs: lint-and-smoke
+    needs: [lint-and-smoke, r-lint-and-test]
     
     strategy:
       fail-fast: false
@@ -178,21 +346,30 @@ jobs:
         R --version | head -1
         python -c "from rmcp.r_integration import diagnose_r_installation; import json; print(json.dumps(diagnose_r_installation(), indent=2))"
     
-    - name: Run unit tests
+    - name: Run unit tests with coverage
       run: |
-        pytest tests/unit/ -v --tb=short
+        pytest tests/unit/ -v --tb=short --cov=rmcp --cov-report=xml --cov-report=term-missing
     
     - name: Run MCP protocol compliance tests
       run: |
-        pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short
+        pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short --cov=rmcp --cov-append
     
     - name: Run integration tests
       run: |
-        pytest tests/integration/test_mcp_interface.py -v --tb=short
+        pytest tests/integration/test_mcp_interface.py -v --tb=short --cov=rmcp --cov-append
     
     - name: Run schema validation tests
       run: |
-        pytest tests/integration/test_schema_validation.py -v --tb=short
+        pytest tests/integration/test_schema_validation.py -v --tb=short --cov=rmcp --cov-append
+    
+    - name: Upload Python coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: python
+        name: python-coverage
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
     
     - name: Test RMCP CLI
       run: |
@@ -229,6 +406,42 @@ jobs:
         print('✅ R subprocess works')
         
         print('✅ Subprocess integration tests passed')
+        "
+    
+    - name: Test R script execution
+      run: |
+        # Test direct R script execution with our fixed boilerplate
+        cd rmcp/r_assets/scripts/descriptive
+        R -e "
+        # Test that our fixed R scripts work in the Docker environment
+        testthat_testing <- TRUE
+        result <- tryCatch({
+          system('Rscript summary_stats.R \'{\"data\":[{\"x\":1,\"y\":2},{\"x\":2,\"y\":4}]}\'', intern=TRUE)
+        }, error = function(e) {
+          cat('Error running R script:', e\$message, '\n')
+          NULL
+        })
+        
+        if (!is.null(result) && length(result) > 0) {
+          # Try to parse JSON result
+          library(jsonlite)
+          tryCatch({
+            json_result <- fromJSON(result[length(result)])
+            if ('statistics' %in% names(json_result)) {
+              cat('✅ R script execution works in Docker environment\n')
+            } else {
+              cat('❌ R script output missing expected fields\n')
+              quit(status=1)
+            }
+          }, error = function(e) {
+            cat('❌ R script output is not valid JSON:', e\$message, '\n')
+            cat('Raw output:', paste(result, collapse='\n'), '\n')
+            quit(status=1)
+          })
+        } else {
+          cat('❌ R script execution failed\n')
+          quit(status=1)
+        }
         "
     
     - name: Test MCP Protocol stdio communication

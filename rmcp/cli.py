@@ -505,7 +505,13 @@ def _validate_allowed_paths(paths: list[str]) -> list[str]:
 
 
 def _register_builtin_tools(server):
-    """Register built-in statistical tools."""
+    """Register built-in statistical tools and advanced MCP features."""
+    from .bidirectional import (
+        create_r_callback_session,
+        handle_r_callback,
+        list_callback_sessions,
+        setup_r_bidirectional,
+    )
     from .tools.descriptive import frequency_table, outlier_detection, summary_stats
     from .tools.econometrics import instrumental_variables, panel_regression, var_model
     from .tools.fileops import (
@@ -521,6 +527,14 @@ def _register_builtin_tools(server):
     from .tools.flexible_r import execute_r_analysis, list_allowed_r_packages
     from .tools.formula_builder import build_formula, validate_formula
     from .tools.helpers import load_example, suggest_fix, validate_data
+
+    # Import advanced MCP integration tools
+    from .tools.introspection import (
+        get_r_session_info,
+        inspect_r_object,
+        list_r_objects,
+        list_r_packages,
+    )
     from .tools.machine_learning import decision_tree, kmeans_clustering, random_forest
     from .tools.regression import (
         correlation_analysis,
@@ -598,8 +612,20 @@ def _register_builtin_tools(server):
         # Flexible R execution
         execute_r_analysis,
         list_allowed_r_packages,
+        # Advanced MCP Integration - R Session Management
+        list_r_objects,
+        inspect_r_object,
+        list_r_packages,
+        get_r_session_info,
+        # Advanced MCP Integration - Bidirectional Communication
+        create_r_callback_session,
+        handle_r_callback,
+        setup_r_bidirectional,
+        list_callback_sessions,
     )
-    logger.info("Registered comprehensive statistical analysis tools (44 total)")
+    logger.info(
+        "Registered comprehensive statistical analysis tools (52 total: 44 core + 8 advanced MCP)"
+    )
 
 
 if __name__ == "__main__":
