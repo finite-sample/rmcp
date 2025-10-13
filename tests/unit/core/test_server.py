@@ -90,13 +90,13 @@ def test_cli_basic():
     """Test basic CLI functionality."""
     print("\n🔍 Testing CLI")
     print("-" * 40)
-    
+
     # Try direct command first (works in Docker/CI), then fallback to poetry (local dev)
     commands_to_try = [
         (["rmcp", "--version"], "direct command"),
-        (["poetry", "run", "rmcp", "--version"], "poetry run command")
+        (["poetry", "run", "rmcp", "--version"], "poetry run command"),
     ]
-    
+
     for command, description in commands_to_try:
         try:
             result = subprocess.run(
@@ -121,9 +121,11 @@ def test_cli_basic():
         except Exception as e:
             print(f"⚠️  {description} failed: {e}")
             continue  # Try next command
-    
+
     # If we get here, none of the commands worked
-    assert False, "All CLI test commands failed - neither 'rmcp --version' nor 'poetry run rmcp --version' worked"
+    assert (
+        False
+    ), "All CLI test commands failed - neither 'rmcp --version' nor 'poetry run rmcp --version' worked"
 
 
 def main():
