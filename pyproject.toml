@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rmcp"
-version = "0.3.13"
+version = "0.4.0"
 description = "Comprehensive Model Context Protocol server with 44 statistical analysis tools, HTTP transport, and Server-Sent Events"
 authors = ["Gaurav Sood <gsood07@gmail.com>"]
 license = "MIT"

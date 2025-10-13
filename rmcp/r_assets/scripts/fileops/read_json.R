@@ -10,71 +10,77 @@ library(jsonlite)
 
 # Determine script directory for path resolution
 script_dir <- if (exists("testthat_testing") && testthat_testing) {
-    # Running under testthat - use relative path from test directory
-    file.path("..", "..", "R")
+  # Running under testthat - use relative path from test directory
+  file.path("..", "..", "R")
 } else {
-    # Try multiple possible paths for utils.R
-    possible_paths <- c(
-        file.path("..", "..", "R"),  # Normal relative path
-        file.path(getwd(), "rmcp", "r_assets", "R"),  # From project root
-        file.path(getwd(), "R"),  # Direct R directory
-        "/workspace/rmcp/r_assets/R"  # Docker path
-    )
-    
-    # Try to add script-relative path if possible
-    tryCatch({
-        script_location <- sys.frame(1)$ofile
-        if (!is.null(script_location)) {
-            script_based_path <- file.path(dirname(script_location), "..", "..", "R")
-            possible_paths <- c(possible_paths, script_based_path)
-        }
-    }, error = function(e) {
-        # sys.frame() not available or no calling frame - continue without it
-    })
-    
-    # Find the first path that contains utils.R
-    found_path <- NULL
-    for (path in possible_paths) {
-        if (file.exists(file.path(path, "utils.R"))) {
-            found_path <- path
-            break
-        }
+  # Try multiple possible paths for utils.R
+  possible_paths <- c(
+    file.path("..", "..", "R"), # Normal relative path
+    file.path(getwd(), "rmcp", "r_assets", "R"), # From project root
+    file.path(getwd(), "R"), # Direct R directory
+    "/workspace/rmcp/r_assets/R" # Docker path
+  )
+
+  # Try to add script-relative path if possible
+  tryCatch(
+    {
+      script_location <- sys.frame(1)$ofile
+      if (!is.null(script_location)) {
+        script_based_path <- file.path(dirname(script_location), "..", "..", "R")
+        possible_paths <- c(possible_paths, script_based_path)
+      }
+    },
+    error = function(e) {
+      # sys.frame() not available or no calling frame - continue without it
     }
-    
-    if (is.null(found_path)) {
-        file.path("..", "..", "R")  # Fallback to default
-    } else {
-        found_path
+  )
+
+  # Find the first path that contains utils.R
+  found_path <- NULL
+  for (path in possible_paths) {
+    if (file.exists(file.path(path, "utils.R"))) {
+      found_path <- path
+      break
     }
+  }
+
+  if (is.null(found_path)) {
+    file.path("..", "..", "R") # Fallback to default
+  } else {
+    found_path
+  }
 }
 
 # Load RMCP utilities
 utils_path <- file.path(script_dir, "utils.R")
 if (file.exists(utils_path)) {
-    source(utils_path)
+  source(utils_path)
 } else {
-    stop("Cannot find RMCP utilities at: ", utils_path)
+  stop("Cannot find RMCP utilities at: ", utils_path)
 }
 
 # Parse command line arguments
 if (!exists("args")) {
-    args <- if (exists("test_args")) {
-        # Use test arguments if provided (for testthat)
-        test_args
-    } else {
-        # Parse from command line
-        cmd_args <- commandArgs(trailingOnly = TRUE)
-        if (length(cmd_args) == 0) {
-            stop("No JSON arguments provided")
-        }
-        
-        # Parse JSON input
-        tryCatch({
-            fromJSON(cmd_args[1])
-        }, error = function(e) {
-            stop("Failed to parse JSON arguments: ", e$message)
-        })
+  args <- if (exists("test_args")) {
+    # Use test arguments if provided (for testthat)
+    test_args
+  } else {
+    # Parse from command line
+    cmd_args <- commandArgs(trailingOnly = TRUE)
+    if (length(cmd_args) == 0) {
+      stop("No JSON arguments provided")
     }
+
+    # Parse JSON input
+    tryCatch(
+      {
+        fromJSON(cmd_args[1])
+      },
+      error = function(e) {
+        stop("Failed to parse JSON arguments: ", e$message)
+      }
+    )
+  }
 }
 
 
@@ -89,68 +95,68 @@ array_to_rows <- args$array_to_rows %||% TRUE
 
 # Check if file exists
 if (!file.exists(file_path)) {
-    stop(paste("File not found:", file_path))
+  stop(paste("File not found:", file_path))
 }
 
 # Check if it's a URL
 if (grepl("^https?://", file_path)) {
-    # Read from URL
-    json_data <- fromJSON(file_path, flatten = flatten_data)
+  # Read from URL
+  json_data <- fromJSON(file_path, flatten = flatten_data)
 } else {
-    # Read from local file
-    json_data <- fromJSON(file_path, flatten = flatten_data)
+  # Read from local file
+  json_data <- fromJSON(file_path, flatten = flatten_data)
 }
 
 # Convert to data frame if possible
 if (is.list(json_data) && !is.data.frame(json_data)) {
-    # Try to convert list to data frame
-    if (all(sapply(json_data, length) == length(json_data[[1]]))) {
-        # All elements same length - can convert directly
-        data <- as.data.frame(json_data, stringsAsFactors = FALSE)
-    } else {
-        # Unequal lengths - need to flatten differently
-        data <- json_data %>%
-               as.data.frame(stringsAsFactors = FALSE)
-    }
+  # Try to convert list to data frame
+  if (all(sapply(json_data, length) == length(json_data[[1]]))) {
+    # All elements same length - can convert directly
+    data <- as.data.frame(json_data, stringsAsFactors = FALSE)
+  } else {
+    # Unequal lengths - need to flatten differently
+    data <- json_data %>%
+      as.data.frame(stringsAsFactors = FALSE)
+  }
 } else if (is.data.frame(json_data)) {
-    data <- json_data
+  data <- json_data
 } else {
-    # Create single-column data frame
-    data <- data.frame(value = json_data, stringsAsFactors = FALSE)
+  # Create single-column data frame
+  data <- data.frame(value = json_data, stringsAsFactors = FALSE)
 }
 
 # Get file info
 if (!grepl("^https?://", file_path)) {
-    file_info <- file.info(file_path)
-    file_size <- file_info$size
-    modified_date <- as.character(file_info$mtime)
+  file_info <- file.info(file_path)
+  file_size <- file_info$size
+  modified_date <- as.character(file_info$mtime)
 } else {
-    file_size <- NA
-    modified_date <- NA
+  file_size <- NA
+  modified_date <- NA
 }
 
 result <- list(
-    data = as.list(data),  # Convert to column-wise format for schema compatibility
-    file_info = list(
-        file_path = file_path,
-        rows = nrow(data),
-        columns = ncol(data),
-        column_names = colnames(data),
-        file_size_bytes = file_size,
-        modified_date = modified_date,
-        is_url = grepl("^https?://", file_path)
-    ),
-    summary = list(
-        rows_read = nrow(data),
-        columns_read = ncol(data),
-        column_types = as.list(sapply(data, class)),
-        missing_values = as.list(sapply(data, function(x) sum(is.na(x)))),
-        sample_data = if(nrow(data) > 0) head(data, 3) else data.frame()
-    )
+  data = as.list(data), # Convert to column-wise format for schema compatibility
+  file_info = list(
+    file_path = file_path,
+    rows = nrow(data),
+    columns = ncol(data),
+    column_names = colnames(data),
+    file_size_bytes = file_size,
+    modified_date = modified_date,
+    is_url = grepl("^https?://", file_path)
+  ),
+  summary = list(
+    rows_read = nrow(data),
+    columns_read = ncol(data),
+    column_types = as.list(sapply(data, class)),
+    missing_values = as.list(sapply(data, function(x) sum(is.na(x)))),
+    sample_data = if (nrow(data) > 0) head(data, 3) else data.frame()
+  )
 )
 # Output results in standard JSON format
 if (exists("result")) {
-    cat(safe_json(format_json_output(result)))
+  cat(safe_json(format_json_output(result)))
 } else {
-    cat(safe_json(list(error = "No result generated", success = FALSE)))
+  cat(safe_json(list(error = "No result generated", success = FALSE)))
 }

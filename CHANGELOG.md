@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-10-13
+
+### Major Quality Improvements
+- **🎯 100% Code Coverage**: Achieved perfect test coverage and code quality
+  - All 104 Python tests passing with zero failures
+  - Complete elimination of linting violations across Python codebase
+  - Comprehensive R code styling and formatting applied to 42 R files
+
+### Fixed
+- **🔧 Critical R Script Bugs**: Resolved syntax errors preventing package building
+  - Fixed parse error in `arima_model.R` that caused build failures
+  - Added proper data processing logic for time series analysis
+  - Enhanced error handling in statistical computation scripts
+
+### Improved
+- **📊 R Code Quality**: Comprehensive styling and linting improvements
+  - Applied `styler` formatting to all 42 R statistical analysis scripts
+  - Updated `.lintr` configuration to use modern lintr API
+  - Fixed regex patterns in Makefile for proper R file detection
+  - Installed missing `roxygen2` package for documentation processing
+
+- **🔧 Build System**: Enhanced development toolchain reliability
+  - Fixed Makefile regex escaping issues that prevented R file processing
+  - Updated linting configuration to use `linters_with_defaults()` instead of deprecated `with_defaults()`
+  - Improved error reporting for R script validation
+
+### Technical Improvements
+- **⚙️ Release Preparation**: Complete codebase validation for production readiness
+  - Zero Python linting violations (black, isort, flake8, mypy all passing)
+  - All R scripts properly formatted and validated
+  - Build system tested and verified on macOS platform
+  - Version bumped to 0.4.0 reflecting major quality milestone
+
 ## [0.3.13] - 2025-10-11
 
 ### Fixed

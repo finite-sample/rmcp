@@ -11,38 +11,41 @@ library(jsonlite)
 
 # Determine script directory for path resolution
 script_dir <- if (exists("testthat_testing") && testthat_testing) {
-    # Running under testthat - use relative path from test directory
-    file.path("..", "..", "R")
+  # Running under testthat - use relative path from test directory
+  file.path("..", "..", "R")
 } else {
-    # Running normally - use relative path from script location
-    file.path("..", "..", "R")
+  # Running normally - use relative path from script location
+  file.path("..", "..", "R")
 }
 
 # Load RMCP utilities
 utils_path <- file.path(script_dir, "utils.R")
 if (file.exists(utils_path)) {
-    source(utils_path)
+  source(utils_path)
 } else {
-    stop("Cannot find RMCP utilities at: ", utils_path)
+  stop("Cannot find RMCP utilities at: ", utils_path)
 }
 
 # Parse command line arguments
 args <- if (exists("test_args")) {
-    # Use test arguments if provided (for testthat)
-    test_args
+  # Use test arguments if provided (for testthat)
+  test_args
 } else {
-    # Parse from command line
-    cmd_args <- commandArgs(trailingOnly = TRUE)
-    if (length(cmd_args) == 0) {
-        stop("No JSON arguments provided")
+  # Parse from command line
+  cmd_args <- commandArgs(trailingOnly = TRUE)
+  if (length(cmd_args) == 0) {
+    stop("No JSON arguments provided")
+  }
+
+  # Parse JSON input
+  tryCatch(
+    {
+      fromJSON(cmd_args[1])
+    },
+    error = function(e) {
+      stop("Failed to parse JSON arguments: ", e$message)
     }
-    
-    # Parse JSON input
-    tryCatch({
-        fromJSON(cmd_args[1])
-    }, error = function(e) {
-        stop("Failed to parse JSON arguments: ", e$message)
-    })
+  )
 }
 
 
@@ -58,14 +61,14 @@ model <- lm(formula, data = data)
 
 # Perform ANOVA
 if (anova_type == "I") {
-    anova_result <- anova(model)
-    anova_table <- anova_result
+  anova_result <- anova(model)
+  anova_table <- anova_result
 } else {
-    library(car)
-    # Convert ANOVA type string (e.g., "II", "III") to numeric for car::Anova
-    # Type I = 1, Type II = 2, Type III = 3
-    anova_numeric <- as.numeric(substr(anova_type, 1, 1))
-    anova_table <- Anova(model, type = anova_numeric)
+  library(car)
+  # Convert ANOVA type string (e.g., "II", "III") to numeric for car::Anova
+  # Type I = 1, Type II = 2, Type III = 3
+  anova_numeric <- as.numeric(substr(anova_type, 1, 1))
+  anova_table <- Anova(model, type = anova_numeric)
 }
 
 # Normalize ANOVA table column names
@@ -82,45 +85,52 @@ f_value <- if ("F" %in% names(df)) df[["F"]] else rep(NA, nrow(df))
 p_value <- if ("p_value" %in% names(df)) df[["p_value"]] else rep(NA, nrow(df))
 
 result <- list(
-    anova_table = list(
-        terms = rownames(df),
-        df = df[["Df"]],
-        sum_sq = sum_sq,
-        mean_sq = mean_sq,
-        f_value = f_value,
-        p_value = p_value
-    ),
-    model_summary = list(
-        r_squared = summary(model)$r.squared,
-        adj_r_squared = summary(model)$adj.r.squared,
-        residual_se = summary(model)$sigma,
-        df_residual = summary(model)$df[2],
-        n_obs = nrow(model$model)
-    ),
-    formula = deparse(formula),
-    anova_type = paste("Type", anova_type),
+  anova_table = list(
+    terms = rownames(df),
+    df = df[["Df"]],
+    sum_sq = sum_sq,
+    mean_sq = mean_sq,
+    f_value = f_value,
+    p_value = p_value
+  ),
+  model_summary = list(
+    r_squared = summary(model)$r.squared,
+    adj_r_squared = summary(model)$adj.r.squared,
+    residual_se = summary(model)$sigma,
+    df_residual = summary(model)$df[2],
+    n_obs = nrow(model$model)
+  ),
+  formula = deparse(formula),
+  anova_type = paste("Type", anova_type),
 
-    # Special non-validated field for formatting
-    "_formatting" = list(
-        summary = tryCatch({
-            # Try to tidy the ANOVA table
-            tidy_anova <- broom::tidy(anova_table)
-            as.character(knitr::kable(
-                tidy_anova, format = "markdown", digits = 4
-            ))
-        }, error = function(e) {
-            # Fallback: format the data frame directly
-            as.character(knitr::kable(
-                tidy_anova, format = "markdown", digits = 4
-            ))
-        }),
-        interpretation = paste0("ANOVA ",
-                              get_significance(min(p_value, na.rm = TRUE)), ".")
+  # Special non-validated field for formatting
+  "_formatting" = list(
+    summary = tryCatch(
+      {
+        # Try to tidy the ANOVA table
+        tidy_anova <- broom::tidy(anova_table)
+        as.character(knitr::kable(
+          tidy_anova,
+          format = "markdown", digits = 4
+        ))
+      },
+      error = function(e) {
+        # Fallback: format the data frame directly
+        as.character(knitr::kable(
+          tidy_anova,
+          format = "markdown", digits = 4
+        ))
+      }
+    ),
+    interpretation = paste0(
+      "ANOVA ",
+      get_significance(min(p_value, na.rm = TRUE)), "."
     )
+  )
 )
 # Output results in standard JSON format
 if (exists("result")) {
-    cat(safe_json(format_json_output(result)))
+  cat(safe_json(format_json_output(result)))
 } else {
-    cat(safe_json(list(error = "No result generated", success = FALSE)))
+  cat(safe_json(list(error = "No result generated", success = FALSE)))
 }

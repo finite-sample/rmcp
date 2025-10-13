@@ -11,38 +11,41 @@ library(jsonlite)
 
 # Determine script directory for path resolution
 script_dir <- if (exists("testthat_testing") && testthat_testing) {
-    # Running under testthat - use relative path from test directory
-    file.path("..", "..", "R")
+  # Running under testthat - use relative path from test directory
+  file.path("..", "..", "R")
 } else {
-    # Running normally - use relative path from script location
-    file.path("..", "..", "R")
+  # Running normally - use relative path from script location
+  file.path("..", "..", "R")
 }
 
 # Load RMCP utilities
 utils_path <- file.path(script_dir, "utils.R")
 if (file.exists(utils_path)) {
-    source(utils_path)
+  source(utils_path)
 } else {
-    stop("Cannot find RMCP utilities at: ", utils_path)
+  stop("Cannot find RMCP utilities at: ", utils_path)
 }
 
 # Parse command line arguments
 args <- if (exists("test_args")) {
-    # Use test arguments if provided (for testthat)
-    test_args
+  # Use test arguments if provided (for testthat)
+  test_args
 } else {
-    # Parse from command line
-    cmd_args <- commandArgs(trailingOnly = TRUE)
-    if (length(cmd_args) == 0) {
-        stop("No JSON arguments provided")
+  # Parse from command line
+  cmd_args <- commandArgs(trailingOnly = TRUE)
+  if (length(cmd_args) == 0) {
+    stop("No JSON arguments provided")
+  }
+
+  # Parse JSON input
+  tryCatch(
+    {
+      fromJSON(cmd_args[1])
+    },
+    error = function(e) {
+      stop("Failed to parse JSON arguments: ", e$message)
     }
-    
-    # Parse JSON input
-    tryCatch({
-        fromJSON(cmd_args[1])
-    }, error = function(e) {
-        stop("Failed to parse JSON arguments: ", e$message)
-    })
+  )
 }
 
 
@@ -57,58 +60,62 @@ result_data <- data
 scaling_info <- list()
 
 for (var in variables) {
-    original_values <- data[[var]]
-    
-    if (method == "z_score") {
-        mean_val <- mean(original_values, na.rm = TRUE)
-        sd_val <- sd(original_values, na.rm = TRUE)
-        scaled <- (original_values - mean_val) / sd_val
-        scaling_info[[var]] <- list(mean = mean_val, sd = sd_val)
-    } else if (method == "min_max") {
-        min_val <- min(original_values, na.rm = TRUE)
-        max_val <- max(original_values, na.rm = TRUE)
-        scaled <- (original_values - min_val) / (max_val - min_val)
-        scaling_info[[var]] <- list(min = min_val, max = max_val)
-    } else if (method == "robust") {
-        median_val <- median(original_values, na.rm = TRUE)
-        mad_val <- mad(original_values, na.rm = TRUE)
-        scaled <- (original_values - median_val) / mad_val
-        scaling_info[[var]] <- list(median = median_val, mad = mad_val)
-    }
-    
-    new_var <- paste0(var, "_", method)
-    result_data[[new_var]] <- scaled
+  original_values <- data[[var]]
+
+  if (method == "z_score") {
+    mean_val <- mean(original_values, na.rm = TRUE)
+    sd_val <- sd(original_values, na.rm = TRUE)
+    scaled <- (original_values - mean_val) / sd_val
+    scaling_info[[var]] <- list(mean = mean_val, sd = sd_val)
+  } else if (method == "min_max") {
+    min_val <- min(original_values, na.rm = TRUE)
+    max_val <- max(original_values, na.rm = TRUE)
+    scaled <- (original_values - min_val) / (max_val - min_val)
+    scaling_info[[var]] <- list(min = min_val, max = max_val)
+  } else if (method == "robust") {
+    median_val <- median(original_values, na.rm = TRUE)
+    mad_val <- mad(original_values, na.rm = TRUE)
+    scaled <- (original_values - median_val) / mad_val
+    scaling_info[[var]] <- list(median = median_val, mad = mad_val)
+  }
+
+  new_var <- paste0(var, "_", method)
+  result_data[[new_var]] <- scaled
 }
 
 result <- list(
-    data = as.list(result_data),
-    scaling_method = method,
-    scaling_info = scaling_info,
-    variables_scaled = variables,
-    n_obs = nrow(result_data),
+  data = as.list(result_data),
+  scaling_method = method,
+  scaling_info = scaling_info,
+  variables_scaled = variables,
+  n_obs = nrow(result_data),
 
-    # Special non-validated field for formatting
-    "_formatting" = list(
-        summary = tryCatch({
-            # Create standardization summary table
-            std_summary <- data.frame(
-                Operation = "Standardization",
-                Method = method,
-                Variables = length(variables),
-                Observations = nrow(result_data)
-            )
-            as.character(knitr::kable(
-                std_summary, format = "markdown", digits = 4
-            ))
-        }, error = function(e) {
-            "Variables standardized successfully"
-        }),
-        interpretation = paste0("Standardized ", length(variables), " variables using ", method, " method.")
-    )
+  # Special non-validated field for formatting
+  "_formatting" = list(
+    summary = tryCatch(
+      {
+        # Create standardization summary table
+        std_summary <- data.frame(
+          Operation = "Standardization",
+          Method = method,
+          Variables = length(variables),
+          Observations = nrow(result_data)
+        )
+        as.character(knitr::kable(
+          std_summary,
+          format = "markdown", digits = 4
+        ))
+      },
+      error = function(e) {
+        "Variables standardized successfully"
+      }
+    ),
+    interpretation = paste0("Standardized ", length(variables), " variables using ", method, " method.")
+  )
 )
 # Output results in standard JSON format
 if (exists("result")) {
-    cat(safe_json(format_json_output(result)))
+  cat(safe_json(format_json_output(result)))
 } else {
-    cat(safe_json(list(error = "No result generated", success = FALSE)))
+  cat(safe_json(list(error = "No result generated", success = FALSE)))
 }

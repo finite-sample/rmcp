@@ -24,9 +24,9 @@ lint-python:  ## Format and lint Python code
 # R linting and formatting  
 lint-r:  ## Format and lint R code
 	@echo "📊 Formatting R code..."
-	cd rmcp/r_assets && R -e "library(styler); files <- list.files(c('R', 'scripts'), pattern='\\\\.R$$', recursive=TRUE, full.names=TRUE); if(length(files) > 0) styler::style_file(files)"
+	cd rmcp/r_assets && R -e "library(styler); files <- list.files(c('R', 'scripts'), pattern='[.]R$$', recursive=TRUE, full.names=TRUE); if(length(files) > 0) styler::style_file(files)"
 	@echo "🔍 Linting R code..."
-	cd rmcp/r_assets && R -e "library(lintr); files <- list.files(c('R', 'scripts'), pattern='\\\\.R$$', recursive=TRUE, full.names=TRUE); if(length(files) > 0) { results <- lapply(files, lint); all_lints <- unlist(results, recursive=FALSE); if(length(all_lints) > 0) { print(all_lints); stop('Linting issues found') } else { cat('✅ R linting passed\\n') } }"
+	cd rmcp/r_assets && R -e "library(lintr); files <- list.files(c('R', 'scripts'), pattern='[.]R$$', recursive=TRUE, full.names=TRUE); if(length(files) > 0) { results <- lapply(files, lint); all_lints <- unlist(results, recursive=FALSE); if(length(all_lints) > 0) { print(all_lints); stop('Linting issues found') } else { cat('✅ R linting passed\\n') } }"
 
 lint: lint-python lint-r  ## Lint all code (Python + R)
 
