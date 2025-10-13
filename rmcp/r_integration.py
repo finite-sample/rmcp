@@ -33,6 +33,56 @@ logger = logging.getLogger(__name__)
 # Global semaphore for R process concurrency (max 4 concurrent R processes)
 R_SEMAPHORE = asyncio.Semaphore(4)
 
+# Cached R binary path for performance
+_R_BINARY_PATH = None
+
+
+def get_r_binary_path() -> str:
+    """
+    Discover and cache the R binary path.
+
+    Returns:
+        str: Path to R binary
+
+    Raises:
+        FileNotFoundError: If R binary cannot be found
+    """
+    global _R_BINARY_PATH
+
+    if _R_BINARY_PATH is not None:
+        return _R_BINARY_PATH
+
+    import shutil
+
+    # Try to find R binary using multiple approaches
+    candidates = [
+        # Standard approach - use which to find R in PATH
+        shutil.which("R"),
+        # Common installation paths
+        "/usr/bin/R",
+        "/usr/local/bin/R",
+        "/opt/R/bin/R",
+        # Windows paths (if running on Windows)
+        shutil.which("R.exe") if os.name == "nt" else None,
+        # Try Rscript as alternative
+        shutil.which("Rscript"),
+    ]
+
+    # Filter out None values
+    candidates = [path for path in candidates if path is not None]
+
+    for candidate in candidates:
+        if candidate and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            _R_BINARY_PATH = candidate
+            logger.info(f"Found R binary at: {_R_BINARY_PATH}")
+            return _R_BINARY_PATH
+
+    # If we get here, R was not found
+    raise FileNotFoundError(
+        "R binary not found. Please ensure R is installed and available in PATH. "
+        f"Searched paths: {candidates}"
+    )
+
 
 class RExecutionError(Exception):
     """
@@ -206,15 +256,34 @@ write_json(result, "{result_path_safe}", auto_unbox = TRUE)
             script_file.flush()
             logger.debug(f"Executing R script with args: {args}")
             # Execute R script
+            r_binary = get_r_binary_path()
             process = subprocess.run(
-                ["R", "--slave", "--no-restore", "--file=" + script_path],
+                [r_binary, "--slave", "--no-restore", "--file=" + script_path],
                 capture_output=True,
                 text=True,
                 timeout=120,
             )
             if process.returncode != 0:
                 # Enhanced error handling for missing packages
-                error_msg = f"R script failed with return code {process.returncode}"
+                try:
+                    r_path = get_r_binary_path()
+                except FileNotFoundError:
+                    r_path = "R (not found in PATH)"
+                env_info = {
+                    "PATH": os.environ.get("PATH", ""),
+                    "R_HOME": os.environ.get("R_HOME", ""),
+                    "R_LIBS": os.environ.get("R_LIBS", ""),
+                    "working_dir": os.getcwd(),
+                }
+
+                error_msg = f"""R script failed with return code {process.returncode}
+COMMAND: {r_path} --slave --no-restore --file={script_path}
+STDOUT:
+{process.stdout or '(empty)'}
+STDERR:
+{process.stderr or '(empty)'}
+ENVIRONMENT:
+{env_info}"""
                 stderr = process.stderr or ""
                 # Check for common R package errors
                 if "there is no package called" in stderr:
@@ -371,8 +440,9 @@ if (exists("result")) {{
                 script_file.flush()
                 logger.debug(f"Executing R script asynchronously with args: {args}")
                 # Execute R script asynchronously
+                r_binary = get_r_binary_path()
                 proc = await asyncio.create_subprocess_exec(
-                    "R",
+                    r_binary,
                     "--slave",
                     "--no-restore",
                     f"--file={script_path}",
@@ -460,7 +530,25 @@ if (exists("result")) {{
                     )
                 if proc.returncode != 0:
                     # Enhanced error handling for missing packages
-                    error_msg = f"R script failed with return code {proc.returncode}"
+                    try:
+                        r_path = get_r_binary_path()
+                    except FileNotFoundError:
+                        r_path = "R (not found in PATH)"
+                    env_info = {
+                        "PATH": os.environ.get("PATH", ""),
+                        "R_HOME": os.environ.get("R_HOME", ""),
+                        "R_LIBS": os.environ.get("R_LIBS", ""),
+                        "working_dir": os.getcwd(),
+                    }
+
+                    error_msg = f"""R script failed with return code {proc.returncode}
+COMMAND: {r_path} --slave --no-restore --file={script_path}
+STDOUT:
+{stdout or '(empty)'}
+STDERR:
+{stderr or '(empty)'}
+ENVIRONMENT:
+{env_info}"""
                     stderr = stderr or ""
                     # Check for common R package errors
                     if "there is no package called" in stderr:
@@ -693,3 +781,207 @@ async def execute_r_script_with_image_async(
     else:
         # Standard execution without image support
         return await execute_r_script_async(script, args)
+
+
+def diagnose_r_installation() -> dict[str, Any]:
+    """
+    Diagnose R installation and return comprehensive status information.
+
+    Returns:
+        dict containing diagnostic information including:
+        - r_available: Whether R binary is found
+        - r_path: Path to R binary
+        - r_version: R version string (if available)
+        - jsonlite_available: Whether jsonlite package is installed
+        - environment: Relevant environment variables
+        - error: Any error encountered during diagnosis
+    """
+    import os
+    import subprocess
+
+    diagnosis = {
+        "r_available": False,
+        "r_path": None,
+        "r_version": None,
+        "jsonlite_available": False,
+        "environment": {
+            "PATH": os.environ.get("PATH", ""),
+            "R_HOME": os.environ.get("R_HOME", ""),
+            "R_LIBS": os.environ.get("R_LIBS", ""),
+            "working_dir": os.getcwd(),
+        },
+        "error": None,
+    }
+
+    try:
+        # Check if R is available
+        try:
+            r_path = get_r_binary_path()
+        except FileNotFoundError:
+            r_path = None
+
+        if r_path:
+            diagnosis["r_available"] = True
+            diagnosis["r_path"] = r_path
+
+            # Get R version
+            try:
+                result = subprocess.run(
+                    [r_path, "--version"], capture_output=True, text=True, timeout=30
+                )
+                if result.returncode == 0:
+                    # Extract first line which contains version info
+                    version_line = (
+                        result.stdout.split("\n")[0] if result.stdout else "Unknown"
+                    )
+                    diagnosis["r_version"] = version_line
+                else:
+                    diagnosis["error"] = (
+                        f"R --version failed with return code {result.returncode}: {result.stderr}"
+                    )
+            except subprocess.TimeoutExpired:
+                diagnosis["error"] = "R --version timed out after 30 seconds"
+            except Exception as e:
+                diagnosis["error"] = f"Failed to get R version: {str(e)}"
+
+            # Test basic R functionality and jsonlite availability
+            try:
+                test_script = """
+                cat("R OK\\n")
+                library(jsonlite)
+                cat(toJSON(list(jsonlite_ok=TRUE)), "\\n")
+                """
+
+                result = subprocess.run(
+                    [r_path, "--slave", "--no-restore", "-e", test_script],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+
+                if result.returncode == 0:
+                    if "jsonlite_ok" in result.stdout:
+                        diagnosis["jsonlite_available"] = True
+                    else:
+                        diagnosis["error"] = (
+                            f"jsonlite test failed - unexpected output: {result.stdout}"
+                        )
+                else:
+                    diagnosis["error"] = (
+                        f"R basic test failed (code {result.returncode}): {result.stderr}"
+                    )
+            except subprocess.TimeoutExpired:
+                diagnosis["error"] = "R basic test timed out after 30 seconds"
+            except Exception as e:
+                diagnosis["error"] = f"R basic test failed: {str(e)}"
+        else:
+            diagnosis["error"] = "R binary not found in PATH"
+
+    except Exception as e:
+        diagnosis["error"] = f"Diagnostic failed: {str(e)}"
+
+    return diagnosis
+
+
+async def diagnose_r_installation_async() -> dict[str, Any]:
+    """
+    Asynchronous version of R installation diagnosis.
+
+    Returns:
+        dict containing the same diagnostic information as diagnose_r_installation
+    """
+    import asyncio
+    import os
+
+    diagnosis = {
+        "r_available": False,
+        "r_path": None,
+        "r_version": None,
+        "jsonlite_available": False,
+        "environment": {
+            "PATH": os.environ.get("PATH", ""),
+            "R_HOME": os.environ.get("R_HOME", ""),
+            "R_LIBS": os.environ.get("R_LIBS", ""),
+            "working_dir": os.getcwd(),
+        },
+        "error": None,
+    }
+
+    try:
+        # Check if R is available
+        try:
+            r_path = get_r_binary_path()
+        except FileNotFoundError:
+            r_path = None
+
+        if r_path:
+            diagnosis["r_available"] = True
+            diagnosis["r_path"] = r_path
+
+            # Get R version
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    r_path,
+                    "--version",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+
+                if proc.returncode == 0:
+                    # Extract first line which contains version info
+                    version_line = (
+                        stdout.decode().split("\n")[0] if stdout else "Unknown"
+                    )
+                    diagnosis["r_version"] = version_line
+                else:
+                    diagnosis["error"] = (
+                        f"R --version failed with return code {proc.returncode}: {stderr.decode()}"
+                    )
+            except asyncio.TimeoutError:
+                diagnosis["error"] = "R --version timed out after 30 seconds"
+            except Exception as e:
+                diagnosis["error"] = f"Failed to get R version: {str(e)}"
+
+            # Test basic R functionality and jsonlite availability
+            try:
+                test_script = """
+                cat("R OK\\n")
+                library(jsonlite)
+                cat(toJSON(list(jsonlite_ok=TRUE)), "\\n")
+                """
+
+                proc = await asyncio.create_subprocess_exec(
+                    r_path,
+                    "--slave",
+                    "--no-restore",
+                    "-e",
+                    test_script,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+
+                if proc.returncode == 0:
+                    stdout_str = stdout.decode()
+                    if "jsonlite_ok" in stdout_str:
+                        diagnosis["jsonlite_available"] = True
+                    else:
+                        diagnosis["error"] = (
+                            f"jsonlite test failed - unexpected output: {stdout_str}"
+                        )
+                else:
+                    diagnosis["error"] = (
+                        f"R basic test failed (code {proc.returncode}): {stderr.decode()}"
+                    )
+            except asyncio.TimeoutError:
+                diagnosis["error"] = "R basic test timed out after 30 seconds"
+            except Exception as e:
+                diagnosis["error"] = f"R basic test failed: {str(e)}"
+        else:
+            diagnosis["error"] = "R binary not found in PATH"
+
+    except Exception as e:
+        diagnosis["error"] = f"Diagnostic failed: {str(e)}"
+
+    return diagnosis
