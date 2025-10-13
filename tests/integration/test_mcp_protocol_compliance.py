@@ -15,6 +15,7 @@ from pathlib import Path
 from shutil import which
 
 import pytest
+import pytest_asyncio
 
 # Add rmcp to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -25,6 +26,51 @@ from rmcp.core.server import create_server
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for MCP protocol compliance tests"
 )
+
+
+def extract_json_content_from_mcp_response(response: dict) -> dict | None:
+    """
+    Extract JSON content from MCP tool response, supporting both new and legacy formats.
+
+    Args:
+        response: MCP tool response dictionary
+
+    Returns:
+        JSON content dict if found, None otherwise
+    """
+    result = response.get("result", {})
+
+    # Check new structuredContent format first (preferred)
+    structured_content = result.get("structuredContent")
+    if structured_content and isinstance(structured_content, list):
+        for item in structured_content:
+            if isinstance(item, dict) and item.get("type") == "json":
+                return item.get("json")
+
+    # Check if structuredContent is a dict with a single json item
+    if (
+        isinstance(structured_content, dict)
+        and structured_content.get("type") == "json"
+    ):
+        return structured_content.get("json")
+
+    # Fallback to legacy content format with annotations
+    content = result.get("content", [])
+    for item in content:
+        if isinstance(item, dict):
+            # Check for direct JSON content (newer format)
+            if item.get("type") == "json":
+                return item.get("json")
+            # Check legacy text with JSON annotation
+            if item.get("type") == "text" and "application/json" in item.get(
+                "annotations", {}
+            ).get("mimeType", ""):
+                try:
+                    return json.loads(item["text"])
+                except json.JSONDecodeError:
+                    continue
+
+    return None
 
 
 class MCPProtocolTester:
@@ -83,7 +129,7 @@ class MCPProtocolTester:
         return response
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def mcp_tester():
     """Create an MCP protocol tester instance."""
     tester = MCPProtocolTester()
@@ -176,16 +222,11 @@ async def test_mcp_tool_execution(mcp_tester):
     assert isinstance(content, list), "Tool content must be an array"
     assert len(content) > 0, "Tool content cannot be empty"
 
-    # Check for JSON content in response
-    json_content = None
-    for item in content:
-        if item.get("type") == "text" and "application/json" in item.get(
-            "annotations", {}
-        ).get("mimeType", ""):
-            json_content = json.loads(item["text"])
-            break
-
-    assert json_content is not None, "Tool response missing JSON content"
+    # Extract JSON content using utility function (supports both old and new formats)
+    json_content = extract_json_content_from_mcp_response(response)
+    assert (
+        json_content is not None
+    ), f"Tool response missing JSON content. Response: {response}"
     assert "coefficients" in json_content, "Linear model missing coefficients"
     assert "r_squared" in json_content, "Linear model missing r_squared"
 
@@ -256,18 +297,9 @@ async def test_mcp_prompt_discovery(mcp_tester):
 @pytest.mark.asyncio
 async def test_stdio_transport_compliance():
     """Test stdio transport as used by Claude Desktop."""
-    # Test that we can start the server and communicate via stdio
+    # Test that we can start the server and communicate via stdio using actual CLI
     process = subprocess.Popen(
-        [
-            sys.executable,
-            "-c",
-            """
-import sys
-sys.path.insert(0, '.')
-from rmcp.cli import start_stdio_server
-start_stdio_server()
-""",
-        ],
+        [sys.executable, "-m", "rmcp.cli", "start", "--log-level", "ERROR"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -293,19 +325,26 @@ start_stdio_server()
             input=json.dumps(initialize_request) + "\n", timeout=10
         )
 
-        # Parse the response
+        # Parse all JSON responses to find our initialize response (by ID)
         lines = stdout.strip().split("\n")
-        response_line = None
+        initialize_response = None
+
         for line in lines:
             if line.startswith('{"jsonrpc"'):
-                response_line = line
-                break
+                try:
+                    message = json.loads(line)
+                    # Look for the response to our initialize request (ID = 1)
+                    if message.get("id") == 1 and "result" in message:
+                        initialize_response = message
+                        break
+                except json.JSONDecodeError:
+                    continue
 
-        assert response_line is not None, f"No JSON response found in stdout: {stdout}"
-
-        response = json.loads(response_line)
-        assert response["jsonrpc"] == "2.0", "Invalid JSON-RPC version"
-        assert "result" in response, "Initialize response missing result"
+        assert (
+            initialize_response is not None
+        ), f"No initialize response found in stdout: {stdout}"
+        assert initialize_response["jsonrpc"] == "2.0", "Invalid JSON-RPC version"
+        assert "result" in initialize_response, "Initialize response missing result"
 
     except subprocess.TimeoutExpired:
         process.kill()
