@@ -238,29 +238,46 @@ jobs:
       uses: actions/checkout@v4
     
     # All R packages and Python environment pre-installed in Docker image
+    - name: Verify and setup Python environment
+      run: |
+        # Ensure we're using the venv Python environment  
+        export PATH="/opt/venv/bin:$PATH"
+        echo "PATH: $PATH"
+        which python
+        which pip
+        python --version
+        pip --version
+        
     - name: Install RMCP in development mode
-      run: pip install -e .
+      run: |
+        export PATH="/opt/venv/bin:$PATH" 
+        pip install -e .
     
     - name: Verify R and Python environment
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         python --version
         R --version | head -1
         python -c "from rmcp.r_integration import diagnose_r_installation; import json; print(json.dumps(diagnose_r_installation(), indent=2))"
     
     - name: Run unit tests with coverage
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         pytest tests/unit/ -v --tb=short --cov=rmcp --cov-report=xml --cov-report=term-missing
     
     - name: Run MCP protocol compliance tests
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short --cov=rmcp --cov-append
     
     - name: Run integration tests
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         pytest tests/integration/test_mcp_interface.py -v --tb=short --cov=rmcp --cov-append
     
     - name: Run schema validation tests
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         pytest tests/integration/test_schema_validation.py -v --tb=short --cov=rmcp --cov-append
     
     - name: Upload Python coverage to Codecov
@@ -274,21 +291,25 @@ jobs:
     
     - name: Test RMCP CLI
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         rmcp --version
         rmcp list-capabilities
     
     - name: Test basic tool execution
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -20
     
     - name: Test package installation
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         python -m build
         pip install dist/*.whl
         rmcp --version
     
     - name: Test subprocess integration  
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         python -c "
         import platform
         import subprocess
@@ -347,6 +368,7 @@ jobs:
     
     - name: Test MCP Protocol stdio communication
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         python -c "
         import subprocess
         import json
@@ -410,29 +432,36 @@ jobs:
     
     # All R packages and Python environment pre-installed in Docker image
     - name: Install RMCP in development mode
-      run: pip install -e .
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pip install -e .
     
     - name: Verify Python environment
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         python --version
         python -c "import sys; print(f'Python version: {sys.version}')"
         R --version | head -1
     
     - name: Run unit tests
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         pytest tests/unit/ -v --tb=short
     
     - name: Run MCP protocol compliance tests
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short
     
     - name: Test RMCP CLI
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         rmcp --version
         rmcp list-capabilities
     
     - name: Test basic tool execution
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -10
 
   # Feature verification (using freshly built Docker image)
@@ -452,11 +481,14 @@ jobs:
     
     # All dependencies pre-installed in Docker image - just install RMCP in development mode
     - name: Install RMCP in development mode
-      run: pip install -e .
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pip install -e .
     
     
     - name: Test new features
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         python -c "
         import sys, asyncio, json
         sys.path.insert(0, '.')
@@ -572,6 +604,7 @@ jobs:
     
     - name: Verify package metadata consistency
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         python -c "
         import rmcp
         import sys
@@ -592,6 +625,7 @@ jobs:
     
     - name: Verify tool registration and count
       run: |
+        export PATH="/opt/venv/bin:$PATH"
         python -c "
         from rmcp.core.server import create_server
         from rmcp.cli import _register_builtin_tools
