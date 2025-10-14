@@ -40,6 +40,7 @@ RUN set -eux; \
         "isort>=5.12.0" \
         "flake8>=6.0.0" \
         "pytest>=8.0.0" \
+        "pytest-cov>=4.0.0" \
         "pytest-asyncio>=0.21.0" \
         "click>=8.1.0" \
         "jsonschema>=4.0.0" \
