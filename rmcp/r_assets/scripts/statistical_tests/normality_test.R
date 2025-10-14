@@ -8,52 +8,6 @@
 # Prepare data and parameters
 
 # Load required libraries
-library(jsonlite)
-
-# Determine script directory for path resolution
-script_dir <- if (exists("testthat_testing") && testthat_testing) {
-  # Running under testthat - use relative path from test directory
-  file.path("..", "..", "R")
-} else {
-  # Running normally - use relative path from script location
-  file.path("..", "..", "R")
-}
-
-# Load RMCP utilities
-utils_path <- file.path(script_dir, "utils.R")
-if (file.exists(utils_path)) {
-  source(utils_path)
-} else {
-  stop("Cannot find RMCP utilities at: ", utils_path)
-}
-
-# Parse command line arguments
-args <- if (exists("test_args")) {
-  # Use test arguments if provided (for testthat)
-  test_args
-} else {
-  # Parse from command line
-  cmd_args <- commandArgs(trailingOnly = TRUE)
-  if (length(cmd_args) == 0) {
-    stop("No JSON arguments provided")
-  }
-
-  # Parse JSON input
-  tryCatch(
-    {
-      fromJSON(cmd_args[1])
-    },
-    error = function(e) {
-      stop("Failed to parse JSON arguments: ", e$message)
-    }
-  )
-}
-
-
-# Validate input
-args <- validate_json_input(args, required = c("data"))
-
-# Main script logic
 variable <- args$variable
 test_type <- args$test %||% "shapiro"
 
@@ -82,7 +36,6 @@ if (test_type == "shapiro") {
     stop("Package 'tseries' is required for Jarque-Bera test but not installed")
   }
   library(tseries)
-
   test_result <- jarque.bera.test(values)
   result <- list(
     test_name = "Jarque-Bera normality test",
@@ -96,7 +49,6 @@ if (test_type == "shapiro") {
     stop("Package 'nortest' is required for Anderson-Darling test but not installed")
   }
   library(nortest)
-
   test_result <- ad.test(values)
   result <- list(
     test_name = "Anderson-Darling normality test",
@@ -105,22 +57,14 @@ if (test_type == "shapiro") {
     is_normal = test_result$p.value > 0.05
   )
 }
-
 result$variable <- variable
 result$n_obs <- n
 result$mean <- mean(values)
 result$sd <- sd(values)
 result$skewness <- (sum((values - mean(values))^3) / n) / (sd(values)^3)
 result$excess_kurtosis <- (sum((values - mean(values))^4) / n) / (sd(values)^4) - 3
-
 # Add formatting
 result$"_formatting" <- list(
   summary = format_result_table(test_result, paste0(result$test_name, " Results")),
   interpretation = interpret_result(test_result, result$test_name)
 )
-# Output results in standard JSON format
-if (exists("result")) {
-  cat(safe_json(format_json_output(result)))
-} else {
-  cat(safe_json(list(error = "No result generated", success = FALSE)))
-}

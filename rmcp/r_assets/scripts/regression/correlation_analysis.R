@@ -8,52 +8,6 @@
 # Prepare data and parameters
 
 # Load required libraries
-library(jsonlite)
-
-# Determine script directory for path resolution
-script_dir <- if (exists("testthat_testing") && testthat_testing) {
-  # Running under testthat - use relative path from test directory
-  file.path("..", "..", "R")
-} else {
-  # Running normally - use relative path from script location
-  file.path("..", "..", "R")
-}
-
-# Load RMCP utilities
-utils_path <- file.path(script_dir, "utils.R")
-if (file.exists(utils_path)) {
-  source(utils_path)
-} else {
-  stop("Cannot find RMCP utilities at: ", utils_path)
-}
-
-# Parse command line arguments
-args <- if (exists("test_args")) {
-  # Use test arguments if provided (for testthat)
-  test_args
-} else {
-  # Parse from command line
-  cmd_args <- commandArgs(trailingOnly = TRUE)
-  if (length(cmd_args) == 0) {
-    stop("No JSON arguments provided")
-  }
-
-  # Parse JSON input
-  tryCatch(
-    {
-      fromJSON(cmd_args[1])
-    },
-    error = function(e) {
-      stop("Failed to parse JSON arguments: ", e$message)
-    }
-  )
-}
-
-
-# Validate input
-args <- validate_json_input(args, required = c("data"))
-
-# Main script logic
 variables <- args$variables
 method <- args$method %||% "pearson"
 use <- args$use %||% "complete.obs"
@@ -77,7 +31,6 @@ numeric_data <- data[, numeric_vars, drop = FALSE]
 
 # Compute correlation matrix
 cor_matrix <- cor(numeric_data, method = method, use = use)
-
 # Compute significance tests and pairwise n_obs
 n <- nrow(numeric_data)
 cor_test_results <- list()
@@ -87,7 +40,6 @@ rownames(n_obs_matrix) <- names(numeric_data)
 colnames(n_obs_matrix) <- names(numeric_data)
 # Fill diagonal with total observations
 diag(n_obs_matrix) <- n
-
 for (i in 1:(ncol(numeric_data) - 1)) {
   for (j in (i + 1):ncol(numeric_data)) {
     var1 <- names(numeric_data)[i]
@@ -109,10 +61,8 @@ for (i in 1:(ncol(numeric_data) - 1)) {
     )
   }
 }
-
 # Generate formatted summary using our formatting functions
 formatted_summary <- format_correlation_matrix(cor_matrix)
-
 # Generate natural language interpretation
 # Extract the smallest p-value from significance tests for overall interpretation
 min_p <- 1
@@ -123,7 +73,6 @@ for (test in cor_test_results) {
 }
 sig_text <- get_significance(min_p)
 interpretation <- paste0("Strongest correlations are ", sig_text, ".")
-
 # Convert correlation matrix to nested list structure
 cor_list <- list()
 for (var1 in names(numeric_data)) {
@@ -134,7 +83,6 @@ n_obs_list <- list()
 for (var1 in names(numeric_data)) {
   n_obs_list[[var1]] <- as.list(setNames(n_obs_matrix[var1, ], names(numeric_data)))
 }
-
 result <- list(
   # Schema-compliant fields only (strict validation)
   correlation_matrix = cor_list,
@@ -142,16 +90,9 @@ result <- list(
   method = method,
   n_obs = n_obs_list,
   variables = names(numeric_data),
-
   # Special non-validated field for formatting (will be extracted before validation)
   "_formatting" = list(
     summary = formatted_summary,
     interpretation = interpretation
   )
 )
-# Output results in standard JSON format
-if (exists("result")) {
-  cat(safe_json(format_json_output(result)))
-} else {
-  cat(safe_json(list(error = "No result generated", success = FALSE)))
-}

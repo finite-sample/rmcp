@@ -6,52 +6,6 @@
 
 
 # Load required libraries
-library(jsonlite)
-
-# Determine script directory for path resolution
-script_dir <- if (exists("testthat_testing") && testthat_testing) {
-  # Running under testthat - use relative path from test directory
-  file.path("..", "..", "R")
-} else {
-  # Running normally - use relative path from script location
-  file.path("..", "..", "R")
-}
-
-# Load RMCP utilities
-utils_path <- file.path(script_dir, "utils.R")
-if (file.exists(utils_path)) {
-  source(utils_path)
-} else {
-  stop("Cannot find RMCP utilities at: ", utils_path)
-}
-
-# Parse command line arguments
-args <- if (exists("test_args")) {
-  # Use test arguments if provided (for testthat)
-  test_args
-} else {
-  # Parse from command line
-  cmd_args <- commandArgs(trailingOnly = TRUE)
-  if (length(cmd_args) == 0) {
-    stop("No JSON arguments provided")
-  }
-
-  # Parse JSON input
-  tryCatch(
-    {
-      fromJSON(cmd_args[1])
-    },
-    error = function(e) {
-      stop("Failed to parse JSON arguments: ", e$message)
-    }
-  )
-}
-
-
-# Validate input
-args <- validate_json_input(args, required = c("data"))
-
-# Main script logic
 library(cluster)
 
 # Prepare data and parameters
@@ -74,24 +28,19 @@ rmcp_progress("Running k-means clustering", 0, 100)
 set.seed(123) # For reproducibility
 kmeans_result <- kmeans(scaled_data, centers = k, iter.max = max_iter, nstart = nstart)
 rmcp_progress("K-means clustering completed", 100, 100)
-
 # Calculate cluster statistics
 cluster_centers <- kmeans_result$centers
 cluster_assignments <- kmeans_result$cluster
-
 # Within-cluster sum of squares
 wss <- kmeans_result$withinss
 total_wss <- kmeans_result$tot.withinss
 between_ss <- kmeans_result$betweenss
 total_ss <- kmeans_result$totss
-
 # Cluster sizes
 cluster_sizes <- table(cluster_assignments)
-
 # Silhouette analysis
 sil <- silhouette(cluster_assignments, dist(scaled_data))
 silhouette_score <- mean(sil[, 3])
-
 result <- list(
   cluster_assignments = cluster_assignments,
   cluster_centers = as.list(as.data.frame(cluster_centers)),
@@ -106,7 +55,6 @@ result <- list(
   variables = variables,
   n_obs = nrow(cluster_data),
   converged = kmeans_result$iter < max_iter,
-
   # Special non-validated field for formatting
   "_formatting" = list(
     summary = tryCatch(
@@ -136,9 +84,3 @@ result <- list(
     )
   )
 )
-# Output results in standard JSON format
-if (exists("result")) {
-  cat(safe_json(format_json_output(result)))
-} else {
-  cat(safe_json(list(error = "No result generated", success = FALSE)))
-}

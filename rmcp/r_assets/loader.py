@@ -1,21 +1,8 @@
 """
-R Script Loader for RMCP Statistical Analysis Tools.
+Simple R Script Loader for RMCP Statistical Analysis Tools.
 
-This module provides functionality to dynamically load R scripts from the r_assets
-directory structure, enabling clean separation between Python tool logic and R
-statistical computation code.
-
-Key Features:
-- Dynamic R script loading by category and name
-- Common utility script inclusion
-- Path validation and error handling
-- Caching for improved performance
-- Support for script composition and includes
-
-Example Usage:
-    >>> from rmcp.r_assets.loader import get_r_script
-    >>> script = get_r_script("regression", "linear_model")
-    >>> print(script[:100])  # Show first 100 characters
+This module provides clean functionality to load R scripts with automatic
+infrastructure injection using a template-based approach.
 """
 
 import logging
@@ -29,26 +16,21 @@ _script_cache: Dict[str, str] = {}
 
 
 def get_r_assets_path() -> Path:
-    """
-    Get the path to the R assets directory.
-
-    Returns:
-        Path: Absolute path to the r_assets directory
-    """
+    """Get the path to the R assets directory."""
     return Path(__file__).parent
 
 
 def get_r_script(category: str, script_name: str, include_common: bool = True) -> str:
     """
-    Load an R script from the r_assets directory structure.
+    Load an R script using template-based approach.
 
-    This function loads R scripts organized by category (e.g., "regression",
-    "statistical_tests") and optionally includes common utility scripts.
+    This function loads R scripts and automatically injects all necessary infrastructure
+    using a clean template file approach instead of complex string building.
 
     Args:
         category: Script category (e.g., "regression", "statistical_tests")
         script_name: Name of the script file (without .R extension)
-        include_common: Whether to include common utility scripts
+        include_common: Whether to include common utility scripts (default: True)
 
     Returns:
         str: Complete R script content ready for execution
@@ -56,13 +38,6 @@ def get_r_script(category: str, script_name: str, include_common: bool = True) -
     Raises:
         FileNotFoundError: If the requested script file doesn't exist
         ValueError: If category or script_name contains invalid characters
-
-    Example:
-        >>> # Load linear regression script
-        >>> script = get_r_script("regression", "linear_model")
-        >>>
-        >>> # Load correlation analysis without common utilities
-        >>> script = get_r_script("regression", "correlation", include_common=False)
     """
     # Input validation
     if not category or not script_name:
@@ -82,11 +57,18 @@ def get_r_script(category: str, script_name: str, include_common: bool = True) -
         logger.debug(f"Using cached R script: {cache_key}")
         return _script_cache[cache_key]
 
-    # Build script path
     r_assets_path = get_r_assets_path()
-    script_path = r_assets_path / "scripts" / category / f"{script_name}.R"
 
-    # Check if script exists
+    # Load template
+    template_path = r_assets_path / "template.R"
+    if not template_path.exists():
+        raise FileNotFoundError(f"R template not found: {template_path}")
+
+    with open(template_path, "r", encoding="utf-8") as f:
+        template = f.read()
+
+    # Load main script
+    script_path = r_assets_path / "scripts" / category / f"{script_name}.R"
     if not script_path.exists():
         available_scripts = list_available_scripts(category)
         raise FileNotFoundError(
@@ -94,30 +76,18 @@ def get_r_script(category: str, script_name: str, include_common: bool = True) -
             f"Available scripts in '{category}': {available_scripts}"
         )
 
-    # Load the main script
-    try:
-        with open(script_path, "r", encoding="utf-8") as f:
-            main_script = f.read()
-    except Exception as e:
-        raise RuntimeError(f"Failed to read R script {script_path}: {e}")
+    with open(script_path, "r", encoding="utf-8") as f:
+        main_script = f.read()
 
-    # Build complete script
-    script_parts = []
-
-    # Add common utilities if requested
+    # Load utilities if requested
+    utilities = ""
     if include_common:
-        common_script = get_common_utilities()
-        if common_script:
-            script_parts.append("# === COMMON UTILITIES ===")
-            script_parts.append(common_script)
-            script_parts.append("")
+        utilities = get_common_utilities()
 
-    # Add main script
-    script_parts.append(f"# === {category.upper()} / {script_name.upper()} ===")
-    script_parts.append(main_script)
-
-    # Combine all parts
-    complete_script = "\n".join(script_parts)
+    # Substitute into template
+    complete_script = template.replace("{{UTILITIES}}", utilities).replace(
+        "{{MAIN_SCRIPT}}", main_script
+    )
 
     # Cache the result
     _script_cache[cache_key] = complete_script
@@ -129,46 +99,37 @@ def get_r_script(category: str, script_name: str, include_common: bool = True) -
 
 
 def get_common_utilities() -> str:
-    """
-    Load common R utility functions shared across all scripts.
-
-    Returns:
-        str: Common R utility script content, or empty string if not found
-    """
+    """Load common R utility functions shared across all scripts."""
     r_assets_path = get_r_assets_path()
-    common_path = r_assets_path / "common" / "formatting.R"
+    utils_path = r_assets_path / "R" / "utils.R"
+    formatting_path = r_assets_path / "common" / "formatting.R"
 
-    if not common_path.exists():
-        logger.warning(f"Common utilities not found at {common_path}")
-        return ""
+    script_parts = []
 
-    try:
-        with open(common_path, "r", encoding="utf-8") as f:
-            return f.read()
-    except Exception as e:
-        logger.warning(f"Failed to read common utilities: {e}")
-        return ""
+    # Load main utilities
+    if utils_path.exists():
+        try:
+            with open(utils_path, "r", encoding="utf-8") as f:
+                script_parts.append(f.read())
+        except Exception as e:
+            logger.warning(f"Failed to read R utilities: {e}")
+
+    # Load formatting utilities
+    if formatting_path.exists():
+        try:
+            with open(formatting_path, "r", encoding="utf-8") as f:
+                if script_parts:  # Add separator if we have utils
+                    script_parts.append("")
+                script_parts.append("# === FORMATTING UTILITIES ===")
+                script_parts.append(f.read())
+        except Exception as e:
+            logger.warning(f"Failed to read formatting utilities: {e}")
+
+    return "\n".join(script_parts)
 
 
 def list_available_scripts(category: Optional[str] = None) -> Dict[str, list]:
-    """
-    List all available R scripts by category.
-
-    Args:
-        category: Optional category to filter by. If None, returns all categories.
-
-    Returns:
-        Dict[str, list]: Dictionary mapping category names to lists of script names
-
-    Example:
-        >>> scripts = list_available_scripts()
-        >>> print(scripts["regression"])
-        ['linear_model', 'correlation_analysis', 'logistic_regression']
-
-        >>> regression_scripts = list_available_scripts("regression")
-        >>> print(regression_scripts)
-        {'regression': ['linear_model', 'correlation_analysis']}
-    """
+    """List all available R scripts by category."""
     r_assets_path = get_r_assets_path()
     scripts_path = r_assets_path / "scripts"
 
@@ -195,43 +156,6 @@ def list_available_scripts(category: Optional[str] = None) -> Dict[str, list]:
     return available_scripts
 
 
-def validate_r_script(script_content: str) -> bool:
-    """
-    Perform basic validation on R script content.
-
-    Args:
-        script_content: R script content to validate
-
-    Returns:
-        bool: True if script appears valid, False otherwise
-
-    Note:
-        This performs basic syntax checking only. Full validation requires R execution.
-    """
-    if not script_content or not script_content.strip():
-        return False
-
-    # Check for balanced braces and parentheses
-    brace_count = script_content.count("{") - script_content.count("}")
-    paren_count = script_content.count("(") - script_content.count(")")
-
-    if brace_count != 0 or paren_count != 0:
-        logger.warning("R script has unbalanced braces or parentheses")
-        return False
-
-    # Check for basic R structure
-    essential_patterns = [
-        "library(",  # Should load libraries
-        "result",  # Should define result variable
-    ]
-
-    for pattern in essential_patterns:
-        if pattern not in script_content:
-            logger.warning(f"R script missing expected pattern: {pattern}")
-
-    return True
-
-
 def clear_script_cache():
     """Clear the R script cache to force reloading from disk."""
     _script_cache.clear()
@@ -239,12 +163,7 @@ def clear_script_cache():
 
 
 def get_cache_stats() -> Dict[str, int]:
-    """
-    Get statistics about the R script cache.
-
-    Returns:
-        Dict with cache statistics
-    """
+    """Get statistics about the R script cache."""
     return {
         "cached_scripts": len(_script_cache),
         "total_cache_size": sum(len(script) for script in _script_cache.values()),

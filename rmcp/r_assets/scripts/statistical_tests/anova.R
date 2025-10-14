@@ -7,52 +7,6 @@
 # Prepare data and parameters
 
 # Load required libraries
-library(jsonlite)
-
-# Determine script directory for path resolution
-script_dir <- if (exists("testthat_testing") && testthat_testing) {
-  # Running under testthat - use relative path from test directory
-  file.path("..", "..", "R")
-} else {
-  # Running normally - use relative path from script location
-  file.path("..", "..", "R")
-}
-
-# Load RMCP utilities
-utils_path <- file.path(script_dir, "utils.R")
-if (file.exists(utils_path)) {
-  source(utils_path)
-} else {
-  stop("Cannot find RMCP utilities at: ", utils_path)
-}
-
-# Parse command line arguments
-args <- if (exists("test_args")) {
-  # Use test arguments if provided (for testthat)
-  test_args
-} else {
-  # Parse from command line
-  cmd_args <- commandArgs(trailingOnly = TRUE)
-  if (length(cmd_args) == 0) {
-    stop("No JSON arguments provided")
-  }
-
-  # Parse JSON input
-  tryCatch(
-    {
-      fromJSON(cmd_args[1])
-    },
-    error = function(e) {
-      stop("Failed to parse JSON arguments: ", e$message)
-    }
-  )
-}
-
-
-# Validate input
-args <- validate_json_input(args, required = c("data"))
-
-# Main script logic
 formula <- as.formula(args$formula)
 anova_type <- args$type %||% "I"
 
@@ -77,13 +31,11 @@ names(df) <- gsub("Pr\\(>F\\)", "p_value", names(df))
 names(df) <- gsub("^F value$", "F", names(df))
 names(df) <- gsub("^Sum of Sq$", "Sum Sq", names(df))
 names(df) <- gsub("^Mean of Sq$", "Mean Sq", names(df))
-
 # Extract values using normalized names
 sum_sq <- if ("Sum Sq" %in% names(df)) df[["Sum Sq"]] else rep(NA, nrow(df))
 mean_sq <- if ("Mean Sq" %in% names(df)) df[["Mean Sq"]] else if ("Sum Sq" %in% names(df) && "Df" %in% names(df)) df[["Sum Sq"]] / df[["Df"]] else rep(NA, nrow(df))
 f_value <- if ("F" %in% names(df)) df[["F"]] else rep(NA, nrow(df))
 p_value <- if ("p_value" %in% names(df)) df[["p_value"]] else rep(NA, nrow(df))
-
 result <- list(
   anova_table = list(
     terms = rownames(df),
@@ -102,7 +54,6 @@ result <- list(
   ),
   formula = deparse(formula),
   anova_type = paste("Type", anova_type),
-
   # Special non-validated field for formatting
   "_formatting" = list(
     summary = tryCatch(
@@ -128,9 +79,3 @@ result <- list(
     )
   )
 )
-# Output results in standard JSON format
-if (exists("result")) {
-  cat(safe_json(format_json_output(result)))
-} else {
-  cat(safe_json(list(error = "No result generated", success = FALSE)))
-}
