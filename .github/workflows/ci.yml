@@ -338,10 +338,7 @@ jobs:
         import sys, asyncio, json
         sys.path.insert(0, '.')
         from rmcp.core.server import create_server
-        from rmcp.registries.tools import register_tool_functions
-        from rmcp.tools.descriptive import summary_stats
-        from rmcp.tools.regression import linear_model
-        from rmcp.tools.helpers import load_example
+        from rmcp.cli import _register_builtin_tools
         
         def extract_json_content(resp):
             '''Extract JSON content from MCP tool response'''
@@ -364,7 +361,11 @@ jobs:
         async def test_mcp_r_integration():
             print('=== Testing R Integration through MCP Server ===')
             server = create_server()
-            register_tool_functions(server.tools, summary_stats, linear_model, load_example)
+            _register_builtin_tools(server)
+            
+            # Verify tools are registered
+            tool_count = len(server.tools._tools)
+            print(f'✅ Registered {tool_count} tools in MCP server')
             
             # Test 1: Summary statistics (descriptive analysis)
             print('Testing summary_stats through MCP...')
