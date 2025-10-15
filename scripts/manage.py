@@ -90,12 +90,12 @@ class ScriptManager:
                     "type": "python",
                     "category": "integration",
                     "description": "Real Claude Desktop integration testing",
-                    "dependencies": ["python", "claude-desktop"],
+                    "dependencies": ["python", "claude-desktop?"],
                     "args": ["--quick", "--verbose"],
                 },
                 "docker-workflows": {
                     "path": integration_dir / "docker_workflows.py",
-                    "type": "python", 
+                    "type": "python",
                     "category": "integration",
                     "description": "Complete Docker workflow validation",
                     "dependencies": ["python", "docker"],
@@ -104,7 +104,7 @@ class ScriptManager:
                 "realistic-scenarios": {
                     "path": integration_dir / "realistic_scenarios.py",
                     "type": "python",
-                    "category": "integration", 
+                    "category": "integration",
                     "description": "Real-world usage scenario testing",
                     "dependencies": ["python", "docker?", "claude-desktop?"],
                     "args": [],
@@ -130,7 +130,13 @@ class ScriptManager:
                     "category": "setup",
                     "description": "Automated setup for new users and environments",
                     "dependencies": ["python"],
-                    "args": ["--claude-desktop", "--vscode", "--docker", "--r-packages", "--all"],
+                    "args": [
+                        "--claude-desktop",
+                        "--vscode",
+                        "--docker",
+                        "--r-packages",
+                        "--all",
+                    ],
                 },
                 "ide-integrations": {
                     "path": setup_dir / "ide_integrations.py",
