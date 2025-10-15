@@ -59,17 +59,21 @@ install.packages(c("testthat", "roxygen2", "lintr", "styler", "devtools"))
 
 ### Running Individual Tools
 
-All R scripts accept JSON input and produce JSON output:
+R scripts are designed to work through the RMCP template system, which provides automatic argument parsing, utility functions, and output formatting. For direct testing, use the Python loader:
 
-```bash
-# Example: Run linear regression
-echo '{"data": {"x": [1,2,3,4,5], "y": [2,4,6,8,10]}, "formula": "y ~ x"}' | \
-Rscript scripts/regression/linear_model.R
+```python
+# Example: Run linear regression through template system
+from rmcp.r_assets.loader import get_r_script
+import subprocess, tempfile
 
-# Example: Generate summary statistics
-echo '{"data": {"values": [1,2,3,4,5,6,7,8,9,10]}}' | \
-Rscript scripts/descriptive/summary_stats.R
+script_content = get_r_script('regression', 'linear_model')
+with tempfile.NamedTemporaryFile(mode='w', suffix='.R', delete=False) as f:
+    f.write(script_content)
+    result = subprocess.run(['Rscript', f.name, '{"data": {"x": [1,2,3,4,5], "y": [2,4,6,8,10]}, "formula": "y ~ x"}'], capture_output=True, text=True)
+    print(result.stdout)
 ```
+
+**Note**: Raw R scripts in `scripts/` contain only statistical logic and require the template system for execution.
 
 ### Quality Assurance Tools
 

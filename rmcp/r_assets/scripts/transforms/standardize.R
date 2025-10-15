@@ -5,11 +5,10 @@
 # z-score, min-max, or robust scaling for data preprocessing.
 
 # Prepare data and parameters
-
-# Load required libraries
 variables <- args$variables
 method <- args$method %||% "z_score"
 
+# Load required libraries
 result_data <- data
 scaling_info <- list()
 

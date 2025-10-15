@@ -4,7 +4,6 @@
 # This script builds decision tree models for classification and regression
 # with variable importance analysis and performance metrics.
 
-
 # Load required libraries
 library(rpart)
 
@@ -38,7 +37,7 @@ if (tree_type == "classification") {
   accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
   performance <- list(
     accuracy = accuracy,
-    confusion_matrix = as.matrix(confusion_matrix)
+    confusion_matrix = as.list(as.data.frame.matrix(confusion_matrix))
   )
 } else {
   # Regression metrics

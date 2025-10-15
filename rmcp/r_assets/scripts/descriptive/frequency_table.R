@@ -5,12 +5,11 @@
 # with support for percentages, sorting, and missing value analysis.
 
 # Prepare data and parameters
+variables <- args$variables
+sort_by <- args$sort_by %||% "frequency"
+include_percentages <- args$include_percentages %||% TRUE
 
 # Load required libraries
-variables <- args$variables
-include_percentages <- args$include_percentages %||% TRUE
-sort_by <- args$sort_by %||% "frequency"
-
 freq_tables <- list()
 
 for (var in variables) {

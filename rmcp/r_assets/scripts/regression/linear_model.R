@@ -5,6 +5,7 @@
 # It supports weighted regression, missing value handling, and returns detailed
 # model diagnostics including coefficients, significance tests, and goodness-of-fit.
 
+
 # Main script logic
 formula <- as.formula(args$formula)
 
@@ -55,3 +56,4 @@ result <- list(
     interpretation = interpretation
   )
 )
+

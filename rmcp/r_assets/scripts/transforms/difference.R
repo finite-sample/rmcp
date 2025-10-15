@@ -5,12 +5,12 @@
 # in time series analysis, with optional log transformation.
 
 # Prepare data and parameters
-
-# Load required libraries
 variables <- args$variables
-diff_order <- args$order %||% 1
+differences <- args$differences %||% 1
+diff_order <- differences  # For backward compatibility
 log_transform <- args$log_transform %||% FALSE
 
+# Load required libraries
 result_data <- data
 
 for (var in variables) {

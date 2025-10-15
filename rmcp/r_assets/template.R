@@ -16,7 +16,7 @@ library(jsonlite)
 # The 'data' variable contains the main dataset (if provided)
 
 # Parse arguments from command line if not already provided
-if (!exists('args')) {
+if (!exists('args') || is.function(args)) {
   # Handle command line execution
   cmd_args <- commandArgs(trailingOnly = TRUE)
   if (length(cmd_args) == 0) {

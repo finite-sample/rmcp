@@ -4,7 +4,6 @@
 # This script performs K-means clustering analysis with cluster validation
 # including silhouette analysis and variance explained calculations.
 
-
 # Load required libraries
 library(cluster)
 

@@ -6,11 +6,10 @@
 # properties to help assess normality.
 
 # Prepare data and parameters
+variable <- args$variable
+test_type <- args$test_type %||% "shapiro"
 
 # Load required libraries
-variable <- args$variable
-test_type <- args$test %||% "shapiro"
-
 values <- data[[variable]]
 values <- values[!is.na(values)]
 n <- length(values)

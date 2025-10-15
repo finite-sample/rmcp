@@ -3,15 +3,14 @@
 #
 # This script creates time series plots for trend analysis with forecasting visualization.
 
-# Set CRAN mirror
-
 # Load required libraries
 options(repos = c(CRAN = "https://cloud.r-project.org/"))
 library(ggplot2)
+library(rlang)
 
 # Prepare data and parameters
-time_var <- args$time_variable
-variables <- args$variables
+time_var <- args$time_variable %||% "time"
+variables <- args$variables %||% "value"
 title <- args$title %||% "Time Series Plot"
 file_path <- args$file_path
 return_image <- args$return_image %||% TRUE
@@ -30,14 +29,14 @@ if (length(variables) > 1) {
   # Melt data for multiple series
   library(reshape2)
   melted_data <- melt(data, id.vars = time_var, measure.vars = variables)
-  p <- ggplot(melted_data, aes_string(x = time_var, y = "value", color = "variable")) +
-    geom_line(size = 1) +
+  p <- ggplot(melted_data, aes(x = !!sym(time_var), y = value, color = variable)) +
+    geom_line(linewidth = 1) +
     geom_point(alpha = 0.6) +
     labs(title = title, x = time_var, y = "Value", color = "Variable")
 } else {
   # Single variable plot
-  p <- ggplot(data, aes_string(x = time_var, y = variables[1])) +
-    geom_line(color = "steelblue", size = 1) +
+  p <- ggplot(data, aes(x = !!sym(time_var), y = !!sym(variables[1]))) +
+    geom_line(color = "steelblue", linewidth = 1) +
     geom_point(alpha = 0.6, color = "steelblue") +
     labs(title = title, x = time_var, y = variables[1])
 }
@@ -55,7 +54,7 @@ if (!is.null(file_path)) {
 }
 # Calculate basic time series statistics
 n_obs <- nrow(data)
-date_range <- if (is.Date(data[[time_var]])) {
+date_range <- if (inherits(data[[time_var]], "Date")) {
   list(start = min(data[[time_var]], na.rm = TRUE), end = max(data[[time_var]], na.rm = TRUE))
 } else {
   list(start = min(data[[time_var]], na.rm = TRUE), end = max(data[[time_var]], na.rm = TRUE))
@@ -76,8 +75,10 @@ if (!is.null(file_path)) {
 }
 # Generate base64 image if requested
 if (return_image) {
-  image_data <- safe_encode_plot(p, width, height)
-  if (!is.null(image_data)) {
-    result$image_data <- image_data
+  image_data <- if(exists("safe_encode_plot")) {
+    safe_encode_plot(p, width, height)
+  } else {
+    "Plot created successfully but base64 encoding not available in standalone mode"
   }
+  result$image_data <- image_data
 }

@@ -3,11 +3,10 @@
 #
 # This script creates boxplots for quartile analysis and outlier detection.
 
-# Set CRAN mirror
-
 # Load required libraries
 options(repos = c(CRAN = "https://cloud.r-project.org/"))
 library(ggplot2)
+library(rlang)
 
 # Prepare data and parameters
 variable <- args$variable
@@ -19,12 +18,12 @@ width <- args$width %||% 800
 height <- args$height %||% 600
 
 # Create base plot
-if (!is.null(group_var)) {
-  p <- ggplot(data, aes_string(x = group_var, y = variable, fill = group_var)) +
+if (!is.null(group_var) && !is.na(group_var)) {
+  p <- ggplot(data, aes(x = !!sym(group_var), y = !!sym(variable), fill = !!sym(group_var))) +
     geom_boxplot(alpha = 0.7) +
     labs(title = title, x = group_var, y = variable)
 } else {
-  p <- ggplot(data, aes_string(y = variable)) +
+  p <- ggplot(data, aes(y = !!sym(variable))) +
     geom_boxplot(fill = "steelblue", alpha = 0.7) +
     labs(title = title, x = "", y = variable)
 }
@@ -70,8 +69,10 @@ if (!is.null(file_path)) {
 }
 # Generate base64 image if requested
 if (return_image) {
-  image_data <- safe_encode_plot(p, width, height)
-  if (!is.null(image_data)) {
-    result$image_data <- image_data
+  image_data <- if(exists("safe_encode_plot")) {
+    safe_encode_plot(p, width, height)
+  } else {
+    "Plot created successfully but base64 encoding not available in standalone mode"
   }
+  result$image_data <- image_data
 }

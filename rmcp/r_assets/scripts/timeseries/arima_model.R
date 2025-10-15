@@ -4,8 +4,6 @@
 # This script fits ARIMA models to time series data with automatic or manual
 # order selection and generates forecasts with prediction intervals.
 
-# Install required packages
-
 # Load required libraries
 library(forecast)
 

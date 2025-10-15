@@ -4,7 +4,6 @@
 # This script fits Vector Autoregression models for multivariate time series
 # analysis with support for different lag orders and deterministic terms.
 
-
 # Load required libraries
 library(vars)
 
@@ -42,7 +41,7 @@ result <- list(
   variables = variables,
   lag_order = lag_order,
   var_type = var_type,
-  n_obs = nobs(var_model),
+  n_obs = var_model$obs,
   n_variables = length(variables),
   loglik = logLik(var_model)[1],
   aic = AIC(var_model),
@@ -57,7 +56,7 @@ result <- list(
           Model = "VAR",
           Variables = length(variables),
           Lags = lag_order,
-          Observations = nobs(var_model),
+          Observations = var_model$obs,
           AIC = round(AIC(var_model), 2),
           BIC = round(BIC(var_model), 2)
         )
@@ -72,7 +71,7 @@ result <- list(
     ),
     interpretation = paste0(
       "VAR(", lag_order, ") model with ", length(variables),
-      " variables and ", nobs(var_model), " observations."
+      " variables and ", var_model$obs, " observations."
     )
   )
 )

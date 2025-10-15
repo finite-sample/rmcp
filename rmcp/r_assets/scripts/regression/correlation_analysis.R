@@ -5,9 +5,7 @@
 # Pearson, Spearman, or Kendall methods. It includes significance tests for
 # each correlation and handles missing values appropriately.
 
-# Prepare data and parameters
-
-# Load required libraries
+# Main script logic
 variables <- args$variables
 method <- args$method %||% "pearson"
 use <- args$use %||% "complete.obs"
@@ -61,9 +59,10 @@ for (i in 1:(ncol(numeric_data) - 1)) {
     )
   }
 }
-# Generate formatted summary using our formatting functions
+# Generate formatted summary using our formatting functions (with fallback)
 formatted_summary <- format_correlation_matrix(cor_matrix)
-# Generate natural language interpretation
+
+# Generate natural language interpretation (with fallback)
 # Extract the smallest p-value from significance tests for overall interpretation
 min_p <- 1
 for (test in cor_test_results) {
@@ -71,7 +70,9 @@ for (test in cor_test_results) {
     min_p <- test$p_value
   }
 }
+
 sig_text <- get_significance(min_p)
+
 interpretation <- paste0("Strongest correlations are ", sig_text, ".")
 # Convert correlation matrix to nested list structure
 cor_list <- list()

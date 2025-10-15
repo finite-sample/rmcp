@@ -5,8 +5,6 @@
 # for URLs, custom separators, missing value handling, and file metadata extraction.
 
 # Prepare parameters
-
-# Load required libraries
 file_path <- args$file_path
 header <- args$header %||% TRUE
 sep <- args$sep %||% ","

@@ -4,10 +4,7 @@
 # This script validates data quality and identifies potential issues
 # before statistical analysis, with analysis-specific checks.
 
-
 # Load required libraries
-library(dplyr)
-
 # Prepare data and parameters
 analysis_type <- args$analysis_type %||% "general"
 strict_mode <- args$strict %||% FALSE

@@ -4,7 +4,6 @@
 # This script reads JSON files and converts them to tabular format with support
 # for nested structures, arrays, and URL sources.
 
-
 # Load required libraries
 library(dplyr)
 

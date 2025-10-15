@@ -6,13 +6,12 @@
 # observed frequencies to expected distributions.
 
 # Prepare data and parameters
+test_type <- args$test_type %||% "independence"
+x_var <- args$x_var
+y_var <- args$y_var
+expected_probs <- args$expected_probs
 
 # Load required libraries
-x_var <- args$x
-y_var <- args$y
-test_type <- args$test_type %||% "independence"
-expected <- args$expected
-
 if (test_type == "independence") {
   if (is.null(x_var) || is.null(y_var)) {
     stop("Both x and y variables required for independence test")

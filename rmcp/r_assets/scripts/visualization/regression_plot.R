@@ -3,12 +3,11 @@
 #
 # This script creates comprehensive 4-panel diagnostic plots for model validation.
 
-# Set CRAN mirror
-
 # Load required libraries
 options(repos = c(CRAN = "https://cloud.r-project.org/"))
 library(ggplot2)
 library(gridExtra)
+library(rlang)
 
 # Prepare data and parameters
 formula_str <- args$formula
@@ -102,8 +101,10 @@ if (!is.null(file_path)) {
 }
 # Generate base64 image if requested
 if (return_image) {
-  image_data <- safe_encode_plot(combined_plot, width, height)
-  if (!is.null(image_data)) {
-    result$image_data <- image_data
+  image_data <- if(exists("safe_encode_plot")) {
+    safe_encode_plot(combined_plot, width, height)
+  } else {
+    "Plot created successfully but base64 encoding not available in standalone mode"
   }
+  result$image_data <- image_data
 }

@@ -5,11 +5,10 @@
 # sum of squares. It uses base R anova() for Type I and car::Anova() for Types II and III.
 
 # Prepare data and parameters
+formula <- as.formula(args$formula)
+anova_type <- args$anova_type %||% "I"
 
 # Load required libraries
-formula <- as.formula(args$formula)
-anova_type <- args$type %||% "I"
-
 # Fit the model
 model <- lm(formula, data = data)
 

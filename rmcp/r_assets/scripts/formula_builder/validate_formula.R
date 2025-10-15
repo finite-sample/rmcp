@@ -4,9 +4,11 @@
 # This script validates R formulas against provided data to ensure
 # variable existence and identify potential data quality issues.
 
-# Convert data to data frame
+# Convert data to data frame if needed
+if (!is.data.frame(data)) {
+  data <- as.data.frame(data)
+}
 
-# Load required libraries
 formula_str <- args$formula
 
 # Parse formula

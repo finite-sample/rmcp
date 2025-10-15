@@ -4,11 +4,10 @@
 # This script generates example datasets for testing and learning
 # statistical analysis methods with realistic data patterns.
 
-
 # Load required libraries
 library(dplyr)
 
-# Prepare parameters
+# Prepare parameters with safe fallbacks
 dataset_name <- args$dataset %||% "sales"
 size_param <- args$size %||% "small"
 add_noise <- args$add_noise %||% FALSE
@@ -193,4 +192,3 @@ if (dataset_name == "sales") {
     "Multiple regression with demographic controls"
   )
 }
-result

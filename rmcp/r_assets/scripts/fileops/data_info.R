@@ -5,8 +5,6 @@
 # dimensions, variable types, missing values, and memory usage.
 
 # Prepare data and parameters
-
-# Load required libraries
 include_sample <- args$include_sample %||% TRUE
 sample_size <- args$sample_size %||% 5
 

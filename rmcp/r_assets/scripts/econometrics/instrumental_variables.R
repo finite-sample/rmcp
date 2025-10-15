@@ -4,11 +4,9 @@
 # This script performs two-stage least squares (2SLS) instrumental variables
 # regression with diagnostic tests for weak instruments and endogeneity.
 
-
 # Load required libraries
 library(AER)
 library(lmtest)
-library(sandwich)
 
 # Prepare data and parameters
 formula_str <- args$formula

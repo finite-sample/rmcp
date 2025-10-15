@@ -3,11 +3,10 @@
 #
 # This script creates histograms with density overlays for distribution analysis.
 
-# Set CRAN mirror
-
 # Load required libraries
 options(repos = c(CRAN = "https://cloud.r-project.org/"))
 library(ggplot2)
+library(rlang)
 
 # Prepare data and parameters
 variable <- args$variable
@@ -20,10 +19,10 @@ width <- args$width %||% 800
 height <- args$height %||% 600
 
 # Create base plot
-p <- ggplot(data, aes_string(x = variable))
-if (!is.null(group_var)) {
-  p <- p + geom_histogram(aes_string(fill = group_var), bins = bins, alpha = 0.7, position = "identity") +
-    geom_density(aes_string(color = group_var), alpha = 0.8)
+p <- ggplot(data, aes(x = !!sym(variable)))
+if (!is.null(group_var) && !is.na(group_var)) {
+  p <- p + geom_histogram(aes(fill = !!sym(group_var)), bins = bins, alpha = 0.7, position = "identity") +
+    geom_density(aes(color = !!sym(group_var)), alpha = 0.8)
 } else {
   p <- p + geom_histogram(bins = bins, alpha = 0.7, fill = "steelblue") +
     geom_density(alpha = 0.8, color = "red")
@@ -64,8 +63,10 @@ if (!is.null(file_path)) {
 }
 # Generate base64 image if requested
 if (return_image) {
-  image_data <- safe_encode_plot(p, width, height)
-  if (!is.null(image_data)) {
-    result$image_data <- image_data
+  image_data <- if(exists("safe_encode_plot")) {
+    safe_encode_plot(p, width, height)
+  } else {
+    "Plot created successfully but base64 encoding not available in standalone mode"
   }
+  result$image_data <- image_data
 }

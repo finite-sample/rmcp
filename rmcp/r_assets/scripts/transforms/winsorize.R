@@ -5,11 +5,11 @@
 # at specified percentile thresholds, preserving data structure while reducing outlier impact.
 
 # Prepare data and parameters
+variables <- args$variables
+lower_percentile <- args$lower_percentile %||% 0.05
+upper_percentile <- args$upper_percentile %||% 0.95
 
 # Load required libraries
-variables <- args$variables
-percentiles <- args$percentiles %||% c(0.01, 0.99)
-
 result_data <- data
 outliers_summary <- list()
 
@@ -17,8 +17,8 @@ for (var in variables) {
   original_values <- data[[var]]
 
   # Calculate percentile thresholds
-  lower_threshold <- quantile(original_values, percentiles[1], na.rm = TRUE)
-  upper_threshold <- quantile(original_values, percentiles[2], na.rm = TRUE)
+  lower_threshold <- quantile(original_values, lower_percentile, na.rm = TRUE)
+  upper_threshold <- quantile(original_values, upper_percentile, na.rm = TRUE)
 
   # Winsorize
   winsorized <- pmax(pmin(original_values, upper_threshold), lower_threshold)
@@ -39,7 +39,7 @@ for (var in variables) {
 result <- list(
   data = as.list(result_data),
   outliers_summary = outliers_summary,
-  percentiles = percentiles,
+  percentiles = c(lower_percentile, upper_percentile),
   variables_winsorized = I(variables),
   n_obs = nrow(result_data),
   # Special non-validated field for formatting
@@ -51,7 +51,7 @@ result <- list(
         winsor_summary <- data.frame(
           Operation = "Winsorization",
           Variables = length(variables),
-          Percentiles = paste0(percentiles[1] * 100, "%-", percentiles[2] * 100, "%"),
+          Percentiles = paste0(lower_percentile * 100, "%-", upper_percentile * 100, "%"),
           Total_Outliers_Capped = total_capped,
           Observations = nrow(result_data)
         )
@@ -66,7 +66,7 @@ result <- list(
     ),
     interpretation = paste0(
       "Winsorized ", length(variables), " variables at ",
-      percentiles[1] * 100, "%-", percentiles[2] * 100, "% thresholds."
+      lower_percentile * 100, "%-", upper_percentile * 100, "% thresholds."
     )
   )
 )

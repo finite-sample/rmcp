@@ -5,12 +5,11 @@
 # useful for autoregressive modeling and causal inference.
 
 # Prepare data and parameters
-
-# Load required libraries
 variables <- args$variables
 lags <- args$lags %||% c(1)
 leads <- args$leads %||% c()
 
+# Load required libraries
 result_data <- data
 
 # Create lagged variables

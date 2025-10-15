@@ -5,14 +5,12 @@
 # cause errors during statistical analysis.
 
 # Prepare data
+n_rows <- nrow(data)
+n_cols <- ncol(data)
 
 # Load required libraries
 
 # Basic data analysis
-n_rows <- nrow(data)
-n_cols <- ncol(data)
-col_names <- names(data)
-
 # Check for potential issues
 issues <- c()
 suggestions <- c()

@@ -8,8 +8,36 @@
 # Load required libraries
 library(tseries)
 
+
 # Prepare data and parameters
 test_type <- args$test %||% "adf"
+
+# Extract values from data
+if ('values' %in% names(args)) {
+  values <- args$values
+} else if ('value_col' %in% names(args)) {
+  value_col <- args$value_col
+  if (value_col %in% names(data)) {
+    values <- data[[value_col]]
+  } else {
+    # Find first numeric column
+    numeric_cols <- names(data)[sapply(data, is.numeric)]
+    if (length(numeric_cols) > 0) {
+      values <- data[[numeric_cols[1]]]
+    } else {
+      stop("No numeric columns found for stationarity test")
+    }
+  }
+} else {
+  # Find first numeric column
+  numeric_cols <- names(data)[sapply(data, is.numeric)]
+  if (length(numeric_cols) > 0) {
+    values <- data[[numeric_cols[1]]]
+  } else {
+    stop("No numeric columns found for stationarity test")
+  }
+}
+
 ts_data <- ts(values)
 
 if (test_type == "adf") {
@@ -53,3 +81,4 @@ result <- list(
     )
   )
 )
+

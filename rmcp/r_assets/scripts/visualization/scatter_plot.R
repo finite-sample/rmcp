@@ -5,12 +5,12 @@
 # using ggplot2 for publication-quality visualizations.
 
 # Set CRAN mirror
-
 # Load required libraries
 options(repos = c(CRAN = "https://cloud.r-project.org/"))
 library(ggplot2)
+library(rlang)
 
-# Prepare data and parameters
+# Prepare data and parameters with safe fallbacks
 x_var <- args$x
 y_var <- args$y
 group_var <- if (!is.null(args$group) && length(args$group) > 0 &&
@@ -25,11 +25,11 @@ return_image <- args$return_image %||% TRUE
 width <- args$width %||% 800
 height <- args$height %||% 600
 
-# Create base plot
-p <- ggplot(data, aes_string(x = x_var, y = y_var))
-if (!is.null(group_var)) {
-  p <- p + geom_point(aes_string(color = group_var), alpha = 0.7) +
-    geom_smooth(aes_string(color = group_var), method = "lm", se = TRUE)
+# Create base plot using modern aes() syntax
+p <- ggplot(data, aes(x = !!sym(x_var), y = !!sym(y_var)))
+if (!is.null(group_var) && !is.na(group_var)) {
+  p <- p + geom_point(aes(color = !!sym(group_var)), alpha = 0.7) +
+    geom_smooth(aes(color = !!sym(group_var)), method = "lm", se = TRUE)
 } else {
   p <- p + geom_point(alpha = 0.7) +
     geom_smooth(method = "lm", se = TRUE, color = "blue")
@@ -67,8 +67,10 @@ if (!is.null(file_path)) {
 }
 # Generate base64 image if requested
 if (return_image) {
-  image_data <- safe_encode_plot(p, width, height)
-  if (!is.null(image_data)) {
-    result$image_data <- image_data
+  image_data <- if(exists("safe_encode_plot")) {
+    safe_encode_plot(p, width, height)
+  } else {
+    "Plot created successfully but base64 encoding not available in standalone mode"
   }
+  result$image_data <- image_data
 }

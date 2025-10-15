@@ -3,12 +3,11 @@
 #
 # This script creates correlation heatmaps with color-coded matrices for statistical analysis.
 
-# Set CRAN mirror
-
 # Load required libraries
 options(repos = c(CRAN = "https://cloud.r-project.org/"))
 library(ggplot2)
 library(reshape2)
+library(rlang)
 
 # Prepare data and parameters
 variables <- args$variables
@@ -74,8 +73,10 @@ if (!is.null(file_path)) {
 }
 # Generate base64 image if requested
 if (return_image) {
-  image_data <- safe_encode_plot(p, width, height)
-  if (!is.null(image_data)) {
-    result$image_data <- image_data
+  image_data <- if(exists("safe_encode_plot")) {
+    safe_encode_plot(p, width, height)
+  } else {
+    "Plot created successfully but base64 encoding not available in standalone mode"
   }
+  result$image_data <- image_data
 }

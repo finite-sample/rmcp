@@ -4,7 +4,6 @@
 # This script performs panel data regression with fixed effects, random effects,
 # between effects, or pooling models using the plm package.
 
-
 # Load required libraries
 library(plm)
 library(lmtest)

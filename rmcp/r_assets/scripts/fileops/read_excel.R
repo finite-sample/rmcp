@@ -4,7 +4,6 @@
 # This script reads Excel files (.xlsx, .xls) with flexible sheet and range selection.
 # Supports multiple sheets, custom ranges, and comprehensive file metadata.
 
-
 # Load required libraries
 library(readxl)
 

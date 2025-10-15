@@ -4,8 +4,6 @@
 # This script writes data to Excel files using openxlsx package with
 # support for sheet names, row names, and formatting options.
 
-# Check and load required packages
-
 # Load required libraries
 if (!require(openxlsx, quietly = TRUE)) {
   stop("Package 'openxlsx' is required but not installed. Please install it with: install.packages('openxlsx')")

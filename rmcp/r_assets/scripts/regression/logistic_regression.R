@@ -6,12 +6,11 @@
 # with special diagnostics for binomial models.
 
 # Prepare data and parameters
-
-# Load required libraries
 formula <- as.formula(args$formula)
 family <- args$family %||% "binomial"
 link <- args$link %||% "logit"
 
+# Load required libraries
 # Prepare family specification
 if (family == "binomial") {
   family_spec <- binomial(link = link)

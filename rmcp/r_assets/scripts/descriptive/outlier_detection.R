@@ -5,12 +5,11 @@
 # IQR (Interquartile Range), Z-score, and Modified Z-score approaches.
 
 # Prepare data and parameters
-
-# Load required libraries
 variable <- args$variable
 method <- args$method %||% "iqr"
-threshold <- args$threshold %||% 3.0
+threshold <- args$threshold %||% 1.5
 
+# Load required libraries
 values <- data[[variable]]
 values_clean <- values[!is.na(values)]
 

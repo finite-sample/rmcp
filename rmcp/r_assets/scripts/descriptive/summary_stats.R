@@ -120,4 +120,3 @@ if (is.null(group_by)) {
     interpretation = paste0("Summary statistics for ", length(variables), " variables across ", length(groups), " groups.")
   )
 }
-
