@@ -11,10 +11,115 @@ env:
   IMAGE_NAME: ${{ github.repository }}/rmcp-ci
 
 jobs:
+  # Script validation and management
+  script-validation:
+    name: Script Validation & Management
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install basic dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install click jsonschema
+    
+    - name: Validate script organization and health
+      run: |
+        # Check script management utility
+        python3 scripts/manage.py list
+        python3 scripts/manage.py health-check
+        
+        # Verify all development scripts are properly organized
+        echo "📋 Verifying script organization..."
+        
+        # Check for any remaining ad hoc scripts in root
+        if [ -f "test-local.sh" ] || [ -f "debug-mcp-protocol.sh" ] || [ -f "run_e2e_tests.py" ]; then
+          echo "❌ Found ad hoc scripts in root directory - should be in scripts/"
+          exit 1
+        fi
+        
+        # Verify scripts are in correct directories
+        if [ ! -f "scripts/testing/run_e2e_tests.py" ]; then
+          echo "❌ Missing scripts/testing/run_e2e_tests.py"
+          exit 1
+        fi
+        
+        if [ ! -f "scripts/testing/test-local.sh" ]; then
+          echo "❌ Missing scripts/testing/test-local.sh"
+          exit 1
+        fi
+        
+        if [ ! -f "scripts/debugging/debug-mcp-protocol.sh" ]; then
+          echo "❌ Missing scripts/debugging/debug-mcp-protocol.sh"
+          exit 1
+        fi
+        
+        # Verify integration scripts moved from tests/e2e/
+        if [ ! -f "scripts/testing/integration/claude_desktop_e2e.py" ]; then
+          echo "❌ Missing scripts/testing/integration/claude_desktop_e2e.py"
+          exit 1
+        fi
+        
+        if [ ! -f "scripts/testing/integration/docker_workflows.py" ]; then
+          echo "❌ Missing scripts/testing/integration/docker_workflows.py"
+          exit 1
+        fi
+        
+        # Verify setup scripts moved from tests/local/
+        if [ ! -f "scripts/setup/validate_local_setup.py" ]; then
+          echo "❌ Missing scripts/setup/validate_local_setup.py"
+          exit 1
+        fi
+        
+        if [ ! -f "scripts/setup/setup_automation.py" ]; then
+          echo "❌ Missing scripts/setup/setup_automation.py"
+          exit 1
+        fi
+        
+        # Verify old problematic directories are gone
+        if [ -d "tests/e2e" ] && [ "$(ls -A tests/e2e)" ]; then
+          echo "❌ tests/e2e/ directory should be empty or removed"
+          exit 1
+        fi
+        
+        if [ -d "tests/local" ] && [ "$(ls -A tests/local)" ]; then
+          echo "❌ tests/local/ directory should be empty or removed"
+          exit 1
+        fi
+        
+        echo "✅ Script organization validated"
+    
+    - name: Test script documentation and README
+      run: |
+        # Verify README exists and has required content
+        if [ ! -f "scripts/README.md" ]; then
+          echo "❌ Missing scripts/README.md"
+          exit 1
+        fi
+        
+        # Check for required sections in README
+        if ! grep -q "## Directory Structure" scripts/README.md; then
+          echo "❌ Missing Directory Structure section in scripts/README.md"
+          exit 1
+        fi
+        
+        if ! grep -q "## Script Categories" scripts/README.md; then
+          echo "❌ Missing Script Categories section in scripts/README.md"
+          exit 1
+        fi
+        
+        echo "✅ Script documentation validated"
+
   # Fast checks that don't need R
   lint-and-smoke:
     name: Lint & Smoke Tests
     runs-on: ubuntu-latest
+    needs: script-validation
     steps:
     - uses: actions/checkout@v4
     
@@ -31,9 +136,9 @@ jobs:
     
     - name: Run linting
       run: |
-        black --check rmcp tests streamlit
-        isort --check-only rmcp tests streamlit
-        flake8 rmcp tests streamlit
+        black --check rmcp tests streamlit scripts
+        isort --check-only rmcp tests streamlit scripts
+        flake8 rmcp tests streamlit scripts
     
     - name: Quick smoke tests
       run: |
@@ -52,14 +157,14 @@ jobs:
         print('✅ Server creation works')
         "
         
-        # Test non-R dependent unit tests
+        # Test non-R dependent unit tests (only CI-compatible tests)
         python -m pytest tests/unit/core/test_server.py -v
 
   # R linting and testing (using our proven Docker environment)
   r-lint-and-test:
     name: R Lint & Test (Docker)
     runs-on: ubuntu-latest
-    needs: lint-and-smoke
+    needs: [script-validation, lint-and-smoke]
     steps:
     - uses: actions/checkout@v4
     
@@ -128,7 +233,7 @@ jobs:
   docker-build:
     name: Build CI Docker Image
     runs-on: ubuntu-latest
-    needs: [lint-and-smoke, r-lint-and-test]
+    needs: [script-validation, lint-and-smoke, r-lint-and-test]
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     permissions:
       contents: read
@@ -191,7 +296,7 @@ jobs:
   cross-platform-python:
     name: Python tests on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    needs: [lint-and-smoke, r-lint-and-test]
+    needs: [script-validation, lint-and-smoke, r-lint-and-test]
     
     strategy:
       fail-fast: false
@@ -225,7 +330,7 @@ jobs:
   integration-tests-docker:
     name: R Integration Tests (Docker)
     runs-on: ubuntu-latest
-    needs: [lint-and-smoke, docker-build]
+    needs: [script-validation, lint-and-smoke, docker-build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     container:
       image: ${{ needs.docker-build.outputs.image }}
@@ -260,22 +365,22 @@ jobs:
         R --version | head -1
         python -c "from rmcp.r_integration import diagnose_r_installation; import json; print(json.dumps(diagnose_r_installation(), indent=2))"
     
-    - name: Run unit tests with coverage
+    - name: Run unit tests with coverage (CI-compatible only)
       run: |
         export PATH="/opt/venv/bin:$PATH"
         pytest tests/unit/ -v --tb=short --cov=rmcp --cov-report=xml --cov-report=term-missing
     
-    - name: Run MCP protocol compliance tests
+    - name: Run MCP protocol compliance tests (CI-compatible)
       run: |
         export PATH="/opt/venv/bin:$PATH"
         pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short --cov=rmcp --cov-append
     
-    - name: Run integration tests
+    - name: Run integration tests (CI-compatible)
       run: |
         export PATH="/opt/venv/bin:$PATH"
         pytest tests/integration/test_mcp_interface.py -v --tb=short --cov=rmcp --cov-append
     
-    - name: Run schema validation tests
+    - name: Run schema validation tests (CI-compatible)
       run: |
         export PATH="/opt/venv/bin:$PATH"
         pytest tests/integration/test_schema_validation.py -v --tb=short --cov=rmcp --cov-append
@@ -494,7 +599,7 @@ jobs:
   test-docker-env:
     name: Test with Docker Environment
     runs-on: ubuntu-latest
-    needs: [lint-and-smoke, docker-build]
+    needs: [script-validation, lint-and-smoke, docker-build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     container:
       image: ${{ needs.docker-build.outputs.image }}
@@ -544,7 +649,7 @@ jobs:
   feature-verification:
     name: Feature Verification
     runs-on: ubuntu-latest
-    needs: [lint-and-smoke, docker-build]
+    needs: [script-validation, lint-and-smoke, docker-build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     container:
       image: ${{ needs.docker-build.outputs.image }}

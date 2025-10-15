@@ -72,29 +72,40 @@ def start(log_level: str):
             "Windows platform detected - using Windows-compatible stdio transport"
         )
     try:
-        # Check R version compatibility
+        # Check R version compatibility (but don't fail if R check fails)
         from .r_integration import check_r_version
 
         try:
             is_compatible, version_string = check_r_version()
             logger.info(f"R version check: {version_string}")
             if not is_compatible:
-                logger.error(
+                logger.warning(
                     "RMCP requires R 4.4.0 or higher for full compatibility. "
                     "Some features may not work correctly with older R versions. "
                     "Please upgrade R to 4.4.0+ for best experience."
                 )
         except Exception as e:
-            logger.error(f"R version check failed: {e}")
-            logger.error(
-                "R may not be properly installed. Please ensure R 4.4.0+ is installed and available in PATH."
+            logger.warning(f"R version check failed: {e}")
+            logger.warning(
+                "R may not be properly installed. Server will start but R-dependent tools may fail. "
+                "Please ensure R 4.4.0+ is installed and available in PATH."
             )
 
         # Create and configure server
+        logger.info("Creating MCP server...")
         server = create_server()
         server.configure(allowed_paths=[str(Path.cwd())], read_only=True)
+
+        # Set up stdio transport BEFORE registering tools to avoid notification timing issues
+        logger.info("Setting up stdio transport...")
+        transport = StdioTransport()
+        transport.set_message_handler(server.create_message_handler(transport))
+
+        logger.info("Registering built-in tools...")
         # Register built-in statistical tools
         _register_builtin_tools(server)
+
+        logger.info("Registering built-in prompts...")
         # Register built-in prompts
         register_prompt_functions(
             server.prompts,
@@ -104,11 +115,17 @@ def start(log_level: str):
             time_series_forecast_prompt,
             panel_regression_prompt,
         )
-        # Set up stdio transport
-        transport = StdioTransport()
-        transport.set_message_handler(server.create_message_handler(transport))
+
+        logger.info("Starting MCP server with stdio transport...")
         # Run the server with lifecycle management
-        asyncio.run(_run_server_with_transport(server, transport))
+        try:
+            asyncio.run(_run_server_with_transport(server, transport))
+        except Exception as e:
+            logger.error(f"Failed to start server: {e}")
+            import traceback
+
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
     except Exception as e:
