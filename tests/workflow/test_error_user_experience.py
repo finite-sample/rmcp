@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
+from rmcp.tools.fileops import data_info, read_csv
 from rmcp.tools.helpers import suggest_fix, validate_data
 from rmcp.tools.machine_learning import decision_tree, random_forest
 from rmcp.tools.regression import (
@@ -38,7 +39,6 @@ from rmcp.tools.regression import (
     logistic_regression,
 )
 from rmcp.tools.statistical_tests import chi_square_test, normality_test, t_test
-from rmcp.tools.fileops import read_csv, data_info
 from tests.utils import extract_json_content, extract_text_summary
 
 pytestmark = [

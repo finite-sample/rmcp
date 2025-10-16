@@ -28,9 +28,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
+from rmcp.tools.fileops import read_csv
 from rmcp.tools.regression import linear_model, logistic_regression
 from rmcp.tools.statistical_tests import chi_square_test
-from rmcp.tools.fileops import read_csv
 
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for MCP error protocol tests"

@@ -89,8 +89,8 @@ def test_server_with_r_integration():
     sys.path.insert(0, str(project_root))
 
     try:
-        from rmcp.core.server import create_server
         from rmcp.cli import _register_builtin_tools
+        from rmcp.core.server import create_server
 
         # Create server and register R-dependent tools
         server = create_server()
