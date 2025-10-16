@@ -28,7 +28,7 @@ class TestRegressionSchemaValidation:
         valid_input = {
             "data": {
                 "sales": [120, 135, 128, 142, 156, 148, 160, 175],
-                "marketing": [10, 12, 11, 14, 16, 15, 18, 20]
+                "marketing": [10, 12, 11, 14, 16, 15, 18, 20],
             },
             "formula": "sales ~ marketing",
             "na_action": "na.omit",

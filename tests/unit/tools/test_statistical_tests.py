@@ -35,8 +35,50 @@ class TestTTestSchemaValidation:
         # Realistic teaching method comparison (R-validated: t=6.27, p<0.001)
         valid_input = {
             "data": {
-                "test_scores": [78, 82, 85, 79, 88, 84, 81, 86, 83, 87, 73, 76, 74, 78, 75, 77, 74, 79, 76, 75],
-                "method": ["A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B"],
+                "test_scores": [
+                    78,
+                    82,
+                    85,
+                    79,
+                    88,
+                    84,
+                    81,
+                    86,
+                    83,
+                    87,
+                    73,
+                    76,
+                    74,
+                    78,
+                    75,
+                    77,
+                    74,
+                    79,
+                    76,
+                    75,
+                ],
+                "method": [
+                    "A",
+                    "A",
+                    "A",
+                    "A",
+                    "A",
+                    "A",
+                    "A",
+                    "A",
+                    "A",
+                    "A",
+                    "B",
+                    "B",
+                    "B",
+                    "B",
+                    "B",
+                    "B",
+                    "B",
+                    "B",
+                    "B",
+                    "B",
+                ],
             },
             "variable": "test_scores",
             "group": "method",
@@ -78,8 +120,30 @@ class TestChiSquareSchemaValidation:
         # Realistic employee satisfaction survey (R-validated: chi-sq=3.53, p=0.47)
         valid_input = {
             "data": {
-                "satisfaction": ["Satisfied", "Neutral", "Satisfied", "Dissatisfied", "Satisfied", "Neutral", "Satisfied", "Satisfied", "Neutral", "Dissatisfied"],
-                "department": ["Sales", "Sales", "Marketing", "Marketing", "HR", "HR", "Sales", "Marketing", "HR", "Sales"]
+                "satisfaction": [
+                    "Satisfied",
+                    "Neutral",
+                    "Satisfied",
+                    "Dissatisfied",
+                    "Satisfied",
+                    "Neutral",
+                    "Satisfied",
+                    "Satisfied",
+                    "Neutral",
+                    "Dissatisfied",
+                ],
+                "department": [
+                    "Sales",
+                    "Sales",
+                    "Marketing",
+                    "Marketing",
+                    "HR",
+                    "HR",
+                    "Sales",
+                    "Marketing",
+                    "HR",
+                    "Sales",
+                ],
             },
             "test_type": "independence",
             "x": "satisfaction",
@@ -92,7 +156,20 @@ class TestChiSquareSchemaValidation:
         """Test valid goodness of fit test input with realistic market share data."""
         # Realistic market share analysis
         valid_input = {
-            "data": {"brand_choice": ["BrandA", "BrandB", "BrandC", "BrandA", "BrandB", "BrandA", "BrandC", "BrandB", "BrandA", "BrandC"]},
+            "data": {
+                "brand_choice": [
+                    "BrandA",
+                    "BrandB",
+                    "BrandC",
+                    "BrandA",
+                    "BrandB",
+                    "BrandA",
+                    "BrandC",
+                    "BrandB",
+                    "BrandA",
+                    "BrandC",
+                ]
+            },
             "test_type": "goodness_of_fit",
             "x": "brand_choice",
             "expected": [0.4, 0.35, 0.25],  # Expected market shares
@@ -138,7 +215,20 @@ class TestAnovaSchemaValidation:
         valid_input = {
             "data": {
                 "test_scores": [85, 88, 78, 82, 90, 87, 75, 79, 92, 89, 73, 77],
-                "teaching_method": ["Method1", "Method1", "Method1", "Method1", "Method2", "Method2", "Method2", "Method2", "Method3", "Method3", "Method3", "Method3"],
+                "teaching_method": [
+                    "Method1",
+                    "Method1",
+                    "Method1",
+                    "Method1",
+                    "Method2",
+                    "Method2",
+                    "Method2",
+                    "Method2",
+                    "Method3",
+                    "Method3",
+                    "Method3",
+                    "Method3",
+                ],
             },
             "formula": "test_scores ~ teaching_method",
         }

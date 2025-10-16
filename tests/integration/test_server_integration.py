@@ -83,33 +83,31 @@ def test_server_with_r_integration():
     """Test server creation with R tools integration."""
     print("\n🔍 Testing Server with R Integration")
     print("-" * 40)
-    
+
     # Add rmcp to path
     project_root = Path(__file__).parent.parent.parent
     sys.path.insert(0, str(project_root))
-    
+
     try:
         from rmcp.core.server import create_server
         from rmcp.cli import _register_builtin_tools
-        
+
         # Create server and register R-dependent tools
         server = create_server()
         _register_builtin_tools(server)
-        
+
         # Check that R-dependent tools are registered
         tool_count = len(server.tools._tools)
         assert tool_count >= 40, f"Expected at least 40 tools, got {tool_count}"
-        
+
         # Check for key R-dependent tools
         tool_names = set(server.tools._tools.keys())
-        required_r_tools = {
-            "linear_model", "summary_stats", "read_csv", "arima_model"
-        }
+        required_r_tools = {"linear_model", "summary_stats", "read_csv", "arima_model"}
         missing_tools = required_r_tools - tool_names
         assert not missing_tools, f"Missing R-dependent tools: {missing_tools}"
-        
+
         print(f"✅ Server created with {tool_count} R-integrated tools")
-        
+
     except Exception as e:
         print(f"❌ Server R integration failed: {e}")
         assert False, f"Server R integration failed: {e}"

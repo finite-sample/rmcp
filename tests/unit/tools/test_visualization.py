@@ -29,7 +29,7 @@ class TestVisualizationSchemaValidation:
         valid_input = {
             "data": {
                 "marketing_spend": [10, 12, 11, 14, 16, 15, 18, 20],
-                "sales_revenue": [120, 135, 128, 142, 156, 148, 160, 175]
+                "sales_revenue": [120, 135, 128, 142, 156, 148, 160, 175],
             },
             "x": "marketing_spend",
             "y": "sales_revenue",
@@ -45,7 +45,22 @@ class TestVisualizationSchemaValidation:
         """Test valid histogram input."""
         # Realistic customer satisfaction scores distribution
         valid_input = {
-            "data": {"satisfaction_scores": [7.8, 8.2, 8.2, 8.5, 8.5, 8.5, 7.9, 7.9, 8.1, 8.3, 7.7, 8.4]},
+            "data": {
+                "satisfaction_scores": [
+                    7.8,
+                    8.2,
+                    8.2,
+                    8.5,
+                    8.5,
+                    8.5,
+                    7.9,
+                    7.9,
+                    8.1,
+                    8.3,
+                    7.7,
+                    8.4,
+                ]
+            },
             "variable": "satisfaction_scores",
             "bins": 10,
             "return_image": True,

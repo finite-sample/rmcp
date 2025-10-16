@@ -21,8 +21,30 @@ class TestDescriptiveSchemaValidation:
         # Realistic employee satisfaction scores by department
         valid_input = {
             "data": {
-                "satisfaction_score": [8.2, 7.8, 8.5, 7.9, 8.1, 7.6, 8.3, 7.7, 8.0, 8.4],
-                "department": ["Sales", "Sales", "Marketing", "Marketing", "HR", "HR", "Sales", "Marketing", "HR", "Sales"]
+                "satisfaction_score": [
+                    8.2,
+                    7.8,
+                    8.5,
+                    7.9,
+                    8.1,
+                    7.6,
+                    8.3,
+                    7.7,
+                    8.0,
+                    8.4,
+                ],
+                "department": [
+                    "Sales",
+                    "Sales",
+                    "Marketing",
+                    "Marketing",
+                    "HR",
+                    "HR",
+                    "Sales",
+                    "Marketing",
+                    "HR",
+                    "Sales",
+                ],
             },
             "variables": ["satisfaction_score"],
             "group_by": "department",
@@ -35,7 +57,9 @@ class TestDescriptiveSchemaValidation:
         """Test valid outlier detection input."""
         # Realistic sales data with potential outlier (R-validated)
         valid_input = {
-            "data": {"monthly_sales": [45000, 47000, 52000, 48000, 125000]},  # 125000 is potential outlier
+            "data": {
+                "monthly_sales": [45000, 47000, 52000, 48000, 125000]
+            },  # 125000 is potential outlier
             "variable": "monthly_sales",
             "method": "iqr",
             "threshold": 3.0,
@@ -59,7 +83,20 @@ class TestDescriptiveSchemaValidation:
         """Test valid frequency table input."""
         # Realistic customer segment frequency analysis
         valid_input = {
-            "data": {"customer_segment": ["Premium", "Standard", "Premium", "Budget", "Standard", "Premium", "Luxury", "Standard", "Budget", "Premium"]},
+            "data": {
+                "customer_segment": [
+                    "Premium",
+                    "Standard",
+                    "Premium",
+                    "Budget",
+                    "Standard",
+                    "Premium",
+                    "Luxury",
+                    "Standard",
+                    "Budget",
+                    "Premium",
+                ]
+            },
             "variables": ["customer_segment"],  # Changed from 'variable' to 'variables'
         }
         schema = frequency_table._mcp_tool_input_schema
@@ -71,7 +108,18 @@ class TestDescriptiveSchemaValidation:
         valid_input = {
             "data": {
                 "performance_score": [85, 88, 78, 82, 90, 87, 75, 79, 92, 89],
-                "department": ["Sales", "Sales", "Marketing", "Marketing", "HR", "HR", "Sales", "Marketing", "HR", "Sales"],
+                "department": [
+                    "Sales",
+                    "Sales",
+                    "Marketing",
+                    "Marketing",
+                    "HR",
+                    "HR",
+                    "Sales",
+                    "Marketing",
+                    "HR",
+                    "Sales",
+                ],
             },
             "variables": ["performance_score"],
             "group_by": "department",

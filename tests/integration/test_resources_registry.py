@@ -44,7 +44,7 @@ async def test_environment_resource_reports_versions():
     context = server.create_context("res-env", "resources/read")
     result = await server.resources.read_resource(context, "rmcp://env")
     payload = json.loads(result["contents"][0]["text"])
-    
+
     # Verify real R environment information
     assert "rVersion" in payload
     assert "R" in payload["rVersion"]  # Should contain actual R version
@@ -62,13 +62,13 @@ async def test_dataset_resource_streams_example():
     server = create_server()
     register_tool_functions(server.tools, load_example)
     context = server.create_context("res-data", "resources/read")
-    
+
     # Use real R execution for load_example
     result = await server.resources.read_resource(
         context, "rmcp://dataset/sales?size=medium&add_noise=true"
     )
     payload = json.loads(result["contents"][0]["text"])
-    
+
     # Verify real dataset generation
     assert payload["metadata"]["name"] == "sales"
     assert payload["metadata"]["size"] == "medium"

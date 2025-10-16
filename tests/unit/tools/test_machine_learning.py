@@ -34,7 +34,14 @@ class TestMachineLearningSchemaValidation:
             "data": {
                 "age": [25, 32, 45, 29, 38, 52],
                 "income": [45000, 62000, 85000, 52000, 71000, 95000],
-                "segment": ["Budget", "Premium", "Luxury", "Standard", "Premium", "Luxury"]
+                "segment": [
+                    "Budget",
+                    "Premium",
+                    "Luxury",
+                    "Standard",
+                    "Premium",
+                    "Luxury",
+                ],
             },
             "formula": "segment ~ age + income",
             "method": "class",
@@ -47,7 +54,7 @@ class TestMachineLearningSchemaValidation:
             "data": {
                 "age": [25, 32, 45, 29, 38, 52],
                 "income": [45000, 62000, 85000, 52000, 71000, 95000],
-                "annual_spend": [2200, 3800, 6200, 2900, 4400, 7100]
+                "annual_spend": [2200, 3800, 6200, 2900, 4400, 7100],
             },
             "formula": "annual_spend ~ age + income",
             "method": "anova",
@@ -68,7 +75,14 @@ class TestMachineLearningSchemaValidation:
             "data": {
                 "age": [25, 32, 45, 29, 38, 52],
                 "income": [45000, 62000, 85000, 52000, 71000, 95000],
-                "segment": ["Budget", "Premium", "Luxury", "Standard", "Premium", "Luxury"]
+                "segment": [
+                    "Budget",
+                    "Premium",
+                    "Luxury",
+                    "Standard",
+                    "Premium",
+                    "Luxury",
+                ],
             },
             "formula": "segment ~ age + income",
             "n_trees": 100,
@@ -82,7 +96,7 @@ class TestMachineLearningSchemaValidation:
             "data": {
                 "age": [25, 32, 45, 29, 38, 52],
                 "income": [45000, 62000, 85000, 52000, 71000, 95000],
-                "annual_spend": [2200, 3800, 6200, 2900, 4400, 7100]
+                "annual_spend": [2200, 3800, 6200, 2900, 4400, 7100],
             },
             "formula": "annual_spend ~ age + income",
             "n_trees": 50,
@@ -98,7 +112,20 @@ class TestMachineLearningSchemaValidation:
         valid_input = {
             "data": {
                 "age": [25, 32, 45, 29, 38, 52, 33, 41, 27, 36, 48, 31],
-                "income": [45000, 62000, 85000, 52000, 71000, 95000, 58000, 78000, 47000, 65000, 89000, 55000],
+                "income": [
+                    45000,
+                    62000,
+                    85000,
+                    52000,
+                    71000,
+                    95000,
+                    58000,
+                    78000,
+                    47000,
+                    65000,
+                    89000,
+                    55000,
+                ],
                 "years_customer": [2, 5, 8, 3, 6, 10, 4, 7, 2, 5, 9, 4],
             },
             "variables": ["age", "income", "years_customer"],
@@ -118,7 +145,14 @@ class TestMachineLearningSchemaValidation:
         dt_class_input = {
             "data": {
                 "age": [25, 32, 45, 29, 38, 52],
-                "segment": ["Budget", "Premium", "Luxury", "Standard", "Premium", "Luxury"]
+                "segment": [
+                    "Budget",
+                    "Premium",
+                    "Luxury",
+                    "Standard",
+                    "Premium",
+                    "Luxury",
+                ],
             },
             "formula": "segment ~ age",
             "method": "class",
@@ -130,7 +164,7 @@ class TestMachineLearningSchemaValidation:
             "data": {
                 "age": [25, 32, 45, 29, 38, 52],
                 "income": [45000, 62000, 85000, 52000, 71000, 95000],
-                "annual_spend": [2200, 3800, 6200, 2900, 4400, 7100]
+                "annual_spend": [2200, 3800, 6200, 2900, 4400, 7100],
             },
             "formula": "annual_spend ~ age + income",
             "n_trees": 100,
