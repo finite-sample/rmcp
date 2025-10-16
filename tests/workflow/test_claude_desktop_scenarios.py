@@ -30,9 +30,15 @@ from rmcp.tools.regression import (
 )
 from tests.utils import extract_json_content
 
-pytestmark = pytest.mark.skipif(
-    which("R") is None, reason="R binary is required for Claude Desktop scenarios"
-)
+pytestmark = [
+    pytest.mark.skipif(
+        which("R") is None, reason="R binary is required for Claude Desktop scenarios"
+    ),
+    pytest.mark.skipif(
+        bool(os.getenv("CI")) or bool(os.getenv("GITHUB_ACTIONS")),
+        reason="Claude Desktop scenarios require local environment",
+    ),
+]
 
 
 async def create_claude_desktop_server():

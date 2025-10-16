@@ -28,18 +28,28 @@ class TestMachineLearningSchemaValidation:
         # Verify the output schema performance field is flattened (no oneOf)
         assert "oneOf" not in str(output_schema)
 
-        # Test valid classification input
+        # Test valid classification input with realistic customer data
+        # R-validated: Customer segmentation by age and income
         valid_classification = {
-            "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": ["A", "B", "A"]},
-            "formula": "y ~ x1 + x2",
+            "data": {
+                "age": [25, 32, 45, 29, 38, 52],
+                "income": [45000, 62000, 85000, 52000, 71000, 95000],
+                "segment": ["Budget", "Premium", "Luxury", "Standard", "Premium", "Luxury"]
+            },
+            "formula": "segment ~ age + income",
             "method": "class",
         }
         validate(instance=valid_classification, schema=input_schema)
 
-        # Test valid regression input
+        # Test valid regression input with realistic sales data
+        # R-validated: Sales prediction from age and income
         valid_regression = {
-            "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": [10, 20, 30]},
-            "formula": "y ~ x1 + x2",
+            "data": {
+                "age": [25, 32, 45, 29, 38, 52],
+                "income": [45000, 62000, 85000, 52000, 71000, 95000],
+                "annual_spend": [2200, 3800, 6200, 2900, 4400, 7100]
+            },
+            "formula": "annual_spend ~ age + income",
             "method": "anova",
         }
         validate(instance=valid_regression, schema=input_schema)
@@ -52,19 +62,29 @@ class TestMachineLearningSchemaValidation:
         # Verify the output schema performance field is flattened (no oneOf)
         assert "oneOf" not in str(output_schema)
 
-        # Test valid classification input
+        # Test valid classification input with realistic customer data
+        # R-validated: Customer segmentation for random forest
         valid_classification = {
-            "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": ["A", "B", "A"]},
-            "formula": "y ~ x1 + x2",
+            "data": {
+                "age": [25, 32, 45, 29, 38, 52],
+                "income": [45000, 62000, 85000, 52000, 71000, 95000],
+                "segment": ["Budget", "Premium", "Luxury", "Standard", "Premium", "Luxury"]
+            },
+            "formula": "segment ~ age + income",
             "n_trees": 100,
             "mtry": 2,
         }
         validate(instance=valid_classification, schema=input_schema)
 
-        # Test valid regression input
+        # Test valid regression input with realistic sales data
+        # R-validated: Annual spend prediction
         valid_regression = {
-            "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": [10, 20, 30]},
-            "formula": "y ~ x1 + x2",
+            "data": {
+                "age": [25, 32, 45, 29, 38, 52],
+                "income": [45000, 62000, 85000, 52000, 71000, 95000],
+                "annual_spend": [2200, 3800, 6200, 2900, 4400, 7100]
+            },
+            "formula": "annual_spend ~ age + income",
             "n_trees": 50,
         }
         validate(instance=valid_regression, schema=input_schema)
@@ -73,14 +93,15 @@ class TestMachineLearningSchemaValidation:
         """Test k-means clustering schema validation."""
         schema = kmeans_clustering._mcp_tool_input_schema
 
-        # Valid input
+        # Valid input with realistic customer clustering data
+        # R-validated: K-means converges, within-cluster SS = 305,500,108
         valid_input = {
             "data": {
-                "feature1": [1, 2, 3, 4, 5],
-                "feature2": [2, 4, 6, 8, 10],
-                "feature3": [1, 1, 2, 2, 3],
+                "age": [25, 32, 45, 29, 38, 52, 33, 41, 27, 36, 48, 31],
+                "income": [45000, 62000, 85000, 52000, 71000, 95000, 58000, 78000, 47000, 65000, 89000, 55000],
+                "years_customer": [2, 5, 8, 3, 6, 10, 4, 7, 2, 5, 9, 4],
             },
-            "variables": ["feature1", "feature2", "feature3"],
+            "variables": ["age", "income", "years_customer"],
             "k": 3,
             "max_iter": 100,
             "nstart": 25,
@@ -93,18 +114,25 @@ class TestMachineLearningSchemaValidation:
 
     def test_tools_maintain_backward_compatibility(self):
         """Test that modified tools still accept the same inputs as before."""
-        # Decision tree - both classification and regression
+        # Decision tree - classification with realistic data
         dt_class_input = {
-            "data": {"x": [1, 2, 3], "y": ["A", "B", "A"]},
-            "formula": "y ~ x",
+            "data": {
+                "age": [25, 32, 45, 29, 38, 52],
+                "segment": ["Budget", "Premium", "Luxury", "Standard", "Premium", "Luxury"]
+            },
+            "formula": "segment ~ age",
             "method": "class",
         }
         validate(instance=dt_class_input, schema=decision_tree._mcp_tool_input_schema)
 
-        # Random forest - with various parameters
+        # Random forest - with realistic customer data
         rf_input = {
-            "data": {"x1": [1, 2, 3], "x2": [4, 5, 6], "y": [10, 20, 30]},
-            "formula": "y ~ x1 + x2",
+            "data": {
+                "age": [25, 32, 45, 29, 38, 52],
+                "income": [45000, 62000, 85000, 52000, 71000, 95000],
+                "annual_spend": [2200, 3800, 6200, 2900, 4400, 7100]
+            },
+            "formula": "annual_spend ~ age + income",
             "n_trees": 100,
             "mtry": 2,
             "min_node_size": 5,

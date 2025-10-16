@@ -54,7 +54,7 @@ def run_command(command, description="", timeout=60):
 def run_local_validation():
     """Run local environment validation."""
     return run_command(
-        [sys.executable, "tests/local/validate_local_setup.py"],
+        [sys.executable, "scripts/setup/validate_local_setup.py"],
         "Local Environment Validation",
         timeout=120,
     )
@@ -62,32 +62,31 @@ def run_local_validation():
 
 def run_claude_desktop_tests():
     """Run Claude Desktop integration tests."""
-    tests = [
-        "tests/e2e/test_real_claude_desktop_e2e.py::TestClaudeDesktopRealIntegration::test_claude_desktop_installed",
-        "tests/e2e/test_real_claude_desktop_e2e.py::TestClaudeDesktopRealIntegration::test_rmcp_configured_in_claude",
-        "tests/e2e/test_real_claude_desktop_e2e.py::TestClaudeDesktopRealIntegration::test_real_mcp_communication",
-        "tests/e2e/test_real_claude_desktop_e2e.py::TestClaudeDesktopRealIntegration::test_claude_desktop_tools_availability",
-        "tests/e2e/test_real_claude_desktop_e2e.py::TestClaudeDesktopWorkflows::test_data_analysis_workflow",
-    ]
-
-    success_count = 0
-    for test in tests:
-        if run_command(
-            [sys.executable, "-m", "pytest", test, "-v"],
-            f"Claude Desktop Test: {test.split('::')[-1]}",
-            timeout=60,
-        ):
-            success_count += 1
-
-    print(f"\n📊 Claude Desktop Tests: {success_count}/{len(tests)} passed")
-    return success_count == len(tests)
+    # Run all Claude Desktop related tests
+    return run_command(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/e2e/test_claude_desktop_e2e.py",
+            "-v",
+        ],
+        "Claude Desktop Integration Tests",
+        timeout=180,
+    )
 
 
 def run_existing_e2e_scenarios():
-    """Run existing E2E scenario tests."""
+    """Run workflow scenario tests."""
     return run_command(
-        [sys.executable, "tests/e2e/test_claude_desktop_scenarios.py"],
-        "Claude Desktop Scenario Tests",
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/workflow/test_realistic_scenarios.py",
+            "-v",
+        ],
+        "Workflow Scenario Tests",
         timeout=180,
     )
 
@@ -115,42 +114,33 @@ def run_docker_tests():
         return False
 
     # Run Docker workflow tests
-    docker_tests = [
-        "tests/e2e/test_docker_full_workflow.py::TestDockerWorkflowValidation::test_docker_build_and_basic_functionality",
-        "tests/e2e/test_docker_full_workflow.py::TestDockerWorkflowValidation::test_docker_mcp_protocol_communication",
-        "tests/e2e/test_docker_full_workflow.py::TestDockerWorkflowValidation::test_docker_r_environment_validation",
-    ]
-
-    success_count = 0
-    for test in docker_tests:
-        if run_command(
-            [sys.executable, "-m", "pytest", test, "-v", "-s"],
-            f"Docker Test: {test.split('::')[-1]}",
-            timeout=120,
-        ):
-            success_count += 1
-
-    print(f"\n📊 Docker Tests: {success_count}/{len(docker_tests)} passed")
-    return success_count == len(docker_tests)
+    return run_command(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/deployment/test_docker_workflows.py",
+            "-v",
+            "-s",
+        ],
+        "Docker Workflow Tests",
+        timeout=300,
+    )
 
 
 def run_performance_tests():
     """Run performance and reliability tests."""
-    performance_tests = [
-        "tests/e2e/test_real_claude_desktop_e2e.py::TestClaudeDesktopPerformance::test_startup_performance",
-    ]
-
-    success_count = 0
-    for test in performance_tests:
-        if run_command(
-            [sys.executable, "-m", "pytest", test, "-v", "-s"],
-            f"Performance Test: {test.split('::')[-1]}",
-            timeout=60,
-        ):
-            success_count += 1
-
-    print(f"\n📊 Performance Tests: {success_count}/{len(performance_tests)} passed")
-    return success_count == len(performance_tests)
+    return run_command(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/workflow/test_excel_plotting_workflow.py",
+            "-v",
+        ],
+        "Performance/Excel Plotting Tests",
+        timeout=120,
+    )
 
 
 def run_quick_validation():

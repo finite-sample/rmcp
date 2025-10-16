@@ -43,7 +43,9 @@ mypy rmcp                        # Type checking
 1. Create tool function in appropriate file under `rmcp/tools/`
 2. Use `@tool` decorator with input/output JSON schemas
 3. Implement corresponding R script in `r_assets/scripts/`
-4. Write tests in `tests/unit/tools/` and `tests/integration/`
+4. Write schema validation tests in `tests/unit/tools/` (Python-only)
+5. Write functional tests in `tests/integration/` (real R execution)
+6. Add workflow tests in `tests/workflow/` for user scenarios
 
 ### Key Design Patterns
 - **Registry Pattern**: All tools/resources/prompts use centralized registries
@@ -52,10 +54,14 @@ mypy rmcp                        # Type checking
 - **Virtual Filesystem**: Security sandbox for file operations (`rmcp/security/vfs.py`)
 
 ### Testing Strategy
-- Unit tests mock R integration for speed
-- Integration tests verify actual R execution
-- E2E tests validate full MCP protocol flows
-- Fixtures in `conftest.py` provide server/context factories
+- **Unit tests** (`tests/unit/`): Pure Python logic - schema validation, JSON-RPC protocol, transport layer (no R required)
+- **Integration tests** (`tests/integration/`): Real R execution for tool functionality, error handling, MCP protocol compliance
+- **Workflow tests** (`tests/workflow/`): End-to-end user scenarios with real R analysis pipelines
+- **Smoke tests** (`tests/smoke/`): Basic functionality validation across all tools
+- **E2E tests** (`tests/e2e/`): Full MCP protocol flows with Claude Desktop simulation
+- **Deployment tests** (`tests/deployment/`): Docker environment and CI/CD validation
+
+**Unified Real R Strategy**: Since R is available in all environments (development, CI/CD), tests use real R execution instead of mocks for accuracy and reliability. This eliminates mock maintenance and ensures tests validate actual behavior.
 
 ## Important Notes
 - Python 3.10+ required

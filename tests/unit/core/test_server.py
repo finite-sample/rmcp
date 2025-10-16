@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """
-Basic test to ensure RMCP server core functionality works.
-This test verifies the server can start and respond to basic requests.
+Unit tests for RMCP server core functionality (Python-only).
+Tests that don't require R execution.
 """
-import subprocess
 import sys
 from pathlib import Path
-from shutil import which
 
 import pytest
 
 
 def test_dependencies():
-    """Test that required dependencies are available."""
+    """Test that required Python dependencies are available."""
     print("🔍 Testing Dependencies")
     print("-" * 40)
     try:
@@ -29,31 +27,6 @@ def test_dependencies():
     except ImportError:
         print("❌ jsonschema missing - install with: pip install jsonschema")
         assert False, "jsonschema missing"
-
-
-@pytest.mark.skipif(
-    which("R") is None, reason="R binary is required for R availability test"
-)
-def test_r_availability():
-    """Test that R is available for statistical computations."""
-    print("\n🔍 Testing R Installation")
-    print("-" * 40)
-    try:
-        result = subprocess.run(
-            ["R", "--version"], capture_output=True, text=True, timeout=10
-        )
-        if result.returncode == 0:
-            version_line = result.stdout.split("\n")[0]
-            print(f"✅ R is available: {version_line}")
-        else:
-            print("❌ R not working properly")
-            assert False, "R not working properly"
-    except subprocess.TimeoutExpired:
-        print("❌ R command timed out")
-        assert False, "R command timed out"
-    except FileNotFoundError:
-        print("❌ R not found - install R to use RMCP")
-        assert False, "R not found"
 
 
 def test_basic_server_import():
@@ -82,61 +55,16 @@ def test_basic_server_import():
         assert False, f"Server creation failed: {e}"
 
 
-@pytest.mark.skipif(
-    which("R") is None,
-    reason="R binary is required for CLI tests that may trigger R-related imports",
-)
-def test_cli_basic():
-    """Test basic CLI functionality."""
-    print("\n🔍 Testing CLI")
-    print("-" * 40)
-
-    # Try direct command first (works in Docker/CI), then fallback to poetry (local dev)
-    commands_to_try = [
-        (["rmcp", "--version"], "direct command"),
-        (["poetry", "run", "rmcp", "--version"], "poetry run command"),
-    ]
-
-    for command, description in commands_to_try:
-        try:
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                timeout=10,
-                cwd=Path(__file__).parent.parent.parent.parent,
-            )
-            if result.returncode == 0:
-                print(f"✅ CLI version ({description}): {result.stdout.strip()}")
-                return  # Success, exit the test
-            else:
-                print(f"⚠️  {description} failed: {result.stderr}")
-                continue  # Try next command
-        except FileNotFoundError:
-            print(f"⚠️  {description} not available (command not found)")
-            continue  # Try next command
-        except subprocess.TimeoutExpired:
-            print(f"❌ {description} timed out")
-            assert False, f"{description} timed out"
-        except Exception as e:
-            print(f"⚠️  {description} failed: {e}")
-            continue  # Try next command
-
-    # If we get here, none of the commands worked
-    assert (
-        False
-    ), "All CLI test commands failed - neither 'rmcp --version' nor 'poetry run rmcp --version' worked"
+# R-dependent tests and CLI tests moved to tests/integration/test_server_integration.py
 
 
 def main():
-    """Run all basic server tests."""
-    print("🧪 RMCP Server Basic Functionality Test")
+    """Run Python-only server tests."""
+    print("🧪 RMCP Server Python-Only Tests")
     print("=" * 50)
     tests = [
         ("Dependencies", test_dependencies),
-        ("R Installation", test_r_availability),
         ("Server Import", test_basic_server_import),
-        ("CLI Basic", test_cli_basic),
     ]
     passed = 0
     total = len(tests)
@@ -151,10 +79,10 @@ def main():
     print("\n" + "=" * 50)
     print(f"📊 Results: {passed}/{total} tests passed")
     if passed == total:
-        print("✅ RMCP server is ready to use!")
+        print("✅ RMCP Python components work!")
         return True
     else:
-        print("❌ RMCP server has issues that need to be fixed")
+        print("❌ RMCP Python components have issues")
         return False
 
 

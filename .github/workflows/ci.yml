@@ -11,115 +11,10 @@ env:
   IMAGE_NAME: ${{ github.repository }}/rmcp-ci
 
 jobs:
-  # Script validation and management
-  script-validation:
-    name: Script Validation & Management
+  # Fast Python-only validation (no R required)
+  python-checks:
+    name: Python Linting & Unit Tests
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-    
-    - name: Install basic dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install click jsonschema
-    
-    - name: Validate script organization and health
-      run: |
-        # Check script management utility
-        python3 scripts/manage.py list
-        python3 scripts/manage.py health-check
-        
-        # Verify all development scripts are properly organized
-        echo "📋 Verifying script organization..."
-        
-        # Check for any remaining ad hoc scripts in root
-        if [ -f "test-local.sh" ] || [ -f "debug-mcp-protocol.sh" ] || [ -f "run_e2e_tests.py" ]; then
-          echo "❌ Found ad hoc scripts in root directory - should be in scripts/"
-          exit 1
-        fi
-        
-        # Verify scripts are in correct directories
-        if [ ! -f "scripts/testing/run_e2e_tests.py" ]; then
-          echo "❌ Missing scripts/testing/run_e2e_tests.py"
-          exit 1
-        fi
-        
-        if [ ! -f "scripts/testing/test-local.sh" ]; then
-          echo "❌ Missing scripts/testing/test-local.sh"
-          exit 1
-        fi
-        
-        if [ ! -f "scripts/debugging/debug-mcp-protocol.sh" ]; then
-          echo "❌ Missing scripts/debugging/debug-mcp-protocol.sh"
-          exit 1
-        fi
-        
-        # Verify integration scripts moved from tests/e2e/
-        if [ ! -f "scripts/testing/integration/claude_desktop_e2e.py" ]; then
-          echo "❌ Missing scripts/testing/integration/claude_desktop_e2e.py"
-          exit 1
-        fi
-        
-        if [ ! -f "scripts/testing/integration/docker_workflows.py" ]; then
-          echo "❌ Missing scripts/testing/integration/docker_workflows.py"
-          exit 1
-        fi
-        
-        # Verify setup scripts moved from tests/local/
-        if [ ! -f "scripts/setup/validate_local_setup.py" ]; then
-          echo "❌ Missing scripts/setup/validate_local_setup.py"
-          exit 1
-        fi
-        
-        if [ ! -f "scripts/setup/setup_automation.py" ]; then
-          echo "❌ Missing scripts/setup/setup_automation.py"
-          exit 1
-        fi
-        
-        # Verify old problematic directories are gone
-        if [ -d "tests/e2e" ] && [ "$(ls -A tests/e2e)" ]; then
-          echo "❌ tests/e2e/ directory should be empty or removed"
-          exit 1
-        fi
-        
-        if [ -d "tests/local" ] && [ "$(ls -A tests/local)" ]; then
-          echo "❌ tests/local/ directory should be empty or removed"
-          exit 1
-        fi
-        
-        echo "✅ Script organization validated"
-    
-    - name: Test script documentation and README
-      run: |
-        # Verify README exists and has required content
-        if [ ! -f "scripts/README.md" ]; then
-          echo "❌ Missing scripts/README.md"
-          exit 1
-        fi
-        
-        # Check for required sections in README
-        if ! grep -q "## Directory Structure" scripts/README.md; then
-          echo "❌ Missing Directory Structure section in scripts/README.md"
-          exit 1
-        fi
-        
-        if ! grep -q "## Script Categories" scripts/README.md; then
-          echo "❌ Missing Script Categories section in scripts/README.md"
-          exit 1
-        fi
-        
-        echo "✅ Script documentation validated"
-
-  # Fast checks that don't need R
-  lint-and-smoke:
-    name: Lint & Smoke Tests
-    runs-on: ubuntu-latest
-    needs: script-validation
     steps:
     - uses: actions/checkout@v4
     
@@ -140,100 +35,20 @@ jobs:
         isort --check-only rmcp tests streamlit scripts
         flake8 rmcp tests streamlit scripts
     
-    - name: Quick smoke tests
+    - name: Run Python-only unit tests
       run: |
-        # Test CLI works
+        # Test CLI basic functionality
         rmcp --version
         rmcp list-capabilities > /dev/null
         
-        # Test server can be created
-        python -c "
-        import sys
-        sys.path.insert(0, '.')
-        from rmcp.core.server import create_server
-        from rmcp.cli import _register_builtin_tools
-        server = create_server()
-        _register_builtin_tools(server)
-        print('✅ Server creation works')
-        "
-        
-        # Test non-R dependent unit tests (only CI-compatible tests)
-        python -m pytest tests/unit/core/test_server.py -v
+        # Run all unit tests (Python-only, schema validation, etc.)
+        pytest tests/unit/ -v --tb=short
 
-  # R linting and testing (using our proven Docker environment)
-  r-lint-and-test:
-    name: R Lint & Test (Docker)
-    runs-on: ubuntu-latest
-    needs: [script-validation, lint-and-smoke]
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Test R environment using working Docker image
-      run: |
-        # Use the same Docker image that works in our local testing
-        docker run --rm -v ${{ github.workspace }}:/workspace rocker/r2u:noble bash -c "
-        echo '=== R Environment Info ==='
-        R --version | head -1
-        
-        echo '=== Test DCF Parsing ==='
-        cd /workspace/rmcp/r_assets
-        R -e \"desc <- read.dcf('DESCRIPTION'); cat('✅ DCF parsing works\\\\n'); print(colnames(desc))\"
-        
-        echo '=== R Code Style Check ==='
-        R -e \"
-        library(styler)
-        files_to_check <- list.files(c('R', 'scripts'), pattern='[.]R\$', recursive=TRUE, full.names=TRUE)
-        if (length(files_to_check) > 0) {
-          style_results <- styler::style_file(files_to_check, dry='on', include_roxygen_examples = FALSE)
-          if (any(style_results\\\$changed)) {
-            cat('❌ R code style issues found. Run styler::style_file() to fix.\\\\n')
-            quit(status=1)
-          } else {
-            cat('✅ R code style check passed\\\\n')
-          }
-        }
-        \"
-        
-        echo '=== R Script Parsing Test ==='
-        R -e \"
-        key_scripts <- c(
-          'scripts/descriptive/summary_stats.R',
-          'scripts/regression/linear_model.R',
-          'scripts/timeseries/arima_model.R',
-          'scripts/fileops/read_csv.R'
-        )
-        
-        success_count <- 0
-        for (script in key_scripts) {
-          if (file.exists(script)) {
-            result <- tryCatch({
-              parse(script)
-              success_count <- success_count + 1
-              cat('✅', script, '- parsed successfully\\\\n')
-              TRUE
-            }, error = function(e) {
-              cat('❌', script, '- parse error:', e\\\$message, '\\\\n')
-              FALSE
-            })
-          }
-        }
-        
-        if (success_count == length(key_scripts)) {
-          cat('✅ All core R scripts are syntactically correct\\\\n')
-        } else {
-          cat('❌ Some R scripts have syntax errors\\\\n')
-          quit(status=1)
-        }
-        \"
-        
-        echo '✅ All R tests passed in Docker environment'
-        "
-
-  # Build Docker image with all R packages for faster testing (only on main branch)
+  # Build Docker image for R testing
   docker-build:
-    name: Build CI Docker Image
+    name: Build R Testing Environment
     runs-on: ubuntu-latest
-    needs: [script-validation, lint-and-smoke, r-lint-and-test]
+    needs: [python-checks]
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     permissions:
       contents: read
@@ -292,11 +107,90 @@ jobs:
       id: image
       run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
 
-  # Cross-platform Python-only tests (fast, no R installation)
-  cross-platform-python:
-    name: Python tests on ${{ matrix.os }}
+  # Comprehensive R testing with real execution (replaces all R-specific jobs)
+  r-testing:
+    name: R Integration & Workflow Tests
+    runs-on: ubuntu-latest
+    needs: [python-checks, docker-build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    container:
+      image: ${{ needs.docker-build.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Python environment in container
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pip install -e .
+    
+    - name: Verify R and Python integration
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        python --version
+        R --version | head -1
+        python -c "from rmcp.r_integration import diagnose_r_installation; import json; print(json.dumps(diagnose_r_installation(), indent=2))"
+    
+    - name: Run R code style checks
+      run: |
+        cd rmcp/r_assets
+        R -e "
+        library(styler)
+        files_to_check <- list.files(c('R', 'scripts'), pattern='[.]R\$', recursive=TRUE, full.names=TRUE)
+        if (length(files_to_check) > 0) {
+          style_results <- styler::style_file(files_to_check, dry='on', include_roxygen_examples = FALSE)
+          if (any(style_results\$changed)) {
+            cat('❌ R code style issues found\\n')
+            quit(status=1)
+          } else {
+            cat('✅ R code style check passed\\n')
+          }
+        }
+        "
+    
+    - name: Run integration tests (real R execution)
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pytest tests/integration/ -v --tb=short --cov=rmcp --cov-report=xml
+    
+    - name: Run workflow tests (end-to-end scenarios)
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pytest tests/workflow/ -v --tb=short --cov=rmcp --cov-append
+    
+    - name: Run smoke tests (basic functionality)
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pytest tests/smoke/ -v --tb=short --cov=rmcp --cov-append
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: comprehensive
+        name: comprehensive-coverage
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+    
+    - name: Test CLI and MCP protocol
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        # Verify CLI works with R integration
+        rmcp --version
+        rmcp list-capabilities
+        
+        # Test basic MCP protocol with R tools
+        echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -20
+
+  # Cross-platform Python testing (validates Python-only functionality)
+  cross-platform:
+    name: Cross-platform Python Tests
     runs-on: ${{ matrix.os }}
-    needs: [script-validation, lint-and-smoke, r-lint-and-test]
+    needs: [python-checks]
     
     strategy:
       fail-fast: false
@@ -319,523 +213,11 @@ jobs:
         pip install poetry
         poetry install --with dev
     
-    # Test Python-only functionality (no R required)
-    - name: Test Python imports and basic functionality
+    - name: Test Python imports and basic functionality (no R)
       run: |
         poetry run python -c "from rmcp.core.server import create_server; print('✅ Server creation works')"
         poetry run rmcp --version
         poetry run rmcp list-capabilities
-
-  # R-dependent tests using Docker (Ubuntu only, all R packages pre-installed)
-  integration-tests-docker:
-    name: R Integration Tests (Docker)
-    runs-on: ubuntu-latest
-    needs: [script-validation, lint-and-smoke, docker-build]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-    container:
-      image: ${{ needs.docker-build.outputs.image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    # All R packages and Python environment pre-installed in Docker image
-    - name: Verify and setup Python environment
-      run: |
-        # Ensure we're using the venv Python environment  
-        export PATH="/opt/venv/bin:$PATH"
-        echo "PATH: $PATH"
-        which python
-        which pip
-        python --version
-        pip --version
         
-    - name: Install RMCP in development mode
-      run: |
-        export PATH="/opt/venv/bin:$PATH" 
-        pip install -e .
-    
-    - name: Verify R and Python environment
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        python --version
-        R --version | head -1
-        python -c "from rmcp.r_integration import diagnose_r_installation; import json; print(json.dumps(diagnose_r_installation(), indent=2))"
-    
-    - name: Run unit tests with coverage (CI-compatible only)
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pytest tests/unit/ -v --tb=short --cov=rmcp --cov-report=xml --cov-report=term-missing
-    
-    - name: Run MCP protocol compliance tests (CI-compatible)
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short --cov=rmcp --cov-append
-    
-    - name: Run integration tests (CI-compatible)
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pytest tests/integration/test_mcp_interface.py -v --tb=short --cov=rmcp --cov-append
-    
-    - name: Run schema validation tests (CI-compatible)
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pytest tests/integration/test_schema_validation.py -v --tb=short --cov=rmcp --cov-append
-    
-    - name: Upload Python coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        flags: python
-        name: python-coverage
-        fail_ci_if_error: false
-        token: ${{ secrets.CODECOV_TOKEN }}
-    
-    - name: Test RMCP CLI
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        rmcp --version
-        rmcp list-capabilities
-    
-    - name: Test basic tool execution
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -20
-    
-    - name: Test package installation
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        python -m build
-        pip install dist/*.whl
-        rmcp --version
-    
-    - name: Test subprocess integration  
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        python -c "
-        import platform
-        import subprocess
-        import sys
-        print(f'Platform: {platform.system()} {platform.release()}')
-        print(f'Python: {sys.version}')
-        
-        # Test subprocess handling (important for R integration)
-        result = subprocess.run(['python', '--version'], capture_output=True, text=True)
-        assert result.returncode == 0, 'Subprocess test failed'
-        print('✅ Subprocess handling works')
-        
-        # Test R subprocess specifically
-        result = subprocess.run(['R', '--version'], capture_output=True, text=True)
-        assert result.returncode == 0, 'R subprocess test failed'
-        print('✅ R subprocess works')
-        
-        print('✅ Subprocess integration tests passed')
-        "
-    
-    - name: Test R integration through MCP server
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        python -c "
-        # Test R integration through the proper RMCP MCP server architecture
-        import sys, asyncio, json
-        sys.path.insert(0, '.')
-        from rmcp.core.server import create_server
-        from rmcp.cli import _register_builtin_tools
-        
-        def extract_json_content(resp):
-            '''Extract JSON content from MCP tool response'''
-            result = resp.get('result', {})
-            
-            # Check structuredContent first (MCP-compliant format)
-            structured = result.get('structuredContent')
-            if structured and isinstance(structured, dict):
-                if structured.get('type') == 'json':
-                    return structured.get('json')
-            
-            # Fallback to content with annotations
-            content_items = result.get('content', [])
-            for item in content_items:
-                if item.get('annotations', {}).get('mimeType') == 'application/json':
-                    return json.loads(item['text'])
-            
-            raise ValueError('No JSON content found in MCP response')
-        
-        async def test_mcp_r_integration():
-            print('=== Testing R Integration through MCP Server ===')
-            server = create_server()
-            _register_builtin_tools(server)
-            
-            # Verify tools are registered
-            tool_count = len(server.tools._tools)
-            print(f'✅ Registered {tool_count} tools in MCP server')
-            
-            # Test 1: Summary statistics (descriptive analysis)
-            print('Testing summary_stats through MCP...')
-            req = {
-                'jsonrpc': '2.0', 
-                'id': 1, 
-                'method': 'tools/call', 
-                'params': {
-                    'name': 'summary_stats', 
-                    'arguments': {
-                        'data': {'x': [1, 2, 3, 4, 5], 'y': [2, 4, 6, 8, 10]},
-                        'variables': ['x', 'y']
-                    }
-                }
-            }
-            resp = await server.handle_request(req)
-            
-            if 'error' in resp:
-                print(f'❌ summary_stats failed: {resp[\"error\"]}')
-                raise AssertionError('summary_stats MCP call failed')
-            
-            result = extract_json_content(resp)
-            assert 'statistics' in result, 'Missing statistics in response'
-            assert 'x' in result['statistics'], 'Missing x variable statistics'
-            print(f'✅ summary_stats: Found {len(result[\"statistics\"])} variable statistics')
-            
-            # Test 2: Linear model (regression analysis)  
-            print('Testing linear_model through MCP...')
-            req = {
-                'jsonrpc': '2.0',
-                'id': 2, 
-                'method': 'tools/call',
-                'params': {
-                    'name': 'linear_model',
-                    'arguments': {
-                        'data': {'x': [1, 2, 3, 4, 5], 'y': [2, 4, 6, 8, 10]},
-                        'formula': 'y ~ x'
-                    }
-                }
-            }
-            resp = await server.handle_request(req)
-            
-            if 'error' in resp:
-                print(f'❌ linear_model failed: {resp[\"error\"]}')
-                raise AssertionError('linear_model MCP call failed')
-                
-            result = extract_json_content(resp)
-            assert 'coefficients' in result, 'Missing coefficients in response'
-            print(f'✅ linear_model: R² = {result.get(\"r_squared\", \"N/A\")}')
-            
-            # Test 3: Example dataset loading
-            print('Testing load_example through MCP...')
-            req = {
-                'jsonrpc': '2.0',
-                'id': 3,
-                'method': 'tools/call', 
-                'params': {
-                    'name': 'load_example',
-                    'arguments': {'dataset_name': 'sales', 'size': 'small'}
-                }
-            }
-            resp = await server.handle_request(req)
-            
-            if 'error' in resp:
-                print(f'⚠️ load_example failed: {resp[\"error\"]}')
-                print('Skipping load_example test - may have R environment issues')
-            else:
-                result = extract_json_content(resp)
-                assert 'data' in result, 'Missing data in response'
-                print(f'✅ load_example: Generated {result[\"metadata\"][\"rows\"]} rows')
-            
-            print('🎉 All R integration tests passed through MCP server!')
-        
-        asyncio.run(test_mcp_r_integration())
-        "
-    
-    - name: Test MCP Protocol stdio communication
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        python -c "
-        import subprocess
-        import json
-        import sys
-        
-        # Test MCP initialize message
-        init_msg = {
-            'jsonrpc': '2.0',
-            'id': 1,
-            'method': 'initialize',
-            'params': {
-                'protocolVersion': '2025-06-18',
-                'capabilities': {'tools': {}},
-                'clientInfo': {'name': 'Test Client', 'version': '1.0.0'}
-            }
-        }
-        
-        process = subprocess.Popen(['rmcp', 'start'],
-                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
-                                 stderr=subprocess.PIPE, text=True)
-        
-        try:
-            stdout, stderr = process.communicate(
-                input=json.dumps(init_msg) + '\n', timeout=10)
-            
-            # Look for JSON response
-            for line in stdout.strip().split('\n'):
-                if line.startswith('{\"jsonrpc\"'):
-                    response = json.loads(line)
-                    assert response['jsonrpc'] == '2.0'
-                    assert 'result' in response
-                    print(f'✅ MCP protocol works on {sys.platform}')
-                    break
-            else:
-                raise AssertionError(f'No JSON response found. stdout: {stdout}, stderr: {stderr}')
-                
-        except subprocess.TimeoutExpired:
-            process.kill()
-            raise AssertionError('MCP server timeout')
-        finally:
-            if process.poll() is None:
-                process.terminate()
-        "
-
-
-  # Test using Docker environment (all R packages pre-installed)
-  test-docker-env:
-    name: Test with Docker Environment
-    runs-on: ubuntu-latest
-    needs: [script-validation, lint-and-smoke, docker-build]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-    container:
-      image: ${{ needs.docker-build.outputs.image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    # All R packages and Python environment pre-installed in Docker image
-    - name: Install RMCP in development mode
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pip install -e .
-    
-    - name: Verify Python environment
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        python --version
-        python -c "import sys; print(f'Python version: {sys.version}')"
-        R --version | head -1
-    
-    - name: Run unit tests
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pytest tests/unit/ -v --tb=short
-    
-    - name: Run MCP protocol compliance tests
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pytest tests/integration/test_mcp_protocol_compliance.py -v --tb=short
-    
-    - name: Test RMCP CLI
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        rmcp --version
-        rmcp list-capabilities
-    
-    - name: Test basic tool execution
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -10
-
-  # Feature verification (using freshly built Docker image)
-  feature-verification:
-    name: Feature Verification
-    runs-on: ubuntu-latest
-    needs: [script-validation, lint-and-smoke, docker-build]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-    container:
-      image: ${{ needs.docker-build.outputs.image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    # All dependencies pre-installed in Docker image - just install RMCP in development mode
-    - name: Install RMCP in development mode
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pip install -e .
-    
-    
-    - name: Test new features
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        python -c "
-        import sys, asyncio, json
-        sys.path.insert(0, '.')
-        from rmcp.core.server import create_server
-        from rmcp.registries.tools import register_tool_functions
-        from rmcp.tools.formula_builder import build_formula
-        from rmcp.tools.helpers import suggest_fix, load_example
-        
-        def extract_json_content(resp):
-            '''Extract JSON content from tool response'''
-            result = resp.get('result', {})
-            
-            # Check structuredContent first (new MCP-compliant format)
-            structured = result.get('structuredContent')
-            if structured:
-                # Handle new object format (single item)
-                if isinstance(structured, dict):
-                    if structured.get('type') == 'json':
-                        return structured.get('json')
-                    # Handle multi-item object format
-                    elif 'items' in structured:
-                        for item in structured['items']:
-                            if item.get('type') == 'json':
-                                return item.get('json')
-                # Handle legacy array format
-                elif isinstance(structured, list):
-                    for item in structured:
-                        if item.get('type') == 'json':
-                            return item.get('json')
-            
-            # Then check content with annotations (legacy format)
-            content_items = result.get('content', [])
-            for item in content_items:
-                if item.get('annotations', {}).get('mimeType') == 'application/json':
-                    return json.loads(item['text'])
-            
-            # Fallback: try to parse any text as JSON
-            for item in content_items:
-                if item.get('type') == 'text' and item.get('text'):
-                    try:
-                        return json.loads(item['text'])
-                    except json.JSONDecodeError:
-                        continue
-            
-            raise ValueError('No JSON content found in response')
-        
-        def debug_response(tool_name, resp):
-            '''Debug response structure'''
-            print(f'=== DEBUG {tool_name} response ===')
-            print(f'Keys: {list(resp.keys())}')
-            if 'result' in resp:
-                result = resp['result']
-                print(f'Result keys: {list(result.keys())}')
-                if 'structuredContent' in result:
-                    sc = result['structuredContent']
-                    print(f'structuredContent type: {type(sc)} = {sc.get(\"type\") if isinstance(sc, dict) else \"list\"}')
-                    if isinstance(sc, dict) and 'json' in sc:
-                        json_data = sc['json']
-                        print(f'JSON keys: {list(json_data.keys()) if isinstance(json_data, dict) else type(json_data)}')
-            elif 'error' in resp:
-                print(f'Error: {resp[\"error\"]}')
-            print('================================')
-        
-        async def test():
-            server = create_server()
-            register_tool_functions(server.tools, build_formula, suggest_fix, load_example)
-            
-            # Test error recovery (pure Python, should work)
-            print('Testing suggest_fix (pure Python)...')
-            req = {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {'name': 'suggest_fix', 'arguments': {'error_message': 'there is no package called \"forecast\"'}}}
-            resp = await server.handle_request(req)
-            debug_response('suggest_fix', resp)
-            try:
-                result = extract_json_content(resp)
-                assert result['error_type'] == 'missing_package'
-                print(f'✅ Error recovery: {result[\"error_type\"]}')
-            except Exception as e:
-                print(f'❌ suggest_fix failed: {e}')
-                raise
-            
-            # Test formula building (uses R validation)
-            print('Testing build_formula (uses R)...')
-            req = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': 'build_formula', 'arguments': {'description': 'predict sales from marketing'}}}
-            resp = await server.handle_request(req)
-            debug_response('build_formula', resp)
-            try:
-                result = extract_json_content(resp)
-                assert 'formula' in result
-                print(f'✅ Formula builder: {result[\"formula\"]}')
-            except Exception as e:
-                print(f'❌ build_formula failed: {e}')
-                # Don't fail the test if formula validation R script fails in Docker
-                print('⚠️ Skipping formula builder test due to R environment issues')
-            
-            # Test example datasets (uses R)
-            print('Testing load_example (uses R)...')
-            req = {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call', 'params': {'name': 'load_example', 'arguments': {'dataset_name': 'sales', 'size': 'small'}}}
-            resp = await server.handle_request(req)
-            debug_response('load_example', resp)
-            try:
-                result = extract_json_content(resp)
-                assert 'data' in result
-                print(f'✅ Example datasets: {result[\"metadata\"][\"rows\"]} rows loaded')
-            except Exception as e:
-                print(f'❌ load_example failed: {e}')
-                # Don't fail the test if R environment has issues
-                print('⚠️ Skipping load_example test due to R environment issues')
-            
-            print('🎊 Core features working!')
-        
-        asyncio.run(test())
-        "
-    
-    - name: Verify package metadata consistency
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        python -c "
-        import rmcp
-        import sys
-        
-        # Check version consistency between __init__.py and pyproject.toml
-        import tomllib
-        with open('pyproject.toml', 'rb') as f:
-            pyproject = tomllib.load(f)
-        
-        init_version = rmcp.__version__
-        toml_version = pyproject['tool']['poetry']['version']
-        
-        assert init_version == toml_version, \
-            f'Version mismatch: __init__.py={init_version} vs pyproject.toml={toml_version}'
-        
-        print(f'✅ Version consistency verified: {init_version}')
-        "
-    
-    - name: Verify tool registration and count
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        python -c "
-        from rmcp.core.server import create_server
-        from rmcp.cli import _register_builtin_tools
-        
-        # Create server and register all tools
-        server = create_server()
-        _register_builtin_tools(server)
-        
-        # Count registered tools
-        tool_count = len(server.tools._tools)
-        tool_names = set(server.tools._tools.keys())
-        
-        print(f'✅ Registered {tool_count} tools')
-        
-        # Verify minimum expected tool count
-        assert tool_count >= 44, f'Expected at least 44 tools, got {tool_count}'
-        
-        # Verify key tools exist (sampling from each category)
-        required_tools = {
-            'linear_model', 'correlation_analysis',  # Regression
-            'execute_r_analysis', 'list_allowed_r_packages',  # Flexible R
-            'read_csv', 'write_excel',  # File operations
-            'build_formula', 'suggest_fix',  # Helpers
-            'arima_model', 'summary_stats'  # Time series, descriptive
-        }
-        
-        missing = required_tools - tool_names
-        assert not missing, f'Missing required tools: {missing}'
-        
-        print('✅ All required tools registered and accessible')
-        print(f'✅ Tool registration verification passed ({tool_count} tools)')
-        "
+        # Run Python-only unit tests
+        poetry run pytest tests/unit/ -v --tb=short

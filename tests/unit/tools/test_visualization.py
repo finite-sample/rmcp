@@ -25,11 +25,15 @@ class TestVisualizationSchemaValidation:
 
     def test_scatter_plot_valid_input(self):
         """Test valid scatter plot input."""
+        # Realistic sales vs marketing spend visualization
         valid_input = {
-            "data": {"x_vals": [1, 2, 3, 4], "y_vals": [2, 4, 6, 8]},
-            "x": "x_vals",
-            "y": "y_vals",
-            "title": "Test Scatter Plot",
+            "data": {
+                "marketing_spend": [10, 12, 11, 14, 16, 15, 18, 20],
+                "sales_revenue": [120, 135, 128, 142, 156, 148, 160, 175]
+            },
+            "x": "marketing_spend",
+            "y": "sales_revenue",
+            "title": "Sales vs Marketing Spend",
             "return_image": True,
             "width": 800,
             "height": 600,
@@ -39,9 +43,10 @@ class TestVisualizationSchemaValidation:
 
     def test_histogram_valid_input(self):
         """Test valid histogram input."""
+        # Realistic customer satisfaction scores distribution
         valid_input = {
-            "data": {"values": [1, 2, 2, 3, 3, 3, 4, 4, 5]},
-            "variable": "values",
+            "data": {"satisfaction_scores": [7.8, 8.2, 8.2, 8.5, 8.5, 8.5, 7.9, 7.9, 8.1, 8.3, 7.7, 8.4]},
+            "variable": "satisfaction_scores",
             "bins": 10,
             "return_image": True,
         }
@@ -51,8 +56,8 @@ class TestVisualizationSchemaValidation:
     def test_histogram_invalid_bins(self):
         """Test invalid number of bins."""
         invalid_input = {
-            "data": {"values": [1, 2, 3]},
-            "variable": "values",
+            "data": {"satisfaction_scores": [7.8, 8.2, 8.5]},
+            "variable": "satisfaction_scores",
             "bins": 200,  # Exceeds maximum of 100
         }
         schema = histogram._mcp_tool_input_schema

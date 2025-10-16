@@ -24,6 +24,12 @@ from pathlib import Path
 
 import pytest
 
+# Mark entire module as local-only for CI skipping
+pytestmark = pytest.mark.skipif(
+    bool(os.getenv("CI")) or bool(os.getenv("GITHUB_ACTIONS")),
+    reason="Claude Desktop integration tests require local environment",
+)
+
 
 class TestClaudeDesktopRealIntegration:
     """Test real Claude Desktop application integration."""

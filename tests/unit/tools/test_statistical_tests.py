@@ -17,11 +17,12 @@ class TestTTestSchemaValidation:
     """Test t_test input schema validation."""
 
     def test_valid_one_sample_input(self):
-        """Test valid one-sample t-test input."""
+        """Test valid one-sample t-test input with realistic test scores."""
+        # Realistic test scores data (R-validated: mean = 83.3)
         valid_input = {
-            "data": {"values": [1, 2, 3, 4, 5]},
-            "variable": "values",
-            "mu": 0,
+            "data": {"test_scores": [78, 82, 85, 79, 88, 84, 81, 86, 83, 87]},
+            "variable": "test_scores",
+            "mu": 80,
             "alternative": "two.sided",
         }
         # Extract schema from tool decorator metadata
@@ -30,14 +31,15 @@ class TestTTestSchemaValidation:
         validate(instance=valid_input, schema=schema)
 
     def test_valid_two_sample_input(self):
-        """Test valid two-sample t-test input."""
+        """Test valid two-sample t-test input with realistic teaching methods."""
+        # Realistic teaching method comparison (R-validated: t=6.27, p<0.001)
         valid_input = {
             "data": {
-                "values": [1, 2, 3, 4, 5, 6, 7, 8],
-                "group": ["A", "A", "A", "A", "B", "B", "B", "B"],
+                "test_scores": [78, 82, 85, 79, 88, 84, 81, 86, 83, 87, 73, 76, 74, 78, 75, 77, 74, 79, 76, 75],
+                "method": ["A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B"],
             },
-            "variable": "values",
-            "group": "group",
+            "variable": "test_scores",
+            "group": "method",
             "paired": False,
             "var_equal": False,  # Test new default
         }
@@ -47,7 +49,7 @@ class TestTTestSchemaValidation:
     def test_missing_required_parameter(self):
         """Test that missing required parameters are caught."""
         invalid_input = {
-            "variable": "values",
+            "variable": "test_scores",
             # Missing "data" parameter
         }
         schema = t_test._mcp_tool_input_schema
@@ -58,8 +60,8 @@ class TestTTestSchemaValidation:
     def test_invalid_alternative_value(self):
         """Test invalid alternative parameter value."""
         invalid_input = {
-            "data": {"values": [1, 2, 3]},
-            "variable": "values",
+            "data": {"test_scores": [78, 82, 85]},
+            "variable": "test_scores",
             "alternative": "invalid_option",  # Not in enum
         }
         schema = t_test._mcp_tool_input_schema
@@ -72,23 +74,28 @@ class TestChiSquareSchemaValidation:
     """Test chi_square_test input schema validation."""
 
     def test_valid_independence_test(self):
-        """Test valid independence test input."""
+        """Test valid independence test input with realistic survey data."""
+        # Realistic employee satisfaction survey (R-validated: chi-sq=3.53, p=0.47)
         valid_input = {
-            "data": {"var1": ["A", "B", "A", "B"], "var2": ["X", "Y", "X", "Y"]},
+            "data": {
+                "satisfaction": ["Satisfied", "Neutral", "Satisfied", "Dissatisfied", "Satisfied", "Neutral", "Satisfied", "Satisfied", "Neutral", "Dissatisfied"],
+                "department": ["Sales", "Sales", "Marketing", "Marketing", "HR", "HR", "Sales", "Marketing", "HR", "Sales"]
+            },
             "test_type": "independence",
-            "x": "var1",
-            "y": "var2",
+            "x": "satisfaction",
+            "y": "department",
         }
         schema = chi_square_test._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
 
     def test_valid_goodness_of_fit(self):
-        """Test valid goodness of fit test input."""
+        """Test valid goodness of fit test input with realistic market share data."""
+        # Realistic market share analysis
         valid_input = {
-            "data": {"category": ["A", "B", "C", "A", "B"]},
+            "data": {"brand_choice": ["BrandA", "BrandB", "BrandC", "BrandA", "BrandB", "BrandA", "BrandC", "BrandB", "BrandA", "BrandC"]},
             "test_type": "goodness_of_fit",
-            "x": "category",
-            "expected": [0.3, 0.4, 0.3],  # Valid probabilities
+            "x": "brand_choice",
+            "expected": [0.4, 0.35, 0.25],  # Expected market shares
         }
         schema = chi_square_test._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
@@ -96,9 +103,9 @@ class TestChiSquareSchemaValidation:
     def test_goodness_of_fit_negative_expected(self):
         """Test that negative expected values are rejected."""
         invalid_input = {
-            "data": {"category": ["A", "B", "C"]},
+            "data": {"brand_choice": ["BrandA", "BrandB", "BrandC"]},
             "test_type": "goodness_of_fit",
-            "x": "category",
+            "x": "brand_choice",
             "expected": [0.5, -0.2, 0.7],  # Negative value
         }
         schema = chi_square_test._mcp_tool_input_schema
@@ -112,9 +119,9 @@ class TestChiSquareSchemaValidation:
         # the validation for y being required for independence test
         # happens at runtime, not at schema validation time
         input_with_missing_y = {
-            "data": {"var1": ["A", "B"]},
+            "data": {"satisfaction": ["Satisfied", "Neutral"]},
             "test_type": "independence",
-            "x": "var1",
+            "x": "satisfaction",
             # Missing "y" parameter - will be caught at runtime
         }
         schema = chi_square_test._mcp_tool_input_schema
@@ -130,10 +137,10 @@ class TestAnovaSchemaValidation:
         """Test valid ANOVA input."""
         valid_input = {
             "data": {
-                "response": [1, 2, 3, 4, 5, 6],
-                "group": ["A", "A", "B", "B", "C", "C"],
+                "test_scores": [85, 88, 78, 82, 90, 87, 75, 79, 92, 89, 73, 77],
+                "teaching_method": ["Method1", "Method1", "Method1", "Method1", "Method2", "Method2", "Method2", "Method2", "Method3", "Method3", "Method3", "Method3"],
             },
-            "formula": "response ~ group",
+            "formula": "test_scores ~ teaching_method",
         }
         schema = anova._mcp_tool_input_schema
         validate(instance=valid_input, schema=schema)
@@ -145,8 +152,8 @@ class TestNormalityTestSchemaValidation:
     def test_valid_normality_test(self):
         """Test valid normality test input."""
         valid_input = {
-            "data": {"values": [1, 2, 3, 4, 5]},
-            "variable": "values",
+            "data": {"test_scores": [78, 82, 85, 79, 88, 84, 81, 86, 83, 87]},
+            "variable": "test_scores",
             "test": "shapiro",
         }
         schema = normality_test._mcp_tool_input_schema

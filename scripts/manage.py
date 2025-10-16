@@ -81,32 +81,16 @@ class ScriptManager:
             }
         )
 
-        # Integration testing scripts
+        # Integration development tools (not tests - those are in tests/ directory)
         integration_dir = testing_dir / "integration"
         registry.update(
             {
-                "claude-desktop-e2e": {
-                    "path": integration_dir / "claude_desktop_e2e.py",
+                "docker-simulation": {
+                    "path": integration_dir / "docker_simulation.py",
                     "type": "python",
-                    "category": "integration",
-                    "description": "Real Claude Desktop integration testing",
-                    "dependencies": ["python", "claude-desktop?"],
-                    "args": ["--quick", "--verbose"],
-                },
-                "docker-workflows": {
-                    "path": integration_dir / "docker_workflows.py",
-                    "type": "python",
-                    "category": "integration",
-                    "description": "Complete Docker workflow validation",
-                    "dependencies": ["python", "docker"],
-                    "args": ["--verbose"],
-                },
-                "realistic-scenarios": {
-                    "path": integration_dir / "realistic_scenarios.py",
-                    "type": "python",
-                    "category": "integration",
-                    "description": "Real-world usage scenario testing",
-                    "dependencies": ["python", "docker?", "claude-desktop?"],
+                    "category": "development",
+                    "description": "Docker environment simulation tool",
+                    "dependencies": ["python", "docker?"],
                     "args": [],
                 },
             }
