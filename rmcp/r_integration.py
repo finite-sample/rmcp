@@ -589,6 +589,92 @@ ENVIRONMENT:
 📦 Install with:
    R -e "install.packages('{missing_pkg}')"
 💡 Check package status: rmcp check-r-packages"""
+                        raise RExecutionError(
+                            error_msg,
+                            stdout=stdout,
+                            stderr=stderr,
+                            returncode=proc.returncode,
+                        )
+
+                    # Enhanced error detection for statistical issues
+                    combined_output = (stdout + stderr).lower()
+
+                    if any(
+                        phrase in combined_output
+                        for phrase in [
+                            "insufficient data",
+                            "insufficient degrees",
+                            "need at least",
+                            "requires at least",
+                            "sample size",
+                        ]
+                    ):
+                        # Extract context from R stderr if available
+                        context_info = ""
+                        if stderr and "parameters but only" in stderr:
+                            # Try to extract parameter and observation counts
+                            import re
+
+                            match = re.search(
+                                r"(\d+) parameters but only (\d+) observations", stderr
+                            )
+                            if match:
+                                params, obs = match.groups()
+                                context_info = f"\n📋 Analysis details: {params} parameters, {obs} observations"
+
+                        helpful_msg = f"""❌ Insufficient Data for Statistical Analysis
+
+🔍 The analysis requires more data points than provided.{context_info}
+
+📊 Common requirements:
+   • Linear regression: At least 2 observations
+   • Multiple regression: At least k+1 observations (k = number of predictors)
+   • Reliable estimates: Generally 10-20 observations per parameter
+
+💡 Try:
+   • Adding more data points to your sample
+   • Using a simpler model with fewer variables
+   • Checking for missing values that reduce sample size
+
+Original error:
+{error_msg}"""
+                        raise RExecutionError(
+                            helpful_msg,
+                            stdout=stdout,
+                            stderr=stderr,
+                            returncode=proc.returncode,
+                        )
+
+                    if any(
+                        phrase in combined_output
+                        for phrase in [
+                            "degrees of freedom",
+                            "non-numeric argument",
+                            "nans produced",
+                        ]
+                    ):
+                        helpful_msg = f"""❌ Statistical Computation Error
+
+🔍 The analysis encountered a mathematical issue, often due to:
+   • Insufficient degrees of freedom (too few observations vs parameters)
+   • Perfect multicollinearity (predictors are perfectly correlated)
+   • Numerical instability with very small sample sizes
+
+💡 Try:
+   • Increasing your sample size
+   • Removing redundant or highly correlated variables
+   • Checking for constant variables or perfect relationships
+
+Original error:
+{error_msg}"""
+                        raise RExecutionError(
+                            helpful_msg,
+                            stdout=stdout,
+                            stderr=stderr,
+                            returncode=proc.returncode,
+                        )
+
+                    # Fall back to general error
                     raise RExecutionError(
                         error_msg,
                         stdout=stdout,

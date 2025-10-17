@@ -124,10 +124,11 @@ class TestMCPErrorProtocolCompliance:
         """Test MCP protocol compliance for invalid request format."""
         server = await self.create_mcp_server()
 
-        # Invalid request (missing required fields)
+        # Invalid request (missing method but has id)
         invalid_request = {
             "jsonrpc": "2.0",
-            # Missing id and method
+            "id": 123,
+            # Missing method
             "params": {"some": "data"},
         }
 

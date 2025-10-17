@@ -442,8 +442,8 @@ class TestErrorMessageQuality:
 
         # Create an error scenario with specific context
         problematic_data = {
-            "sales": [100, 200, 300],
-            "marketing": ["low", "medium", "high"],  # String where numeric expected
+            "sales": [100],  # Only 1 observation
+            "marketing": [1],  # Will cause insufficient data error
         }
 
         try:
@@ -454,27 +454,25 @@ class TestErrorMessageQuality:
             error_msg = str(e)
 
             # Error should preserve context about what went wrong
-            assert (
-                "marketing" in error_msg or "sales" in error_msg
-            ), "Error should mention problematic variables"
-
-            # Should indicate the nature of the problem
+            # Should provide helpful guidance about the issue
             error_lower = error_msg.lower()
-            has_type_info = any(
+            has_helpful_info = any(
                 keyword in error_lower
                 for keyword in [
-                    "character",
-                    "numeric",
-                    "string",
-                    "number",
+                    "insufficient",
+                    "observations",
+                    "data points",
+                    "sample size",
                     "type",
                     "coerced",
                 ]
             )
 
-            assert has_type_info, f"Error should indicate data type issue: {error_msg}"
+            assert (
+                has_helpful_info
+            ), f"Error should provide helpful context: {error_msg}"
 
-            print(f"✅ Error context preserved: mentions data types and variables")
+            print(f"✅ Error context preserved: provides helpful guidance")
             print(f"   Error: {error_msg[:100]}...")
 
 

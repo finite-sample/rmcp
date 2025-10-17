@@ -776,13 +776,20 @@ All tools provide professionally formatted output with markdown tables, statisti
         params = request.get("params", {})
         if not isinstance(params, dict):
             params = {}
-        if method is None:
-            raise ValueError("Invalid JSON-RPC request: missing method")
+
         # Handle notifications (no response expected)
         if request_id is None:
+            if method is None:
+                # For notifications, we can't return an error, so just log and return
+                logger.error("Invalid JSON-RPC notification: missing method")
+                return None
             await self._handle_notification(method, params)
             return None
+
         try:
+            # Validate method for requests (can return error response)
+            if method is None:
+                raise ValueError("Invalid JSON-RPC request: missing method")
             progress_token = params.get("progressToken")
             tool_invocation_id = params.get("toolInvocationId")
             metadata = {}
@@ -849,10 +856,25 @@ All tools provide professionally formatted output with markdown tables, statisti
             return {"jsonrpc": "2.0", "id": request_id, "result": result}
         except Exception as e:
             logger.error(f"Error handling request {request_id}: {e}")
+
+            # Map specific errors to appropriate JSON-RPC error codes
+            error_message = str(e)
+            if "missing method" in error_message.lower():
+                error_code = -32600  # Invalid Request
+            elif "unknown method" in error_message.lower():
+                error_code = -32601  # Method not found
+            elif (
+                "requires" in error_message.lower()
+                and "parameter" in error_message.lower()
+            ):
+                error_code = -32602  # Invalid params
+            else:
+                error_code = -32603  # Internal error
+
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,
-                "error": {"code": -32603, "message": str(e)},  # Internal error
+                "error": {"code": error_code, "message": error_message},
             }
         finally:
             if request_id:
