@@ -56,4 +56,3 @@ result <- list(
     interpretation = interpretation
   )
 )
-

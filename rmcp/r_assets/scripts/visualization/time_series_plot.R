@@ -75,7 +75,7 @@ if (!is.null(file_path)) {
 }
 # Generate base64 image if requested
 if (return_image) {
-  image_data <- if(exists("safe_encode_plot")) {
+  image_data <- if (exists("safe_encode_plot")) {
     safe_encode_plot(p, width, height)
   } else {
     "Plot created successfully but base64 encoding not available in standalone mode"

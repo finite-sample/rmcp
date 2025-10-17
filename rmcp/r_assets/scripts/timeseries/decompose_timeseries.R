@@ -9,9 +9,9 @@ frequency <- args$frequency %||% 12
 decomp_type <- args$type %||% "additive"
 
 # Extract values from data
-if ('values' %in% names(args)) {
+if ("values" %in% names(args)) {
   values <- args$values
-} else if ('value_col' %in% names(args)) {
+} else if ("value_col" %in% names(args)) {
   value_col <- args$value_col
   if (value_col %in% names(data)) {
     values <- data[[value_col]]

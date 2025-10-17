@@ -10,9 +10,9 @@ if (!require(jsonlite, quietly = TRUE)) {
 }
 
 # Prepare data and parameters - handle both template and standalone data passing
-if (exists('data') && !is.null(data)) {
+if (exists("data") && !is.null(data)) {
   # Data already loaded from template system or standalone
-} else if ('data' %in% names(args)) {
+} else if ("data" %in% names(args)) {
   data <- args$data
 } else {
   stop("No data provided")

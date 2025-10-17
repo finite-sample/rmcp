@@ -9,7 +9,7 @@ library(dplyr)
 
 # Prepare data and parameters
 conditions <- args$conditions
-condition <- args$condition  # Support single condition string
+condition <- args$condition # Support single condition string
 logic <- args$logic %||% "AND"
 
 # Build filter expressions
@@ -46,11 +46,14 @@ if (logic == "AND") {
   full_expression <- paste(filter_expressions, collapse = " | ")
 }
 # Apply filter with error handling
-filtered_data <- tryCatch({
-  data %>% filter(eval(parse(text = full_expression)))
-}, error = function(e) {
-  stop(paste("Filter expression failed:", full_expression, "Error:", e$message))
-})
+filtered_data <- tryCatch(
+  {
+    data %>% filter(eval(parse(text = full_expression)))
+  },
+  error = function(e) {
+    stop(paste("Filter expression failed:", full_expression, "Error:", e$message))
+  }
+)
 result <- list(
   data = filtered_data,
   filter_expression = full_expression,

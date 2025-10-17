@@ -7,7 +7,7 @@
 # Prepare data and parameters
 variables <- args$variables
 differences <- args$differences %||% 1
-diff_order <- differences  # For backward compatibility
+diff_order <- differences # For backward compatibility
 log_transform <- args$log_transform %||% FALSE
 
 # Load required libraries

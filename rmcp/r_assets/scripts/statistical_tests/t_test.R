@@ -29,7 +29,7 @@ if (is.null(group)) {
     confidence_interval = list(
       lower = as.numeric(test_result$conf.int[1]),
       upper = as.numeric(test_result$conf.int[2]),
-      level = if(!is.null(attr(test_result$conf.int, "conf.level"))) attr(test_result$conf.int, "conf.level") else 0.95
+      level = if (!is.null(attr(test_result$conf.int, "conf.level"))) attr(test_result$conf.int, "conf.level") else 0.95
     ),
     mean = as.numeric(test_result$estimate),
     null_value = mu,
@@ -69,7 +69,7 @@ if (is.null(group)) {
     confidence_interval = list(
       lower = as.numeric(test_result$conf.int[1]),
       upper = as.numeric(test_result$conf.int[2]),
-      level = if(!is.null(attr(test_result$conf.int, "conf.level"))) attr(test_result$conf.int, "conf.level") else 0.95
+      level = if (!is.null(attr(test_result$conf.int, "conf.level"))) attr(test_result$conf.int, "conf.level") else 0.95
     ),
     mean_x = as.numeric(test_result$estimate[1]),
     mean_y = as.numeric(test_result$estimate[2]),
