@@ -187,8 +187,9 @@ class LocalEnvironmentValidator:
                         f'Install R packages manually: install.packages(c("{package_list}"))'
                     )
             else:
+                package_list = '", "'.join(missing_packages[:10])
                 self.recommendations.append(
-                    f"Install missing R packages: install.packages(c(\"{'", "'.join(missing_packages[:10])}\"))"
+                    f'Install missing R packages: install.packages(c("{package_list}"))'
                 )
                 return False
         else:
