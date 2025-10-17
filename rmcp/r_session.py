@@ -93,7 +93,7 @@ class RSessionManager:
             max_sessions: Maximum number of concurrent sessions
         """
         self._sessions: Dict[str, RSessionInfo] = {}
-        self._session_processes: Dict[str, subprocess.Popen] = {}
+        self._session_processes: Dict[str, asyncio.subprocess.Process] = {}
         self._session_timeout = session_timeout
         self._max_sessions = max_sessions
         self._cleanup_task: Optional[asyncio.Task] = None
@@ -316,6 +316,8 @@ class RSessionManager:
 
         try:
             # Send script to R session
+            if process.stdin is None:
+                raise RExecutionError(f"No stdin available for session {session_id}")
             script_bytes = (script + "\n").encode("utf-8")
             process.stdin.write(script_bytes)
             await process.stdin.drain()

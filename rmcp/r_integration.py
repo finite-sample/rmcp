@@ -885,7 +885,7 @@ def diagnose_r_installation() -> dict[str, Any]:
     import os
     import subprocess
 
-    diagnosis = {
+    diagnosis: dict[str, Any] = {
         "r_available": False,
         "r_path": None,
         "r_version": None,
@@ -979,7 +979,7 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
     import asyncio
     import os
 
-    diagnosis = {
+    diagnosis: dict[str, Any] = {
         "r_available": False,
         "r_path": None,
         "r_version": None,

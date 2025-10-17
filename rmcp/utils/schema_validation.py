@@ -109,7 +109,7 @@ class SchemaDriftDetector:
             >>> for rec in analysis["recommendations"]:
             ...     print(f"💡 {rec}")
         """
-        analysis = {
+        analysis: dict[str, Any] = {
             "tool_name": tool_name,
             "violations": [],
             "warnings": [],
@@ -384,7 +384,7 @@ class SchemaConsistencyChecker:
             ...     for issue in analysis["type_inconsistencies"]:
             ...         print(f"  {issue['field']}: {issue['type_variations']}")
         """
-        analysis = {
+        analysis: dict[str, Any] = {
             "total_tools": len(self.tool_schemas),
             "common_field_patterns": {},
             "type_inconsistencies": [],
@@ -393,8 +393,8 @@ class SchemaConsistencyChecker:
         }
 
         # Analyze common field patterns
-        field_types = {}
-        field_descriptions = {}
+        field_types: dict[str, dict[str, list[str]]] = {}
+        field_descriptions: dict[str, dict[str, list[str]]] = {}
 
         for tool_name, schema in self.tool_schemas.items():
             if schema.get("type") == "object" and "properties" in schema:
@@ -617,7 +617,7 @@ def validate_tool_output_with_diagnostics(
         >>> if report["drift_analysis"] and report["drift_analysis"]["extra_fields"]:
         ...     print(f"New fields detected: {report['drift_analysis']['extra_fields']}")
     """
-    report = {
+    report: dict[str, Any] = {
         "tool_name": tool_name,
         "validation_passed": False,
         "validation_errors": [],
@@ -725,7 +725,7 @@ def generate_schema_validation_report(validation_results: List[Dict[str, Any]]) 
         report.append("")
 
         # Group failures by type
-        common_issues = {}
+        common_issues: dict[str, list[str]] = {}
         for result in validation_results:
             if not result["validation_passed"]:
                 for error in result["validation_errors"]:

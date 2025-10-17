@@ -18,7 +18,6 @@ try:
     from mcp import LoggingLevel
     from mcp.types import (
         LATEST_PROTOCOL_VERSION,
-        CompletionCapability,
         Implementation,
         InitializeResult,
         LoggingCapability,
@@ -30,7 +29,8 @@ try:
 
     _MCP_TYPES_AVAILABLE = True
     _PROTOCOL_VERSION = LATEST_PROTOCOL_VERSION
-    _SUPPORTED_LOG_LEVELS = list(LoggingLevel.__args__)
+    # Use fallback log levels since LoggingLevel.__args__ may not be available
+    _SUPPORTED_LOG_LEVELS = ["debug", "info", "warning", "error"]
 except Exception:  # pragma: no cover - optional dependency
     _MCP_TYPES_AVAILABLE = False
     _PROTOCOL_VERSION = "2025-06-18"
@@ -469,12 +469,12 @@ All tools provide professionally formatted output with markdown tables, statisti
             f"{client_info.get('name', 'unknown')}"
         )
         if _MCP_TYPES_AVAILABLE:
+            # Build capabilities - completion capability is not available in current MCP version
             capabilities = ServerCapabilities(
                 tools=ToolsCapability(listChanged=False),
                 resources=ResourcesCapability(subscribe=True, listChanged=True),
                 prompts=PromptsCapability(listChanged=False),
-                logging=LoggingCapability(levels=_SUPPORTED_LOG_LEVELS),
-                completion=CompletionCapability(),
+                logging=LoggingCapability(),
             )
             initialize_result = InitializeResult(
                 protocolVersion=_PROTOCOL_VERSION,
@@ -483,16 +483,17 @@ All tools provide professionally formatted output with markdown tables, statisti
                 instructions=self.description or None,
             )
             return initialize_result.model_dump(mode="json", exclude_none=True)
-        capabilities = {
+        # Fallback for when MCP types not available
+        capabilities_dict = {
             "tools": {"listChanged": False},
             "resources": {"subscribe": True, "listChanged": True},
             "prompts": {"listChanged": False},
-            "logging": {"levels": _SUPPORTED_LOG_LEVELS},
+            "logging": {},
             "completion": {},
         }
         result = {
             "protocolVersion": _PROTOCOL_VERSION,
-            "capabilities": capabilities,
+            "capabilities": capabilities_dict,
             "serverInfo": {"name": self.name, "version": self.version},
         }
         if self.description:

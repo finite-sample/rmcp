@@ -200,7 +200,7 @@ class RToolDiscovery:
     def _infer_input_schema(self, content: str) -> Dict[str, Any]:
         """Infer input schema from R script content."""
         # Basic schema inference based on common patterns
-        schema = {"type": "object", "properties": {}}
+        schema: Dict[str, Any] = {"type": "object", "properties": {}}
 
         # Look for common parameter patterns
         if "args$data" in content:

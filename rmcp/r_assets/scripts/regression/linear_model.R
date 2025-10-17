@@ -16,7 +16,10 @@ na_action <- args$na_action %||% "na.omit"
 # Validate data sufficiency before modeling
 n_total <- nrow(data)
 if (n_total < 2) {
-  stop("Insufficient data: Linear regression requires at least 2 observations. Current sample size: ", n_total, ". Please provide more data points.")
+  stop(
+    "Insufficient data: Linear regression requires at least 2 observations. ",
+    "Current sample size: ", n_total, ". Please provide more data points."
+  )
 }
 
 # Fit model
@@ -32,7 +35,11 @@ n_params <- length(coef(model))
 df_residual <- n_obs - n_params
 
 if (df_residual <= 0) {
-  stop("Insufficient degrees of freedom: Model has ", n_params, " parameters but only ", n_obs, " observations after removing missing values. Need at least ", n_params + 1, " observations for reliable estimation.")
+  stop(
+    "Insufficient degrees of freedom: Model has ", n_params, " parameters but only ",
+    n_obs, " observations after removing missing values. Need at least ",
+    n_params + 1, " observations for reliable estimation."
+  )
 }
 
 # Get comprehensive results
@@ -45,16 +52,21 @@ formatted_summary <- format_lm_results(model, args$formula)
 interpretation <- interpret_lm(model)
 
 # Calculate F-statistic p-value safely
-f_p_value <- tryCatch({
-  if (!is.null(summary_model$fstatistic) && length(summary_model$fstatistic) >= 3) {
-    pf(summary_model$fstatistic[1],
-       summary_model$fstatistic[2], 
-       summary_model$fstatistic[3],
-       lower.tail = FALSE)
-  } else {
-    NA_real_
-  }
-}, error = function(e) NA_real_)
+f_p_value <- tryCatch(
+  {
+    if (!is.null(summary_model$fstatistic) && length(summary_model$fstatistic) >= 3) {
+      pf(
+        summary_model$fstatistic[1],
+        summary_model$fstatistic[2],
+        summary_model$fstatistic[3],
+        lower.tail = FALSE
+      )
+    } else {
+      NA_real_
+    }
+  },
+  error = function(e) NA_real_
+)
 
 # Ensure all numeric values are valid (not NaN, Inf, or NULL)
 clean_numeric <- function(x, default = 0) {

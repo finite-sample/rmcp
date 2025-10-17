@@ -468,7 +468,7 @@ async def list_r_packages(context: Context, params: Dict[str, Any]) -> Dict[str,
     )
     """
 
-    args = {}
+    args: dict[str, Any] = {}
 
     try:
         result = await context.execute_r_with_session(r_script, args, use_session=True)
@@ -547,7 +547,7 @@ async def get_r_session_info(
     result <- session_info
     """
 
-    args = {}
+    args: dict[str, Any] = {}
 
     try:
         result = await context.execute_r_with_session(r_script, args, use_session=True)
