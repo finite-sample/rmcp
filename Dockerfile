@@ -26,7 +26,8 @@ RUN R -q -e "install.packages(c( \
   'MASS','boot','survival','nlme','mgcv','lme4','glmnet', \
   'e1071','caret','nnet','gbm','xgboost','kernlab','cluster', \
   'zoo','xts','TTR','quantmod','data.table','lattice', \
-  'corrplot','viridis','RColorBrewer','lavaan' \
+  'corrplot','viridis','RColorBrewer','lavaan', \
+  'styler','lintr','testthat' \
 ))"
 
 # ---- Python: create a venv to avoid PEP 668 issues ----
