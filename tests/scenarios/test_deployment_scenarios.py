@@ -10,12 +10,34 @@ These tests validate complete RMCP workflows in Docker environments:
 """
 
 import json
+import shutil
 import subprocess
 import tempfile
 import time
 from pathlib import Path
 
 import pytest
+
+def _check_docker_available():
+    """Check if Docker is available and functional at runtime."""
+    if not shutil.which("docker"):
+        pytest.skip("Docker not available in PATH")
+    
+    try:
+        # Test basic Docker functionality
+        result = subprocess.run(["docker", "--version"], 
+                              capture_output=True, timeout=10)
+        if result.returncode != 0:
+            pytest.skip("Docker not functional")
+            
+        # Test Docker daemon access
+        result = subprocess.run(["docker", "info"], 
+                              capture_output=True, timeout=10)
+        if result.returncode != 0:
+            pytest.skip("Docker daemon not accessible")
+            
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pytest.skip("Docker not accessible")
 
 
 class TestDockerWorkflowValidation:
@@ -344,6 +366,7 @@ class TestDockerProductionScenarios:
 
     def test_docker_multi_stage_build_optimization(self):
         """Test multi-stage Docker build for production optimization."""
+        _check_docker_available()
         print("🐳 Testing multi-stage Docker build optimization...")
 
         # Build production image with multi-stage Dockerfile
@@ -457,6 +480,7 @@ class TestDockerProductionScenarios:
 
     def test_docker_security_configuration(self):
         """Test Docker security best practices."""
+        _check_docker_available()
         print("🐳 Testing Docker security configuration...")
 
         # Test running as non-root user
@@ -473,6 +497,7 @@ class TestDockerProductionScenarios:
 
     def test_docker_environment_variables(self):
         """Test environment variable configuration in Docker."""
+        _check_docker_available()
         print("🐳 Testing environment variables in Docker...")
 
         # Test with custom environment variables
@@ -499,6 +524,7 @@ class TestDockerProductionScenarios:
 
     def test_docker_volume_mounts(self):
         """Test volume mounts for data persistence."""
+        _check_docker_available()
         print("🐳 Testing volume mounts in Docker...")
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -536,6 +562,7 @@ class TestDockerCrossplatformCompatibility:
 
     def test_docker_architecture_detection(self):
         """Test architecture detection and compatibility."""
+        _check_docker_available()
         print("🐳 Testing Docker architecture compatibility...")
 
         arch_test = subprocess.run(
@@ -551,6 +578,7 @@ class TestDockerCrossplatformCompatibility:
 
     def test_docker_platform_specific_features(self):
         """Test platform-specific features and compatibility."""
+        _check_docker_available()
         print("🏗️ Testing platform-specific features...")
 
         # Get current platform architecture

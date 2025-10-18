@@ -343,6 +343,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install poetry
         poetry install --with dev
+        
+        # Ensure Docker is available for scenario tests that need it
+        echo "🐳 Verifying Docker availability..."
+        docker --version
+        docker info
     
     - name: Run production scenario tests
       run: |
