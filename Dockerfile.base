@@ -85,15 +85,15 @@ RUN R -q -e "install.packages(c( \
 RUN R -q -e "install.packages(c('styler','lintr','testthat'))"
 
 # Verify R installation and package availability
-RUN R -q -e "
-library(jsonlite);
-library(dplyr);
-library(ggplot2);
-library(forecast);
-library(randomForest);
-cat('✅ All R packages installed successfully\n');
-cat('R version:', R.version.string, '\n');
-cat('Installed packages:', length(.packages(all.available=TRUE)), '\n');
+RUN R -q -e " \
+library(jsonlite); \
+library(dplyr); \
+library(ggplot2); \
+library(forecast); \
+library(randomForest); \
+cat('✅ All R packages installed successfully\\n'); \
+cat('R version:', R.version.string, '\\n'); \
+cat('Installed packages:', length(.packages(all.available=TRUE)), '\\n'); \
 "
 
 # Create base metadata file for versioning
