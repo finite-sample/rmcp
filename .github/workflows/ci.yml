@@ -336,29 +336,35 @@ jobs:
             print('⚠️ rmcp user not found - this may be expected in CI')
         "
     
-    - name: Run new scenario tests (production features)
+    # Scenario tests run outside production container with proper dev dependencies
+    - name: Setup testing environment for scenario tests
       run: |
-        export PATH="/opt/venv/bin:$PATH"
-        echo "🎯 Testing new production scenario features..."
+        # Install development dependencies on runner for pytest-based tests
+        python -m pip install --upgrade pip
+        pip install poetry
+        poetry install --with dev
+    
+    - name: Run production scenario tests
+      run: |
+        echo "🎯 Testing production scenario features..."
         
         # Test multi-stage build optimization (will build and test production image)
-        pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_multi_stage_build_optimization -v --tb=short
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_multi_stage_build_optimization -v --tb=short
         
         # Test platform-specific features
-        pytest tests/scenarios/test_deployment_scenarios.py::TestDockerCrossplatformCompatibility::test_docker_platform_specific_features -v --tb=short
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerCrossplatformCompatibility::test_docker_platform_specific_features -v --tb=short
         
         # Test concurrent request handling 
-        pytest tests/scenarios/test_claude_desktop_scenarios.py::TestClaudeDesktopPerformance::test_concurrent_requests -v --tb=short
+        poetry run pytest tests/scenarios/test_claude_desktop_scenarios.py::TestClaudeDesktopPerformance::test_concurrent_requests -v --tb=short
         
-        echo "✅ All new scenario tests completed"
+        echo "✅ All production scenario tests completed"
     
     - name: Validate complete test coverage
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         echo "📊 Validating complete test coverage..."
         
-        # Verify all 201 tests are collected
-        TEST_COUNT=$(pytest --collect-only -q tests/ | grep "collected" | grep -o '[0-9]\+' | head -1)
+        # Verify all 201 tests are collected (using poetry environment)
+        TEST_COUNT=$(poetry run pytest --collect-only -q tests/ | grep "collected" | grep -o '[0-9]\+' | head -1)
         echo "Tests collected: $TEST_COUNT"
         
         if [ "$TEST_COUNT" != "201" ]; then
@@ -368,8 +374,8 @@ jobs:
           echo "✅ All 201 tests successfully collected"
         fi
         
-        # Run a sample to verify no collection issues
-        pytest tests/smoke/ -v --tb=short
+        # Run a sample to verify no collection issues (using poetry environment)
+        poetry run pytest tests/smoke/ -v --tb=short
         echo "✅ Test collection and execution verified"
 
   # Cross-platform Python testing (validates Python-only functionality)
