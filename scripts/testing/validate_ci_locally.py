@@ -52,7 +52,7 @@ class LocalCIValidator:
         try:
             if self.verbose:
                 self.log(f"Running: {' '.join(command)}")
-            
+
             result = subprocess.run(
                 command,
                 capture_output=True,
@@ -61,12 +61,12 @@ class LocalCIValidator:
                 cwd=cwd or self.root_dir,
             )
             success = result.returncode == 0
-            
+
             if self.verbose and not success:
                 self.log(f"Command failed with code {result.returncode}")
                 if result.stderr:
                     self.log(f"STDERR: {result.stderr[:200]}...")
-                    
+
             return success, result.stdout, result.stderr
         except subprocess.TimeoutExpired:
             return False, "", "Command timed out"
@@ -76,60 +76,67 @@ class LocalCIValidator:
     def validate_python_linting(self) -> bool:
         """Validate Python code formatting and linting (mirrors CI python-checks job)."""
         self.log("Validating Python Code Quality", "STEP")
-        
+
         # Black formatting check
         self.log("Checking black formatting...")
-        success, stdout, stderr = self.run_command([
-            "black", "--check", "rmcp", "tests", "streamlit", "scripts"
-        ])
+        success, stdout, stderr = self.run_command(
+            ["black", "--check", "rmcp", "tests", "streamlit", "scripts"]
+        )
         if not success:
-            self.log("Black formatting issues found - run: black rmcp tests streamlit scripts", "ERROR")
+            self.log(
+                "Black formatting issues found - run: black rmcp tests streamlit scripts",
+                "ERROR",
+            )
             self.results.append(("Black formatting", False, stderr))
             return False
         else:
             self.log("Black formatting passed")
-            
+
         # Import sorting check
         self.log("Checking import sorting...")
-        success, stdout, stderr = self.run_command([
-            "isort", "--check-only", "rmcp", "tests", "streamlit", "scripts"
-        ])
+        success, stdout, stderr = self.run_command(
+            ["isort", "--check-only", "rmcp", "tests", "streamlit", "scripts"]
+        )
         if not success:
-            self.log("Import sorting issues found - run: isort rmcp tests streamlit scripts", "ERROR")
+            self.log(
+                "Import sorting issues found - run: isort rmcp tests streamlit scripts",
+                "ERROR",
+            )
             self.results.append(("Import sorting", False, stderr))
             return False
         else:
             self.log("Import sorting passed")
-            
+
         # Flake8 linting
         self.log("Running flake8 linting...")
-        success, stdout, stderr = self.run_command([
-            "flake8", "rmcp", "tests", "streamlit", "scripts"
-        ])
+        success, stdout, stderr = self.run_command(
+            ["flake8", "rmcp", "tests", "streamlit", "scripts"]
+        )
         if not success:
             self.log("Flake8 linting issues found", "ERROR")
             self.results.append(("Flake8 linting", False, stderr))
             return False
         else:
             self.log("Flake8 linting passed")
-            
+
         self.results.append(("Python Code Quality", True, "All checks passed"))
         return True
 
     def validate_r_style(self) -> bool:
         """Validate R code style using styler (mirrors CI R style checks)."""
         self.log("Validating R Code Style", "STEP")
-        
+
         # Check if R is available
         success, _, _ = self.run_command(["R", "--version"])
         if not success:
             self.log("R not found - skipping R style checks", "WARNING")
             self.results.append(("R Style Check", True, "Skipped - R not available"))
             return True
-            
+
         # Run R style check exactly as in CI
         r_command = [
-            "R", "-e",
+            "R",
+            "-e",
             """
             library(styler)
             files <- list.files('rmcp/r_assets', pattern='[.]R$', recursive=TRUE, full.names=TRUE)
@@ -142,9 +149,9 @@ class LocalCIValidator:
                     cat('✅ R code style check passed\\n')
                 }
             }
-            """
+            """,
         ]
-        
+
         success, stdout, stderr = self.run_command(r_command)
         if not success:
             self.log("R style issues found - run R formatting", "ERROR")
@@ -158,70 +165,97 @@ class LocalCIValidator:
     def validate_docker_builds(self) -> bool:
         """Validate Docker builds (mirrors CI docker-build job)."""
         self.log("Validating Docker Builds", "STEP")
-        
+
         # Check Docker availability
         success, _, _ = self.run_command(["docker", "--version"])
         if not success:
             self.log("Docker not found - cannot validate builds", "ERROR")
             self.results.append(("Docker Build", False, "Docker not available"))
             return False
-            
+
         # Build development image
         self.log("Building development Docker image...")
-        success, stdout, stderr = self.run_command([
-            "docker", "build", "-f", "docker/Dockerfile", "--target", "development",
-            "-t", "rmcp-dev-local", "."
-        ], timeout=600)
-        
+        success, stdout, stderr = self.run_command(
+            [
+                "docker",
+                "build",
+                "-f",
+                "docker/Dockerfile",
+                "--target",
+                "development",
+                "-t",
+                "rmcp-dev-local",
+                ".",
+            ],
+            timeout=600,
+        )
+
         if not success:
             self.log("Development Docker build failed", "ERROR")
             self.results.append(("Docker Development Build", False, stderr[:200]))
             return False
         else:
             self.log("Development Docker build succeeded")
-            
+
         # Build production image
         self.log("Building production Docker image...")
-        success, stdout, stderr = self.run_command([
-            "docker", "build", "-f", "docker/Dockerfile", "--target", "production",
-            "-t", "rmcp-prod-local", "."
-        ], timeout=600)
-        
+        success, stdout, stderr = self.run_command(
+            [
+                "docker",
+                "build",
+                "-f",
+                "docker/Dockerfile",
+                "--target",
+                "production",
+                "-t",
+                "rmcp-prod-local",
+                ".",
+            ],
+            timeout=600,
+        )
+
         if not success:
             self.log("Production Docker build failed", "ERROR")
             self.results.append(("Docker Production Build", False, stderr[:200]))
             return False
         else:
             self.log("Production Docker build succeeded")
-            
+
         # Test basic functionality
         self.log("Testing Docker image functionality...")
-        success, stdout, stderr = self.run_command([
-            "docker", "run", "--rm", "rmcp-dev-local", "rmcp", "--version"
-        ])
-        
+        success, stdout, stderr = self.run_command(
+            ["docker", "run", "--rm", "rmcp-dev-local", "rmcp", "--version"]
+        )
+
         if not success:
             self.log("Docker image functionality test failed", "ERROR")
             self.results.append(("Docker Functionality", False, stderr))
             return False
         else:
             self.log(f"Docker functionality test passed: {stdout.strip()}")
-            
-        self.results.append(("Docker Builds", True, "Development and production builds successful"))
+
+        self.results.append(
+            ("Docker Builds", True, "Development and production builds successful")
+        )
         return True
 
     def validate_test_suite(self) -> bool:
         """Run the complete test suite in Docker (mirrors CI r-testing job)."""
         self.log("Running Complete Test Suite", "STEP")
-        
+
         # Run tests inside Docker development environment (exactly like CI)
         self.log("Running pytest in Docker environment...")
         docker_test_cmd = [
-            "docker", "run", "--rm", 
-            "-v", f"{self.root_dir}:/workspace",
-            "-w", "/workspace",
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{self.root_dir}:/workspace",
+            "-w",
+            "/workspace",
             "rmcp-dev-local",
-            "bash", "-c", 
+            "bash",
+            "-c",
             """
             export PATH="/opt/venv/bin:$PATH"
             pip install -e .
@@ -255,11 +289,11 @@ class LocalCIValidator:
             pytest tests/scenarios/ -v --tb=short
             
             echo "✅ All 201 tests completed successfully"
-            """
+            """,
         ]
-        
+
         success, stdout, stderr = self.run_command(docker_test_cmd, timeout=900)
-        
+
         if not success:
             self.log("Test suite failed", "ERROR")
             self.results.append(("Test Suite", False, stderr[:500]))
@@ -272,7 +306,7 @@ class LocalCIValidator:
     def validate_cli_functionality(self) -> bool:
         """Test CLI functionality (mirrors CI CLI tests)."""
         self.log("Validating CLI Functionality", "STEP")
-        
+
         # Test rmcp --version
         success, stdout, stderr = self.run_command(["rmcp", "--version"])
         if not success:
@@ -281,7 +315,7 @@ class LocalCIValidator:
             return False
         else:
             self.log(f"CLI version: {stdout.strip()}")
-            
+
         # Test rmcp list-capabilities
         success, stdout, stderr = self.run_command(["rmcp", "list-capabilities"])
         if not success:
@@ -290,7 +324,7 @@ class LocalCIValidator:
             return False
         else:
             self.log("CLI capabilities listing succeeded")
-            
+
         self.results.append(("CLI Functionality", True, "All CLI commands work"))
         return True
 
@@ -299,10 +333,10 @@ class LocalCIValidator:
         print("\n" + "=" * 60)
         print("🎯 LOCAL CI VALIDATION SUMMARY")
         print("=" * 60)
-        
+
         passed = 0
         total = len(self.results)
-        
+
         for check_name, success, details in self.results:
             status = "✅ PASSED" if success else "❌ FAILED"
             print(f"{status}: {check_name}")
@@ -310,9 +344,9 @@ class LocalCIValidator:
                 print(f"   Details: {details[:100]}...")
             if success:
                 passed += 1
-                
+
         print(f"\nResult: {passed}/{total} checks passed")
-        
+
         if passed == total:
             print("\n🎉 ALL VALIDATIONS PASSED!")
             print("✅ Your code is ready for CI/CD pipeline")
@@ -321,38 +355,40 @@ class LocalCIValidator:
             print(f"\n❌ {total - passed} VALIDATIONS FAILED")
             print("🔧 Fix the issues above before pushing to GitHub")
             print("💡 This will prevent CI/CD failures")
-            
+
         return passed == total
 
-    def run_validation(self, skip_docker: bool = False, skip_tests: bool = False) -> bool:
+    def run_validation(
+        self, skip_docker: bool = False, skip_tests: bool = False
+    ) -> bool:
         """Run all validation checks."""
         print("🛠️  LOCAL CI/CD VALIDATION")
         print("=" * 60)
         print("This script mirrors the GitHub CI pipeline to catch issues locally")
         print(f"Working directory: {self.root_dir}")
         print()
-        
+
         start_time = time.time()
-        
+
         # Run all validation steps
         validations = [
             ("Python Code Quality", self.validate_python_linting),
             ("R Code Style", self.validate_r_style),
             ("CLI Functionality", self.validate_cli_functionality),
         ]
-        
+
         if not skip_docker:
             validations.append(("Docker Builds", self.validate_docker_builds))
         else:
             self.log("Skipping Docker builds (--skip-docker)", "WARNING")
-            
+
         if not skip_tests and not skip_docker:
             validations.append(("Test Suite", self.validate_test_suite))
         elif skip_tests:
             self.log("Skipping test suite (--skip-tests)", "WARNING")
         elif skip_docker:
             self.log("Skipping test suite (requires Docker)", "WARNING")
-            
+
         # Execute all validations
         all_passed = True
         for name, validator in validations:
@@ -367,11 +403,11 @@ class LocalCIValidator:
                 self.log(f"{name} validation failed with exception: {e}", "ERROR")
                 self.results.append((name, False, str(e)))
                 all_passed = False
-                
+
         # Print summary
         elapsed = time.time() - start_time
         print(f"\nValidation completed in {elapsed:.1f} seconds")
-        
+
         return self.print_summary()
 
 
@@ -386,33 +422,33 @@ Examples:
   python scripts/testing/validate_ci_locally.py --skip-docker     # Skip Docker builds
   python scripts/testing/validate_ci_locally.py --skip-tests      # Skip test suite
   python scripts/testing/validate_ci_locally.py --verbose         # Detailed output
-        """
+        """,
     )
-    
+
     parser.add_argument(
         "--skip-docker",
         action="store_true",
-        help="Skip Docker build validation (faster, but less complete)"
+        help="Skip Docker build validation (faster, but less complete)",
     )
     parser.add_argument(
-        "--skip-tests", 
+        "--skip-tests",
         action="store_true",
-        help="Skip running the test suite (much faster)"
+        help="Skip running the test suite (much faster)",
     )
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true", 
-        help="Enable verbose output with detailed error messages"
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output with detailed error messages",
     )
-    
+
     args = parser.parse_args()
-    
+
     validator = LocalCIValidator(verbose=args.verbose)
     success = validator.run_validation(
-        skip_docker=args.skip_docker,
-        skip_tests=args.skip_tests
+        skip_docker=args.skip_docker, skip_tests=args.skip_tests
     )
-    
+
     sys.exit(0 if success else 1)
 
 
