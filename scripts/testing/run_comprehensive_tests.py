@@ -47,8 +47,20 @@ from rmcp.tools.visualization import (
     time_series_plot,
 )
 
-# Import test R script loader
-from test_r_loader import get_flexible_r_script
+
+# Simple R script loading (replaced over-engineered test_r_loader)
+def load_r_script(script_name: str) -> str:
+    """Load R script from tests/r_scripts/unit directory."""
+    script_path = (
+        Path(__file__).parent.parent.parent
+        / "tests"
+        / "r_scripts"
+        / "unit"
+        / f"{script_name}.R"
+    )
+    if not script_path.exists():
+        raise FileNotFoundError(f"R script not found: {script_path}")
+    return script_path.read_text()
 
 
 def check_r_installation():
@@ -442,7 +454,7 @@ async def run_all_tests():
                 (
                     "execute_r_analysis",
                     {
-                        "r_code": get_flexible_r_script("test_basic_analysis"),
+                        "r_code": load_r_script("test_basic_analysis"),
                         "data": sample_data,
                         "description": "Calculate means of x and y variables",
                         "packages": ["base"],

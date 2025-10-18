@@ -152,20 +152,35 @@ jobs:
         }
         "
     
-    - name: Run integration tests (real R execution)
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pytest tests/integration/ -v --tb=short --cov=rmcp --cov-report=xml
-    
-    - name: Run workflow tests (end-to-end scenarios)
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pytest tests/workflow/ -v --tb=short --cov=rmcp --cov-append
-    
     - name: Run smoke tests (basic functionality)
       run: |
         export PATH="/opt/venv/bin:$PATH"
-        pytest tests/smoke/ -v --tb=short --cov=rmcp --cov-append
+        pytest tests/smoke/ -v --tb=short --cov=rmcp --cov-report=xml
+    
+    - name: Run protocol tests (MCP protocol validation)
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pytest tests/integration/protocol/ -v --tb=short --cov=rmcp --cov-append
+    
+    - name: Run integration tests - tools (R tool integration)
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pytest tests/integration/tools/ -v --tb=short --cov=rmcp --cov-append
+    
+    - name: Run integration tests - transport (HTTP transport)
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pytest tests/integration/transport/ -v --tb=short --cov=rmcp --cov-append
+    
+    - name: Run integration tests - core (server & registries)
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pytest tests/integration/core/ -v --tb=short --cov=rmcp --cov-append
+    
+    - name: Run scenario tests (end-to-end user scenarios)
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pytest tests/scenarios/ -v --tb=short --cov=rmcp --cov-append
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4

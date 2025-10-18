@@ -38,7 +38,7 @@ poetry run flake8 .              # Linting
 **R integration tests (Docker-based):**
 ```bash
 docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/integration/"
-docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/workflow/"
+docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/scenarios/"
 ```
 
 ### Code Quality
@@ -67,8 +67,8 @@ docker run -v $(pwd):/workspace rmcp-dev R -e "library(styler); style_file(list.
 2. Use `@tool` decorator with input/output JSON schemas
 3. Implement corresponding R script in `r_assets/scripts/`
 4. Write schema validation tests in `tests/unit/tools/` (Python-only)
-5. Write functional tests in `tests/integration/` (real R execution)
-6. Add workflow tests in `tests/workflow/` for user scenarios
+5. Write functional tests in `tests/integration/tools/` (real R execution)
+6. Add scenario tests in `tests/scenarios/` for user workflows
 
 ### Key Design Patterns
 - **Registry Pattern**: All tools/resources/prompts use centralized registries
@@ -76,15 +76,32 @@ docker run -v $(pwd):/workspace rmcp-dev R -e "library(styler); style_file(list.
 - **Transport Abstraction**: Common interface for stdio/HTTP transports
 - **Virtual Filesystem**: Security sandbox for file operations (`rmcp/security/vfs.py`)
 
-### Testing Strategy
-- **Unit tests** (`tests/unit/`): Pure Python logic - schema validation, JSON-RPC protocol, transport layer (no R required)
-- **Integration tests** (`tests/integration/`): Real R execution for tool functionality, error handling, MCP protocol compliance
-- **Workflow tests** (`tests/workflow/`): End-to-end user scenarios with real R analysis pipelines
-- **Smoke tests** (`tests/smoke/`): Basic functionality validation across all tools
-- **E2E tests** (`tests/e2e/`): Full MCP protocol flows with Claude Desktop simulation
-- **Deployment tests** (`tests/deployment/`): Docker environment and CI/CD validation
+### Testing Strategy (Optimized Organization)
 
-**Unified Real R Strategy**: Since R is available in all environments (development, CI/CD), tests use real R execution instead of mocks for accuracy and reliability. This eliminates mock maintenance and ensures tests validate actual behavior.
+**Tier 1: Basic Functionality (Python-only, cross-platform)**
+- **Smoke tests** (`tests/smoke/`): Basic server startup, CLI, imports (no R required, very fast)
+- **Unit tests** (`tests/unit/`): Pure Python logic organized by component:
+  - `tests/unit/core/`: Server, context, schemas
+  - `tests/unit/tools/`: Tool schema validation
+  - `tests/unit/transport/`: HTTP transport logic
+
+**Tier 2: Integration Testing (R required, Docker-based)**
+- **Protocol tests** (`tests/integration/protocol/`): MCP protocol validation with mocked R responses
+- **Tool integration** (`tests/integration/tools/`): Real R execution for statistical tool functionality
+- **Transport integration** (`tests/integration/transport/`): HTTP transport with real server
+- **Core integration** (`tests/integration/core/`): Server registries, capabilities, error handling
+
+**Tier 3: Complete User Scenarios (End-to-end)**
+- **Scenario tests** (`tests/scenarios/`): Full user workflows and deployment scenarios:
+  - `test_realistic_scenarios.py`: Statistical analysis pipelines  
+  - `test_claude_desktop_scenarios.py`: Claude Desktop integration flows
+  - `test_excel_plotting_scenarios.py`: File workflow scenarios
+  - `test_deployment_scenarios.py`: Docker environment validation
+
+**Development Utilities**
+- **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (tests all 44 tools with real R)
+
+**Strategy**: Tests progress from basic functionality → protocol compliance → component integration → complete scenarios. Each tier builds on the previous, ensuring fast feedback for basic issues while providing comprehensive validation for complex workflows.
 
 ## Hybrid Development Approach
 

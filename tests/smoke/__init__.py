@@ -1,1 +1,1 @@
-# Smoke tests for RMCP
+# Smoke tests for basic RMCP functionality
