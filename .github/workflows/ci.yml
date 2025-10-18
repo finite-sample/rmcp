@@ -327,13 +327,13 @@ jobs:
         # Test that production image can run as non-root when configured
         echo "🔍 Testing non-root capability..."
         python -c "
-import os, pwd
-try:
-    # Check if rmcp user exists in the container
-    rmcp_user = pwd.getpwnam('rmcp')
-    print(f'✅ Non-root user available: rmcp (uid={rmcp_user.pw_uid})')
-except KeyError:
-    print('⚠️ rmcp user not found - this may be expected in CI')
+        import os, pwd
+        try:
+            # Check if rmcp user exists in the container
+            rmcp_user = pwd.getpwnam('rmcp')
+            print(f'✅ Non-root user available: rmcp (uid={rmcp_user.pw_uid})')
+        except KeyError:
+            print('⚠️ rmcp user not found - this may be expected in CI')
         "
     
     - name: Run new scenario tests (production features)
