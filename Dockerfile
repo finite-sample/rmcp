@@ -45,7 +45,9 @@ RUN set -eux; \
         "pytest-asyncio>=0.21.0" \
         "click>=8.1.0" \
         "jsonschema>=4.0.0" \
-        "build>=0.10.0"
+        "build>=0.10.0" \
+        "pandas>=1.5.0" \
+        "openpyxl>=3.0.0"
 
 # Ensure venv tools are first on PATH for subsequent steps/CI
 ENV PATH="$VENV/bin:$PATH"

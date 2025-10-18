@@ -7,27 +7,50 @@ RMCP (R Model Context Protocol) is a statistical analysis server that bridges AI
 
 ## Development Commands
 
-### Setup & Running
+### Setup & Running (Hybrid Approach)
+
+**For Python-only development (cross-platform):**
 ```bash
-poetry install                    # Install dependencies
-poetry run rmcp start            # Start server in stdio mode
+poetry install --with dev        # Install minimal Python dependencies
+poetry run rmcp start            # Start server in stdio mode (no R tools)
 poetry run rmcp http             # Start HTTP server with SSE
 ```
 
-### Testing
+**For R integration development (Docker-based):**
 ```bash
-pytest tests/unit/               # Run unit tests (no R required)
-pytest tests/integration/        # Run integration tests (requires R)
-pytest tests/e2e/               # Run end-to-end tests
-pytest -xvs tests/test_file.py::test_name  # Run single test
+docker build -t rmcp-dev .       # Build R + Python environment
+docker run -v $(pwd):/workspace -it rmcp-dev bash
+# Inside container:
+cd /workspace && pip install -e .
+rmcp start                        # Full R integration available
+```
+
+### Testing (Hybrid Strategy)
+
+**Python-only tests (cross-platform via Poetry):**
+```bash
+poetry run pytest tests/unit/    # Schema validation, JSON-RPC, transport
+poetry run black --check .       # Code formatting
+poetry run isort --check .       # Import sorting
+poetry run flake8 .              # Linting
+```
+
+**R integration tests (Docker-based):**
+```bash
+docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/integration/"
+docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/workflow/"
 ```
 
 ### Code Quality
 ```bash
-black rmcp tests streamlit       # Format code
-isort rmcp tests streamlit       # Sort imports
-flake8 rmcp tests streamlit      # Lint code
-mypy rmcp                        # Type checking
+# Python formatting (cross-platform)
+poetry run black rmcp tests streamlit
+poetry run isort rmcp tests streamlit  
+poetry run flake8 rmcp tests streamlit
+poetry run mypy rmcp
+
+# R formatting (Docker-based)
+docker run -v $(pwd):/workspace rmcp-dev R -e "library(styler); style_file(list.files('rmcp/r_assets', pattern='[.]R$', recursive=TRUE, full.names=TRUE))"
 ```
 
 ## Architecture
@@ -63,9 +86,23 @@ mypy rmcp                        # Type checking
 
 **Unified Real R Strategy**: Since R is available in all environments (development, CI/CD), tests use real R execution instead of mocks for accuracy and reliability. This eliminates mock maintenance and ensures tests validate actual behavior.
 
+## Hybrid Development Approach
+
+**Why Hybrid?**
+- **Docker**: Ensures consistent R environment for integration testing (complex R package dependencies)
+- **Poetry**: Enables cross-platform Python testing on Mac/Windows/Linux (important for CLI tools)
+- **Optimized**: No 179KB `poetry.lock` in repository (regenerated locally as needed)
+- **Flexible**: Developers can choose lightweight Poetry setup or full Docker environment
+
+**When to use what:**
+- **Local development**: Poetry for Python development, schema changes, CLI testing
+- **R tool development**: Docker for testing actual R integration and statistical computations
+- **CI/CD**: Docker for R tests, Poetry for cross-platform Python validation
+
 ## Important Notes
-- Python 3.10+ required
-- R must be installed for integration/E2E tests
+- Python 3.11+ required
+- R environment provided via Docker (no local R installation needed for development)
 - All R communication uses JSON via subprocess
 - HTTP transport includes session management and SSE for streaming
 - VFS security restricts file access to configured paths only
+- `poetry.lock` is gitignored (optimizes repository size, regenerated locally)

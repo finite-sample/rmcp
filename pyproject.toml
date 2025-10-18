@@ -39,29 +39,18 @@ sse-starlette = {version = ">=1.6.0", optional = true}
 http = ["fastapi", "uvicorn", "sse-starlette"]
 all = ["fastapi", "uvicorn", "sse-starlette"]
 
+# Hybrid approach: Docker for R integration, Poetry for cross-platform Python testing
 [tool.poetry.group.dev.dependencies]
+# Essential dependencies for cross-platform Python testing
 pytest = ">=8.0.0"
-pytest-cov = ">=5.0.0"
-pytest-mock = ">=3.12.0"
 pytest-asyncio = ">=0.21.0"
 black = ">=23.0.0"
 isort = ">=5.12.0"
 flake8 = ">=6.0.0"
-mypy = ">=1.5.0"
-httpx = ">=0.25.0"  # For HTTP transport testing
-pandas = ">=1.5.0"  # For e2e test data creation
-
-[tool.poetry.group.http.dependencies]
-fastapi = ">=0.100.0"
-uvicorn = ">=0.20.0"
-sse-starlette = ">=1.6.0"
-
-[tool.poetry.group.docs.dependencies]
-sphinx = ">=7.0.0"
-sphinx-rtd-theme = ">=2.0.0"
-sphinx-autodoc-typehints = ">=1.24.0"
-myst-parser = ">=2.0.0"
-sphinx-copybutton = ">=0.5.0"
+# Workflow test dependencies (Excel file creation)
+pandas = ">=1.5.0"
+openpyxl = ">=3.0.0"
+# Note: R integration tests run in Docker, not via Poetry
 
 [tool.poetry.scripts]
 rmcp = "rmcp.cli:cli"

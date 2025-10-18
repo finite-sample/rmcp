@@ -1,0 +1,82 @@
+# Poetry lock file (using Docker-first approach)
+poetry.lock
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+/venv-release-test
+/venv-test
+rmcp_test_env/
+*_test_env/
+
+# IDEs
+.vscode/
+.cursor/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Cache and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+
+# Test artifacts
+test_*.log
+test_*.xlsx
+test_*.csv
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+temp_*.R
+temp_*.json
+response.json
+Rplots.pdf
+
+# Code Assistants
+.claude/
+
+# CI/CD artifacts
+.github/
+
+# README and docs (not needed in runtime container)
+README.md
+CHANGELOG.md
+examples/
+docs/
+
+# Development scripts
+scripts/
