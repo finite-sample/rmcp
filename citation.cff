@@ -3,7 +3,7 @@ message: "If you use this software, please cite it as below."
 type: software
 title: "RMCP: R Model Context Protocol Server"
 version: "0.3.8"
-date-released: "2024-12-20"
+date-released: "2025-08-20"
 url: "https://github.com/finite-sample/rmcp"
 repository-code: "https://github.com/finite-sample/rmcp"
 abstract: "A Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. Features 40 statistical analysis tools across 9 categories, enabling AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation."
