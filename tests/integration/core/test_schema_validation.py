@@ -20,9 +20,6 @@ import pytest
 import pytest_asyncio
 from jsonschema import ValidationError, validate
 
-# Add rmcp to path for testing
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.schemas import validate_schema
 from rmcp.tools import (
@@ -36,6 +33,9 @@ from rmcp.tools import (
     transforms,
     visualization,
 )
+
+# Add rmcp to path for testing
+
 
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for schema validation tests"

@@ -789,9 +789,6 @@ if __name__ == "__main__":
     import sys
     from pathlib import Path
 
-    # Add rmcp to path
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
     parser = argparse.ArgumentParser(description="RMCP Schema Validation Utility")
     parser.add_argument("--tool", help="Validate specific tool only")
     parser.add_argument(

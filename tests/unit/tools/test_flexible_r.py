@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 from jsonschema import ValidationError, validate
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from rmcp.tools.flexible_r import execute_r_analysis, list_allowed_r_packages
 
 

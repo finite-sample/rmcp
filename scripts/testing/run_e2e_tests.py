@@ -157,7 +157,6 @@ def run_quick_validation():
             "-c",
             """
 import sys
-sys.path.insert(0, '.')
 from rmcp.core.server import create_server
 from rmcp.cli import _register_builtin_tools
 import json

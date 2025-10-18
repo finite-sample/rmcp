@@ -15,7 +15,6 @@ pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for helper tools tests"
 )
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from rmcp.core.context import Context, LifespanState  # noqa: E402
 from rmcp.tools.helpers import load_example, suggest_fix, validate_data  # noqa: E402
 

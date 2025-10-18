@@ -24,8 +24,7 @@ from pathlib import Path
 
 import pytest
 
-# Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Script relies on rmcp being installed via pip install -e .
 
 # Import removed - this function doesn't exist in the CLI module
 

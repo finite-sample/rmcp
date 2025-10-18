@@ -11,12 +11,12 @@ from shutil import which
 
 import pytest
 
-# Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.helpers import load_example
+
+# Add rmcp to path
+
 
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for resource registry tests"

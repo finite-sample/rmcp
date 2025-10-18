@@ -44,7 +44,7 @@ jobs:
         # Run all unit tests (Python-only, schema validation, etc.)
         pytest tests/unit/ -v --tb=short
 
-  # Build Docker image for R testing
+  # Build Docker images for R testing (both development and production)
   docker-build:
     name: Build R Testing Environment
     runs-on: ubuntu-latest
@@ -57,7 +57,9 @@ jobs:
       id-token: write
     outputs:
       image: ${{ steps.image.outputs.image }}
+      production-image: ${{ steps.prod-image.outputs.image }}
       digest: ${{ steps.build.outputs.digest }}
+      production-digest: ${{ steps.prod-build.outputs.digest }}
     
     steps:
     - name: Checkout repository
@@ -73,7 +75,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
+    - name: Extract metadata for development image
       id: meta
       uses: docker/metadata-action@v5
       with:
@@ -83,7 +85,17 @@ jobs:
           type=sha,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Build and push Docker image
+    - name: Extract metadata for production image  
+      id: prod-meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch,suffix=-production
+          type=sha,prefix={{branch}}-production-
+          type=raw,value=production-latest,enable={{is_default_branch}}
+
+    - name: Build and push development Docker image
       id: build
       uses: docker/build-push-action@v5
       with:
@@ -95,17 +107,58 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+    - name: Build and push production Docker image
+      id: prod-build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile.production
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.prod-meta.outputs.tags }}
+        labels: ${{ steps.prod-meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         
-    - name: Generate artifact attestation
+    - name: Generate artifact attestation for development image
       uses: actions/attest-build-provenance@v1
       with:
         subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         subject-digest: ${{ steps.build.outputs.digest }}
         push-to-registry: true
+
+    - name: Generate artifact attestation for production image
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        subject-digest: ${{ steps.prod-build.outputs.digest }}
+        push-to-registry: true
     
-    - name: Output image reference
+    - name: Output image references
       id: image
       run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+      
+    - name: Output production image reference
+      id: prod-image  
+      run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest" >> $GITHUB_OUTPUT
+
+    - name: Test production image functionality
+      run: |
+        echo "🐳 Testing production image functionality..."
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest \
+          python -c "import rmcp; print('✅ Production image RMCP import successful')"
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest \
+          python -c "import fastapi, uvicorn, httpx; print('✅ Production image HTTP transport ready')"
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest \
+          R -e "cat('✅ Production image R version:', R.version.string, '\n')"
+        echo "✅ Production image functionality verified"
+
+    - name: Compare image sizes
+      run: |
+        echo "📊 Comparing image sizes..."
+        docker images --filter "reference=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
+        echo "✅ Image size comparison completed"
 
   # Comprehensive R testing with real execution (replaces all R-specific jobs)
   r-testing:
@@ -152,19 +205,47 @@ jobs:
         }
         "
     
+    - name: Diagnose environment before testing
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        echo "=== Environment Diagnostics ==="
+        echo "Working directory: $(pwd)"
+        echo "Python version: $(python --version)"
+        echo "Python path: $(which python)"
+        echo "Pip packages: $(pip list | grep -E '(pytest|rmcp)')"
+        echo "R availability: $(which R || echo 'R not found')"
+        if which R; then
+          echo "R version: $(R --version | head -1)"
+        fi
+        echo "PYTHONPATH: $PYTHONPATH"
+        echo "PATH: $PATH"
+        echo "=== Test Discovery Diagnostics ==="
+        pytest --collect-only tests/smoke/ -q || echo "Test collection failed"
+        echo "=== Python Import Test ==="
+        python -c "import rmcp; print('✅ rmcp imported successfully')" || echo "❌ rmcp import failed"
+        python -c "import rmcp.core.server; print('✅ rmcp.core.server imported')" || echo "❌ rmcp.core.server import failed"
+        echo "=== File System Check ==="
+        ls -la tests/
+        ls -la tests/smoke/
+    
     - name: Run smoke tests (basic functionality)
       run: |
         export PATH="/opt/venv/bin:$PATH"
+        # Ensure R is in PATH for skip condition checks  
+        which R && export R_AVAILABLE=1 || export R_AVAILABLE=0
+        echo "R available: $R_AVAILABLE"
         pytest tests/smoke/ -v --tb=short --cov=rmcp --cov-report=xml
     
     - name: Run protocol tests (MCP protocol validation)
       run: |
         export PATH="/opt/venv/bin:$PATH"
+        which R && echo "✅ R available for protocol tests" || echo "⚠️ R not available"
         pytest tests/integration/protocol/ -v --tb=short --cov=rmcp --cov-append
     
     - name: Run integration tests - tools (R tool integration)
       run: |
         export PATH="/opt/venv/bin:$PATH"
+        which R && echo "✅ R available for tool integration tests" || echo "❌ R required but not available"
         pytest tests/integration/tools/ -v --tb=short --cov=rmcp --cov-append
     
     - name: Run integration tests - transport (HTTP transport)
@@ -175,11 +256,13 @@ jobs:
     - name: Run integration tests - core (server & registries)
       run: |
         export PATH="/opt/venv/bin:$PATH"
+        which R && echo "✅ R available for core integration tests" || echo "⚠️ R not available"
         pytest tests/integration/core/ -v --tb=short --cov=rmcp --cov-append
     
     - name: Run scenario tests (end-to-end user scenarios)
       run: |
         export PATH="/opt/venv/bin:$PATH"
+        which R && echo "✅ R available for scenario tests" || echo "❌ R required but not available"
         pytest tests/scenarios/ -v --tb=short --cov=rmcp --cov-append
     
     - name: Upload coverage to Codecov
@@ -200,6 +283,83 @@ jobs:
         
         # Test basic MCP protocol with R tools
         echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -20
+
+  # Production image testing and new scenario tests
+  production-testing:
+    name: Production & Advanced Scenario Tests
+    runs-on: ubuntu-latest
+    needs: [python-checks, docker-build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    container:
+      image: ${{ needs.docker-build.outputs.production-image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Python environment in production container
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pip install -e .
+    
+    - name: Verify production container security
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        echo "🔒 Testing production container security..."
+        
+        # Verify running as non-root user
+        CURRENT_USER=$(whoami)
+        echo "Container user: $CURRENT_USER"
+        if [ "$CURRENT_USER" = "root" ]; then
+          echo "❌ Production container should not run as root"
+          exit 1
+        else
+          echo "✅ Production container runs as non-root user: $CURRENT_USER"
+        fi
+        
+        # Verify essential functionality
+        python -c "import rmcp; print('✅ RMCP import successful')"
+        python -c "import fastapi, uvicorn, httpx; print('✅ HTTP transport ready')"
+        R -e "cat('✅ R version:', R.version.string, '\n')"
+    
+    - name: Run new scenario tests (production features)
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        echo "🎯 Testing new production scenario features..."
+        
+        # Test multi-stage build optimization (will build and test production image)
+        pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_multi_stage_build_optimization -v --tb=short
+        
+        # Test platform-specific features
+        pytest tests/scenarios/test_deployment_scenarios.py::TestDockerCrossplatformCompatibility::test_docker_platform_specific_features -v --tb=short
+        
+        # Test concurrent request handling 
+        pytest tests/scenarios/test_claude_desktop_scenarios.py::TestClaudeDesktopPerformance::test_concurrent_requests -v --tb=short
+        
+        echo "✅ All new scenario tests completed"
+    
+    - name: Validate complete test coverage
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        echo "📊 Validating complete test coverage..."
+        
+        # Verify all 201 tests are collected
+        TEST_COUNT=$(pytest --collect-only -q tests/ | grep "collected" | grep -o '[0-9]\+' | head -1)
+        echo "Tests collected: $TEST_COUNT"
+        
+        if [ "$TEST_COUNT" != "201" ]; then
+          echo "❌ Expected 201 tests, but collected $TEST_COUNT"
+          exit 1
+        else
+          echo "✅ All 201 tests successfully collected"
+        fi
+        
+        # Run a sample to verify no collection issues
+        pytest tests/smoke/ -v --tb=short
+        echo "✅ Test collection and execution verified"
 
   # Cross-platform Python testing (validates Python-only functionality)
   cross-platform:

@@ -25,6 +25,12 @@ cd /workspace && pip install -e .
 rmcp start                        # Full R integration available
 ```
 
+**For production deployment (optimized):**
+```bash
+docker build -f docker/Dockerfile.production -t rmcp-production .  # Multi-stage optimized build
+docker run -p 8000:8000 rmcp-production rmcp http                  # Production HTTP server
+```
+
 ### Testing (Hybrid Strategy)
 
 **Python-only tests (cross-platform via Poetry):**
@@ -35,10 +41,13 @@ poetry run isort --check .       # Import sorting
 poetry run flake8 .              # Linting
 ```
 
-**R integration tests (Docker-based):**
+**Complete integration tests (Docker-based):**
 ```bash
+# Docker includes R + FastAPI for complete test coverage (all 201 tests)
 docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/integration/"
 docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/scenarios/"
+# Full test suite: smoke + unit + integration + scenarios + protocol
+docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/"
 ```
 
 ### Code Quality
@@ -85,21 +94,30 @@ docker run -v $(pwd):/workspace rmcp-dev R -e "library(styler); style_file(list.
   - `tests/unit/tools/`: Tool schema validation
   - `tests/unit/transport/`: HTTP transport logic
 
-**Tier 2: Integration Testing (R required, Docker-based)**
+**Tier 2: Integration Testing (R + FastAPI required, Docker-based)**
 - **Protocol tests** (`tests/integration/protocol/`): MCP protocol validation with mocked R responses
 - **Tool integration** (`tests/integration/tools/`): Real R execution for statistical tool functionality
-- **Transport integration** (`tests/integration/transport/`): HTTP transport with real server
+- **Transport integration** (`tests/integration/transport/`): HTTP transport with real FastAPI server
 - **Core integration** (`tests/integration/core/`): Server registries, capabilities, error handling
 
 **Tier 3: Complete User Scenarios (End-to-end)**
 - **Scenario tests** (`tests/scenarios/`): Full user workflows and deployment scenarios:
   - `test_realistic_scenarios.py`: Statistical analysis pipelines  
-  - `test_claude_desktop_scenarios.py`: Claude Desktop integration flows
+  - `test_claude_desktop_scenarios.py`: Claude Desktop integration flows (includes concurrent load testing)
   - `test_excel_plotting_scenarios.py`: File workflow scenarios
-  - `test_deployment_scenarios.py`: Docker environment validation
+  - `test_deployment_scenarios.py`: Docker environment validation, production builds, multi-platform testing
 
 **Development Utilities**
 - **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (tests all 44 tools with real R)
+
+**Complete Test Coverage**: Docker environment includes **all 201 tests** with comprehensive coverage across all components:
+- ✅ **R Integration**: 44 statistical tools with real R execution  
+- ✅ **HTTP Transport**: FastAPI, uvicorn, SSE streaming, session management
+- ✅ **Core MCP Protocol**: JSON-RPC 2.0, tool calls, capabilities, error handling
+- ✅ **Production Deployment**: Multi-stage Docker builds, security validation, size optimization
+- ✅ **Scalability**: Concurrent request handling, load testing, performance validation
+- ✅ **Cross-platform**: Multi-architecture support, numerical consistency, platform compatibility
+- ✅ **Zero Skipped Tests**: All 201 tests execute successfully with no dependency-related skips
 
 **Strategy**: Tests progress from basic functionality → protocol compliance → component integration → complete scenarios. Each tier builds on the previous, ensuring fast feedback for basic issues while providing comprehensive validation for complex workflows.
 

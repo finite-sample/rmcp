@@ -76,7 +76,6 @@ pip install -e .
 echo '=== R Integration through MCP Server ==='
 python -c \"
 import sys, asyncio, json
-sys.path.insert(0, '.')
 from rmcp.core.server import create_server
 from rmcp.cli import _register_builtin_tools
 

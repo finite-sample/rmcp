@@ -15,7 +15,6 @@ from pathlib import Path
 import pytest
 
 # Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from rmcp.core.context import Context, LifespanState
 from rmcp.tools.regression import (
     correlation_analysis,

@@ -16,14 +16,13 @@ from pathlib import Path
 import pytest
 from jsonschema import ValidationError, validate
 
-# Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.cli import _register_builtin_tools
 from rmcp.core.server import create_server
 from rmcp.tools.flexible_r import execute_r_analysis
 from rmcp.tools.machine_learning import decision_tree, random_forest
 from rmcp.tools.statistical_tests import chi_square_test
+
+# Add rmcp to path
 
 
 class TestClaudeAPISchemaCompliance:

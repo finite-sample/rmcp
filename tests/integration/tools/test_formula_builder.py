@@ -14,7 +14,6 @@ pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for formula builder tests"
 )
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from rmcp.core.context import Context, LifespanState  # noqa: E402
 from rmcp.tools.formula_builder import build_formula, validate_formula  # noqa: E402
 

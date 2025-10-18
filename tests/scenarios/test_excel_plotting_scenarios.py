@@ -13,7 +13,6 @@ import pandas as pd
 import pytest
 
 # Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.fileops import read_excel

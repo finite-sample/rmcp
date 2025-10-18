@@ -17,11 +17,12 @@ from shutil import which
 import pytest
 import pytest_asyncio
 
-# Add rmcp to path for testing
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.cli import _register_builtin_tools
 from rmcp.core.server import create_server
+
+# Add rmcp to path for testing
+# rmcp package installed via pip install -e .
+
 
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for MCP protocol compliance tests"

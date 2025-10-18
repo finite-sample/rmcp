@@ -33,9 +33,6 @@ def test_basic_server_import():
     """Test that the server can be imported without errors."""
     print("\n🔍 Testing Server Import")
     print("-" * 40)
-    # Add rmcp to path - adjusted for new location
-    project_root = Path(__file__).parent.parent.parent.parent
-    sys.path.insert(0, str(project_root))
     try:
         # Try to import core components
         from rmcp.core.context import Context, LifespanState

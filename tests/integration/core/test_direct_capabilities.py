@@ -9,7 +9,6 @@ from pathlib import Path
 from shutil import which
 
 # Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import pytest
 
 from rmcp.core.context import Context

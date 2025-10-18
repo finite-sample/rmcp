@@ -47,7 +47,11 @@ RUN set -eux; \
         "jsonschema>=4.0.0" \
         "build>=0.10.0" \
         "pandas>=1.5.0" \
-        "openpyxl>=3.0.0"
+        "openpyxl>=3.0.0" \
+        "fastapi>=0.100.0" \
+        "uvicorn>=0.20.0" \
+        "sse-starlette>=1.6.0" \
+        "httpx>=0.24.0"
 
 # Ensure venv tools are first on PATH for subsequent steps/CI
 ENV PATH="$VENV/bin:$PATH"

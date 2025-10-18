@@ -11,8 +11,6 @@ from typing import Any, Dict, List, Tuple
 import pytest
 from jsonschema import ValidationError, validate
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
 # Import available tool modules
 from rmcp.tools import regression, statistical_tests
 

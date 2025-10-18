@@ -12,8 +12,7 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 
-# Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# rmcp package installed via pip install -e .
 from rmcp.core.context import Context
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions

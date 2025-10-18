@@ -21,9 +21,6 @@ from typing import Any, Dict
 
 import pytest
 
-# Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.tools.helpers import suggest_fix, validate_data
 from rmcp.tools.machine_learning import decision_tree, random_forest
@@ -35,6 +32,10 @@ from rmcp.tools.regression import (
 from rmcp.tools.statistical_tests import chi_square_test, t_test
 from rmcp.tools.timeseries import arima_model
 from tests.utils import extract_json_content, extract_text_summary
+
+# Add rmcp to path
+# rmcp package installed via pip install -e .
+
 
 pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for R error handling tests"

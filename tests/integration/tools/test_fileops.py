@@ -17,7 +17,6 @@ pytestmark = pytest.mark.skipif(
     which("R") is None, reason="R binary is required for fileops tests"
 )
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from rmcp.core.context import Context, LifespanState
 from rmcp.tools.fileops import (
     data_info,

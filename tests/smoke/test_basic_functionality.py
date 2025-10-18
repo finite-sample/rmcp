@@ -3,13 +3,7 @@
 Basic smoke tests for RMCP core functionality.
 These tests verify that basic server and CLI functionality works without requiring R.
 """
-import sys
-from pathlib import Path
-
 import pytest
-
-# Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
 class TestServerSmoke:

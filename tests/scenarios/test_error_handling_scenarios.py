@@ -24,9 +24,6 @@ from typing import Any, Dict, List
 
 import pytest
 
-# Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
@@ -40,6 +37,9 @@ from rmcp.tools.regression import (
 )
 from rmcp.tools.statistical_tests import chi_square_test, normality_test, t_test
 from tests.utils import extract_json_content, extract_text_summary
+
+# Add rmcp to path
+
 
 pytestmark = [
     pytest.mark.skipif(

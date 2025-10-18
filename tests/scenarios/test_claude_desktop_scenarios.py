@@ -611,9 +611,217 @@ class TestClaudeDesktopPerformance:
 
     def test_concurrent_requests(self):
         """Test handling multiple concurrent requests like Claude Desktop might send."""
-        # This test would simulate Claude Desktop sending multiple tool calls
-        # in rapid succession, which can happen during complex analysis workflows
-        pytest.skip("Concurrent request testing requires more complex setup")
+        print("🤖 Testing concurrent request handling...")
+
+        import httpx
+
+        from rmcp.cli import _register_builtin_tools
+        from rmcp.core.server import create_server
+        from rmcp.transport.http import HTTPTransport
+
+        async def run_concurrent_test():
+            # Create server and transport
+            server = create_server()
+            _register_builtin_tools(server)
+            transport = HTTPTransport(host="127.0.0.1", port=0)
+            transport.set_message_handler(server.create_message_handler(transport))
+
+            # Start server
+            await transport.startup()
+
+            # Get actual port
+            import socket
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+            sock.close()
+            transport.port = port
+
+            # Run server in background
+            server_task = asyncio.create_task(transport.run())
+            await asyncio.sleep(0.1)  # Let server start
+
+            try:
+                base_url = f"http://127.0.0.1:{port}"
+
+                # Initialize session
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    init_request = {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": "2025-06-18",
+                            "capabilities": {},
+                            "clientInfo": {
+                                "name": "concurrent-test",
+                                "version": "1.0.0",
+                            },
+                        },
+                    }
+
+                    init_response = await client.post(
+                        f"{base_url}/mcp", json=init_request
+                    )
+                    assert init_response.status_code == 200
+                    session_id = init_response.headers.get("Mcp-Session-Id")
+
+                    headers = {}
+                    if session_id:
+                        headers["Mcp-Session-Id"] = session_id
+
+                    # Define concurrent test scenarios
+                    async def run_tool_call(client, tool_name, arguments, request_id):
+                        start_time = time.time()
+                        request = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "method": "tools/call",
+                            "params": {"name": tool_name, "arguments": arguments},
+                        }
+
+                        try:
+                            response = await client.post(
+                                f"{base_url}/mcp", json=request, headers=headers
+                            )
+                            end_time = time.time()
+
+                            return {
+                                "id": request_id,
+                                "tool": tool_name,
+                                "status_code": response.status_code,
+                                "success": response.status_code == 200,
+                                "duration": end_time - start_time,
+                                "response_size": (
+                                    len(response.content) if response.content else 0
+                                ),
+                            }
+                        except Exception as e:
+                            end_time = time.time()
+                            return {
+                                "id": request_id,
+                                "tool": tool_name,
+                                "status_code": 0,
+                                "success": False,
+                                "duration": end_time - start_time,
+                                "error": str(e),
+                            }
+
+                    # Test 1: Rapid sequential requests (simulate Claude Desktop burst)
+                    print("   📡 Test 1: Rapid sequential requests...")
+                    sequential_tasks = []
+                    for i in range(5):
+                        task = run_tool_call(
+                            client, "load_example", {"dataset_name": "sales"}, 100 + i
+                        )
+                        sequential_tasks.append(task)
+
+                    sequential_results = await asyncio.gather(*sequential_tasks)
+                    successful_sequential = sum(
+                        1 for r in sequential_results if r["success"]
+                    )
+                    avg_sequential_time = sum(
+                        r["duration"] for r in sequential_results
+                    ) / len(sequential_results)
+
+                    print(
+                        f"   ✅ Sequential: {successful_sequential}/{len(sequential_results)} successful"
+                    )
+                    print(f"   ⏱️  Average response time: {avg_sequential_time:.2f}s")
+
+                    # Test 2: True concurrent requests (multiple tools simultaneously)
+                    print("   📡 Test 2: Concurrent different tools...")
+                    concurrent_tasks = [
+                        run_tool_call(
+                            client, "load_example", {"dataset_name": "sales"}, 200
+                        ),
+                        run_tool_call(
+                            client, "load_example", {"dataset_name": "timeseries"}, 201
+                        ),
+                        run_tool_call(
+                            client, "validate_data", {"data": {"x": [1, 2, 3]}}, 202
+                        ),
+                    ]
+
+                    concurrent_start = time.time()
+                    concurrent_results = await asyncio.gather(
+                        *concurrent_tasks, return_exceptions=True
+                    )
+                    concurrent_end = time.time()
+
+                    # Filter out exceptions and get valid results
+                    valid_concurrent = [
+                        r for r in concurrent_results if isinstance(r, dict)
+                    ]
+                    successful_concurrent = sum(
+                        1 for r in valid_concurrent if r.get("success", False)
+                    )
+                    total_concurrent_time = concurrent_end - concurrent_start
+
+                    print(
+                        f"   ✅ Concurrent: {successful_concurrent}/{len(concurrent_tasks)} successful"
+                    )
+                    print(f"   ⏱️  Total concurrent time: {total_concurrent_time:.2f}s")
+
+                    # Test 3: Stress test with many rapid requests
+                    print("   📡 Test 3: Stress test (10 rapid requests)...")
+                    stress_tasks = []
+                    for i in range(10):
+                        task = run_tool_call(
+                            client, "load_example", {"dataset_name": "sales"}, 300 + i
+                        )
+                        stress_tasks.append(task)
+
+                    stress_start = time.time()
+                    stress_results = await asyncio.gather(
+                        *stress_tasks, return_exceptions=True
+                    )
+                    stress_end = time.time()
+
+                    # Analyze stress test results
+                    valid_stress = [r for r in stress_results if isinstance(r, dict)]
+                    successful_stress = sum(
+                        1 for r in valid_stress if r.get("success", False)
+                    )
+                    total_stress_time = stress_end - stress_start
+
+                    print(
+                        f"   ✅ Stress test: {successful_stress}/{len(stress_tasks)} successful"
+                    )
+                    print(f"   ⏱️  Total stress time: {total_stress_time:.2f}s")
+
+                    # Assertions for test success
+                    assert (
+                        successful_sequential >= 4
+                    ), f"Sequential requests: {successful_sequential}/5 successful (expected ≥4)"
+                    assert (
+                        successful_concurrent >= 2
+                    ), f"Concurrent requests: {successful_concurrent}/3 successful (expected ≥2)"
+                    assert (
+                        successful_stress >= 7
+                    ), f"Stress test: {successful_stress}/10 successful (expected ≥7)"
+
+                    # Performance assertions
+                    assert (
+                        avg_sequential_time < 5.0
+                    ), f"Sequential avg time {avg_sequential_time:.2f}s too slow (expected <5s)"
+                    assert (
+                        total_concurrent_time < 10.0
+                    ), f"Concurrent time {total_concurrent_time:.2f}s too slow (expected <10s)"
+
+                    print("🎉 All concurrent request tests passed!")
+
+            finally:
+                server_task.cancel()
+                try:
+                    await server_task
+                except asyncio.CancelledError:
+                    pass
+                await transport.shutdown()
+
+        # Run the async test
+        asyncio.run(run_concurrent_test())
 
 
 if __name__ == "__main__":

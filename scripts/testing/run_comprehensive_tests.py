@@ -8,8 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Add rmcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Script relies on rmcp being installed via pip install -e .
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 

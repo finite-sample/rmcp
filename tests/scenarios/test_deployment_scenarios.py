@@ -344,8 +344,114 @@ class TestDockerProductionScenarios:
 
     def test_docker_multi_stage_build_optimization(self):
         """Test multi-stage Docker build for production optimization."""
-        # This would test a production-optimized Dockerfile
-        pytest.skip("Multi-stage build optimization requires separate Dockerfile")
+        print("🐳 Testing multi-stage Docker build optimization...")
+
+        # Build production image with multi-stage Dockerfile
+        build_cmd = [
+            "docker",
+            "build",
+            "-f",
+            "docker/Dockerfile.production",
+            "-t",
+            "rmcp-production-test",
+            ".",
+        ]
+
+        print("Building production image...")
+        build_result = subprocess.run(
+            build_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minutes for build
+        )
+
+        if build_result.returncode != 0:
+            pytest.fail(f"Production build failed: {build_result.stderr}")
+
+        print("✅ Production image built successfully")
+
+        # Compare image sizes
+        def get_image_size(image_tag):
+            size_cmd = ["docker", "images", image_tag, "--format", "{{.Size}}"]
+            result = subprocess.run(size_cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                return result.stdout.strip()
+            return "Unknown"
+
+        # Get sizes for comparison
+        dev_size = get_image_size("rmcp-test-verification")  # Development image
+        prod_size = get_image_size("rmcp-production-test")  # Production image
+
+        print(f"📊 Image size comparison:")
+        print(f"   Development image: {dev_size}")
+        print(f"   Production image:  {prod_size}")
+
+        # Test functionality of production image
+        print("Testing production image functionality...")
+
+        # Test basic RMCP functionality
+        test_cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "rmcp-production-test",
+            "python",
+            "-c",
+            "import rmcp; print('RMCP import successful')",
+        ]
+
+        func_result = subprocess.run(
+            test_cmd, capture_output=True, text=True, timeout=30
+        )
+
+        if func_result.returncode != 0:
+            pytest.fail(
+                f"Production image functionality test failed: {func_result.stderr}"
+            )
+
+        print("✅ Production image functionality verified")
+
+        # Test security - should run as non-root user
+        user_cmd = ["docker", "run", "--rm", "rmcp-production-test", "whoami"]
+        user_result = subprocess.run(
+            user_cmd, capture_output=True, text=True, timeout=10
+        )
+
+        if user_result.returncode == 0:
+            username = user_result.stdout.strip()
+            print(f"✅ Container runs as user: {username}")
+            assert username != "root", "Production image should not run as root user"
+
+        # Test R availability in production image
+        r_cmd = ["docker", "run", "--rm", "rmcp-production-test", "R", "--version"]
+        r_result = subprocess.run(r_cmd, capture_output=True, text=True, timeout=10)
+
+        if r_result.returncode == 0:
+            print("✅ R environment available in production image")
+        else:
+            pytest.fail("R not available in production image")
+
+        # Test FastAPI dependencies
+        fastapi_cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "rmcp-production-test",
+            "python",
+            "-c",
+            "import fastapi, uvicorn, httpx; print('HTTP transport ready')",
+        ]
+
+        fastapi_result = subprocess.run(
+            fastapi_cmd, capture_output=True, text=True, timeout=10
+        )
+
+        if fastapi_result.returncode == 0:
+            print("✅ HTTP transport dependencies available in production image")
+        else:
+            pytest.fail("FastAPI dependencies not available in production image")
+
+        print("🎉 Multi-stage build optimization test completed successfully")
 
     def test_docker_security_configuration(self):
         """Test Docker security best practices."""
@@ -443,8 +549,192 @@ class TestDockerCrossplatformCompatibility:
 
     def test_docker_platform_specific_features(self):
         """Test platform-specific features and compatibility."""
-        # This would test different behaviors on different platforms
-        pytest.skip("Platform-specific testing requires multi-platform setup")
+        print("🏗️ Testing platform-specific features...")
+
+        # Get current platform architecture
+        arch_cmd = ["docker", "run", "--rm", "rmcp-test-verification", "uname", "-m"]
+        arch_result = subprocess.run(
+            arch_cmd, capture_output=True, text=True, timeout=10
+        )
+
+        if arch_result.returncode != 0:
+            pytest.skip("Could not determine container architecture")
+
+        current_arch = arch_result.stdout.strip()
+        print(f"🔍 Current container architecture: {current_arch}")
+
+        # Test 1: Architecture-specific R package behavior
+        print("   📦 Testing R package architecture compatibility...")
+        r_arch_cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "rmcp-test-verification",
+            "R",
+            "-q",
+            "-e",
+            "cat('R architecture:', R.version$arch, '\\n')",
+        ]
+
+        r_arch_result = subprocess.run(
+            r_arch_cmd, capture_output=True, text=True, timeout=15
+        )
+
+        if r_arch_result.returncode == 0:
+            print(f"   ✅ R architecture info: {r_arch_result.stdout.strip()}")
+        else:
+            pytest.fail("R architecture test failed")
+
+        # Test 2: Platform-specific library paths
+        print("   📚 Testing platform-specific library paths...")
+        lib_cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "rmcp-test-verification",
+            "python",
+            "-c",
+            "import sys, platform; print(f'Python platform: {platform.platform()}'); print(f'Architecture: {platform.architecture()}')",
+        ]
+
+        lib_result = subprocess.run(lib_cmd, capture_output=True, text=True, timeout=10)
+
+        if lib_result.returncode == 0:
+            print(f"   ✅ Platform info: {lib_result.stdout.strip()}")
+        else:
+            pytest.fail("Platform library test failed")
+
+        # Test 3: Numerical computation consistency across platforms
+        print("   🧮 Testing numerical computation consistency...")
+        math_test_cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "rmcp-test-verification",
+            "R",
+            "-q",
+            "-e",
+            """
+            library(jsonlite)
+            set.seed(42)
+            x <- rnorm(100)
+            y <- 2*x + rnorm(100, 0, 0.1)
+            model <- lm(y ~ x)
+            result <- list(
+                coefficient = coef(model)[2],
+                r_squared = summary(model)$r.squared,
+                platform = paste(R.version$platform, R.version$arch)
+            )
+            cat(toJSON(result, auto_unbox=TRUE))
+            """,
+        ]
+
+        math_result = subprocess.run(
+            math_test_cmd, capture_output=True, text=True, timeout=20
+        )
+
+        if math_result.returncode == 0:
+            try:
+                import json
+
+                math_data = json.loads(math_result.stdout.strip())
+                coefficient = math_data.get("coefficient", 0)
+                r_squared = math_data.get("r_squared", 0)
+                platform_info = math_data.get("platform", "unknown")
+
+                print(f"   ✅ Computation results on {platform_info}:")
+                print(f"      Regression coefficient: {coefficient:.4f}")
+                print(f"      R-squared: {r_squared:.4f}")
+
+                # Verify reasonable statistical results (should be consistent across platforms)
+                assert (
+                    1.8 <= coefficient <= 2.2
+                ), f"Unexpected coefficient: {coefficient}"
+                assert 0.9 <= r_squared <= 1.0, f"Unexpected R-squared: {r_squared}"
+
+            except (json.JSONDecodeError, KeyError) as e:
+                pytest.fail(f"Failed to parse mathematical computation results: {e}")
+        else:
+            pytest.fail(f"Mathematical computation test failed: {math_result.stderr}")
+
+        # Test 4: Docker buildx multi-platform capability (if available)
+        print("   🏗️ Testing multi-platform build capability...")
+        try:
+            buildx_cmd = ["docker", "buildx", "version"]
+            buildx_result = subprocess.run(
+                buildx_cmd, capture_output=True, text=True, timeout=10
+            )
+
+            if buildx_result.returncode == 0:
+                print(
+                    f"   ✅ Docker Buildx available: {buildx_result.stdout.strip().split()[0]}"
+                )
+
+                # Check available platforms
+                platforms_cmd = ["docker", "buildx", "ls"]
+                platforms_result = subprocess.run(
+                    platforms_cmd, capture_output=True, text=True, timeout=10
+                )
+
+                if platforms_result.returncode == 0:
+                    print("   📋 Available build platforms:")
+                    for line in platforms_result.stdout.split("\n"):
+                        if "linux/" in line:
+                            print(f"      {line.strip()}")
+                else:
+                    print("   ⚠️  Could not list available platforms")
+            else:
+                print(
+                    "   ⚠️  Docker Buildx not available (multi-platform builds not supported)"
+                )
+
+        except Exception as e:
+            print(f"   ⚠️  Buildx test failed: {e}")
+
+        # Test 5: Architecture-specific performance characteristics
+        print("   ⚡ Testing platform performance characteristics...")
+        perf_cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "rmcp-test-verification",
+            "python",
+            "-c",
+            """
+import time
+import platform
+start = time.time()
+# Simple computational benchmark
+total = sum(i**2 for i in range(100000))
+end = time.time()
+print(f'Platform: {platform.machine()}')
+print(f'Computation time: {end-start:.4f}s')
+print(f'Result validation: {total == 333328333350000}')
+""",
+        ]
+
+        perf_result = subprocess.run(
+            perf_cmd, capture_output=True, text=True, timeout=15
+        )
+
+        if perf_result.returncode == 0:
+            print(f"   ✅ Performance test results:")
+            for line in perf_result.stdout.strip().split("\n"):
+                print(f"      {line}")
+        else:
+            print(f"   ⚠️  Performance test failed: {perf_result.stderr}")
+
+        print("🎉 Platform-specific testing completed!")
+
+        # Summary of platform compatibility
+        print(f"\n📊 Platform Compatibility Summary:")
+        print(f"   Architecture: {current_arch}")
+        print(f"   R Integration: ✅ Working")
+        print(f"   Python Integration: ✅ Working")
+        print(f"   Numerical Consistency: ✅ Verified")
+        print(
+            f"   Multi-platform Build: {'✅ Available' if buildx_result.returncode == 0 else '⚠️ Limited'}"
+        )
 
 
 def main():
