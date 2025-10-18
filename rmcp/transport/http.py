@@ -38,25 +38,49 @@ class HTTPTransport(Transport):
     - MCP protocol compliance with session management and security
     """
 
-    def __init__(self, host: str = None, port: int = None):
+    def __init__(
+        self,
+        host: str = None,
+        port: int = None,
+        ssl_keyfile: str = None,
+        ssl_certfile: str = None,
+        ssl_keyfile_password: str = None,
+    ):
         super().__init__("HTTP")
 
         # Get configuration and use provided values or config defaults
         config = get_config()
         self.host = host or config.http.host
         self.port = port or config.http.port
+        self.ssl_keyfile = ssl_keyfile or config.http.ssl_keyfile
+        self.ssl_certfile = ssl_certfile or config.http.ssl_certfile
+        self.ssl_keyfile_password = (
+            ssl_keyfile_password or config.http.ssl_keyfile_password
+        )
 
         # Session management
         self._sessions: Dict[str, Dict[str, Any]] = {}
         self._initialized_sessions: set[str] = set()
+
+        # SSL/TLS configuration
+        self.is_https = bool(self.ssl_keyfile and self.ssl_certfile)
+
         # Security validation
         self._is_localhost = self.host in ("localhost", "127.0.0.1", "::1")
-        # Issue security warning for remote binding
-        if not self._is_localhost:
+        # Issue security warning for remote binding without HTTPS
+        if not self._is_localhost and not self.is_https:
             logger.warning(
-                f"🚨 SECURITY WARNING: HTTP transport bound to {self.host}:{self.port}. "
-                "This allows remote access! For production, implement proper authentication. "
-                "See https://spec.modelcontextprotocol.io/specification/server/transports/#security"
+                f"🚨 SECURITY WARNING: HTTP transport bound to {self.host}:"
+                f"{self.port} without SSL/TLS. "
+                "This allows remote access with unencrypted communication! "
+                "For production, use HTTPS with --ssl-keyfile and --ssl-certfile. "
+                "See https://spec.modelcontextprotocol.io/specification/server/"
+                "transports/#security"
+            )
+        elif not self._is_localhost and self.is_https:
+            logger.info(
+                f"🔒 HTTPS enabled for remote binding to {self.host}:"
+                f"{self.port}"
             )
         self.app = FastAPI(title="RMCP HTTP Transport", version="1.0.0")
         self._notification_queue: queue.Queue[dict[str, Any]] = queue.Queue()
@@ -65,11 +89,22 @@ class HTTPTransport(Transport):
 
     def _setup_cors(self) -> None:
         """Configure CORS for web client access."""
-        # Get CORS origins from configuration
+        # Get CORS origins from configuration and add HTTPS versions if SSL is enabled
         config = get_config()
-        allowed_origins = (
-            config.http.cors_origins if self._is_localhost else ["*"]
-        )  # Allow all for remote (with warning)
+        allowed_origins = list(config.http.cors_origins)
+
+        # If HTTPS is enabled, add HTTPS versions of localhost origins
+        if self.is_https:
+            https_origins = []
+            for origin in config.http.cors_origins:
+                if origin.startswith("http://"):
+                    https_origin = origin.replace("http://", "https://")
+                    https_origins.append(https_origin)
+            allowed_origins.extend(https_origins)
+
+        # For remote binding, allow all origins (with security warning already issued)
+        if not self._is_localhost:
+            allowed_origins = ["*"]
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=allowed_origins,
@@ -345,16 +380,30 @@ class HTTPTransport(Transport):
             raise RuntimeError("Message handler not set")
         try:
             await self.startup()
-            # Configure uvicorn
-            config = uvicorn.Config(
-                app=self.app,
-                host=self.host,
-                port=self.port,
-                log_level="info",
-                access_log=True,
-            )
+            # Configure uvicorn with SSL support
+            config_params = {
+                "app": self.app,
+                "host": self.host,
+                "port": self.port,
+                "log_level": "info",
+                "access_log": True,
+            }
+
+            # Add SSL configuration if enabled
+            if self.is_https:
+                config_params.update(
+                    {
+                        "ssl_keyfile": self.ssl_keyfile,
+                        "ssl_certfile": self.ssl_certfile,
+                    }
+                )
+                if self.ssl_keyfile_password:
+                    config_params["ssl_keyfile_password"] = self.ssl_keyfile_password
+
+            config = uvicorn.Config(**config_params)
             server = uvicorn.Server(config)
-            logger.info(f"Starting HTTP server on {self.host}:{self.port}")
+            protocol = "HTTPS" if self.is_https else "HTTP"
+            logger.info(f"Starting {protocol} server on {self.host}:{self.port}")
             await server.serve()
         except Exception as e:
             logger.error(f"HTTP transport error: {e}")

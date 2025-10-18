@@ -13,6 +13,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "http": {
         "host": "localhost",
         "port": 8000,
+        "ssl_keyfile": None,
+        "ssl_certfile": None,
+        "ssl_keyfile_password": None,
         "cors_origins": ["http://localhost:*", "http://127.0.0.1:*", "http://[::1]:*"],
     },
     "r": {

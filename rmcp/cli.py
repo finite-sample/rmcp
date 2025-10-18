@@ -261,13 +261,23 @@ def serve(
 @cli.command()
 @click.option("--host", help="Host to bind to (overrides config)")
 @click.option("--port", type=int, help="Port to bind to (overrides config)")
+@click.option("--ssl-keyfile", help="SSL private key file (enables HTTPS)")
+@click.option("--ssl-certfile", help="SSL certificate file (enables HTTPS)")
+@click.option("--ssl-keyfile-password", help="Password for encrypted SSL key")
 @click.option(
     "--allowed-paths", multiple=True, help="Additional allowed file system paths"
 )
 @click.option("--cache-root", help="Cache root directory")
 @click.pass_context
 def serve_http(
-    ctx, host: str, port: int, allowed_paths: tuple[str, ...], cache_root: str | None
+    ctx,
+    host: str,
+    port: int,
+    ssl_keyfile: str,
+    ssl_certfile: str,
+    ssl_keyfile_password: str,
+    allowed_paths: tuple[str, ...],
+    cache_root: str | None,
 ):
     """Run MCP server over HTTP transport (requires fastapi extras)."""
     try:
@@ -285,8 +295,19 @@ def serve_http(
     # Use CLI options or fall back to config
     effective_host = host or config.http.host
     effective_port = port or config.http.port
+    effective_ssl_keyfile = ssl_keyfile or config.http.ssl_keyfile
+    effective_ssl_certfile = ssl_certfile or config.http.ssl_certfile
+    effective_ssl_keyfile_password = (
+        ssl_keyfile_password or config.http.ssl_keyfile_password
+    )
 
-    logger.info(f"Starting HTTP transport on {effective_host}:{effective_port}")
+    # Determine if HTTPS is enabled
+    is_https = bool(effective_ssl_keyfile and effective_ssl_certfile)
+    protocol = "https" if is_https else "http"
+
+    logger.info(
+        f"Starting {protocol.upper()} transport on {effective_host}:{effective_port}"
+    )
 
     # Create and configure server
     server = create_server()
@@ -304,21 +325,36 @@ def serve_http(
     _register_builtin_tools(server)
 
     # Create HTTP transport with configuration
-    transport = HTTPTransport(host=effective_host, port=effective_port)
-    transport.set_message_handler(server.create_message_handler(transport))
-    click.echo(
-        f"🚀 RMCP HTTP server starting on http://{effective_host}:{effective_port}"
+    transport = HTTPTransport(
+        host=effective_host,
+        port=effective_port,
+        ssl_keyfile=effective_ssl_keyfile,
+        ssl_certfile=effective_ssl_certfile,
+        ssl_keyfile_password=effective_ssl_keyfile_password,
     )
+    transport.set_message_handler(server.create_message_handler(transport))
+
+    # Show appropriate protocol and security info
+    if is_https:
+        click.echo(
+            f"🔒 RMCP HTTPS server starting on https://{effective_host}:{effective_port}"
+        )
+        click.echo("🛡️  SSL/TLS encryption enabled")
+    else:
+        click.echo(
+            f"🚀 RMCP HTTP server starting on http://{effective_host}:{effective_port}"
+        )
+
     click.echo(f"📊 Available tools: {len(server.tools._tools)}")
     click.echo("🔗 Endpoints:")
     click.echo(
-        f"   • POST http://{effective_host}:{effective_port}/ (JSON-RPC requests)"
+        f"   • POST {protocol}://{effective_host}:{effective_port}/ (JSON-RPC requests)"
     )
     click.echo(
-        f"   • GET  http://{effective_host}:{effective_port}/sse (Server-Sent Events)"
+        f"   • GET  {protocol}://{effective_host}:{effective_port}/sse (Server-Sent Events)"
     )
     click.echo(
-        f"   • GET  http://{effective_host}:{effective_port}/health (Health check)"
+        f"   • GET  {protocol}://{effective_host}:{effective_port}/health (Health check)"
     )
     try:
         asyncio.run(_run_server_with_transport(server, transport))

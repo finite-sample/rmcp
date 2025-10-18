@@ -22,6 +22,9 @@ class TestHTTPConfig:
         config = HTTPConfig()
         assert config.host == "localhost"
         assert config.port == 8000
+        assert config.ssl_keyfile is None
+        assert config.ssl_certfile is None
+        assert config.ssl_keyfile_password is None
         assert "http://localhost:*" in config.cors_origins
 
     def test_custom_values(self):
@@ -32,6 +35,17 @@ class TestHTTPConfig:
         assert config.host == "0.0.0.0"
         assert config.port == 9000
         assert config.cors_origins == ["https://example.com"]
+
+    def test_ssl_configuration(self):
+        """Test SSL configuration values."""
+        config = HTTPConfig(
+            ssl_keyfile="/path/to/key.pem",
+            ssl_certfile="/path/to/cert.pem",
+            ssl_keyfile_password="secret123",
+        )
+        assert config.ssl_keyfile == "/path/to/key.pem"
+        assert config.ssl_certfile == "/path/to/cert.pem"
+        assert config.ssl_keyfile_password == "secret123"
 
 
 class TestRConfig:
@@ -200,3 +214,35 @@ class TestRMCPConfig:
         """Test validation of invalid log level."""
         with pytest.raises(ValueError, match="Log level must be one of"):
             RMCPConfig(logging=LoggingConfig(level="INVALID"))
+
+    def test_ssl_validation_missing_certfile(self):
+        """Test SSL validation when keyfile is provided without certfile."""
+        with pytest.raises(
+            ValueError,
+            match="SSL certificate file is required when SSL key is specified",
+        ):
+            RMCPConfig(http=HTTPConfig(ssl_keyfile="/path/to/key.pem"))
+
+    def test_ssl_validation_missing_keyfile(self):
+        """Test SSL validation when certfile is provided without keyfile."""
+        with pytest.raises(
+            ValueError,
+            match="SSL key file is required when SSL certificate is specified",
+        ):
+            RMCPConfig(http=HTTPConfig(ssl_certfile="/path/to/cert.pem"))
+
+    def test_ssl_validation_file_not_found(self):
+        """Test SSL validation when files don't exist."""
+        with pytest.raises(ValueError, match="SSL key file not found"):
+            RMCPConfig(
+                http=HTTPConfig(
+                    ssl_keyfile="/nonexistent/key.pem",
+                    ssl_certfile="/nonexistent/cert.pem",
+                )
+            )
+
+    def test_ssl_validation_both_none(self):
+        """Test SSL validation when both keyfile and certfile are None."""
+        config = RMCPConfig(http=HTTPConfig(ssl_keyfile=None, ssl_certfile=None))
+        assert config.http.ssl_keyfile is None
+        assert config.http.ssl_certfile is None

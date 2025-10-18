@@ -1,0 +1,108 @@
+# Base R Environment for RMCP
+# This image contains all R packages and system dependencies
+# Rebuilt weekly via scheduled GitHub Actions workflow
+#
+# To rebuild manually:
+#   docker build -f Dockerfile.base -t ghcr.io/finite-sample/rmcp-base:latest .
+#   docker push ghcr.io/finite-sample/rmcp-base:latest
+
+FROM rocker/r2u:noble
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+LABEL org.opencontainers.image.title="RMCP Base Environment"
+LABEL org.opencontainers.image.description="Pre-built R statistical environment for RMCP"
+LABEL org.opencontainers.image.vendor="RMCP Project"
+LABEL org.opencontainers.image.source="https://github.com/finite-sample/rmcp"
+
+# Install system dependencies (shared between dev and prod)
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        python3 python3-pip python3-venv python3-dev \
+        build-essential git \
+        libcurl4-openssl-dev libssl-dev libxml2-dev \
+        ca-certificates wget \
+        # Additional build dependencies
+        pkg-config \
+        gcc g++ \
+        libblas-dev liblapack-dev \
+        gfortran \
+        # mkcert dependencies for HTTPS development
+        libnss3-tools \
+        curl; \
+    rm -rf /var/lib/apt/lists/*
+
+# Configure r2u binary package manager for faster installation
+RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
+
+# Install mkcert for HTTPS development
+RUN set -eux; \
+    MKCERT_VERSION="v1.4.4"; \
+    curl -Lo /usr/local/bin/mkcert \
+        "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-linux-amd64"; \
+    chmod +x /usr/local/bin/mkcert; \
+    # Verify installation
+    mkcert -version
+
+# Install R packages in optimized groups (leverages r2u binary packages)
+# Group 1: Essential data manipulation and stats packages
+RUN R -q -e "install.packages(c( \
+  'jsonlite', 'dplyr', 'rlang', 'data.table', 'tidyr', \
+  'MASS', 'boot', 'survival', 'lattice' \
+))"
+
+# Group 2: Statistical modeling packages  
+RUN R -q -e "install.packages(c( \
+  'plm', 'lmtest', 'sandwich', 'AER', 'car', 'broom', \
+  'nlme', 'mgcv', 'lme4', 'glmnet' \
+))"
+
+# Group 3: Time series and forecasting
+RUN R -q -e "install.packages(c( \
+  'forecast', 'vars', 'urca', 'tseries', 'zoo', 'xts', 'TTR', 'quantmod' \
+))"
+
+# Group 4: Machine learning packages
+RUN R -q -e "install.packages(c( \
+  'e1071', 'caret', 'nnet', 'gbm', 'xgboost', 'kernlab', 'cluster', \
+  'rpart', 'randomForest' \
+))"
+
+# Group 5: Visualization and formatting
+RUN R -q -e "install.packages(c( \
+  'ggplot2', 'gridExtra', 'corrplot', 'viridis', 'RColorBrewer' \
+))"
+
+# Group 6: File I/O and utilities
+RUN R -q -e "install.packages(c( \
+  'readxl', 'openxlsx', 'base64enc', 'reshape2', 'knitr', 'nortest', 'lavaan' \
+))"
+
+# Group 7: Development and testing packages
+RUN R -q -e "install.packages(c('styler','lintr','testthat'))"
+
+# Verify R installation and package availability
+RUN R -q -e "
+library(jsonlite);
+library(dplyr);
+library(ggplot2);
+library(forecast);
+library(randomForest);
+cat('✅ All R packages installed successfully\n');
+cat('R version:', R.version.string, '\n');
+cat('Installed packages:', length(.packages(all.available=TRUE)), '\n');
+"
+
+# Create base metadata file for versioning
+RUN echo "{\"build_date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"r_version\":\"$(R --version | head -1)\",\"base_image\":\"rocker/r2u:noble\"}" > /opt/rmcp-base-info.json
+
+# Final cleanup
+RUN apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
+
+WORKDIR /workspace
+CMD ["R"]

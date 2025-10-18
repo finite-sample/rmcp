@@ -66,6 +66,13 @@ temp_*.json
 response.json
 Rplots.pdf
 
+# SSL certificates (generated dynamically)
+certs/
+*.pem
+*.key
+*.crt
+*.p12
+
 # Code Assistants
 .claude/
 

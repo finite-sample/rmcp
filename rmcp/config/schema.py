@@ -30,6 +30,21 @@ CONFIG_SCHEMA: Dict[str, Any] = {
                     "maximum": 65535,
                     "default": 8000,
                 },
+                "ssl_keyfile": {
+                    "type": ["string", "null"],
+                    "description": "Path to SSL/TLS private key file",
+                    "default": None,
+                },
+                "ssl_certfile": {
+                    "type": ["string", "null"],
+                    "description": "Path to SSL/TLS certificate file",
+                    "default": None,
+                },
+                "ssl_keyfile_password": {
+                    "type": ["string", "null"],
+                    "description": "Password for encrypted SSL/TLS private key",
+                    "default": None,
+                },
                 "cors_origins": {
                     "type": "array",
                     "description": "Allowed CORS origins",

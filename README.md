@@ -127,6 +127,12 @@ rmcp start
 # Start HTTP server (for web apps)
 rmcp serve-http --host 0.0.0.0 --port 8080
 
+# Start HTTPS server (production ready)
+rmcp serve-http --ssl-keyfile server.key --ssl-certfile server.crt --port 8443
+
+# Quick HTTPS setup for development
+./scripts/setup/setup_https_dev.sh && source certs/https-env.sh && rmcp serve-http
+
 # Use configuration file
 rmcp --config ~/.rmcp/config.json start
 

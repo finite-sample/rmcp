@@ -8,7 +8,7 @@ before pushing to GitHub. It runs all the same checks as the CI pipeline:
 1. Python linting (black, isort, flake8)
 2. R style checks (styler)
 3. Docker build (development + production)
-4. Complete test suite (201 tests)
+4. Complete test suite (dynamic count validation)
 5. Code quality validation
 
 Usage:
@@ -180,7 +180,7 @@ class LocalCIValidator:
                 "docker",
                 "build",
                 "-f",
-                "docker/Dockerfile",
+                "Dockerfile",
                 "--target",
                 "development",
                 "-t",
@@ -204,7 +204,7 @@ class LocalCIValidator:
                 "docker",
                 "build",
                 "-f",
-                "docker/Dockerfile",
+                "Dockerfile",
                 "--target",
                 "production",
                 "-t",
@@ -264,9 +264,37 @@ class LocalCIValidator:
             TEST_COUNT=$(pytest --collect-only -q tests/ | grep "collected" | grep -o '[0-9]\\+' | head -1)
             echo "Tests collected: $TEST_COUNT"
             
-            if [ "$TEST_COUNT" != "201" ]; then
-                echo "❌ Expected 201 tests, but collected $TEST_COUNT"
-                exit 1
+            # Load baseline and validate dynamically
+            BASELINE_FILE="/workspace/tests/.test_baseline.json"
+            if [ -f "$BASELINE_FILE" ]; then
+                BASELINE_COUNT=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE'))['baseline_counts']['total_tests'])")
+                MIN_TESTS=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE'))['validation_rules']['min_tests'])")
+                MAX_DEVIATION=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE'))['validation_rules']['max_deviation_percent'])")
+                
+                MIN_ALLOWED=$((BASELINE_COUNT * (100 - MAX_DEVIATION) / 100))
+                MAX_ALLOWED=$((BASELINE_COUNT * (100 + MAX_DEVIATION) / 100))
+                
+                echo "📊 Test count validation:"
+                echo "  Current: $TEST_COUNT"
+                echo "  Baseline: $BASELINE_COUNT" 
+                echo "  Allowed range: $MIN_ALLOWED - $MAX_ALLOWED"
+                
+                if [ "$TEST_COUNT" -lt "$MIN_TESTS" ]; then
+                    echo "❌ Test count ($TEST_COUNT) below minimum threshold ($MIN_TESTS)"
+                    exit 1
+                elif [ "$TEST_COUNT" -lt "$MIN_ALLOWED" ] || [ "$TEST_COUNT" -gt "$MAX_ALLOWED" ]; then
+                    echo "⚠️ Test count ($TEST_COUNT) outside expected range ($MIN_ALLOWED - $MAX_ALLOWED)"
+                    echo "💡 Consider updating baseline if this change is expected"
+                    echo "   Current baseline: $BASELINE_COUNT tests"
+                else
+                    echo "✅ Test count within expected range"
+                fi
+            else
+                echo "⚠️ Baseline file not found, using minimum threshold"
+                if [ "$TEST_COUNT" -lt "200" ]; then
+                    echo "❌ Test count ($TEST_COUNT) below minimum threshold (200)"
+                    exit 1
+                fi
             fi
             
             # Run all test categories as in CI
@@ -288,7 +316,7 @@ class LocalCIValidator:
             echo "=== Running scenario tests ==="
             pytest tests/scenarios/ -v --tb=short
             
-            echo "✅ All 201 tests completed successfully"
+            echo "✅ All $TEST_COUNT tests completed successfully"
             """,
         ]
 
@@ -299,8 +327,16 @@ class LocalCIValidator:
             self.results.append(("Test Suite", False, stderr[:500]))
             return False
         else:
-            self.log("Complete test suite passed (201 tests)")
-            self.results.append(("Test Suite", True, "All 201 tests passed"))
+            # Extract test count from output
+            test_count = "unknown"
+            if "Tests collected:" in stdout:
+                import re
+                match = re.search(r'Tests collected: (\d+)', stdout)
+                if match:
+                    test_count = match.group(1)
+            
+            self.log(f"Complete test suite passed ({test_count} tests)")
+            self.results.append(("Test Suite", True, f"All {test_count} tests passed"))
             return True
 
     def validate_cli_functionality(self) -> bool:

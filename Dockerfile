@@ -6,73 +6,29 @@
 #   Production:  docker build --target production -t rmcp:prod .
 
 # ============================================================================
-# STAGE: Base Environment (Shared R and system dependencies)
+# STAGE: Base Environment (Pre-built R environment)
 # ============================================================================
-FROM rocker/r2u:noble AS base
+FROM ghcr.io/finite-sample/rmcp-base:latest AS base
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# Base image already contains:
+# - rocker/r2u:noble with optimized R package installation
+# - All required system dependencies (Python, build tools, SSL, etc.)
+# - 50+ R packages for statistical analysis, ML, and visualization  
+# - mkcert for HTTPS development
+# - Optimized configurations and cleanup
 
-# Install system dependencies (shared between dev and prod)
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        python3 python3-pip python3-venv python3-dev \
-        build-essential git \
-        libcurl4-openssl-dev libssl-dev libxml2-dev \
-        ca-certificates wget \
-        # Additional build dependencies
-        pkg-config \
-        gcc g++ \
-        libblas-dev liblapack-dev \
-        gfortran; \
-    rm -rf /var/lib/apt/lists/*
-
-# Configure r2u binary package manager for faster installation
-RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
-
-# Install R packages in optimized groups (leverages r2u binary packages)
-# Group 1: Essential data manipulation and stats packages
-RUN R -q -e "install.packages(c( \
-  'jsonlite', 'dplyr', 'rlang', 'data.table', 'tidyr', \
-  'MASS', 'boot', 'survival', 'lattice' \
-))"
-
-# Group 2: Statistical modeling packages  
-RUN R -q -e "install.packages(c( \
-  'plm', 'lmtest', 'sandwich', 'AER', 'car', 'broom', \
-  'nlme', 'mgcv', 'lme4', 'glmnet' \
-))"
-
-# Group 3: Time series and forecasting
-RUN R -q -e "install.packages(c( \
-  'forecast', 'vars', 'urca', 'tseries', 'zoo', 'xts', 'TTR', 'quantmod' \
-))"
-
-# Group 4: Machine learning packages
-RUN R -q -e "install.packages(c( \
-  'e1071', 'caret', 'nnet', 'gbm', 'xgboost', 'kernlab', 'cluster', \
-  'rpart', 'randomForest' \
-))"
-
-# Group 5: Visualization and formatting
-RUN R -q -e "install.packages(c( \
-  'ggplot2', 'gridExtra', 'corrplot', 'viridis', 'RColorBrewer' \
-))"
-
-# Group 6: File I/O and utilities
-RUN R -q -e "install.packages(c( \
-  'readxl', 'openxlsx', 'base64enc', 'reshape2', 'knitr', 'nortest', 'lavaan' \
-))"
+# Verify base image and display info
+RUN echo "📦 Using pre-built RMCP base environment" && \
+    cat /opt/rmcp-base-info.json && \
+    echo "🔍 R packages available: $(R -q --slave -e 'cat(length(.packages(all.available=TRUE)))')" && \
+    echo "✅ Base environment ready"
 
 # ============================================================================
 # STAGE: Development Environment (Full development stack)
 # ============================================================================
 FROM base AS development
 
-# Install additional R packages for development
-RUN R -q -e "install.packages(c('styler','lintr','testthat'))"
+# Note: R packages and mkcert are already installed in base image
 
 # Create Python virtual environment with development dependencies
 ENV VENV=/opt/venv
@@ -146,9 +102,27 @@ RUN echo "# RMCP Production Build" > README.md
 RUN . "$VENV/bin/activate" && pip wheel --no-deps . -w /build/wheels/
 
 # ============================================================================
-# STAGE: Production Runtime (Minimal production environment)
+# STAGE: Production Runtime (Optimized from base image)
 # ============================================================================
-FROM rocker/r2u:noble AS production
+FROM base AS production-base
+
+# Remove development tools to minimize size
+RUN set -eux; \
+    apt-get remove -y \
+        build-essential \
+        gcc g++ \
+        pkg-config \
+        python3-dev \
+        git \
+        curl; \
+    apt-get autoremove -y; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
+
+# ============================================================================
+# STAGE: Production Runtime (Final minimal environment)
+# ============================================================================
+FROM ubuntu:noble AS production
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -165,19 +139,22 @@ RUN set -eux; \
         # Essential utilities
         ca-certificates \
         # Runtime math libraries
-        libblas3 liblapack3; \
+        libblas3 liblapack3 \
+        # R runtime dependencies
+        r-base-core \
+        littler; \
     # Clean up aggressively
     rm -rf /var/lib/apt/lists/* \
            /tmp/* \
            /var/tmp/* \
            /root/.cache
 
-# Copy entire R installation from base stage to ensure all packages are available
-COPY --from=base /usr/local/lib/R /usr/local/lib/R
-COPY --from=base /usr/lib/R /usr/lib/R
-COPY --from=base /etc/R /etc/R
+# Copy R packages and configuration from production-base
+COPY --from=production-base /usr/local/lib/R /usr/local/lib/R
+COPY --from=production-base /usr/lib/R /usr/lib/R  
+COPY --from=production-base /etc/R /etc/R
 
-# Configure R for container environment (fix bspm warnings)
+# Configure R for container environment
 RUN echo "options(bspm.sudo = TRUE)" >> /etc/R/Rprofile.site
 
 # Copy Python virtual environment from builder stage

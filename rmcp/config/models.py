@@ -15,6 +15,10 @@ class HTTPConfig:
 
     host: str = "localhost"
     port: int = 8000
+    # SSL/TLS configuration
+    ssl_keyfile: Optional[str] = None
+    ssl_certfile: Optional[str] = None
+    ssl_keyfile_password: Optional[str] = None
     cors_origins: List[str] = field(
         default_factory=lambda: [
             "http://localhost:*",
@@ -100,6 +104,24 @@ class RMCPConfig:
             raise ValueError(
                 f"HTTP port must be between 1-65535, got: {self.http.port}"
             )
+
+        # SSL validation - if one SSL file is specified, both must be provided
+        ssl_keyfile = self.http.ssl_keyfile
+        ssl_certfile = self.http.ssl_certfile
+        if ssl_keyfile or ssl_certfile:
+            if not ssl_keyfile:
+                raise ValueError(
+                    "SSL key file is required when SSL certificate is specified"
+                )
+            if not ssl_certfile:
+                raise ValueError(
+                    "SSL certificate file is required when SSL key is specified"
+                )
+            # Validate files exist if paths are provided
+            if ssl_keyfile and not Path(ssl_keyfile).is_file():
+                raise ValueError(f"SSL key file not found: {ssl_keyfile}")
+            if ssl_certfile and not Path(ssl_certfile).is_file():
+                raise ValueError(f"SSL certificate file not found: {ssl_certfile}")
 
         # R configuration validation
         if self.r.timeout <= 0:
