@@ -1,0 +1,15 @@
+# R build ignore patterns for RMCP package
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.git$
+^\.github$
+^\.gitignore$
+^README\.md$
+^README\.Rmd$
+^\.travis\.yml$
+^\.appveyor\.yml$
+^run_tests\.R$
+^scripts/
+^build_docs\.R$
+^\.lintr$
+^\.styler$

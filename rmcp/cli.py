@@ -72,11 +72,40 @@ def start(log_level: str):
             "Windows platform detected - using Windows-compatible stdio transport"
         )
     try:
+        # Check R version compatibility (but don't fail if R check fails)
+        from .r_integration import check_r_version
+
+        try:
+            is_compatible, version_string = check_r_version()
+            logger.info(f"R version check: {version_string}")
+            if not is_compatible:
+                logger.warning(
+                    "RMCP requires R 4.4.0 or higher for full compatibility. "
+                    "Some features may not work correctly with older R versions. "
+                    "Please upgrade R to 4.4.0+ for best experience."
+                )
+        except Exception as e:
+            logger.warning(f"R version check failed: {e}")
+            logger.warning(
+                "R may not be properly installed. Server will start but R-dependent tools may fail. "
+                "Please ensure R 4.4.0+ is installed and available in PATH."
+            )
+
         # Create and configure server
+        logger.info("Creating MCP server...")
         server = create_server()
         server.configure(allowed_paths=[str(Path.cwd())], read_only=True)
+
+        # Set up stdio transport BEFORE registering tools to avoid notification timing issues
+        logger.info("Setting up stdio transport...")
+        transport = StdioTransport()
+        transport.set_message_handler(server.create_message_handler(transport))
+
+        logger.info("Registering built-in tools...")
         # Register built-in statistical tools
         _register_builtin_tools(server)
+
+        logger.info("Registering built-in prompts...")
         # Register built-in prompts
         register_prompt_functions(
             server.prompts,
@@ -86,11 +115,17 @@ def start(log_level: str):
             time_series_forecast_prompt,
             panel_regression_prompt,
         )
-        # Set up stdio transport
-        transport = StdioTransport()
-        transport.set_message_handler(server.create_message_handler(transport))
+
+        logger.info("Starting MCP server with stdio transport...")
         # Run the server with lifecycle management
-        asyncio.run(_run_server_with_transport(server, transport))
+        try:
+            asyncio.run(_run_server_with_transport(server, transport))
+        except Exception as e:
+            logger.error(f"Failed to start server: {e}")
+            import traceback
+
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
     except Exception as e:
@@ -133,6 +168,24 @@ def serve(
     logging.getLogger().setLevel(getattr(logging, log_level))
     logger.info(f"Starting RMCP MCP Server v{__version__}")
     try:
+        # Check R version compatibility
+        from .r_integration import check_r_version
+
+        try:
+            is_compatible, version_string = check_r_version()
+            logger.info(f"R version check: {version_string}")
+            if not is_compatible:
+                logger.error(
+                    "RMCP requires R 4.4.0 or higher for full compatibility. "
+                    "Some features may not work correctly with older R versions. "
+                    "Please upgrade R to 4.4.0+ for best experience."
+                )
+        except Exception as e:
+            logger.error(f"R version check failed: {e}")
+            logger.error(
+                "R may not be properly installed. Please ensure R 4.4.0+ is installed and available in PATH."
+            )
+
         # Load configuration
         config = _load_config(config_file) if config_file else {}
         # Override with CLI options
@@ -469,7 +522,13 @@ def _validate_allowed_paths(paths: list[str]) -> list[str]:
 
 
 def _register_builtin_tools(server):
-    """Register built-in statistical tools."""
+    """Register built-in statistical tools and advanced MCP features."""
+    from .bidirectional import (
+        create_r_callback_session,
+        handle_r_callback,
+        list_callback_sessions,
+        setup_r_bidirectional,
+    )
     from .tools.descriptive import frequency_table, outlier_detection, summary_stats
     from .tools.econometrics import instrumental_variables, panel_regression, var_model
     from .tools.fileops import (
@@ -485,6 +544,14 @@ def _register_builtin_tools(server):
     from .tools.flexible_r import execute_r_analysis, list_allowed_r_packages
     from .tools.formula_builder import build_formula, validate_formula
     from .tools.helpers import load_example, suggest_fix, validate_data
+
+    # Import advanced MCP integration tools
+    from .tools.introspection import (
+        get_r_session_info,
+        inspect_r_object,
+        list_r_objects,
+        list_r_packages,
+    )
     from .tools.machine_learning import decision_tree, kmeans_clustering, random_forest
     from .tools.regression import (
         correlation_analysis,
@@ -562,8 +629,20 @@ def _register_builtin_tools(server):
         # Flexible R execution
         execute_r_analysis,
         list_allowed_r_packages,
+        # Advanced MCP Integration - R Session Management
+        list_r_objects,
+        inspect_r_object,
+        list_r_packages,
+        get_r_session_info,
+        # Advanced MCP Integration - Bidirectional Communication
+        create_r_callback_session,
+        handle_r_callback,
+        setup_r_bidirectional,
+        list_callback_sessions,
     )
-    logger.info("Registered comprehensive statistical analysis tools (44 total)")
+    logger.info(
+        "Registered comprehensive statistical analysis tools (52 total: 44 core + 8 advanced MCP)"
+    )
 
 
 if __name__ == "__main__":

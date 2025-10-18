@@ -112,3 +112,6 @@ environment.pickle
 
 # Code Assistants
 .claude/
+
+# Poetry lock file (using Docker-first approach)
+poetry.lock

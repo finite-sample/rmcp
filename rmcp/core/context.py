@@ -54,6 +54,10 @@ class LifespanState:
     vfs: Optional[Any] = None
     # Logging
     current_log_level: str = "info"
+    # R Session Management
+    r_session_enabled: bool = False
+    r_session_timeout: float = 3600.0  # 1 hour default
+    default_r_session_id: Optional[str] = None
 
 
 @dataclass
@@ -156,3 +160,83 @@ class Context:
         if self.lifespan.cache_root:
             return self.lifespan.cache_root / key
         return None
+
+    # R Session Management helpers
+    def is_r_session_enabled(self) -> bool:
+        """Check if R session management is enabled."""
+        return self.lifespan.r_session_enabled
+
+    def get_r_session_id(self) -> Optional[str]:
+        """Get the R session ID for this context."""
+        # Check for session ID in request metadata first
+        session_id = self.request.metadata.get("r_session_id")
+        if session_id:
+            return session_id
+
+        # Fall back to lifespan default
+        return self.lifespan.default_r_session_id
+
+    def set_r_session_id(self, session_id: str) -> None:
+        """Set the R session ID for this context."""
+        self.request.metadata["r_session_id"] = session_id
+
+    async def get_or_create_r_session(
+        self, working_directory: Optional[Path] = None
+    ) -> Optional[str]:
+        """Get or create an R session for this context."""
+        if not self.is_r_session_enabled():
+            return None
+
+        try:
+            # Import here to avoid circular imports
+            from ..r_session import get_session_manager
+
+            session_manager = get_session_manager()
+            session_id = await session_manager.get_or_create_session(
+                context=self,
+                session_id=self.get_r_session_id(),
+                working_directory=working_directory,
+            )
+
+            # Update context with session ID
+            self.set_r_session_id(session_id)
+            return session_id
+
+        except Exception as e:
+            await self.warn(f"Failed to get/create R session: {e}")
+            return None
+
+    async def execute_r_with_session(
+        self, script: str, args: Dict[str, Any], use_session: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Execute R script with optional session support.
+
+        Args:
+            script: R script to execute
+            args: Arguments to pass to script
+            use_session: Whether to use session (if available) or run statelessly
+
+        Returns:
+            Script execution results
+        """
+        # Try session execution first if enabled and requested
+        if use_session and self.is_r_session_enabled():
+            try:
+                from ..r_session import get_session_manager
+
+                session_id = await self.get_or_create_r_session()
+                if session_id:
+                    session_manager = get_session_manager()
+                    return await session_manager.execute_in_session(
+                        session_id, script, args, self
+                    )
+            except Exception as e:
+                await self.warn(
+                    f"Session execution failed, falling back to stateless: {e}"
+                )
+
+        # Fall back to stateless execution
+        from ..r_integration import execute_r_script_async
+
+        return await execute_r_script_async(script, args, self)

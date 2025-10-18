@@ -77,7 +77,7 @@ Formula building, error recovery, example datasets → *"Help me build a regress
 
 ### Prerequisites
 - **Python 3.10+** 
-- **R 4.0+** with packages: Install all at once:
+- **R 4.4.0+** with packages: Install all at once:
 
 ```r
 install.packages(c(

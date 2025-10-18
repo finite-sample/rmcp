@@ -5,7 +5,6 @@
 # row names, missing value representation, and append mode support.
 
 # Prepare data and parameters
-data <- as.data.frame(args$data)
 file_path <- args$file_path
 include_rownames <- args$include_rownames %||% FALSE
 na_string <- args$na_string %||% ""
@@ -16,16 +15,16 @@ write.csv(data, file_path, row.names = include_rownames, na = na_string, append 
 
 # Verify file was written
 if (!file.exists(file_path)) {
-    stop(paste("Failed to write file:", file_path))
+  stop(paste("Failed to write file:", file_path))
 }
 
 file_info <- file.info(file_path)
 
 result <- list(
-    file_path = file_path,
-    rows_written = nrow(data),
-    cols_written = ncol(data),
-    file_size_bytes = file_info$size,
-    success = TRUE,
-    timestamp = as.character(Sys.time())
+  file_path = file_path,
+  rows_written = nrow(data),
+  cols_written = ncol(data),
+  file_size_bytes = file_info$size,
+  success = TRUE,
+  timestamp = as.character(Sys.time())
 )
