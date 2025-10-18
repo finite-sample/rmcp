@@ -29,19 +29,41 @@ RUN set -eux; \
         gfortran; \
     rm -rf /var/lib/apt/lists/*
 
-# Make r2u behavior explicit for scripts
+# Configure r2u binary package manager for faster installation
 RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
 
-# Install core R packages (shared between dev and prod)
+# Install R packages in optimized groups (leverages r2u binary packages)
+# Group 1: Essential data manipulation and stats packages
 RUN R -q -e "install.packages(c( \
-  'jsonlite','plm','lmtest','sandwich','AER','dplyr', \
-  'forecast','vars','urca','tseries','nortest','car', \
-  'rpart','randomForest','ggplot2','gridExtra','tidyr', \
-  'rlang','readxl','openxlsx','base64enc','reshape2','knitr','broom', \
-  'MASS','boot','survival','nlme','mgcv','lme4','glmnet', \
-  'e1071','caret','nnet','gbm','xgboost','kernlab','cluster', \
-  'zoo','xts','TTR','quantmod','data.table','lattice', \
-  'corrplot','viridis','RColorBrewer','lavaan' \
+  'jsonlite', 'dplyr', 'rlang', 'data.table', 'tidyr', \
+  'MASS', 'boot', 'survival', 'lattice' \
+))"
+
+# Group 2: Statistical modeling packages  
+RUN R -q -e "install.packages(c( \
+  'plm', 'lmtest', 'sandwich', 'AER', 'car', 'broom', \
+  'nlme', 'mgcv', 'lme4', 'glmnet' \
+))"
+
+# Group 3: Time series and forecasting
+RUN R -q -e "install.packages(c( \
+  'forecast', 'vars', 'urca', 'tseries', 'zoo', 'xts', 'TTR', 'quantmod' \
+))"
+
+# Group 4: Machine learning packages
+RUN R -q -e "install.packages(c( \
+  'e1071', 'caret', 'nnet', 'gbm', 'xgboost', 'kernlab', 'cluster', \
+  'rpart', 'randomForest' \
+))"
+
+# Group 5: Visualization and formatting
+RUN R -q -e "install.packages(c( \
+  'ggplot2', 'gridExtra', 'corrplot', 'viridis', 'RColorBrewer' \
+))"
+
+# Group 6: File I/O and utilities
+RUN R -q -e "install.packages(c( \
+  'readxl', 'openxlsx', 'base64enc', 'reshape2', 'knitr', 'nortest', 'lavaan' \
 ))"
 
 # ============================================================================
