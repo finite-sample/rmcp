@@ -538,6 +538,9 @@ class TestDockerProductionScenarios:
             test_file = Path(temp_dir) / "test_data.csv"
             test_file.write_text("x,y\n1,2\n3,4\n5,6\n")
 
+            # Set file permissions to be readable by container user
+            test_file.chmod(0o644)  # rw-r--r-- (readable by all users)
+
             # Test volume mount and file access
             volume_test = subprocess.run(
                 [
