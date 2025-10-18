@@ -466,9 +466,13 @@ class TestDockerProductionScenarios:
         _check_docker_available()
         print("🐳 Testing Docker security configuration...")
 
+        # Use production image built in CI or local testing
+        import os
+        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
+
         # Test running as non-root user
         user_test = subprocess.run(
-            ["docker", "run", "--rm", "rmcp-e2e-test", "whoami"],
+            ["docker", "run", "--rm", production_image, "whoami"],
             capture_output=True,
             text=True,
             timeout=10,
@@ -483,6 +487,10 @@ class TestDockerProductionScenarios:
         _check_docker_available()
         print("🐳 Testing environment variables in Docker...")
 
+        # Use production image built in CI or local testing
+        import os
+        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
+
         # Test with custom environment variables
         env_test = subprocess.run(
             [
@@ -491,7 +499,7 @@ class TestDockerProductionScenarios:
                 "--rm",
                 "-e",
                 "RMCP_LOG_LEVEL=DEBUG",
-                "rmcp-e2e-test",
+                production_image,
                 "python",
                 "-c",
                 'import os; print(f\'Log level: {os.environ.get("RMCP_LOG_LEVEL", "INFO")}\')',
@@ -510,6 +518,10 @@ class TestDockerProductionScenarios:
         _check_docker_available()
         print("🐳 Testing volume mounts in Docker...")
 
+        # Use production image built in CI or local testing
+        import os
+        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
+
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create test data file
             test_file = Path(temp_dir) / "test_data.csv"
@@ -523,7 +535,7 @@ class TestDockerProductionScenarios:
                     "--rm",
                     "-v",
                     f"{temp_dir}:/data",
-                    "rmcp-e2e-test",
+                    production_image,
                     "python",
                     "-c",
                     "import pandas as pd; df = pd.read_csv('/data/test_data.csv'); print(f'Loaded {len(df)} rows')",

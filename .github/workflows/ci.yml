@@ -398,7 +398,7 @@ jobs:
         
         echo "✅ All Docker scenario tests completed"
     
-    # Non-Docker scenario tests run in production container
+    # Non-Docker scenario tests run in production container  
     - name: Run non-Docker scenario tests in production container
       container:
         image: ${{ needs.docker-build.outputs.production-image }}
@@ -417,8 +417,13 @@ jobs:
         
         echo "✅ Non-Docker scenario tests completed"
     
+    # Test coverage validation runs on runner (outside container)
     - name: Validate complete test coverage
       run: |
+        python -m pip install --upgrade pip
+        pip install poetry
+        poetry install --with dev
+        
         echo "📊 Validating complete test coverage..."
         
         # Verify all 201 tests are collected (using poetry environment)
@@ -432,7 +437,7 @@ jobs:
           echo "✅ All 201 tests successfully collected"
         fi
         
-        # Run a sample to verify no collection issues (using poetry environment)
+        # Run a sample to verify no collection issues
         poetry run pytest tests/smoke/ -v --tb=short
         echo "✅ Test collection and execution verified"
 
