@@ -220,15 +220,15 @@ class RMCPSetupAutomation:
         self.log(f"Docker found: {stdout.strip()}", "SUCCESS")
 
         # Check if Dockerfile exists
-        dockerfile_path = Path.cwd() / "Dockerfile"
+        dockerfile_path = Path.cwd() / "docker" / "Dockerfile"
         if not dockerfile_path.exists():
-            self.log("Dockerfile not found in current directory", "ERROR")
+            self.log("Dockerfile not found in docker/ directory", "ERROR")
             return False
 
         # Build development Docker image
         self.log("Building RMCP Docker image...", "INFO")
         success, stdout, stderr = self.run_command(
-            ["docker", "build", "-t", "rmcp-dev", "."], timeout=300
+            ["docker", "build", "-f", "docker/Dockerfile", "--target", "development", "-t", "rmcp-dev", "."], timeout=300
         )
 
         if success:

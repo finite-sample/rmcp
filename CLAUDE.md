@@ -18,7 +18,7 @@ poetry run rmcp http             # Start HTTP server with SSE
 
 **For R integration development (Docker-based):**
 ```bash
-docker build -t rmcp-dev .       # Build R + Python environment
+docker build -f docker/Dockerfile --target development -t rmcp-dev .  # Build R + Python dev environment
 docker run -v $(pwd):/workspace -it rmcp-dev bash
 # Inside container:
 cd /workspace && pip install -e .
@@ -27,8 +27,8 @@ rmcp start                        # Full R integration available
 
 **For production deployment (optimized):**
 ```bash
-docker build -f docker/Dockerfile.production -t rmcp-production .  # Multi-stage optimized build
-docker run -p 8000:8000 rmcp-production rmcp http                  # Production HTTP server
+docker build -f docker/Dockerfile --target production -t rmcp-production .  # Multi-stage optimized build
+docker run -p 8000:8000 rmcp-production rmcp http                          # Production HTTP server
 ```
 
 ### Testing (Hybrid Strategy)

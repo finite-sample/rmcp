@@ -8,7 +8,7 @@ RMCP includes a multi-stage production Dockerfile optimized for minimal image si
 
 ```bash
 # Build production image (optimized, multi-stage)
-docker build -f docker/Dockerfile.production -t rmcp-production .
+docker build -f docker/Dockerfile --target production -t rmcp-production .
 
 # Run production server
 docker run -p 8000:8000 rmcp-production rmcp http
@@ -148,7 +148,8 @@ docker buildx create --use
 # Build for multiple platforms
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -f docker/Dockerfile.production \
+  -f docker/Dockerfile \
+  --target production \
   -t rmcp-production:latest \
   --push .
 ```
