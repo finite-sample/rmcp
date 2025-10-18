@@ -172,9 +172,13 @@ RUN set -eux; \
            /var/tmp/* \
            /root/.cache
 
-# Copy R packages from base stage
-COPY --from=base /usr/local/lib/R/site-library /usr/local/lib/R/site-library
-COPY --from=base /etc/R/Rprofile.site /etc/R/Rprofile.site
+# Copy entire R installation from base stage to ensure all packages are available
+COPY --from=base /usr/local/lib/R /usr/local/lib/R
+COPY --from=base /usr/lib/R /usr/lib/R
+COPY --from=base /etc/R /etc/R
+
+# Configure R for container environment (fix bspm warnings)
+RUN echo "options(bspm.sudo = TRUE)" >> /etc/R/Rprofile.site
 
 # Copy Python virtual environment from builder stage
 ENV VENV=/opt/venv
