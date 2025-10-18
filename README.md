@@ -243,7 +243,6 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start
 ## 🙋 Support
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/finite-sample/rmcp/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/finite-sample/rmcp/discussions)
 - 📖 **Examples**: [Working examples](examples/quick_start_guide.md)
 
 ---
