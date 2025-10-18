@@ -52,6 +52,14 @@ pandas = ">=1.5.0"
 openpyxl = ">=3.0.0"
 # Note: R integration tests run in Docker, not via Poetry
 
+[tool.poetry.group.docs.dependencies]
+# Documentation build dependencies
+sphinx = ">=5.0.0"
+sphinx-rtd-theme = ">=1.0.0"
+myst-parser = ">=0.18.0"
+# Additional Sphinx extensions used in conf.py
+sphinx-copybutton = {version = ">=0.5.0", optional = true}
+
 [tool.poetry.scripts]
 rmcp = "rmcp.cli:cli"
 
