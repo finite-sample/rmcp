@@ -54,13 +54,17 @@ RUN set -eux; \
         "click>=8.1.0" \
         "jsonschema>=4.0.0" \
         "pandas>=1.5.0" \
-        "openpyxl>=3.0.0"
+        "openpyxl>=3.0.0" \
+        "build>=0.10.0"
 
 # Copy and install RMCP package in build stage
 WORKDIR /build
 COPY pyproject.toml ./
 COPY rmcp/ ./rmcp/
-RUN . "$VENV/bin/activate" && pip install --no-deps .
+# Create minimal README.md for build (excluded by .dockerignore)
+RUN echo "# RMCP Production Build" > README.md
+# Build wheel instead of installing directly
+RUN . "$VENV/bin/activate" && pip wheel --no-deps . -w /build/wheels/
 
 # ============================================================================
 # STAGE 2: Runtime Environment (Minimal dependencies, optimized for size)
@@ -97,8 +101,17 @@ COPY --from=builder /etc/R/Rprofile.site /etc/R/Rprofile.site
 ENV VENV=/opt/venv
 COPY --from=builder /opt/venv /opt/venv
 
+# Copy the built wheel from builder stage  
+COPY --from=builder /build/wheels/ /tmp/wheels/
+
 # Ensure venv tools are first on PATH
 ENV PATH="$VENV/bin:$PATH"
+
+# Install RMCP from pre-built wheel (as root before user switch)
+RUN pip install --no-deps /tmp/wheels/*.whl
+
+# Clean up wheels
+RUN rm -rf /tmp/wheels/
 
 # Create non-root user for security
 RUN groupadd -r rmcp && useradd -r -g rmcp -d /app -s /bin/bash rmcp
@@ -107,15 +120,8 @@ RUN groupadd -r rmcp && useradd -r -g rmcp -d /app -s /bin/bash rmcp
 WORKDIR /app
 RUN chown rmcp:rmcp /app
 
-# Copy only necessary application files
-COPY --chown=rmcp:rmcp rmcp/ ./rmcp/
-COPY --chown=rmcp:rmcp pyproject.toml ./
-
 # Switch to non-root user
 USER rmcp
-
-# Install RMCP in production mode (no editable install)
-RUN pip install --no-deps .
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
