@@ -287,55 +287,6 @@ jobs:
         # Test basic MCP protocol with R tools
         echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -20
 
-  # Production image testing and new scenario tests
-  production-testing:
-    name: Production & Advanced Scenario Tests
-    runs-on: ubuntu-latest
-    needs: [python-checks, docker-build]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-    container:
-      image: ${{ needs.docker-build.outputs.production-image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-      options: --user root
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Setup Python environment in production container
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pip install -e .
-    
-    - name: Verify production container functionality
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        echo "🔒 Testing production container functionality..."
-        
-        # Note: Running as root in CI for GitHub Actions permissions
-        # Production deployments should override with --user or run as non-root
-        CURRENT_USER=$(whoami)
-        echo "CI container user: $CURRENT_USER (root for GitHub Actions permissions)"
-        
-        # Verify essential functionality
-        python -c "import rmcp; print('✅ RMCP import successful')"
-        python -c "import fastapi, uvicorn, httpx; print('✅ HTTP transport ready')"
-        R -e "cat('✅ R version:', R.version.string, '\n')"
-        
-        # Test that production image can run as non-root when configured
-        echo "🔍 Testing non-root capability..."
-        python -c "
-        import os, pwd
-        try:
-            # Check if rmcp user exists in the container
-            rmcp_user = pwd.getpwnam('rmcp')
-            print(f'✅ Non-root user available: rmcp (uid={rmcp_user.pw_uid})')
-        except KeyError:
-            print('⚠️ rmcp user not found - this may be expected in CI')
-        "
-    
   # Docker scenario tests run outside production container (need Docker access)
   docker-scenarios:
     name: Docker Scenario Tests
@@ -419,6 +370,33 @@ jobs:
       run: |
         export PATH="/opt/venv/bin:$PATH"
         pip install -e .
+    
+    - name: Verify production container functionality
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        echo "🔒 Testing production container functionality..."
+        
+        # Note: Running as root in CI for GitHub Actions permissions
+        # Production deployments should override with --user or run as non-root
+        CURRENT_USER=$(whoami)
+        echo "CI container user: $CURRENT_USER (root for GitHub Actions permissions)"
+        
+        # Verify essential functionality
+        python -c "import rmcp; print('✅ RMCP import successful')"
+        python -c "import fastapi, uvicorn, httpx; print('✅ HTTP transport ready')"
+        R -e "cat('✅ R version:', R.version.string, '\n')"
+        
+        # Test that production image can run as non-root when configured
+        echo "🔍 Testing non-root capability..."
+        python -c "
+        import os, pwd
+        try:
+            # Check if rmcp user exists in the container
+            rmcp_user = pwd.getpwnam('rmcp')
+            print(f'✅ Non-root user available: rmcp (uid={rmcp_user.pw_uid})')
+        except KeyError:
+            print('⚠️ rmcp user not found - this may be expected in CI')
+        "
     
     - name: Run non-Docker scenario tests in production container
       run: |
