@@ -622,7 +622,7 @@ class TestDockerCrossplatformCompatibility:
             "--rm",
             production_image,
             "R",
-            "-q",
+            "--slave",
             "-e",
             "cat('R architecture:', R.version$arch, '\\n')",
         ]
@@ -663,7 +663,7 @@ class TestDockerCrossplatformCompatibility:
             "--rm",
             production_image,
             "R",
-            "-q",
+            "--slave",
             "-e",
             """
             library(jsonlite)
