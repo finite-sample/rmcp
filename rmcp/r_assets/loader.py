@@ -85,8 +85,8 @@ def get_r_script(category: str, script_name: str, include_common: bool = True) -
         utilities = get_common_utilities()
 
     # Substitute into template
-    complete_script = template.replace("{{UTILITIES}}", utilities).replace(
-        "{{MAIN_SCRIPT}}", main_script
+    complete_script = template.replace("{{ UTILITIES }}", utilities).replace(
+        "{{ MAIN_SCRIPT }}", main_script
     )
 
     # Cache the result
