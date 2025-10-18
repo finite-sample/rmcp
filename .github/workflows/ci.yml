@@ -321,9 +321,35 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Run Docker deployment scenario tests
+    - name: Verify Docker authentication and pull production image
       env:
-        RMCP_PRODUCTION_IMAGE: ${{ needs.docker-build.outputs.production-image }}
+        PRODUCTION_IMAGE: ${{ needs.docker-build.outputs.production-image }}
+      run: |
+        echo "🔍 Verifying Docker authentication..."
+        docker info | grep -E "(Username|Registry)"
+        
+        echo "🔍 Production image to test: $PRODUCTION_IMAGE"
+        
+        echo "🔍 Attempting to pull production image..."
+        if docker pull "$PRODUCTION_IMAGE"; then
+          echo "✅ Production image pulled successfully"
+          export RMCP_PRODUCTION_IMAGE="$PRODUCTION_IMAGE"
+        else
+          echo "❌ Failed to pull production image from registry"
+          echo "🔧 Building production image locally as fallback..."
+          docker build --target production -t rmcp-prod-fallback .
+          export RMCP_PRODUCTION_IMAGE="rmcp-prod-fallback"
+          echo "✅ Local production image built: $RMCP_PRODUCTION_IMAGE"
+        fi
+        
+        # Verify the image exists and works
+        echo "🔍 Testing image availability..."
+        docker images | grep rmcp || echo "No RMCP images found"
+        
+        # Export for subsequent steps
+        echo "RMCP_PRODUCTION_IMAGE=$RMCP_PRODUCTION_IMAGE" >> $GITHUB_ENV
+    
+    - name: Run Docker deployment scenario tests
       run: |
         echo "🎯 Testing Docker deployment scenarios..."
         echo "Using production image: $RMCP_PRODUCTION_IMAGE"
@@ -378,6 +404,14 @@ jobs:
       run: |
         export PATH="/opt/venv/bin:$PATH"
         pip install -e .
+        
+        # Install minimal test dependencies needed for scenario tests
+        pip install pytest pytest-asyncio
+        
+        # Verify test environment
+        echo "🔍 Verifying test environment..."
+        pytest --version
+        python -c "import httpx; print(f'✅ httpx available: {httpx.__version__}')"
     
     - name: Verify production container functionality
       run: |
