@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 #' RMCP R Test Runner
-#' 
+#'
 #' Runs all testthat tests for RMCP R statistical analysis scripts.
 #' This script can be called from the main Python project or run independently.
 
@@ -55,7 +55,7 @@ if (inherits(test_results, "testthat_results")) {
   passed_tests <- 0
   warnings <- 0
   skipped <- 0
-  
+
   cat("Test results format not recognized, but tests completed.\n")
 }
 

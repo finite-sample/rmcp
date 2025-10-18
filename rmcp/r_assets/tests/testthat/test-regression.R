@@ -15,24 +15,25 @@ test_that("linear_model produces valid regression output", {
     formula = "y ~ x"
   )
   input_json <- toJSON(input_data, auto_unbox = TRUE)
-  
+
   result <- system2("Rscript",
-                   args = c("../../scripts/regression/linear_model.R", input_json),
-                   stdout = TRUE, stderr = TRUE)
-  
+    args = c("../../scripts/regression/linear_model.R", input_json),
+    stdout = TRUE, stderr = TRUE
+  )
+
   output <- fromJSON(result[length(result)])
-  
+
   # Verify structure
   expect_true(is.list(output))
   expect_true("coefficients" %in% names(output))
   expect_true("r_squared" %in% names(output))
   expect_true("model_summary" %in% names(output))
-  
+
   # Verify regression results
   expect_true(is.numeric(output$r_squared))
   expect_gte(output$r_squared, 0)
   expect_lte(output$r_squared, 1)
-  
+
   # Should have intercept and slope
   expect_gte(length(output$coefficients), 2)
 })
@@ -43,23 +44,24 @@ test_that("correlation_analysis computes correlations", {
     method = "pearson"
   )
   input_json <- toJSON(input_data, auto_unbox = TRUE)
-  
+
   result <- system2("Rscript",
-                   args = c("../../scripts/regression/correlation_analysis.R", input_json),
-                   stdout = TRUE, stderr = TRUE)
-  
+    args = c("../../scripts/regression/correlation_analysis.R", input_json),
+    stdout = TRUE, stderr = TRUE
+  )
+
   output <- fromJSON(result[length(result)])
-  
+
   expect_true(is.list(output))
   expect_true("correlation_matrix" %in% names(output))
   expect_true("method" %in% names(output))
-  
+
   # Correlation matrix should be square
   corr_matrix <- output$correlation_matrix
   expect_equal(nrow(corr_matrix), ncol(corr_matrix))
-  
+
   # Diagonal should be 1 (correlation with self)
-  diag_values <- diag(as.matrix(corr_matrix[, -1]))  # Exclude first column if it's row names
+  diag_values <- diag(as.matrix(corr_matrix[, -1])) # Exclude first column if it's row names
   expect_true(all(abs(diag_values - 1) < 1e-10))
 })
 
@@ -69,23 +71,24 @@ test_that("logistic_regression handles binary outcomes", {
     x = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
     outcome = c(0, 0, 0, 0, 1, 1, 1, 1, 1, 1)
   )
-  
+
   input_data <- list(
     data = binary_data,
     formula = "outcome ~ x"
   )
   input_json <- toJSON(input_data, auto_unbox = TRUE)
-  
+
   result <- system2("Rscript",
-                   args = c("../../scripts/regression/logistic_regression.R", input_json),
-                   stdout = TRUE, stderr = TRUE)
-  
+    args = c("../../scripts/regression/logistic_regression.R", input_json),
+    stdout = TRUE, stderr = TRUE
+  )
+
   output <- fromJSON(result[length(result)])
-  
+
   expect_true(is.list(output))
   expect_true("coefficients" %in% names(output))
   expect_true("model_summary" %in% names(output))
-  
+
   # Should have odds ratios for logistic regression
   if ("odds_ratios" %in% names(output)) {
     expect_true(is.numeric(unlist(output$odds_ratios)))

@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 #' RMCP R Documentation Builder
-#' 
+#'
 #' Generates roxygen2 documentation for RMCP R statistical analysis package.
 #' This script can be called from the main Python project or run independently.
 
@@ -28,15 +28,18 @@ cat("\n")
 
 # Generate documentation
 cat("Generating roxygen2 documentation...\n")
-tryCatch({
-  # Document the package
-  roxygen2::roxygenise(package.dir = ".", clean = TRUE)
-  cat("✅ roxygen2 documentation generated successfully\n")
-}, error = function(e) {
-  cat("❌ Error generating documentation:\n")
-  cat(e$message, "\n")
-  quit(status = 1)
-})
+tryCatch(
+  {
+    # Document the package
+    roxygen2::roxygenise(package.dir = ".", clean = TRUE)
+    cat("✅ roxygen2 documentation generated successfully\n")
+  },
+  error = function(e) {
+    cat("❌ Error generating documentation:\n")
+    cat(e$message, "\n")
+    quit(status = 1)
+  }
+)
 
 # Generate NAMESPACE and Rd files summary
 cat("\nDocumentation Summary:\n")
@@ -72,14 +75,17 @@ if (dir.exists("man")) {
 # Optional: Build package website with pkgdown if available
 if (requireNamespace("pkgdown", quietly = TRUE)) {
   cat("\nBuilding package website with pkgdown...\n")
-  tryCatch({
-    pkgdown::build_site(preview = FALSE)
-    cat("✅ Package website built successfully\n")
-    cat("📖 Documentation available in docs/ directory\n")
-  }, error = function(e) {
-    cat("⚠️ pkgdown website build failed (this is optional):\n")
-    cat(e$message, "\n")
-  })
+  tryCatch(
+    {
+      pkgdown::build_site(preview = FALSE)
+      cat("✅ Package website built successfully\n")
+      cat("📖 Documentation available in docs/ directory\n")
+    },
+    error = function(e) {
+      cat("⚠️ pkgdown website build failed (this is optional):\n")
+      cat(e$message, "\n")
+    }
+  )
 }
 
 cat("\n✅ Documentation build completed!\n")

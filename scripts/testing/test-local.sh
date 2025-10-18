@@ -2,7 +2,7 @@
 set -e
 
 echo "🐳 Building Docker test environment..."
-docker build -t rmcp-test .
+docker build -f docker/Dockerfile --target development -t rmcp-test .
 
 echo ""
 echo "🧹 Running Python linting..."

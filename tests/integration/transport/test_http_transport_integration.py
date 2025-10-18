@@ -148,6 +148,7 @@ class TestHTTPTransportMCPCompliance:
                 headers = {}
                 if session_id:
                     headers["Mcp-Session-Id"] = session_id
+                headers["MCP-Protocol-Version"] = "2025-06-18"
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/mcp",
                     json=tools_request,
@@ -211,6 +212,7 @@ class TestHTTPTransportMCPCompliance:
                 headers = {}
                 if session_id:
                     headers["Mcp-Session-Id"] = session_id
+                headers["MCP-Protocol-Version"] = "2025-06-18"
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/mcp",
                     json=tool_call_request,

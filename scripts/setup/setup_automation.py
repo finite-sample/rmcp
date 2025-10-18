@@ -228,7 +228,18 @@ class RMCPSetupAutomation:
         # Build development Docker image
         self.log("Building RMCP Docker image...", "INFO")
         success, stdout, stderr = self.run_command(
-            ["docker", "build", "-f", "docker/Dockerfile", "--target", "development", "-t", "rmcp-dev", "."], timeout=300
+            [
+                "docker",
+                "build",
+                "-f",
+                "docker/Dockerfile",
+                "--target",
+                "development",
+                "-t",
+                "rmcp-dev",
+                ".",
+            ],
+            timeout=300,
         )
 
         if success:

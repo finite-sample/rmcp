@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 #' RMCP R Code Formatting Script
-#' 
+#'
 #' Automatically formats RMCP R statistical analysis scripts and utility functions
 #' using the styler package with consistent style guidelines.
 
@@ -27,89 +27,96 @@ cat("\n")
 rmcp_style <- function() {
   # Start with tidyverse style as base
   style <- tidyverse_style()
-  
+
   # Customize for our needs
   style$line_break$remove_line_breaks_in_fun_dec <- TRUE
   style$indention$indent_by <- 2L
   style$space$remove_space_before_closing_paren <- TRUE
   style$space$remove_space_before_opening_paren <- FALSE
   style$line_break$remove_line_breaks <- TRUE
-  
+
   return(style)
 }
 
 # Function to format specific files or directories
 format_files <- function(paths, title, dry_run = FALSE) {
-  cat(sprintf("Formatting %s%s...\n", title, if(dry_run) " (dry run)" else ""))
-  
+  cat(sprintf("Formatting %s%s...\n", title, if (dry_run) " (dry run)" else ""))
+
   formatted_count <- 0
   error_count <- 0
-  
+
   for (path in paths) {
     if (file.exists(path)) {
       if (file.info(path)$isdir) {
         # Format all R files in directory
         r_files <- list.files(path, pattern = "\\.R$", recursive = TRUE, full.names = TRUE)
         cat(sprintf("Found %d R files in %s\n", length(r_files), path))
-        
+
         for (r_file in r_files) {
-          tryCatch({
-            if (dry_run) {
-              # Check if file needs formatting
-              needs_styling <- !styler::style_file(r_file, 
-                                                  style = rmcp_style, 
-                                                  dry = "on")
-              if (needs_styling) {
-                cat(sprintf("  📝 %s needs formatting\n", basename(r_file)))
-                formatted_count <- formatted_count + 1
+          tryCatch(
+            {
+              if (dry_run) {
+                # Check if file needs formatting
+                needs_styling <- !styler::style_file(r_file,
+                  style = rmcp_style,
+                  dry = "on"
+                )
+                if (needs_styling) {
+                  cat(sprintf("  📝 %s needs formatting\n", basename(r_file)))
+                  formatted_count <- formatted_count + 1
+                } else {
+                  cat(sprintf("  ✅ %s already well formatted\n", basename(r_file)))
+                }
               } else {
-                cat(sprintf("  ✅ %s already well formatted\n", basename(r_file)))
+                # Actually format the file
+                result <- styler::style_file(r_file, style = rmcp_style)
+                if (any(result$changed)) {
+                  cat(sprintf("  📝 Formatted %s\n", basename(r_file)))
+                  formatted_count <- formatted_count + 1
+                } else {
+                  cat(sprintf("  ✅ %s (no changes needed)\n", basename(r_file)))
+                }
               }
-            } else {
-              # Actually format the file
-              result <- styler::style_file(r_file, style = rmcp_style)
-              if (any(result$changed)) {
-                cat(sprintf("  📝 Formatted %s\n", basename(r_file)))
-                formatted_count <- formatted_count + 1
-              } else {
-                cat(sprintf("  ✅ %s (no changes needed)\n", basename(r_file)))
-              }
+            },
+            error = function(e) {
+              cat(sprintf("  ❌ Error formatting %s: %s\n", basename(r_file), e$message))
+              error_count <- error_count + 1
             }
-          }, error = function(e) {
-            cat(sprintf("  ❌ Error formatting %s: %s\n", basename(r_file), e$message))
-            error_count <- error_count + 1
-          })
+          )
         }
       } else {
         # Format single file
-        tryCatch({
-          if (dry_run) {
-            needs_styling <- !styler::style_file(path, style = rmcp_style, dry = "on")
-            if (needs_styling) {
-              cat(sprintf("  📝 %s needs formatting\n", basename(path)))
-              formatted_count <- formatted_count + 1
+        tryCatch(
+          {
+            if (dry_run) {
+              needs_styling <- !styler::style_file(path, style = rmcp_style, dry = "on")
+              if (needs_styling) {
+                cat(sprintf("  📝 %s needs formatting\n", basename(path)))
+                formatted_count <- formatted_count + 1
+              } else {
+                cat(sprintf("  ✅ %s already well formatted\n", basename(path)))
+              }
             } else {
-              cat(sprintf("  ✅ %s already well formatted\n", basename(path)))
+              result <- styler::style_file(path, style = rmcp_style)
+              if (any(result$changed)) {
+                cat(sprintf("  📝 Formatted %s\n", basename(path)))
+                formatted_count <- formatted_count + 1
+              } else {
+                cat(sprintf("  ✅ %s (no changes needed)\n", basename(path)))
+              }
             }
-          } else {
-            result <- styler::style_file(path, style = rmcp_style)
-            if (any(result$changed)) {
-              cat(sprintf("  📝 Formatted %s\n", basename(path)))
-              formatted_count <- formatted_count + 1
-            } else {
-              cat(sprintf("  ✅ %s (no changes needed)\n", basename(path)))
-            }
+          },
+          error = function(e) {
+            cat(sprintf("  ❌ Error formatting %s: %s\n", basename(path), e$message))
+            error_count <- error_count + 1
           }
-        }, error = function(e) {
-          cat(sprintf("  ❌ Error formatting %s: %s\n", basename(path), e$message))
-          error_count <- error_count + 1
-        })
+        )
       }
     } else {
       cat(sprintf("⚠️ Path not found: %s\n", path))
     }
   }
-  
+
   return(list(formatted = formatted_count, errors = error_count))
 }
 
@@ -126,7 +133,7 @@ if (dry_run) {
 cat("1. Processing utility functions...\n")
 utils_results <- format_files(c("R/utils.R"), "utility functions", dry_run)
 
-# Format test files  
+# Format test files
 cat("\n2. Processing test files...\n")
 test_results <- format_files(c("tests/testthat"), "test files", dry_run)
 
@@ -134,7 +141,7 @@ test_results <- format_files(c("tests/testthat"), "test files", dry_run)
 cat("\n3. Processing statistical scripts (sample)...\n")
 script_paths <- c(
   "scripts/descriptive/summary_stats.R",
-  "scripts/regression/linear_model.R", 
+  "scripts/regression/linear_model.R",
   "scripts/timeseries/arima_model.R",
   "scripts/machine_learning/kmeans_clustering.R",
   "scripts/fileops/read_csv.R"

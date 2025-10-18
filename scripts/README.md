@@ -57,6 +57,18 @@ Scripts that orchestrate testing workflows, validation, and CI/CD preparation.
   - CI/CD preparation validation
 - **Dependencies**: Docker
 
+**`validate_ci_locally.py`** - Complete CI Pipeline Validation
+- **Purpose**: Mirror GitHub CI pipeline exactly to catch failures locally
+- **Usage**: `python scripts/testing/validate_ci_locally.py [--skip-docker] [--skip-tests] [--verbose]`
+- **Features**:
+  - All Python linting checks (black, isort, flake8)
+  - R style validation (styler)
+  - Docker build validation (development + production)
+  - Complete test suite (201 tests)
+  - CLI functionality testing
+  - Comprehensive validation reporting
+- **Dependencies**: Docker, R (optional), Python packages
+
 ### Debugging Scripts (`debugging/`)
 
 Scripts for diagnosing issues and investigating problems.
@@ -156,6 +168,12 @@ python scripts/testing/run_e2e_tests.py --quick
 
 # Full local testing with Docker
 ./scripts/testing/test-local.sh
+
+# Validate CI pipeline locally (recommended before pushing)
+python scripts/testing/validate_ci_locally.py
+
+# Fast CI validation (skip Docker and tests)
+python scripts/testing/validate_ci_locally.py --skip-docker --skip-tests
 
 # Debug MCP protocol issues
 ./scripts/debugging/debug-mcp-protocol.sh

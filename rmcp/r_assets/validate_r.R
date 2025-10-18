@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 #' RMCP R Script Validation Pipeline
-#' 
+#'
 #' Comprehensive validation of RMCP R statistical analysis scripts.
 #' Runs syntax checking, linting, testing, and validation of JSON interfaces.
 
@@ -48,69 +48,79 @@ if (quick_mode) {
 
 # Validation functions
 check_syntax <- function(file_path) {
-  tryCatch({
-    parse(file_path)
-    return(list(success = TRUE, message = "Syntax OK"))
-  }, error = function(e) {
-    return(list(success = FALSE, message = paste("Syntax error:", e$message)))
-  })
+  tryCatch(
+    {
+      parse(file_path)
+      return(list(success = TRUE, message = "Syntax OK"))
+    },
+    error = function(e) {
+      return(list(success = FALSE, message = paste("Syntax error:", e$message)))
+    }
+  )
 }
 
 check_json_interface <- function(script_path) {
   # Test if script can handle basic JSON input/output
-  tryCatch({
-    # Create minimal test input
-    test_input <- list(data = data.frame(x = 1:5, y = 6:10))
-    input_json <- toJSON(test_input, auto_unbox = TRUE)
-    
-    # Try to run script (capture output)
-    result <- system2("Rscript", 
-                     args = c(script_path, shQuote(input_json)),
-                     stdout = TRUE, stderr = TRUE, 
-                     timeout = 30)
-    
-    # Check if output is valid JSON
-    if (length(result) > 0) {
-      last_line <- result[length(result)]
-      tryCatch({
-        fromJSON(last_line)
-        return(list(success = TRUE, message = "JSON interface OK"))
-      }, error = function(e) {
-        return(list(success = FALSE, message = "Invalid JSON output"))
-      })
-    } else {
-      return(list(success = FALSE, message = "No output produced"))
+  tryCatch(
+    {
+      # Create minimal test input
+      test_input <- list(data = data.frame(x = 1:5, y = 6:10))
+      input_json <- toJSON(test_input, auto_unbox = TRUE)
+
+      # Try to run script (capture output)
+      result <- system2("Rscript",
+        args = c(script_path, shQuote(input_json)),
+        stdout = TRUE, stderr = TRUE,
+        timeout = 30
+      )
+
+      # Check if output is valid JSON
+      if (length(result) > 0) {
+        last_line <- result[length(result)]
+        tryCatch(
+          {
+            fromJSON(last_line)
+            return(list(success = TRUE, message = "JSON interface OK"))
+          },
+          error = function(e) {
+            return(list(success = FALSE, message = "Invalid JSON output"))
+          }
+        )
+      } else {
+        return(list(success = FALSE, message = "No output produced"))
+      }
+    },
+    error = function(e) {
+      return(list(success = FALSE, message = paste("Interface error:", e$message)))
     }
-  }, error = function(e) {
-    return(list(success = FALSE, message = paste("Interface error:", e$message)))
-  })
+  )
 }
 
 validate_script_category <- function(category_path, category_name) {
   cat(sprintf("\n📂 Validating %s scripts...\n", category_name))
-  
+
   if (!dir.exists(category_path)) {
     cat(sprintf("⚠️ Directory not found: %s\n", category_path))
     return(list(total = 0, passed = 0, failed = 0))
   }
-  
+
   r_files <- list.files(category_path, pattern = "\\.R$", full.names = TRUE)
-  
+
   if (length(r_files) == 0) {
     cat("No R files found in this category\n")
     return(list(total = 0, passed = 0, failed = 0))
   }
-  
+
   cat(sprintf("Found %d R scripts\n", length(r_files)))
-  
+
   results <- list(total = length(r_files), passed = 0, failed = 0)
-  
+
   for (script_path in r_files) {
     script_name <- basename(script_path)
     cat(sprintf("\n  🔍 %s\n", script_name))
-    
+
     script_passed <- TRUE
-    
+
     # 1. Syntax check
     if (validation_config$syntax_check) {
       syntax_result <- check_syntax(script_path)
@@ -121,7 +131,7 @@ validate_script_category <- function(category_path, category_name) {
         script_passed <- FALSE
       }
     }
-    
+
     # 2. JSON interface check (for statistical scripts)
     if (validation_config$json_interface_check && !grepl("util|test", script_name, ignore.case = TRUE)) {
       json_result <- check_json_interface(script_path)
@@ -132,17 +142,17 @@ validate_script_category <- function(category_path, category_name) {
         # Don't fail script for JSON interface issues (they may need specific data)
       }
     }
-    
+
     # 3. Check for required utility imports
     script_content <- readLines(script_path)
     has_jsonlite <- any(grepl("library\\(jsonlite\\)|require\\(jsonlite\\)", script_content))
-    
+
     if (!has_jsonlite) {
       cat("    ⚠️ Missing jsonlite library import\n")
     } else {
       cat("    ✅ Required imports present\n")
     }
-    
+
     # 4. Check for proper error handling
     has_trycatch <- any(grepl("tryCatch|try\\(", script_content))
     if (has_trycatch) {
@@ -150,14 +160,14 @@ validate_script_category <- function(category_path, category_name) {
     } else {
       cat("    ⚠️ No error handling detected\n")
     }
-    
+
     if (script_passed) {
       results$passed <- results$passed + 1
     } else {
       results$failed <- results$failed + 1
     }
   }
-  
+
   return(results)
 }
 
@@ -169,7 +179,7 @@ if (validation_config$format_check) {
   cat("\n" %rep% 50)
   cat("1. CODE FORMATTING CHECK\n")
   cat("========================\n")
-  
+
   if (file.exists("format_r.R")) {
     format_result <- system("Rscript format_r.R --dry-run", ignore.stdout = !verbose)
     if (format_result == 0) {
@@ -187,7 +197,7 @@ if (validation_config$lint_check) {
   cat(sprintf("\n%s\n", paste(rep("=", 50), collapse = "")))
   cat("2. LINTING CHECK\n")
   cat("================\n")
-  
+
   if (file.exists("lint_r.R")) {
     lint_result <- system("Rscript lint_r.R", ignore.stdout = !verbose)
     if (lint_result == 0) {
@@ -205,7 +215,7 @@ if (validation_config$test_run) {
   cat(sprintf("\n%s\n", paste(rep("=", 50), collapse = "")))
   cat("3. TEST SUITE\n")
   cat("=============\n")
-  
+
   if (file.exists("run_tests.R")) {
     test_result <- system("Rscript run_tests.R", ignore.stdout = !verbose)
     if (test_result == 0) {
@@ -227,7 +237,7 @@ cat("====================\n")
 categories <- list(
   c("R", "Utility Functions"),
   c("scripts/descriptive", "Descriptive Statistics"),
-  c("scripts/regression", "Regression Analysis"),  
+  c("scripts/regression", "Regression Analysis"),
   c("scripts/timeseries", "Time Series Analysis"),
   c("scripts/machine_learning", "Machine Learning"),
   c("scripts/statistical_tests", "Statistical Tests"),

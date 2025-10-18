@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 #' RMCP R Linting Script
-#' 
+#'
 #' Runs lintr on RMCP R statistical analysis scripts and utility functions.
 #' This script can be called from the main Python project or run independently.
 
@@ -27,40 +27,46 @@ cat("\n")
 lint_files <- function(paths, title) {
   cat(sprintf("Linting %s...\n", title))
   cat(sprintf("Files: %s\n", paste(paths, collapse = ", ")))
-  
+
   all_results <- list()
-  
+
   for (path in paths) {
     if (file.exists(path)) {
       if (file.info(path)$isdir) {
         # Lint all R files in directory
         r_files <- list.files(path, pattern = "\\.R$", recursive = TRUE, full.names = TRUE)
         for (r_file in r_files) {
-          tryCatch({
-            results <- lint(r_file)
-            if (length(results) > 0) {
-              all_results[[r_file]] <- results
+          tryCatch(
+            {
+              results <- lint(r_file)
+              if (length(results) > 0) {
+                all_results[[r_file]] <- results
+              }
+            },
+            error = function(e) {
+              cat(sprintf("Error linting %s: %s\n", r_file, e$message))
             }
-          }, error = function(e) {
-            cat(sprintf("Error linting %s: %s\n", r_file, e$message))
-          })
+          )
         }
       } else {
         # Lint single file
-        tryCatch({
-          results <- lint(path)
-          if (length(results) > 0) {
-            all_results[[path]] <- results
+        tryCatch(
+          {
+            results <- lint(path)
+            if (length(results) > 0) {
+              all_results[[path]] <- results
+            }
+          },
+          error = function(e) {
+            cat(sprintf("Error linting %s: %s\n", path, e$message))
           }
-        }, error = function(e) {
-          cat(sprintf("Error linting %s: %s\n", path, e$message))
-        })
+        )
       }
     } else {
       cat(sprintf("⚠️ Path not found: %s\n", path))
     }
   }
-  
+
   return(all_results)
 }
 
@@ -70,23 +76,25 @@ print_lint_results <- function(results, title) {
     cat(sprintf("✅ %s: No linting issues found\n", title))
     return(TRUE)
   }
-  
+
   cat(sprintf("❌ %s: %d files with linting issues\n", title, length(results)))
-  
+
   total_issues <- 0
   for (file_path in names(results)) {
     file_results <- results[[file_path]]
     cat(sprintf("\n📁 %s (%d issues):\n", file_path, length(file_results)))
-    
+
     for (issue in file_results) {
-      cat(sprintf("  Line %d: %s [%s]\n", 
-                  issue$line_number %||% "?", 
-                  issue$message %||% "Unknown issue",
-                  issue$linter %||% "unknown"))
+      cat(sprintf(
+        "  Line %d: %s [%s]\n",
+        issue$line_number %||% "?",
+        issue$message %||% "Unknown issue",
+        issue$linter %||% "unknown"
+      ))
       total_issues <- total_issues + 1
     }
   }
-  
+
   cat(sprintf("\nTotal issues: %d\n", total_issues))
   return(FALSE)
 }
@@ -124,7 +132,7 @@ if (utils_clean && tests_clean && scripts_clean) {
 } else {
   cat("⚠️ Linting issues found\n")
   cat("Please review and fix the issues above\n")
-  
+
   # Provide helpful guidance
   cat("\nCommon fixes:\n")
   cat("- Use snake_case for function and variable names\n")
@@ -132,7 +140,7 @@ if (utils_clean && tests_clean && scripts_clean) {
   cat("- Use proper spacing around operators\n")
   cat("- Remove trailing whitespace\n")
   cat("- Use <- for assignment instead of =\n")
-  
+
   quit(status = 1)
 }
 
