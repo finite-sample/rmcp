@@ -547,6 +547,8 @@ class TestDockerProductionScenarios:
                     "docker",
                     "run",
                     "--rm",
+                    "--user",
+                    f"{os.getuid()}:{os.getgid()}",  # Run as host user to avoid UID mismatch
                     "-v",
                     f"{temp_dir}:/data",
                     production_image,
