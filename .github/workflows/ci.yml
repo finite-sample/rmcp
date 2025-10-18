@@ -313,6 +313,14 @@ jobs:
         docker --version
         docker info
     
+    # Authenticate to pull production image built in docker-build job
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
     - name: Run Docker deployment scenario tests
       env:
         RMCP_PRODUCTION_IMAGE: ${{ needs.docker-build.outputs.production-image }}
