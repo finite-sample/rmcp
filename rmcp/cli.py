@@ -14,6 +14,7 @@ from pathlib import Path
 import click
 
 from . import __version__
+from .config import get_config, load_config
 from .core.server import create_server
 from .registries.prompts import (
     model_diagnostic_prompt,
@@ -50,23 +51,50 @@ async def _run_server_with_transport(server, transport) -> None:
 
 @click.group()
 @click.version_option(version=__version__)
-def cli():
+@click.option(
+    "--config",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to configuration file",
+)
+@click.option("--debug", is_flag=True, help="Enable debug mode")
+@click.pass_context
+def cli(ctx, config: Path, debug: bool):
     """RMCP MCP Server - Comprehensive statistical analysis with 44 tools across 11 categories."""
-    pass
+    # Ensure context object exists
+    ctx.ensure_object(dict)
+
+    # Load configuration with overrides
+    overrides = {}
+    if debug:
+        overrides["debug"] = True
+        overrides["logging"] = {"level": "DEBUG"}
+
+    # Store config in context for subcommands
+    ctx.obj["config"] = load_config(config_file=config, overrides=overrides)
 
 
 @cli.command()
 @click.option(
     "--log-level",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
-    default="INFO",
-    help="Logging level",
+    help="Logging level (overrides config)",
 )
-def start(log_level: str):
+@click.pass_context
+def start(ctx, log_level: str):
     """Start RMCP MCP server (default stdio transport)."""
-    # Set logging level
-    logging.getLogger().setLevel(getattr(logging, log_level))
+    # Get configuration
+    config = ctx.obj.get("config") or get_config()
+
+    # Set logging level (CLI option overrides config)
+    effective_log_level = log_level or config.logging.level
+    logging.getLogger().setLevel(getattr(logging, effective_log_level.upper()))
+
     logger.info(f"Starting RMCP MCP Server v{__version__}")
+    if config.debug:
+        logger.debug("Debug mode enabled")
+        logger.debug(
+            f"Configuration loaded from: {config.config_file or 'defaults/environment'}"
+        )
     if sys.platform == "win32":
         logger.info(
             "Windows platform detected - using Windows-compatible stdio transport"
@@ -94,11 +122,18 @@ def start(log_level: str):
         # Create and configure server
         logger.info("Creating MCP server...")
         server = create_server()
-        server.configure(allowed_paths=[str(Path.cwd())], read_only=True)
+
+        # Configure server with paths from config
+        allowed_paths = [str(Path.cwd())] + config.security.vfs_allowed_paths
+        server.configure(
+            allowed_paths=allowed_paths, read_only=config.security.vfs_read_only
+        )
 
         # Set up stdio transport BEFORE registering tools to avoid notification timing issues
         logger.info("Setting up stdio transport...")
-        transport = StdioTransport()
+        transport = StdioTransport(
+            max_workers=config.performance.threadpool_max_workers
+        )
         transport.set_message_handler(server.create_message_handler(transport))
 
         logger.info("Registering built-in tools...")
@@ -224,12 +259,15 @@ def serve(
 
 
 @cli.command()
-@click.option("--host", default="localhost", help="Host to bind to")
-@click.option("--port", default=8000, help="Port to bind to")
-@click.option("--allowed-paths", multiple=True, help="Allowed file system paths")
+@click.option("--host", help="Host to bind to (overrides config)")
+@click.option("--port", type=int, help="Port to bind to (overrides config)")
+@click.option(
+    "--allowed-paths", multiple=True, help="Additional allowed file system paths"
+)
 @click.option("--cache-root", help="Cache root directory")
+@click.pass_context
 def serve_http(
-    host: str, port: int, allowed_paths: tuple[str, ...], cache_root: str | None
+    ctx, host: str, port: int, allowed_paths: tuple[str, ...], cache_root: str | None
 ):
     """Run MCP server over HTTP transport (requires fastapi extras)."""
     try:
@@ -240,19 +278,48 @@ def serve_http(
             "Install with: pip install rmcp[http]"
         )
         sys.exit(1)
-    logger.info(f"Starting HTTP transport on {host}:{port}")
+
+    # Get configuration
+    config = ctx.obj.get("config") or get_config()
+
+    # Use CLI options or fall back to config
+    effective_host = host or config.http.host
+    effective_port = port or config.http.port
+
+    logger.info(f"Starting HTTP transport on {effective_host}:{effective_port}")
+
     # Create and configure server
     server = create_server()
+
+    # Configure allowed paths (combine config and CLI options)
+    all_allowed_paths = (
+        [str(Path.cwd())] + config.security.vfs_allowed_paths + list(allowed_paths)
+    )
+    server.configure(
+        allowed_paths=all_allowed_paths,
+        read_only=config.security.vfs_read_only,
+        cache_root=Path(cache_root) if cache_root else None,
+    )
+
     _register_builtin_tools(server)
-    # Create HTTP transport
-    transport = HTTPTransport(host=host, port=port)
+
+    # Create HTTP transport with configuration
+    transport = HTTPTransport(host=effective_host, port=effective_port)
     transport.set_message_handler(server.create_message_handler(transport))
-    click.echo(f"🚀 RMCP HTTP server starting on http://{host}:{port}")
+    click.echo(
+        f"🚀 RMCP HTTP server starting on http://{effective_host}:{effective_port}"
+    )
     click.echo(f"📊 Available tools: {len(server.tools._tools)}")
     click.echo("🔗 Endpoints:")
-    click.echo(f"   • POST http://{host}:{port}/ (JSON-RPC requests)")
-    click.echo(f"   • GET  http://{host}:{port}/sse (Server-Sent Events)")
-    click.echo(f"   • GET  http://{host}:{port}/health (Health check)")
+    click.echo(
+        f"   • POST http://{effective_host}:{effective_port}/ (JSON-RPC requests)"
+    )
+    click.echo(
+        f"   • GET  http://{effective_host}:{effective_port}/sse (Server-Sent Events)"
+    )
+    click.echo(
+        f"   • GET  http://{effective_host}:{effective_port}/health (Health check)"
+    )
     try:
         asyncio.run(_run_server_with_transport(server, transport))
     except KeyboardInterrupt:

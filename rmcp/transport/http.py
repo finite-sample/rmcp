@@ -23,6 +23,7 @@ except ImportError as e:
     raise ImportError(
         "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp[http]"
     ) from e
+from ..config import get_config
 from .base import Transport
 
 logger = logging.getLogger(__name__)
@@ -37,19 +38,23 @@ class HTTPTransport(Transport):
     - MCP protocol compliance with session management and security
     """
 
-    def __init__(self, host: str = "localhost", port: int = 8000):
+    def __init__(self, host: str = None, port: int = None):
         super().__init__("HTTP")
-        self.host = host
-        self.port = port
+
+        # Get configuration and use provided values or config defaults
+        config = get_config()
+        self.host = host or config.http.host
+        self.port = port or config.http.port
+
         # Session management
         self._sessions: Dict[str, Dict[str, Any]] = {}
         self._initialized_sessions: set[str] = set()
         # Security validation
-        self._is_localhost = host in ("localhost", "127.0.0.1", "::1")
+        self._is_localhost = self.host in ("localhost", "127.0.0.1", "::1")
         # Issue security warning for remote binding
         if not self._is_localhost:
             logger.warning(
-                f"🚨 SECURITY WARNING: HTTP transport bound to {host}:{port}. "
+                f"🚨 SECURITY WARNING: HTTP transport bound to {self.host}:{self.port}. "
                 "This allows remote access! For production, implement proper authentication. "
                 "See https://spec.modelcontextprotocol.io/specification/server/transports/#security"
             )
@@ -60,11 +65,10 @@ class HTTPTransport(Transport):
 
     def _setup_cors(self) -> None:
         """Configure CORS for web client access."""
-        # Secure CORS configuration - only allow localhost origins by default
+        # Get CORS origins from configuration
+        config = get_config()
         allowed_origins = (
-            ["http://localhost:*", "http://127.0.0.1:*", "http://[::1]:*"]
-            if self._is_localhost
-            else ["*"]
+            config.http.cors_origins if self._is_localhost else ["*"]
         )  # Allow all for remote (with warning)
         self.app.add_middleware(
             CORSMiddleware,

@@ -574,173 +574,186 @@ All tools provide professionally formatted output with markdown tables, statisti
         ref = params.get("ref", {})
         completion_type = ref.get("type")
         name = ref.get("name", "")
-        completions = []
-        if completion_type == "tools":
-            # Complete tool names
-            all_tools = await self.tools.list_tools(
-                self.create_context("completion", "completion/complete"), limit=None
-            )
-            tool_names = [tool["name"] for tool in all_tools.get("tools", [])]
-            # Filter based on partial input
-            if name:
-                matching_tools = [tool for tool in tool_names if tool.startswith(name)]
-            else:
-                matching_tools = tool_names
-            completions = [
-                {
-                    "type": "text",
-                    "value": tool_name,
-                    "label": tool_name,
-                    "detail": "Statistical analysis tool",
-                }
-                for tool_name in matching_tools[:10]  # Limit to 10 suggestions
-            ]
-        elif completion_type == "tool_parameters":
-            # Complete parameter names for specific tools
-            tool_name = ref.get("toolName")
-            if tool_name and tool_name in self.tools._tools:
-                tool_def = self.tools._tools[tool_name]
-                schema = tool_def.input_schema
-                properties = schema.get("properties", {})
+        # Use match/case for completion type routing (Python 3.10+)
+        match completion_type:
+            case "tools":
+                # Complete tool names
+                all_tools = await self.tools.list_tools(
+                    self.create_context("completion", "completion/complete"), limit=None
+                )
+                tool_names = [tool["name"] for tool in all_tools.get("tools", [])]
+                # Filter based on partial input
                 if name:
-                    matching_params = [
-                        p for p in properties.keys() if p.startswith(name)
+                    matching_tools = [
+                        tool for tool in tool_names if tool.startswith(name)
                     ]
                 else:
-                    matching_params = list(properties.keys())
+                    matching_tools = tool_names
                 completions = [
                     {
-                        "type": "parameter",
-                        "value": param,
-                        "label": param,
-                        "detail": properties[param].get("description", "Parameter"),
+                        "type": "text",
+                        "value": tool_name,
+                        "label": tool_name,
+                        "detail": "Statistical analysis tool",
                     }
-                    for param in matching_params[:10]
+                    for tool_name in matching_tools[:10]  # Limit to 10 suggestions
                 ]
-        elif completion_type == "formula":
-            # Complete R formula syntax
-            formula_suggestions = [
-                {
-                    "type": "formula",
-                    "value": "y ~ x",
-                    "label": "y ~ x",
-                    "detail": "Simple regression formula",
-                },
-                {
-                    "type": "formula",
-                    "value": "y ~ x1 + x2",
-                    "label": "y ~ x1 + x2",
-                    "detail": "Multiple regression formula",
-                },
-                {
-                    "type": "formula",
-                    "value": "y ~ x1 * x2",
-                    "label": "y ~ x1 * x2",
-                    "detail": "Interaction formula",
-                },
-                {
-                    "type": "formula",
-                    "value": "y ~ .",
-                    "label": "y ~ .",
-                    "detail": "Use all variables",
-                },
-                {
-                    "type": "formula",
-                    "value": "y ~ x + I(x^2)",
-                    "label": "y ~ x + I(x^2)",
-                    "detail": "Polynomial formula",
-                },
-            ]
-            if name:
-                # Filter based on partial input
-                completions = [s for s in formula_suggestions if name in s["value"]]
-            else:
-                completions = formula_suggestions
-        elif completion_type == "analysis_type":
-            # Complete analysis type options
-            analysis_types = [
-                {"value": "regression", "detail": "Linear and logistic regression"},
-                {"value": "correlation", "detail": "Correlation analysis"},
-                {"value": "timeseries", "detail": "Time series modeling"},
-                {"value": "classification", "detail": "Classification and clustering"},
-                {"value": "anova", "detail": "Analysis of variance"},
-                {"value": "econometrics", "detail": "Panel data and IV regression"},
-                {"value": "general", "detail": "General statistical analysis"},
-            ]
-            if name:
-                matching_types = [
-                    t for t in analysis_types if t["value"].startswith(name)
+            case "tool_parameters":
+                # Complete parameter names for specific tools
+                tool_name = ref.get("toolName")
+                if tool_name and tool_name in self.tools._tools:
+                    tool_def = self.tools._tools[tool_name]
+                    schema = tool_def.input_schema
+                    properties = schema.get("properties", {})
+                    if name:
+                        matching_params = [
+                            p for p in properties.keys() if p.startswith(name)
+                        ]
+                    else:
+                        matching_params = list(properties.keys())
+                    completions = [
+                        {
+                            "type": "parameter",
+                            "value": param,
+                            "label": param,
+                            "detail": properties[param].get("description", "Parameter"),
+                        }
+                        for param in matching_params[:10]
+                    ]
+                else:
+                    completions = []
+            case "formula":
+                # Complete R formula syntax
+                formula_suggestions = [
+                    {
+                        "type": "formula",
+                        "value": "y ~ x",
+                        "label": "y ~ x",
+                        "detail": "Simple regression formula",
+                    },
+                    {
+                        "type": "formula",
+                        "value": "y ~ x1 + x2",
+                        "label": "y ~ x1 + x2",
+                        "detail": "Multiple regression formula",
+                    },
+                    {
+                        "type": "formula",
+                        "value": "y ~ x1 * x2",
+                        "label": "y ~ x1 * x2",
+                        "detail": "Interaction formula",
+                    },
+                    {
+                        "type": "formula",
+                        "value": "y ~ .",
+                        "label": "y ~ .",
+                        "detail": "Use all variables",
+                    },
+                    {
+                        "type": "formula",
+                        "value": "y ~ x + I(x^2)",
+                        "label": "y ~ x + I(x^2)",
+                        "detail": "Polynomial formula",
+                    },
                 ]
-            else:
-                matching_types = analysis_types
-            completions = [
-                {
-                    "type": "option",
-                    "value": at["value"],
-                    "label": at["value"],
-                    "detail": at["detail"],
-                }
-                for at in matching_types
-            ]
-        elif completion_type == "dataset":
-            # Complete example dataset names
-            datasets = [
-                {
-                    "value": "sales",
-                    "detail": "Sales and marketing data with seasonal patterns",
-                },
-                {
-                    "value": "economics",
-                    "detail": "Economic indicators for regression analysis",
-                },
-                {"value": "customers", "detail": "Customer data for churn prediction"},
-                {
-                    "value": "timeseries",
-                    "detail": "Time series data with trend and seasonality",
-                },
-                {"value": "survey", "detail": "Survey data with Likert scales"},
-            ]
-            if name:
-                matching_datasets = [d for d in datasets if d["value"].startswith(name)]
-            else:
-                matching_datasets = datasets
-            completions = [
-                {
-                    "type": "dataset",
-                    "value": d["value"],
-                    "label": d["value"],
-                    "detail": d["detail"],
-                }
-                for d in matching_datasets
-            ]
-        else:
-            # Default: provide general RMCP help
-            completions = [
-                {
-                    "type": "help",
-                    "value": "load_example",
-                    "label": "load_example",
-                    "detail": "Load example datasets for analysis",
-                },
-                {
-                    "type": "help",
-                    "value": "data_info",
-                    "label": "data_info",
-                    "detail": "Get information about your dataset",
-                },
-                {
-                    "type": "help",
-                    "value": "validate_data",
-                    "label": "validate_data",
-                    "detail": "Validate data quality before analysis",
-                },
-                {
-                    "type": "help",
-                    "value": "build_formula",
-                    "label": "build_formula",
-                    "detail": "Convert natural language to R formulas",
-                },
-            ]
+                if name:
+                    # Filter based on partial input
+                    completions = [s for s in formula_suggestions if name in s["value"]]
+                else:
+                    completions = formula_suggestions
+            case "analysis_type":
+                # Complete analysis type options
+                analysis_types = [
+                    {"value": "regression", "detail": "Linear and logistic regression"},
+                    {"value": "correlation", "detail": "Correlation analysis"},
+                    {"value": "timeseries", "detail": "Time series modeling"},
+                    {
+                        "value": "classification",
+                        "detail": "Classification and clustering",
+                    },
+                    {"value": "anova", "detail": "Analysis of variance"},
+                    {"value": "econometrics", "detail": "Panel data and IV regression"},
+                    {"value": "general", "detail": "General statistical analysis"},
+                ]
+                if name:
+                    matching_types = [
+                        t for t in analysis_types if t["value"].startswith(name)
+                    ]
+                else:
+                    matching_types = analysis_types
+                completions = [
+                    {
+                        "type": "option",
+                        "value": at["value"],
+                        "label": at["value"],
+                        "detail": at["detail"],
+                    }
+                    for at in matching_types
+                ]
+            case "dataset":
+                # Complete example dataset names
+                datasets = [
+                    {
+                        "value": "sales",
+                        "detail": "Sales and marketing data with seasonal patterns",
+                    },
+                    {
+                        "value": "economics",
+                        "detail": "Economic indicators for regression analysis",
+                    },
+                    {
+                        "value": "customers",
+                        "detail": "Customer data for churn prediction",
+                    },
+                    {
+                        "value": "timeseries",
+                        "detail": "Time series data with trend and seasonality",
+                    },
+                    {"value": "survey", "detail": "Survey data with Likert scales"},
+                ]
+                if name:
+                    matching_datasets = [
+                        d for d in datasets if d["value"].startswith(name)
+                    ]
+                else:
+                    matching_datasets = datasets
+                completions = [
+                    {
+                        "type": "dataset",
+                        "value": d["value"],
+                        "label": d["value"],
+                        "detail": d["detail"],
+                    }
+                    for d in matching_datasets
+                ]
+            case _:
+                # Default: provide general RMCP help
+                completions = [
+                    {
+                        "type": "help",
+                        "value": "load_example",
+                        "label": "load_example",
+                        "detail": "Load example datasets for analysis",
+                    },
+                    {
+                        "type": "help",
+                        "value": "data_info",
+                        "label": "data_info",
+                        "detail": "Get information about your dataset",
+                    },
+                    {
+                        "type": "help",
+                        "value": "validate_data",
+                        "label": "validate_data",
+                        "detail": "Validate data quality before analysis",
+                    },
+                    {
+                        "type": "help",
+                        "value": "build_formula",
+                        "label": "build_formula",
+                        "detail": "Convert natural language to R formulas",
+                    },
+                ]
         return {
             "completion": {
                 "values": completions,
@@ -803,57 +816,58 @@ All tools provide professionally formatted output with markdown tables, statisti
                 tool_invocation_id=tool_invocation_id,
                 metadata=metadata,
             )
-            # Route to appropriate handler
-            if method == "initialize":
-                result = await self._handle_initialize(params)
-            elif method == "tools/list":
-                result = await self.tools.list_tools(
-                    context,
-                    cursor=params.get("cursor"),
-                    limit=params.get("limit"),
-                )
-            elif method == "tools/call":
-                tool_name = params.get("name")
-                if not isinstance(tool_name, str):
-                    raise ValueError("tools/call requires 'name' parameter")
-                arguments = params.get("arguments", {})
-                result = await self.tools.call_tool(context, tool_name, arguments)
-            elif method == "resources/list":
-                result = await self.resources.list_resources(
-                    context,
-                    cursor=params.get("cursor"),
-                    limit=params.get("limit"),
-                )
-            elif method == "resources/read":
-                uri = params.get("uri")
-                if not isinstance(uri, str):
-                    raise ValueError("resources/read requires 'uri' parameter")
-                result = await self.resources.read_resource(context, uri)
-            elif method == "resources/subscribe":
-                result = await self._handle_resources_subscribe(context)
-            elif method == "resources/unsubscribe":
-                result = await self._handle_resources_unsubscribe(context)
-            elif method == "prompts/list":
-                result = await self.prompts.list_prompts(
-                    context,
-                    cursor=params.get("cursor"),
-                    limit=params.get("limit"),
-                )
-            elif method == "prompts/get":
-                name = params.get("name")
-                if not isinstance(name, str):
-                    raise ValueError("prompts/get requires 'name' parameter")
-                arguments = params.get("arguments", {})
-                result = await self.prompts.get_prompt(context, name, arguments)
-            elif method == "logging/setLevel":
-                level = params.get("level")
-                if not isinstance(level, str):
-                    raise ValueError("logging/setLevel requires 'level' parameter")
-                result = await self._handle_set_log_level(level)
-            elif method == "completion/complete":
-                result = await self._handle_completion(params)
-            else:
-                raise ValueError(f"Unknown method: {method}")
+            # Route to appropriate handler using match/case (Python 3.10+)
+            match method:
+                case "initialize":
+                    result = await self._handle_initialize(params)
+                case "tools/list":
+                    result = await self.tools.list_tools(
+                        context,
+                        cursor=params.get("cursor"),
+                        limit=params.get("limit"),
+                    )
+                case "tools/call":
+                    tool_name = params.get("name")
+                    if not isinstance(tool_name, str):
+                        raise ValueError("tools/call requires 'name' parameter")
+                    arguments = params.get("arguments", {})
+                    result = await self.tools.call_tool(context, tool_name, arguments)
+                case "resources/list":
+                    result = await self.resources.list_resources(
+                        context,
+                        cursor=params.get("cursor"),
+                        limit=params.get("limit"),
+                    )
+                case "resources/read":
+                    uri = params.get("uri")
+                    if not isinstance(uri, str):
+                        raise ValueError("resources/read requires 'uri' parameter")
+                    result = await self.resources.read_resource(context, uri)
+                case "resources/subscribe":
+                    result = await self._handle_resources_subscribe(context)
+                case "resources/unsubscribe":
+                    result = await self._handle_resources_unsubscribe(context)
+                case "prompts/list":
+                    result = await self.prompts.list_prompts(
+                        context,
+                        cursor=params.get("cursor"),
+                        limit=params.get("limit"),
+                    )
+                case "prompts/get":
+                    name = params.get("name")
+                    if not isinstance(name, str):
+                        raise ValueError("prompts/get requires 'name' parameter")
+                    arguments = params.get("arguments", {})
+                    result = await self.prompts.get_prompt(context, name, arguments)
+                case "logging/setLevel":
+                    level = params.get("level")
+                    if not isinstance(level, str):
+                        raise ValueError("logging/setLevel requires 'level' parameter")
+                    result = await self._handle_set_log_level(level)
+                case "completion/complete":
+                    result = await self._handle_completion(params)
+                case _:
+                    raise ValueError(f"Unknown method: {method}")
             return {"jsonrpc": "2.0", "id": request_id, "result": result}
         except Exception as e:
             logger.error(f"Error handling request {request_id}: {e}")

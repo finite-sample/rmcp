@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-10-18
+
+### Added
+- **⚙️ Comprehensive Configuration Management**: Complete hierarchical configuration system
+  - Environment variable support with `RMCP_*` prefix for all settings
+  - JSON configuration file support (`~/.rmcp/config.json`, `/etc/rmcp/config.json`)
+  - Command-line option overrides with `--config` and `--debug` flags
+  - Type-safe configuration validation with detailed error messages
+  - Full documentation in `docs/configuration.md`
+
+- **🔧 Enhanced CLI Interface**: Improved command-line experience
+  - Global `--config` option to specify custom configuration files
+  - Global `--debug` option to enable debug mode across all commands
+  - Updated help text and option descriptions for better usability
+
+### Improved
+- **🌐 HTTP Transport Configuration**: More flexible HTTP server setup
+  - Configurable host, port, and CORS origins via environment variables
+  - Support for `RMCP_HTTP_HOST`, `RMCP_HTTP_PORT`, `RMCP_HTTP_CORS_ORIGINS`
+  - Better security warnings for non-localhost binding
+
+- **🐍 R Process Configuration**: Enhanced R integration control
+  - Configurable timeouts for R script execution and version checks
+  - Session management settings for concurrent R processes
+  - Custom R binary path support via `RMCP_R_BINARY_PATH`
+
+- **🛡️ Security Configuration**: Flexible security settings
+  - Configurable VFS file size limits and allowed paths
+  - Read-only mode toggle for production deployments
+  - MIME type restrictions configuration
+
+- **⚡ Performance Configuration**: Tunable performance settings
+  - Configurable thread pool workers for stdio transport
+  - Adjustable callback timeouts for bidirectional communication
+  - Process cleanup timeout configuration
+
+### Technical Improvements
+- **📦 New Configuration Module**: Well-structured configuration system
+  - `rmcp.config` module with typed configuration models
+  - JSON Schema validation for configuration files
+  - Comprehensive test suite with 40+ test cases covering all scenarios
+  - Environment variable parsing with intelligent type conversion
+
+- **🧪 Enhanced Testing**: Expanded test coverage
+  - Complete test coverage for configuration loading and validation
+  - Environment variable parsing and type conversion tests
+  - Configuration hierarchy and merging logic validation
+  - Integration tests with existing transport and security systems
+
+### Fixed
+- **🔧 Docker Test Reliability**: Resolved failing deployment tests
+  - Fixed R command execution in Docker containers using `--slave` flag
+  - Improved JSON output parsing in cross-platform deployment tests
+  - Enhanced error handling for R process communication
+
 ## [0.4.0] - 2025-10-13
 
 ### Major Quality Improvements

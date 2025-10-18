@@ -374,102 +374,104 @@ async def list_allowed_r_packages(context, params) -> dict[str, Any]:
 
     await context.info(f"Listing allowed R packages: {category}")
 
-    if category == "all":
-        packages = sorted(list(ALLOWED_R_PACKAGES))
-    elif category == "stats":
-        packages = sorted(
-            [
-                p
-                for p in ALLOWED_R_PACKAGES
-                if p
-                in [
-                    "lmtest",
-                    "sandwich",
-                    "car",
-                    "MASS",
-                    "boot",
-                    "survival",
-                    "nlme",
-                    "mgcv",
-                    "gam",
-                    "glmnet",
+    # Use match/case for category selection (Python 3.10+)
+    match category:
+        case "all":
+            packages = sorted(list(ALLOWED_R_PACKAGES))
+        case "stats":
+            packages = sorted(
+                [
+                    p
+                    for p in ALLOWED_R_PACKAGES
+                    if p
+                    in [
+                        "lmtest",
+                        "sandwich",
+                        "car",
+                        "MASS",
+                        "boot",
+                        "survival",
+                        "nlme",
+                        "mgcv",
+                        "gam",
+                        "glmnet",
+                    ]
                 ]
-            ]
-        )
-    elif category == "ml":
-        packages = sorted(
-            [
-                p
-                for p in ALLOWED_R_PACKAGES
-                if p
-                in [
-                    "randomForest",
-                    "rpart",
-                    "tree",
-                    "gbm",
-                    "xgboost",
-                    "kernlab",
-                    "cluster",
-                    "caret",
-                    "e1071",
+            )
+        case "ml":
+            packages = sorted(
+                [
+                    p
+                    for p in ALLOWED_R_PACKAGES
+                    if p
+                    in [
+                        "randomForest",
+                        "rpart",
+                        "tree",
+                        "gbm",
+                        "xgboost",
+                        "kernlab",
+                        "cluster",
+                        "caret",
+                        "e1071",
+                    ]
                 ]
-            ]
-        )
-    elif category == "econometrics":
-        packages = sorted(
-            [
-                p
-                for p in ALLOWED_R_PACKAGES
-                if p
-                in [
-                    "plm",
-                    "AER",
-                    "vars",
-                    "tseries",
-                    "urca",
-                    "forecast",
-                    "dynlm",
-                    "quantreg",
-                    "systemfit",
+            )
+        case "econometrics":
+            packages = sorted(
+                [
+                    p
+                    for p in ALLOWED_R_PACKAGES
+                    if p
+                    in [
+                        "plm",
+                        "AER",
+                        "vars",
+                        "tseries",
+                        "urca",
+                        "forecast",
+                        "dynlm",
+                        "quantreg",
+                        "systemfit",
+                    ]
                 ]
-            ]
-        )
-    elif category == "visualization":
-        packages = sorted(
-            [
-                p
-                for p in ALLOWED_R_PACKAGES
-                if p
-                in [
-                    "ggplot2",
-                    "lattice",
-                    "plotly",
-                    "ggpubr",
-                    "corrplot",
-                    "gridExtra",
-                    "viridis",
+            )
+        case "visualization":
+            packages = sorted(
+                [
+                    p
+                    for p in ALLOWED_R_PACKAGES
+                    if p
+                    in [
+                        "ggplot2",
+                        "lattice",
+                        "plotly",
+                        "ggpubr",
+                        "corrplot",
+                        "gridExtra",
+                        "viridis",
+                    ]
                 ]
-            ]
-        )
-    elif category == "data":
-        packages = sorted(
-            [
-                p
-                for p in ALLOWED_R_PACKAGES
-                if p
-                in [
-                    "dplyr",
-                    "tidyr",
-                    "data.table",
-                    "reshape2",
-                    "readr",
-                    "jsonlite",
-                    "openxlsx",
-                    "readxl",
+            )
+        case "data":
+            packages = sorted(
+                [
+                    p
+                    for p in ALLOWED_R_PACKAGES
+                    if p
+                    in [
+                        "dplyr",
+                        "tidyr",
+                        "data.table",
+                        "reshape2",
+                        "readr",
+                        "jsonlite",
+                        "openxlsx",
+                        "readxl",
+                    ]
                 ]
-            ]
-        )
-    else:
-        packages = []
+            )
+        case _:
+            packages = []
 
     return {"packages": packages, "total_count": len(packages), "category": category}
