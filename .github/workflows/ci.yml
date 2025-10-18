@@ -336,33 +336,86 @@ jobs:
             print('⚠️ rmcp user not found - this may be expected in CI')
         "
     
-    # Scenario tests run outside production container with proper dev dependencies
-    - name: Setup testing environment for scenario tests
+  # Docker scenario tests run outside production container (need Docker access)
+  docker-scenarios:
+    name: Docker Scenario Tests
+    runs-on: ubuntu-latest
+    needs: [python-checks, docker-build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install dependencies for scenario tests
       run: |
-        # Install development dependencies on runner for pytest-based tests
         python -m pip install --upgrade pip
         pip install poetry
         poetry install --with dev
         
-        # Ensure Docker is available for scenario tests that need it
         echo "🐳 Verifying Docker availability..."
         docker --version
         docker info
     
-    - name: Run production scenario tests
+    - name: Run Docker deployment scenario tests
+      env:
+        RMCP_PRODUCTION_IMAGE: ${{ needs.docker-build.outputs.production-image }}
       run: |
-        echo "🎯 Testing production scenario features..."
+        echo "🎯 Testing Docker deployment scenarios..."
+        echo "Using production image: $RMCP_PRODUCTION_IMAGE"
         
-        # Test multi-stage build optimization (will build and test production image)
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_multi_stage_build_optimization -v --tb=short
+        # Test basic Docker functionality
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_basic_functionality -v --tb=short
         
-        # Test platform-specific features
+        # Test production image functionality (uses pre-built image)
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_production_image_functionality -v --tb=short
+        
+        # Test security configuration
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_security_configuration -v --tb=short
+        
+        # Test environment variables and volume mounts
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_environment_variables -v --tb=short
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_volume_mounts -v --tb=short
+        
+        # Test R environment
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_r_environment_validation -v --tb=short
+        
+        # Test end-to-end workflows  
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_mcp_protocol_communication -v --tb=short
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_complete_analysis_workflow -v --tb=short
+        
+        # Test performance and resource usage
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_performance_benchmarks -v --tb=short
+        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_resource_usage -v --tb=short
+        
+        # Test platform-specific features (cross-platform compatibility)
         poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerCrossplatformCompatibility::test_docker_platform_specific_features -v --tb=short
         
-        # Test concurrent request handling 
-        poetry run pytest tests/scenarios/test_claude_desktop_scenarios.py::TestClaudeDesktopPerformance::test_concurrent_requests -v --tb=short
+        echo "✅ All Docker scenario tests completed"
+    
+    # Non-Docker scenario tests run in production container
+    - name: Run non-Docker scenario tests in production container
+      container:
+        image: ${{ needs.docker-build.outputs.production-image }}
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        options: --user root
+      run: |
+        export PATH="/opt/venv/bin:$PATH"
+        pip install -e .
         
-        echo "✅ All production scenario tests completed"
+        echo "🎯 Testing non-Docker scenario features in production container..."
+        
+        # Test concurrent request handling (doesn't need Docker)
+        pytest tests/scenarios/test_claude_desktop_scenarios.py::TestClaudeDesktopPerformance::test_concurrent_requests -v --tb=short
+        
+        echo "✅ Non-Docker scenario tests completed"
     
     - name: Validate complete test coverage
       run: |
