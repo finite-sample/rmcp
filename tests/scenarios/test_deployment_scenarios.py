@@ -18,24 +18,25 @@ from pathlib import Path
 
 import pytest
 
+
 def _check_docker_available():
     """Check if Docker is available and functional at runtime."""
     if not shutil.which("docker"):
         pytest.skip("Docker not available in PATH")
-    
+
     try:
         # Test basic Docker functionality
-        result = subprocess.run(["docker", "--version"], 
-                              capture_output=True, timeout=10)
+        result = subprocess.run(
+            ["docker", "--version"], capture_output=True, timeout=10
+        )
         if result.returncode != 0:
             pytest.skip("Docker not functional")
-            
+
         # Test Docker daemon access
-        result = subprocess.run(["docker", "info"], 
-                              capture_output=True, timeout=10)
+        result = subprocess.run(["docker", "info"], capture_output=True, timeout=10)
         if result.returncode != 0:
             pytest.skip("Docker daemon not accessible")
-            
+
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pytest.skip("Docker not accessible")
 
@@ -62,8 +63,9 @@ class TestDockerWorkflowValidation:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
-        
+
         print(f"Testing basic functionality with: {production_image}")
 
         # Test basic functionality in container
@@ -95,6 +97,7 @@ class TestDockerWorkflowValidation:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Create test request
@@ -157,6 +160,7 @@ class TestDockerWorkflowValidation:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Create test data file
@@ -255,6 +259,7 @@ class TestDockerWorkflowValidation:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Test initialization time
@@ -304,6 +309,7 @@ class TestDockerWorkflowValidation:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Run with memory limit to test resource efficiency
@@ -338,6 +344,7 @@ class TestDockerWorkflowValidation:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Test R availability
@@ -385,15 +392,16 @@ class TestDockerProductionScenarios:
         """Test that production Docker image works correctly (uses pre-built image)."""
         _check_docker_available()
         print("🐳 Testing production image functionality...")
-        
+
         # Use production image built in CI or local testing
         # In CI: this will be the image built in docker-build job
         # Locally: assume rmcp:prod or similar exists
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
-        
+
         print(f"Testing production image: {production_image}")
-        
+
         # Test functionality of production image
         print("Testing production image functionality...")
 
@@ -468,6 +476,7 @@ class TestDockerProductionScenarios:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Test running as non-root user
@@ -489,6 +498,7 @@ class TestDockerProductionScenarios:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Test with custom environment variables
@@ -520,6 +530,7 @@ class TestDockerProductionScenarios:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -562,6 +573,7 @@ class TestDockerCrossplatformCompatibility:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         arch_test = subprocess.run(
@@ -582,6 +594,7 @@ class TestDockerCrossplatformCompatibility:
 
         # Use production image built in CI or local testing
         import os
+
         production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Get current platform architecture
