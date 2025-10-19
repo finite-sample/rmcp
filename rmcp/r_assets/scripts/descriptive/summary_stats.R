@@ -70,10 +70,10 @@ if (is.null(group_by)) {
           s <- stats_list[[var]]
           data.frame(variable = var, n = s$n, mean = s$mean, sd = s$sd, min = s$min, max = s$max)
         }))
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           stats_df,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Summary statistics computed successfully"
@@ -108,10 +108,10 @@ if (is.null(group_by)) {
       {
         # Create summary table for grouped stats
         group_summary <- paste0("Grouped statistics by ", group_by, " (", length(groups), " groups)")
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           data.frame(Summary = group_summary),
           format = "markdown"
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Grouped summary statistics computed successfully"

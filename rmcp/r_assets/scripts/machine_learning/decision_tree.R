@@ -69,7 +69,7 @@ result <- list(
       {
         # Try to tidy the tree model
         tidy_tree <- broom::tidy(tree_model)
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           tidy_tree,
           format = "markdown", digits = 4
         ))
@@ -82,7 +82,7 @@ result <- list(
           Complexity = round(tree_model$cptable[nrow(tree_model$cptable), "CP"], 6),
           Observations = nrow(data)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           tree_summary,
           format = "markdown", digits = 4
         ))

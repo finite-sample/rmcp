@@ -60,7 +60,7 @@ result <- list(
           AIC = round(AIC(var_model), 2),
           BIC = round(BIC(var_model), 2)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           var_summary_df,
           format = "markdown", digits = 4
         ))

@@ -138,9 +138,9 @@ DANGEROUS_PATTERNS = [
 ]
 
 
-def validate_r_code(r_code: str) -> tuple[bool, Optional[str]]:
+def validate_r_code(r_code: str, context=None) -> tuple[bool, Optional[str]]:
     """
-    Validate R code for safety.
+    Validate R code for safety with interactive package approval.
 
     Returns:
         (is_safe, error_message)
@@ -150,21 +150,38 @@ def validate_r_code(r_code: str) -> tuple[bool, Optional[str]]:
         if re.search(pattern, r_code, re.IGNORECASE):
             return False, f"Dangerous pattern detected: {pattern}"
 
+    # Filter out comment lines before checking for package usage
+    code_lines = [line for line in r_code.split('\n') if not line.strip().startswith('#')]
+    code_without_comments = '\n'.join(code_lines)
+    
     # Extract library/require calls
     lib_pattern = r"(?:library|require)\s*\(\s*['\"]?(\w+)['\"]?\s*\)"
-    packages = re.findall(lib_pattern, r_code, re.IGNORECASE)
+    packages = re.findall(lib_pattern, code_without_comments, re.IGNORECASE)
 
-    # Check all packages are in whitelist
+    # Check all packages are in whitelist or session-approved
     for pkg in packages:
         if pkg not in ALLOWED_R_PACKAGES:
-            return False, f"Package '{pkg}' is not in the allowed package list"
+            # Check if package is session-approved
+            session_approved = context and hasattr(context, '_approved_packages') and pkg in context._approved_packages
+            if not session_approved:
+                # Request user approval through context
+                if context:
+                    return False, f"APPROVAL_NEEDED:{pkg}"
+                else:
+                    return False, f"Package '{pkg}' requires user approval"
 
     # Check for double-colon package usage (pkg::function)
     colon_pattern = r"(\w+)::"
-    colon_packages = re.findall(colon_pattern, r_code)
+    colon_packages = re.findall(colon_pattern, code_without_comments)
     for pkg in colon_packages:
         if pkg not in ALLOWED_R_PACKAGES:
-            return False, f"Package '{pkg}' (used with ::) is not allowed"
+            # Check if package is session-approved
+            session_approved = context and hasattr(context, '_approved_packages') and pkg in context._approved_packages
+            if not session_approved:
+                if context:
+                    return False, f"APPROVAL_NEEDED:{pkg}"
+                else:
+                    return False, f"Package '{pkg}' (used with ::) requires user approval"
 
     return True, None
 
@@ -257,20 +274,44 @@ async def execute_r_analysis(context, params) -> dict[str, Any]:
 
     await context.info(f"Executing R analysis: {description}")
 
-    # Validate packages
-    for pkg in packages:
-        if pkg not in ALLOWED_R_PACKAGES:
-            await context.error(f"Package '{pkg}' is not allowed")
-            return {
-                "success": False,
-                "error": f"Package '{pkg}' is not in the allowed package list",
-            }
+    # Package validation is now handled in validate_r_code function below
 
-    # Validate R code
-    is_safe, error = validate_r_code(r_code)
+    # Validate R code with interactive approval
+    is_safe, error = validate_r_code(r_code, context)
     if not is_safe:
-        await context.error(f"R code validation failed: {error}")
-        return {"success": False, "error": f"Security validation failed: {error}"}
+        if error and error.startswith("APPROVAL_NEEDED:"):
+            # Extract package name and request approval
+            pkg_name = error.split(":", 1)[1]
+            approval_msg = f"""
+📦 Package Approval Required
+
+The R code wants to use package '{pkg_name}' which is not in the pre-approved list.
+
+This package may provide useful statistical functionality, but requires your permission to use.
+
+Would you like to:
+1. **Allow '{pkg_name}'** - Approve this package for this analysis
+2. **Block '{pkg_name}'** - Reject this package and modify the analysis
+
+Please respond with your choice. If you approve, the analysis will continue with '{pkg_name}' included.
+"""
+            await context.info(f"Package approval required for: {pkg_name}")
+            # Return schema-compliant response with approval prompt
+            return {
+                "success": False,  # Required by schema
+                "result": {
+                    "approval_required": True,
+                    "package": pkg_name,
+                    "message": approval_msg
+                },
+                "console_output": f"Package '{pkg_name}' requires user approval to proceed.",
+                "r_code_executed": r_code,
+                "packages_loaded": [],
+                "description": f"Approval required for package: {pkg_name}"
+            }
+        else:
+            await context.error(f"R code validation failed: {error}")
+            return {"success": False, "error": f"Security validation failed: {error}"}
 
     # Log the execution (audit trail)
     logger.info(f"Executing flexible R analysis: {description[:100]}")
@@ -475,3 +516,83 @@ async def list_allowed_r_packages(context, params) -> dict[str, Any]:
             packages = []
 
     return {"packages": packages, "total_count": len(packages), "category": category}
+
+
+@tool(
+    name="approve_r_package",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "package_name": {
+                "type": "string",
+                "description": "Name of the R package to approve for use"
+            },
+            "action": {
+                "type": "string",
+                "enum": ["approve", "deny"],
+                "description": "Whether to approve or deny the package"
+            },
+            "session_only": {
+                "type": "boolean",
+                "default": True,
+                "description": "Whether approval is only for current session (true) or permanent (false)"
+            }
+        },
+        "required": ["package_name", "action"]
+    },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "success": {"type": "boolean"},
+            "package": {"type": "string"},
+            "action": {"type": "string"},
+            "message": {"type": "string"},
+            "session_packages": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "List of currently approved session packages"
+            }
+        },
+        "required": ["success", "package", "action", "message"]
+    },
+    description="Approve or deny R packages for use in flexible R code execution. Allows users to grant permission for packages not in the default allowlist. Session-only approval means packages are approved for the current analysis session only. Use this tool when RMCP requests package approval for statistical analysis."
+)
+async def approve_r_package(context, params) -> dict[str, Any]:
+    """Handle user approval/denial of R packages."""
+    package_name = params["package_name"]
+    action = params["action"]
+    session_only = params.get("session_only", True)
+    
+    # Get or create session package store
+    if not hasattr(context, '_approved_packages'):
+        context._approved_packages = set()
+    
+    if action == "approve":
+        context._approved_packages.add(package_name)
+        
+        if session_only:
+            await context.info(f"✅ Package '{package_name}' approved for this session")
+            message = f"Package '{package_name}' has been approved for use in this analysis session."
+        else:
+            # For permanent approval, we would need to modify the allowlist
+            # For now, just do session approval
+            await context.info(f"✅ Package '{package_name}' approved for this session (permanent approval not yet implemented)")
+            message = f"Package '{package_name}' has been approved for use in this analysis session."
+            
+        return {
+            "success": True,
+            "package": package_name,
+            "action": "approved",
+            "message": message,
+            "session_packages": list(context._approved_packages)
+        }
+    
+    else:  # deny
+        await context.info(f"❌ Package '{package_name}' denied")
+        return {
+            "success": True,
+            "package": package_name, 
+            "action": "denied",
+            "message": f"Package '{package_name}' has been denied. Please modify your analysis to use approved packages.",
+            "session_packages": list(getattr(context, '_approved_packages', []))
+        }

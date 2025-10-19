@@ -74,7 +74,7 @@ result <- list(
           ),
           Type = c(decomp_type, decomp_type, decomp_type, decomp_type)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           decomp_summary,
           format = "markdown", digits = 4
         ))
