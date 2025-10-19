@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "description": "Test count baseline for RMCP project - tracks expected test counts dynamically",
+  "last_updated": "2025-10-18",
+  "baseline_counts": {
+    "total_tests": 263,
+    "categories": {
+      "smoke": "Basic functionality tests",
+      "unit": "Python-only unit tests", 
+      "integration/protocol": "MCP protocol validation",
+      "integration/tools": "R tool integration tests",
+      "integration/transport": "HTTP transport tests",
+      "integration/core": "Server and registry tests",
+      "scenarios": "End-to-end user workflows"
+    }
+  },
+  "validation_rules": {
+    "min_tests": 200,
+    "max_deviation_percent": 10,
+    "alert_on_significant_change": true
+  },
+  "notes": [
+    "This file tracks test counts dynamically to avoid hardcoded CI failures",
+    "Test count may fluctuate as features are added/removed",
+    "Significant changes (>10%) should be investigated before updating baseline",
+    "Run 'pytest --collect-only tests/' to get current count"
+  ]
+}

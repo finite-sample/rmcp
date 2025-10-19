@@ -27,7 +27,10 @@ import os
 import re
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import Any
+
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 # Global semaphore for R process concurrency (max 4 concurrent R processes)
@@ -72,7 +75,7 @@ def get_r_binary_path() -> str:
     candidates = [path for path in candidates if path is not None]
 
     for candidate in candidates:
-        if candidate and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+        if candidate and Path(candidate).is_file() and os.access(candidate, os.X_OK):
             _R_BINARY_PATH = candidate
             logger.info(f"Found R binary at: {_R_BINARY_PATH}")
             return _R_BINARY_PATH
@@ -133,7 +136,10 @@ def check_r_version() -> tuple[bool, str]:
     """
     try:
         result = subprocess.run(
-            ["R", "--version"], capture_output=True, text=True, timeout=10
+            ["R", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=get_config().r.version_check_timeout,
         )
 
         if result.returncode != 0:
@@ -261,7 +267,7 @@ write_json(result, "{result_path_safe}", auto_unbox = TRUE)
                 [r_binary, "--slave", "--no-restore", "--file=" + script_path],
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=get_config().r.timeout,
             )
             if process.returncode != 0:
                 # Enhanced error handling for missing packages
@@ -347,10 +353,20 @@ Original error: {stderr.strip()}"""
                     result = json.load(f)
                 logger.debug(f"R script executed successfully, result: {result}")
                 return result
-            except FileNotFoundError:
-                raise RExecutionError("R script did not produce output file")
+            except FileNotFoundError as e:
+                exc = RExecutionError("R script did not produce output file")
+                exc.add_note(f"Expected output file: {result_path}")
+                exc.add_note(
+                    "This usually indicates R script execution failed before producing results"
+                )
+                raise exc
             except json.JSONDecodeError as e:
-                raise RExecutionError(f"R script produced invalid JSON: {e}")
+                exc = RExecutionError(f"R script produced invalid JSON: {e}")
+                exc.add_note(f"Output file: {result_path}")
+                exc.add_note(
+                    "Check R script for JSON formatting errors or unexpected output"
+                )
+                raise exc
         finally:
             # Cleanup temporary files
             for temp_path in [script_path, args_path, result_path]:
@@ -497,11 +513,15 @@ if (exists("result")) {{
                                         f"Failed to parse progress message: {e}"
                                     )
 
-                    # Run stdout and stderr monitoring concurrently
-                    await asyncio.wait_for(
-                        asyncio.gather(read_stdout(), monitor_stderr(), proc.wait()),
-                        timeout=120,  # 2 minute timeout
-                    )
+                    # Run stdout and stderr monitoring concurrently using TaskGroup (Python 3.11+)
+                    async with asyncio.TaskGroup() as tg:
+                        stdout_task = tg.create_task(read_stdout())
+                        stderr_task = tg.create_task(monitor_stderr())
+                        wait_task = tg.create_task(
+                            asyncio.wait_for(
+                                proc.wait(), timeout=get_config().r.timeout
+                            )
+                        )
                     # Combine output
                     stdout = (
                         b"".join(stdout_chunks).decode("utf-8") if stdout_chunks else ""
@@ -942,7 +962,7 @@ def diagnose_r_installation() -> dict[str, Any]:
                     [r_path, "--slave", "--no-restore", "-e", test_script],
                     capture_output=True,
                     text=True,
-                    timeout=30,
+                    timeout=get_config().r.version_check_timeout,
                 )
 
                 if result.returncode == 0:
@@ -1012,7 +1032,9 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(), timeout=get_config().r.version_check_timeout
+                )
 
                 if proc.returncode == 0:
                     # Extract first line which contains version info
@@ -1046,7 +1068,9 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(), timeout=get_config().r.version_check_timeout
+                )
 
                 if proc.returncode == 0:
                     stdout_str = stdout.decode()

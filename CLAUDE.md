@@ -13,7 +13,12 @@ RMCP (R Model Context Protocol) is a statistical analysis server that bridges AI
 ```bash
 poetry install --with dev        # Install minimal Python dependencies
 poetry run rmcp start            # Start server in stdio mode (no R tools)
-poetry run rmcp http             # Start HTTP server with SSE
+poetry run rmcp serve-http       # Start HTTP server with SSE
+
+# Use configuration options
+poetry run rmcp --debug start    # Enable debug mode
+poetry run rmcp --config config.json start  # Use custom config file
+RMCP_LOG_LEVEL=DEBUG poetry run rmcp start  # Use environment variables
 ```
 
 **For R integration development (Docker-based):**
@@ -43,10 +48,10 @@ poetry run flake8 .              # Linting
 
 **Complete integration tests (Docker-based):**
 ```bash
-# Docker includes R + FastAPI for complete test coverage (all 201 tests)
+# Docker includes R + FastAPI for complete test coverage (all 240+ tests)
 docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/integration/"
 docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/scenarios/"
-# Full test suite: smoke + unit + integration + scenarios + protocol
+# Full test suite: smoke + unit + integration + scenarios + protocol + config
 docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/"
 ```
 
@@ -110,14 +115,15 @@ docker run -v $(pwd):/workspace rmcp-dev R -e "library(styler); style_file(list.
 **Development Utilities**
 - **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (tests all 44 tools with real R)
 
-**Complete Test Coverage**: Docker environment includes **all 201 tests** with comprehensive coverage across all components:
+**Complete Test Coverage**: Docker environment includes **all 240+ tests** with comprehensive coverage across all components:
 - ✅ **R Integration**: 44 statistical tools with real R execution  
 - ✅ **HTTP Transport**: FastAPI, uvicorn, SSE streaming, session management
 - ✅ **Core MCP Protocol**: JSON-RPC 2.0, tool calls, capabilities, error handling
+- ✅ **Configuration System**: Environment variables, config files, hierarchical loading
 - ✅ **Production Deployment**: Multi-stage Docker builds, security validation, size optimization
 - ✅ **Scalability**: Concurrent request handling, load testing, performance validation
 - ✅ **Cross-platform**: Multi-architecture support, numerical consistency, platform compatibility
-- ✅ **Zero Skipped Tests**: All 201 tests execute successfully with no dependency-related skips
+- ✅ **Zero Skipped Tests**: All tests execute successfully with no dependency-related skips
 
 **Strategy**: Tests progress from basic functionality → protocol compliance → component integration → complete scenarios. Each tier builds on the previous, ensuring fast feedback for basic issues while providing comprehensive validation for complex workflows.
 
@@ -134,10 +140,52 @@ docker run -v $(pwd):/workspace rmcp-dev R -e "library(styler); style_file(list.
 - **R tool development**: Docker for testing actual R integration and statistical computations
 - **CI/CD**: Docker for R tests, Poetry for cross-platform Python validation
 
+## Configuration System
+
+RMCP includes a comprehensive configuration management system that supports:
+
+### **Configuration Sources (Priority Order)**
+1. **Command-line arguments** (highest priority)
+2. **Environment variables** (`RMCP_*` prefix)  
+3. **User config file** (`~/.rmcp/config.json`)
+4. **System config file** (`/etc/rmcp/config.json`)
+5. **Built-in defaults** (lowest priority)
+
+### **Development Configuration**
+```bash
+# Environment variables for development
+export RMCP_LOG_LEVEL=DEBUG
+export RMCP_HTTP_PORT=9000
+export RMCP_R_TIMEOUT=300
+
+# Configuration file for development
+echo '{"debug": true, "logging": {"level": "DEBUG"}}' > ~/.rmcp/config.json
+
+# CLI options override everything
+poetry run rmcp --debug --config custom.json start
+```
+
+### **Docker Configuration**
+```bash
+# Environment variables in Docker
+docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
+
+# Mount configuration file
+docker run -v $(pwd)/config.json:/etc/rmcp/config.json rmcp:latest
+```
+
+### **Testing Configuration**
+- **Unit tests**: Configuration module has 40+ tests covering all scenarios
+- **Integration tests**: Configuration integration with HTTP/R/VFS components
+- **Environment tests**: Validation of all environment variable mappings
+
+**📖 Complete documentation**: `docs/configuration.md`
+
 ## Important Notes
 - Python 3.11+ required
 - R environment provided via Docker (no local R installation needed for development)
 - All R communication uses JSON via subprocess
 - HTTP transport includes session management and SSE for streaming
 - VFS security restricts file access to configured paths only
+- Configuration system supports all deployment scenarios (local, Docker, production)
 - `poetry.lock` is gitignored (optimizes repository size, regenerated locally)

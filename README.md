@@ -125,17 +125,54 @@ Add to your Claude Desktop MCP configuration:
 rmcp start
 
 # Start HTTP server (for web apps)
-rmcp serve-http --port 8080
+rmcp serve-http --host 0.0.0.0 --port 8080
+
+# Start HTTPS server (production ready)
+rmcp serve-http --ssl-keyfile server.key --ssl-certfile server.crt --port 8443
+
+# Quick HTTPS setup for development
+./scripts/setup/setup_https_dev.sh && source certs/https-env.sh && rmcp serve-http
+
+# Use configuration file
+rmcp --config ~/.rmcp/config.json start
+
+# Enable debug mode
+rmcp --debug start
 
 # Check installation
 rmcp --version
 ```
+
+### ⚙️ Configuration
+
+RMCP supports flexible configuration through environment variables, configuration files, and command-line options:
+
+```bash
+# Environment variables
+export RMCP_HTTP_PORT=9000
+export RMCP_R_TIMEOUT=180
+export RMCP_LOG_LEVEL=DEBUG
+rmcp start
+
+# Configuration file (~/.rmcp/config.json)
+{
+  "http": {"port": 9000},
+  "r": {"timeout": 180},
+  "logging": {"level": "DEBUG"}
+}
+
+# Docker with environment variables
+docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
+```
+
+**📖 [Complete Configuration Guide →](docs/configuration.md)**
 
 ## 🔥 Key Features
 
 - **🎯 Natural Conversation**: Ask questions in plain English, get statistical analysis
 - **📊 Professional Output**: Formatted results with markdown tables and inline visualizations  
 - **🔒 Production Ready**: Full MCP protocol compliance with HTTP transport and SSE
+- **⚙️ Flexible Configuration**: Environment variables, config files, and CLI options
 - **⚡ Fast & Reliable**: 100% test success rate across all scenarios
 - **🌐 Multiple Transports**: stdio (Claude Desktop) and HTTP (web applications)
 - **🛡️ Secure**: Controlled R execution with configurable permissions
@@ -206,7 +243,6 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start
 ## 🙋 Support
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/finite-sample/rmcp/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/finite-sample/rmcp/discussions)
 - 📖 **Examples**: [Working examples](examples/quick_start_guide.md)
 
 ---

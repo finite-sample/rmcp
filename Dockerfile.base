@@ -1,0 +1,132 @@
+# Base R Environment for RMCP
+# This image contains all R packages and system dependencies
+# Rebuilt weekly via scheduled GitHub Actions workflow
+#
+# To rebuild manually:
+#   docker build -f Dockerfile.base -t ghcr.io/finite-sample/rmcp-base:latest .
+#   docker push ghcr.io/finite-sample/rmcp-base:latest
+
+FROM rocker/r2u:noble
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+LABEL org.opencontainers.image.title="RMCP Base Environment"
+LABEL org.opencontainers.image.description="Pre-built R statistical environment for RMCP"
+LABEL org.opencontainers.image.vendor="RMCP Project"
+LABEL org.opencontainers.image.source="https://github.com/finite-sample/rmcp"
+
+# Install system dependencies (shared between dev and prod)
+# Use cache mount for apt downloads only (avoid lock conflicts in multi-platform builds)
+ARG TARGETPLATFORM
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETPLATFORM} \
+    set -eux; \
+    # Clean any existing locks and ensure clean state
+    rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        python3 python3-pip python3-venv python3-dev \
+        build-essential git \
+        libcurl4-openssl-dev libssl-dev libxml2-dev \
+        ca-certificates wget \
+        # Additional build dependencies
+        pkg-config \
+        gcc g++ \
+        libblas-dev liblapack-dev \
+        gfortran \
+        # mkcert dependencies for HTTPS development
+        libnss3-tools \
+        curl \
+        # JSON processing for metadata generation
+        jq; \
+    # Clean package lists and temporary files
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Configure r2u binary package manager for faster installation
+RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
+
+# Install mkcert for HTTPS development (multi-architecture support)
+ARG TARGETPLATFORM
+RUN set -eux; \
+    MKCERT_VERSION="v1.4.4"; \
+    case "${TARGETPLATFORM}" in \
+        "linux/amd64") MKCERT_ARCH="linux-amd64" ;; \
+        "linux/arm64") MKCERT_ARCH="linux-arm64" ;; \
+        *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \
+    esac; \
+    curl -Lo /usr/local/bin/mkcert \
+        "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-${MKCERT_ARCH}"; \
+    chmod +x /usr/local/bin/mkcert; \
+    # Verify installation
+    mkcert -version
+
+# Install R packages in optimized groups (leverages r2u binary packages)
+# Merge groups to reduce layers and use parallel installation where possible
+
+# Groups 1-2: Essential data manipulation, stats, and modeling packages
+RUN --mount=type=cache,target=/tmp/downloaded_packages,id=r-cache-${TARGETPLATFORM} \
+    R -q -e "install.packages(c( \
+      'jsonlite', 'dplyr', 'rlang', 'data.table', 'tidyr', \
+      'MASS', 'boot', 'survival', 'lattice', \
+      'plm', 'lmtest', 'sandwich', 'AER', 'car', 'broom', \
+      'nlme', 'mgcv', 'lme4', 'glmnet' \
+    ), Ncpus = parallel::detectCores())"
+
+# Groups 3-4: Time series and machine learning packages  
+RUN --mount=type=cache,target=/tmp/downloaded_packages,id=r-cache-${TARGETPLATFORM} \
+    R -q -e "install.packages(c( \
+      'forecast', 'vars', 'urca', 'tseries', 'zoo', 'xts', 'TTR', 'quantmod', \
+      'e1071', 'caret', 'nnet', 'gbm', 'xgboost', 'kernlab', 'cluster', \
+      'rpart', 'randomForest' \
+    ), Ncpus = parallel::detectCores())"
+
+# Groups 5-7: Visualization, I/O, and development packages
+RUN --mount=type=cache,target=/tmp/downloaded_packages,id=r-cache-${TARGETPLATFORM} \
+    R -q -e "install.packages(c( \
+      'ggplot2', 'gridExtra', 'corrplot', 'viridis', 'RColorBrewer', \
+      'readxl', 'openxlsx', 'base64enc', 'reshape2', 'knitr', 'nortest', 'lavaan', \
+      'styler', 'lintr', 'testthat' \
+    ), Ncpus = parallel::detectCores())"
+
+# Verify R installation and package availability
+RUN R -q -e " \
+library(jsonlite); \
+library(dplyr); \
+library(ggplot2); \
+library(forecast); \
+library(randomForest); \
+cat('✅ All R packages installed successfully\\n'); \
+cat('R version:', R.version.string, '\\n'); \
+cat('Installed packages:', length(.packages(all.available=TRUE)), '\\n'); \
+"
+
+# Create base metadata file for versioning
+RUN set -eux; \
+    BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ); \
+    R_VERSION=$(R --version | head -1); \
+    jq -n \
+        --arg build_date "$BUILD_DATE" \
+        --arg r_version "$R_VERSION" \
+        --arg base_image "rocker/r2u:noble" \
+        '{build_date: $build_date, r_version: $r_version, base_image: $base_image}' \
+        > /opt/rmcp-base-info.json
+
+# Add pre-optimized Python environment to base image
+# This dramatically speeds up subsequent builds by having pip in the base
+RUN --mount=type=cache,target=/root/.cache/pip,id=pip-cache-${TARGETPLATFORM} \
+    --mount=type=cache,target=/tmp/pip-cache,id=pip-temp-${TARGETPLATFORM} \
+    pip3 install --upgrade pip setuptools wheel \
+        --cache-dir=/tmp/pip-cache
+
+# Final cleanup 
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETPLATFORM} \
+    set -eux; \
+    # Clean any locks before cleanup
+    rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*; \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
+
+WORKDIR /workspace
+CMD ["R"]

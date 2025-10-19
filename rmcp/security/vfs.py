@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from ..config import get_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,31 +38,44 @@ class VFS:
     def __init__(
         self,
         allowed_roots: List[Path],
-        read_only: bool = True,
-        max_file_size: int = 50 * 1024 * 1024,  # 50MB
+        read_only: bool = None,
+        max_file_size: int = None,
         allowed_mime_types: Optional[List[str]] = None,
     ):
         self.allowed_roots = [root.resolve() for root in allowed_roots]
-        self.read_only = read_only
-        self.max_file_size = max_file_size
+
+        # Use configuration defaults if not provided
+        config = get_config()
+        self.read_only = (
+            read_only if read_only is not None else config.security.vfs_read_only
+        )
+        self.max_file_size = (
+            max_file_size
+            if max_file_size is not None
+            else config.security.vfs_max_file_size
+        )
         # Default allowed MIME types for data analysis
-        self.allowed_mime_types = allowed_mime_types or [
-            "text/plain",
-            "text/csv",
-            "application/json",
-            "application/xml",
-            "text/xml",
-            "application/pdf",
-            "text/tab-separated-values",
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            # Image types for visualization output
-            "image/png",
-            "image/jpeg",
-            "image/jpg",
-            "image/svg+xml",
-            "image/pdf",
-        ]
+        self.allowed_mime_types = (
+            allowed_mime_types
+            or config.security.vfs_allowed_mime_types
+            or [
+                "text/plain",
+                "text/csv",
+                "application/json",
+                "application/xml",
+                "text/xml",
+                "application/pdf",
+                "text/tab-separated-values",
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                # Image types for visualization output
+                "image/png",
+                "image/jpeg",
+                "image/jpg",
+                "image/svg+xml",
+                "image/pdf",
+            ]
+        )
         logger.info(
             f"VFS initialized: {len(self.allowed_roots)} roots, "
             f"read_only={read_only}, max_size={max_file_size}"

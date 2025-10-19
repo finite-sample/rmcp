@@ -477,8 +477,8 @@ class ResourcesRegistry:
     ) -> Dict[str, Any]:
         """Collect environment metadata including R and Python details."""
         package_vector = ", ".join(f'"{pkg}"' for pkg in _REQUIRED_R_PACKAGES)
-        r_script = """
-packages <- c({packages})
+        r_script = f"""
+packages <- c({package_vector})
 package_details <- lapply(packages, function(pkg) {{
   available <- requireNamespace(pkg, quietly = TRUE)
   version <- if (available) as.character(packageVersion(pkg)) else NA_character_
@@ -493,9 +493,7 @@ result <- list(
   platform = R.version$platform,
   packages = package_details
 )
-""".format(
-            packages=package_vector
-        )
+"""
         r_environment = await execute_r_script_async(r_script, {}, context)
         python_info = {
             "version": platform.python_version(),

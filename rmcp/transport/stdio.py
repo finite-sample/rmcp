@@ -36,11 +36,12 @@ class StdioTransport(Transport):
     - Graceful error handling
     """
 
-    def __init__(self):
+    def __init__(self, max_workers: int = 2):
         super().__init__("stdio")
         self._stdin_reader: asyncio.StreamReader = None
         self._stdout_writer: Union[asyncio.StreamWriter, Any] = None
         self._shutdown_event = asyncio.Event()
+        self._max_workers = max_workers
 
     async def startup(self) -> None:
         """Initialize stdin/stdout streams."""
@@ -92,7 +93,9 @@ class StdioTransport(Transport):
         logger.info("Using Windows fallback I/O method")
 
         # Use ThreadPoolExecutor for blocking I/O operations
-        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        self._executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=self._max_workers
+        )
 
         # Create a simple stream reader that works with Windows
         self._stdin_reader = asyncio.StreamReader()

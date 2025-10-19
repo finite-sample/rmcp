@@ -10,7 +10,7 @@ Following the principle: "Makes cross-cutting features universal without globals
 import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Optional, Self
 
 if TYPE_CHECKING:
     from .server import MCPServer
@@ -91,7 +91,7 @@ class Context:
         log_callback: Optional[
             Callable[[str, str, Dict[str, Any]], Awaitable[None]]
         ] = None,
-    ) -> "Context":
+    ) -> Self:
         """Create a new context for a request."""
         request_state = RequestState(
             request_id=request_id,
