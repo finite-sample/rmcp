@@ -192,6 +192,7 @@ jobs:
         echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
         
     - name: Generate artifact attestation for development image
+      if: steps.check-changes.outputs.should_build == 'true'
       uses: actions/attest-build-provenance@v1
       with:
         subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -199,6 +200,7 @@ jobs:
         push-to-registry: true
 
     - name: Generate artifact attestation for production image
+      if: steps.check-changes.outputs.should_build == 'true'
       uses: actions/attest-build-provenance@v1
       with:
         subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}

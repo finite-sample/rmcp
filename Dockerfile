@@ -48,7 +48,7 @@ RUN --mount=type=cache,target=/root/.cache/pip,id=pip-dev-${TARGETPLATFORM} \
         "flake8==6.1.0" \
         "pytest==8.0.0" \
         "pytest-cov==4.0.0" \
-        "pytest-asyncio==0.23.3" \
+        "pytest-asyncio==0.24.0" \
         # Core dependencies
         "click==8.1.7" \
         "jsonschema==4.21.1" \
