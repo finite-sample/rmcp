@@ -38,11 +38,17 @@ RUN set -eux; \
 # Configure r2u binary package manager for faster installation
 RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
 
-# Install mkcert for HTTPS development
+# Install mkcert for HTTPS development (multi-architecture support)
+ARG TARGETPLATFORM
 RUN set -eux; \
     MKCERT_VERSION="v1.4.4"; \
+    case "${TARGETPLATFORM}" in \
+        "linux/amd64") MKCERT_ARCH="linux-amd64" ;; \
+        "linux/arm64") MKCERT_ARCH="linux-arm64" ;; \
+        *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \
+    esac; \
     curl -Lo /usr/local/bin/mkcert \
-        "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-linux-amd64"; \
+        "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-${MKCERT_ARCH}"; \
     chmod +x /usr/local/bin/mkcert; \
     # Verify installation
     mkcert -version
