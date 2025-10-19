@@ -112,14 +112,9 @@ RUN set -eux; \
         '{build_date: $build_date, r_version: $r_version, base_image: $base_image}' \
         > /opt/rmcp-base-info.json
 
-# Add pre-optimized Python environment to base image
-# This dramatically speeds up subsequent builds by having pip in the base
-# Use --break-system-packages to override PEP 668 externally-managed-environment restriction
-RUN --mount=type=cache,target=/root/.cache/pip,id=pip-cache-${TARGETPLATFORM} \
-    --mount=type=cache,target=/tmp/pip-cache,id=pip-temp-${TARGETPLATFORM} \
-    pip3 install --upgrade pip setuptools wheel \
-        --cache-dir=/tmp/pip-cache \
-        --break-system-packages
+# Python environment is ready via system packages
+# Skip system pip upgrade to avoid Debian package conflicts
+# Individual stages will handle pip upgrades in virtual environments
 
 # Final cleanup 
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETPLATFORM} \
