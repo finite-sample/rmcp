@@ -65,17 +65,22 @@ class HTTPTransport(Transport):
         # SSL/TLS configuration validation
         if self.ssl_keyfile or self.ssl_certfile:
             if not self.ssl_keyfile:
-                raise ValueError("SSL key file is required when SSL certificate is specified")
+                raise ValueError(
+                    "SSL key file is required when SSL certificate is specified"
+                )
             if not self.ssl_certfile:
-                raise ValueError("SSL certificate file is required when SSL key is specified")
-            
+                raise ValueError(
+                    "SSL certificate file is required when SSL key is specified"
+                )
+
             # Validate files exist
             from pathlib import Path
+
             if not Path(self.ssl_keyfile).is_file():
                 raise ValueError(f"SSL key file not found: {self.ssl_keyfile}")
             if not Path(self.ssl_certfile).is_file():
                 raise ValueError(f"SSL certificate file not found: {self.ssl_certfile}")
-        
+
         self.is_https = bool(self.ssl_keyfile and self.ssl_certfile)
 
         # Security validation

@@ -258,7 +258,10 @@ class TestHTTPSTransportIntegration:
         )
 
         # Check that FastAPI app has CORS middleware configured
-        middleware_classes = [type(m.cls) if hasattr(m, 'cls') else type(m) for m in transport.app.user_middleware]
+        middleware_classes = [
+            type(m.cls) if hasattr(m, "cls") else type(m)
+            for m in transport.app.user_middleware
+        ]
         from fastapi.middleware.cors import CORSMiddleware
 
         assert CORSMiddleware in middleware_classes
