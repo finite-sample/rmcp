@@ -7,6 +7,7 @@
 # Load required libraries
 library(plm)
 library(lmtest)
+library(knitr)
 
 # Prepare data and parameters
 formula <- as.formula(args$formula)
@@ -68,7 +69,7 @@ result <- list(
         paste(as.character(knitr::kable(
           tidy_model,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         # Fallback: create summary table
@@ -81,7 +82,7 @@ result <- list(
         paste(as.character(knitr::kable(
           panel_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       }
     ),
     interpretation = paste0(

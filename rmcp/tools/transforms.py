@@ -78,10 +78,11 @@ async def lag_lead(context, params) -> dict[str, Any]:
             "variables": {"type": "array", "items": {"type": "string"}},
             "percentiles": {
                 "type": "array",
-                "items": {"type": "number", "minimum": 0, "maximum": 0.5},
+                "items": {"type": "number", "minimum": 0, "maximum": 1},
                 "minItems": 2,
                 "maxItems": 2,
-                "default": [0.01, 0.99],
+                "default": [0.05, 0.95],
+                "description": "Lower and upper percentiles for winsorization [lower, upper]",
             },
         },
         "required": ["data", "variables"],

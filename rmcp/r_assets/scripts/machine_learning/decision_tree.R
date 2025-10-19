@@ -6,6 +6,7 @@
 
 # Load required libraries
 library(rpart)
+library(knitr)
 
 # Prepare data and parameters
 formula <- as.formula(args$formula)

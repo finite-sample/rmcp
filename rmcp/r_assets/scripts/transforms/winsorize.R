@@ -6,10 +6,21 @@
 
 # Prepare data and parameters
 variables <- args$variables
-lower_percentile <- args$lower_percentile %||% 0.05
-upper_percentile <- args$upper_percentile %||% 0.95
+percentiles <- args$percentiles %||% c(0.05, 0.95)
+lower_percentile <- percentiles[1]
+upper_percentile <- percentiles[2]
+
+# Validate percentiles
+if (lower_percentile >= upper_percentile) {
+  stop("Lower percentile must be less than upper percentile")
+}
+if (lower_percentile < 0 || upper_percentile > 1) {
+  stop("Percentiles must be between 0 and 1")
+}
 
 # Load required libraries
+library(knitr)
+
 result_data <- data
 outliers_summary <- list()
 

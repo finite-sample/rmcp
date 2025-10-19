@@ -62,14 +62,14 @@ result <- list(
         paste(as.character(knitr::kable(
           tidy_anova,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         # Fallback: format the data frame directly
         paste(as.character(knitr::kable(
           tidy_anova,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       }
     ),
     interpretation = paste0(
