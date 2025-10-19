@@ -46,7 +46,7 @@ RUN --mount=type=cache,target=/root/.cache/pip,id=pip-dev-${TARGETPLATFORM} \
         "black==23.12.1" \
         "isort==5.13.2" \
         "flake8==6.1.0" \
-        "pytest==8.0.0" \
+        "pytest==8.2.0" \
         "pytest-cov==4.0.0" \
         "pytest-asyncio==0.24.0" \
         # Core dependencies
