@@ -32,7 +32,9 @@ RUN set -eux; \
         gfortran \
         # mkcert dependencies for HTTPS development
         libnss3-tools \
-        curl; \
+        curl \
+        # JSON processing for metadata generation
+        jq; \
     rm -rf /var/lib/apt/lists/*
 
 # Configure r2u binary package manager for faster installation
@@ -103,7 +105,15 @@ cat('Installed packages:', length(.packages(all.available=TRUE)), '\\n'); \
 "
 
 # Create base metadata file for versioning
-RUN echo "{\"build_date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"r_version\":\"$(R --version | head -1)\",\"base_image\":\"rocker/r2u:noble\"}" > /opt/rmcp-base-info.json
+RUN set -eux; \
+    BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ); \
+    R_VERSION=$(R --version | head -1); \
+    jq -n \
+        --arg build_date "$BUILD_DATE" \
+        --arg r_version "$R_VERSION" \
+        --arg base_image "rocker/r2u:noble" \
+        '{build_date: $build_date, r_version: $r_version, base_image: $base_image}' \
+        > /opt/rmcp-base-info.json
 
 # Final cleanup
 RUN apt-get autoremove -y && \
