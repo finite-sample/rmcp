@@ -331,10 +331,11 @@ class LocalCIValidator:
             test_count = "unknown"
             if "Tests collected:" in stdout:
                 import re
-                match = re.search(r'Tests collected: (\d+)', stdout)
+
+                match = re.search(r"Tests collected: (\d+)", stdout)
                 if match:
                     test_count = match.group(1)
-            
+
             self.log(f"Complete test suite passed ({test_count} tests)")
             self.results.append(("Test Suite", True, f"All {test_count} tests passed"))
             return True

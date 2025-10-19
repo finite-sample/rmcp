@@ -79,8 +79,7 @@ class HTTPTransport(Transport):
             )
         elif not self._is_localhost and self.is_https:
             logger.info(
-                f"🔒 HTTPS enabled for remote binding to {self.host}:"
-                f"{self.port}"
+                f"🔒 HTTPS enabled for remote binding to {self.host}:" f"{self.port}"
             )
         self.app = FastAPI(title="RMCP HTTP Transport", version="1.0.0")
         self._notification_queue: queue.Queue[dict[str, Any]] = queue.Queue()
