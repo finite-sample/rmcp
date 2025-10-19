@@ -18,10 +18,12 @@ LABEL org.opencontainers.image.vendor="RMCP Project"
 LABEL org.opencontainers.image.source="https://github.com/finite-sample/rmcp"
 
 # Install system dependencies (shared between dev and prod)
-# Use cache mount for apt to dramatically speed up builds
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
+# Use cache mount for apt downloads only (avoid lock conflicts in multi-platform builds)
+ARG TARGETPLATFORM
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETPLATFORM} \
     set -eux; \
+    # Clean any existing locks and ensure clean state
+    rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         python3 python3-pip python3-venv python3-dev \
@@ -38,8 +40,8 @@ RUN --mount=type=cache,target=/var/cache/apt \
         curl \
         # JSON processing for metadata generation
         jq; \
-    # Clean temporary files but preserve cache mounts
-    rm -rf /tmp/* /var/tmp/*
+    # Clean package lists and temporary files
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Configure r2u binary package manager for faster installation
 RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
@@ -63,7 +65,7 @@ RUN set -eux; \
 # Merge groups to reduce layers and use parallel installation where possible
 
 # Groups 1-2: Essential data manipulation, stats, and modeling packages
-RUN --mount=type=cache,target=/tmp/downloaded_packages \
+RUN --mount=type=cache,target=/tmp/downloaded_packages,id=r-cache-${TARGETPLATFORM} \
     R -q -e "install.packages(c( \
       'jsonlite', 'dplyr', 'rlang', 'data.table', 'tidyr', \
       'MASS', 'boot', 'survival', 'lattice', \
@@ -72,7 +74,7 @@ RUN --mount=type=cache,target=/tmp/downloaded_packages \
     ), Ncpus = parallel::detectCores())"
 
 # Groups 3-4: Time series and machine learning packages  
-RUN --mount=type=cache,target=/tmp/downloaded_packages \
+RUN --mount=type=cache,target=/tmp/downloaded_packages,id=r-cache-${TARGETPLATFORM} \
     R -q -e "install.packages(c( \
       'forecast', 'vars', 'urca', 'tseries', 'zoo', 'xts', 'TTR', 'quantmod', \
       'e1071', 'caret', 'nnet', 'gbm', 'xgboost', 'kernlab', 'cluster', \
@@ -80,7 +82,7 @@ RUN --mount=type=cache,target=/tmp/downloaded_packages \
     ), Ncpus = parallel::detectCores())"
 
 # Groups 5-7: Visualization, I/O, and development packages
-RUN --mount=type=cache,target=/tmp/downloaded_packages \
+RUN --mount=type=cache,target=/tmp/downloaded_packages,id=r-cache-${TARGETPLATFORM} \
     R -q -e "install.packages(c( \
       'ggplot2', 'gridExtra', 'corrplot', 'viridis', 'RColorBrewer', \
       'readxl', 'openxlsx', 'base64enc', 'reshape2', 'knitr', 'nortest', 'lavaan', \
@@ -112,17 +114,19 @@ RUN set -eux; \
 
 # Add pre-optimized Python environment to base image
 # This dramatically speeds up subsequent builds by having pip in the base
-RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=cache,target=/tmp/pip-cache \
+RUN --mount=type=cache,target=/root/.cache/pip,id=pip-cache-${TARGETPLATFORM} \
+    --mount=type=cache,target=/tmp/pip-cache,id=pip-temp-${TARGETPLATFORM} \
     pip3 install --upgrade pip setuptools wheel \
         --cache-dir=/tmp/pip-cache
 
-# Final cleanup (preserve cache mounts)
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
+# Final cleanup 
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETPLATFORM} \
+    set -eux; \
+    # Clean any locks before cleanup
+    rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*; \
     apt-get autoremove -y && \
     apt-get clean && \
-    rm -rf /tmp/* /var/tmp/* /root/.cache
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
 
 WORKDIR /workspace
 CMD ["R"]

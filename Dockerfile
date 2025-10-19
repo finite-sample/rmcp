@@ -32,9 +32,10 @@ FROM base AS development
 
 # Create Python virtual environment with development dependencies
 # Use cache mount for pip to dramatically speed up builds
+ARG TARGETPLATFORM
 ENV VENV=/opt/venv
-RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=cache,target=/tmp/pip-cache \
+RUN --mount=type=cache,target=/root/.cache/pip,id=pip-dev-${TARGETPLATFORM} \
+    --mount=type=cache,target=/tmp/pip-cache,id=pip-dev-temp-${TARGETPLATFORM} \
     set -eux; \
     python3 -m venv "$VENV"; \
     . "$VENV/bin/activate"; \
@@ -88,8 +89,8 @@ FROM base AS builder
 # Create Python virtual environment with minimal production dependencies
 # Use cache mount for pip to dramatically speed up builds
 ENV VENV=/opt/venv
-RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=cache,target=/tmp/pip-cache \
+RUN --mount=type=cache,target=/root/.cache/pip,id=pip-prod-${TARGETPLATFORM} \
+    --mount=type=cache,target=/tmp/pip-cache,id=pip-prod-temp-${TARGETPLATFORM} \
     set -eux; \
     python3 -m venv "$VENV"; \
     . "$VENV/bin/activate"; \
@@ -117,8 +118,8 @@ COPY pyproject.toml ./
 RUN echo "# RMCP Production Build" > README.md
 COPY rmcp/ ./rmcp/
 # Build wheel for production installation with cache mount
-RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=cache,target=/tmp/build-cache \
+RUN --mount=type=cache,target=/root/.cache/pip,id=pip-build-${TARGETPLATFORM} \
+    --mount=type=cache,target=/tmp/build-cache,id=build-cache-${TARGETPLATFORM} \
     . "$VENV/bin/activate" && \
     pip wheel --no-deps . -w /build/wheels/ --cache-dir=/tmp/build-cache
 
@@ -151,10 +152,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1
 
 # Install only runtime dependencies (no build tools)
-# Use cache mount for apt to speed up package installation
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
+# Use cache mount for apt downloads only (avoid lock conflicts)
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-prod-${TARGETPLATFORM} \
     set -eux; \
+    # Clean any existing locks and ensure clean state
+    rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         # Python runtime (no dev packages)
@@ -168,8 +170,8 @@ RUN --mount=type=cache,target=/var/cache/apt \
         # R runtime dependencies
         r-base-core \
         littler; \
-    # Clean temporary files but preserve cache mounts
-    rm -rf /tmp/* /var/tmp/* /root/.cache
+    # Clean package lists and temporary files
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
 
 # Copy R packages and configuration from production-base, then configure
 COPY --from=production-base /usr/local/lib/R /usr/local/lib/R
