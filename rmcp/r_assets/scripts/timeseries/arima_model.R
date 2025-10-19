@@ -70,7 +70,7 @@ result <- list(
       {
         # Try to tidy the ARIMA model
         tidy_model <- broom::tidy(model)
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           tidy_model,
           format = "markdown", digits = 4
         ))
@@ -83,7 +83,7 @@ result <- list(
           BIC = BIC(model),
           Observations = length(values)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           model_summary,
           format = "markdown", digits = 4
         ))

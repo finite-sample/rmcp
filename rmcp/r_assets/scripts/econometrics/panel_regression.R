@@ -65,7 +65,7 @@ result <- list(
       {
         # Try to tidy the panel model
         tidy_model <- broom::tidy(model)
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           tidy_model,
           format = "markdown", digits = 4
         ))
@@ -78,7 +78,7 @@ result <- list(
           Time_Periods = pdim(model)$nT$T,
           R_Squared = round(summary(model)$r.squared[1], 4)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           panel_summary,
           format = "markdown", digits = 4
         ))

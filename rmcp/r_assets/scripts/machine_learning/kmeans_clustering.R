@@ -67,7 +67,7 @@ result <- list(
           Variance_Explained = round(between_ss / total_ss * 100, 2),
           Silhouette_Score = round(silhouette_score, 3)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           cluster_summary,
           format = "markdown", digits = 4
         ))

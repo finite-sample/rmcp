@@ -55,7 +55,7 @@ result <- list(
           Total_Observations = length(values_clean),
           Outlier_Percentage = round(length(outliers) / length(values_clean) * 100, 2)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           outlier_df,
           format = "markdown", digits = 4
         ))

@@ -55,10 +55,10 @@ result <- list(
             Missing_Values = ifelse(is.null(ft$n_missing), 0, ft$n_missing)
           )
         }))
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           freq_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Frequency tables created successfully"

@@ -51,7 +51,7 @@ result <- list(
           Variables = length(variables),
           Observations = nrow(result_data)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           std_summary,
           format = "markdown", digits = 4
         ))

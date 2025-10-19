@@ -55,7 +55,7 @@ result <- list(
           Total_Outliers_Capped = total_capped,
           Observations = nrow(result_data)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           winsor_summary,
           format = "markdown", digits = 4
         ))

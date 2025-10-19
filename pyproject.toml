@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rmcp"
-version = "0.4.1"
+version = "0.4.2"
 description = "Comprehensive Model Context Protocol server with 44 statistical analysis tools, flexible configuration, and HTTP transport"
 authors = ["Gaurav Sood <gsood07@gmail.com>"]
 license = "MIT"
@@ -43,8 +43,8 @@ all = ["fastapi", "uvicorn", "sse-starlette"]
 # Hybrid approach: Docker for R integration, Poetry for cross-platform Python testing
 [tool.poetry.group.dev.dependencies]
 # Essential dependencies for cross-platform Python testing
-pytest = ">=8.0.0"
-pytest-asyncio = ">=0.21.0"
+pytest = ">=8.2.0"
+pytest-asyncio = ">=0.24.0"
 black = ">=23.0.0"
 isort = ">=5.12.0"
 flake8 = ">=6.0.0"
@@ -85,6 +85,8 @@ addopts = [
     "--strict-markers",
     "--strict-config",
 ]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "asyncio: marks tests as async",
     "local: marks tests that require local IDE setup (not run in CI)",

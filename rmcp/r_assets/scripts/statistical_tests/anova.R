@@ -59,14 +59,14 @@ result <- list(
       {
         # Try to tidy the ANOVA table
         tidy_anova <- broom::tidy(anova_table)
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           tidy_anova,
           format = "markdown", digits = 4
         ))
       },
       error = function(e) {
         # Fallback: format the data frame directly
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           tidy_anova,
           format = "markdown", digits = 4
         ))

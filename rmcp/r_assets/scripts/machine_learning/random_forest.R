@@ -113,7 +113,7 @@ result <- list(
           OOB_Error = if (is.null(oob_error_val)) NA else round(oob_error_val, 4),
           Observations = nrow(data)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           rf_summary,
           format = "markdown", digits = 4
         ))

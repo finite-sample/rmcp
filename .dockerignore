@@ -133,4 +133,4 @@ logs/
 .ipynb_checkpoints/
 
 # VS Code workspace files
-*.code-workspace
+*.code-workspace# Docker optimization test - Sun Oct 19 09:30:48 PDT 2025

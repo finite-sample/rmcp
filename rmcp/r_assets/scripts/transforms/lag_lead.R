@@ -48,7 +48,7 @@ result <- list(
           Variables_Created = length(created_vars),
           Observations = nrow(result_data)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           lagLead_summary,
           format = "markdown", digits = 4
         ))

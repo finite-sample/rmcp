@@ -62,7 +62,7 @@ result <- list(
           Log_Transformed = log_transform,
           Observations = nrow(result_data)
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           diff_summary,
           format = "markdown", digits = 4
         ))

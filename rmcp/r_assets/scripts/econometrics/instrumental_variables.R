@@ -67,7 +67,7 @@ result <- list(
       {
         # Try to tidy the IV model
         tidy_model <- broom::tidy(iv_model)
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           tidy_model,
           format = "markdown", digits = 4
         ))
@@ -80,7 +80,7 @@ result <- list(
           Observations = nobs(iv_model),
           Robust_SE = robust
         )
-        as.character(knitr::kable(
+        paste(as.character(knitr::kable(
           iv_summary,
           format = "markdown", digits = 4
         ))
