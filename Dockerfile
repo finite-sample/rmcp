@@ -8,7 +8,7 @@
 # ============================================================================
 # STAGE: Base Environment (Pre-built R environment)
 # ============================================================================
-FROM ghcr.io/finite-sample/rmcp-base:latest AS base
+FROM ghcr.io/finite-sample/rmcp/rmcp-base:latest AS base
 
 # Base image already contains:
 # - rocker/r2u:noble with optimized R package installation
