@@ -54,7 +54,7 @@ result <- list(
         paste(as.character(knitr::kable(
           std_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Variables standardized successfully"

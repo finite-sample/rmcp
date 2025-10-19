@@ -65,7 +65,7 @@ result <- list(
         paste(as.character(knitr::kable(
           diff_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Variable differences computed successfully"

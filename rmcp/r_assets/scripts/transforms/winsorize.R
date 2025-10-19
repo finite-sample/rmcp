@@ -58,7 +58,7 @@ result <- list(
         paste(as.character(knitr::kable(
           winsor_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Variables winsorized successfully"

@@ -3,12 +3,12 @@ RMCP Documentation
 
 **Statistical Analysis through Natural Conversation**
 
-RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. With 44 statistical analysis tools across 11 categories, RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+RMCP is a Model Context Protocol (MCP) server that provides comprehensive statistical analysis capabilities through R. With 53 statistical analysis tools across 11 categories, RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 Features
 --------
 
-* **44 Statistical Tools** across 11 categories including regression, time series, machine learning, and visualization
+* **53 Statistical Tools** across 11 categories including regression, time series, machine learning, and visualization
 * **Natural Language Interface** - Convert plain English to statistical formulas and analyses
 * **Professional Visualizations** - Inline plots and charts displayed directly in Claude conversations  
 * **MCP Protocol Support** - Full compatibility with Claude Desktop and other MCP clients
@@ -37,6 +37,7 @@ Documentation
 
    user_guide/installation
    user_guide/quick_start
+   configuration/index
    troubleshooting
 
 .. toctree::

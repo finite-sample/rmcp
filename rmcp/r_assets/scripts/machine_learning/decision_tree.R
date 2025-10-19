@@ -37,7 +37,7 @@ if (tree_type == "classification") {
   accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
   performance <- list(
     accuracy = accuracy,
-    confusion_matrix = as.list(as.data.frame.matrix(confusion_matrix))
+    confusion_matrix = lapply(seq_len(nrow(confusion_matrix)), function(i) as.numeric(confusion_matrix[i, ]))
   )
 } else {
   # Regression metrics
@@ -54,10 +54,16 @@ if (tree_type == "classification") {
 }
 # Variable importance
 var_importance <- tree_model$variable.importance
+if (is.null(var_importance) || length(var_importance) == 0) {
+  # Create empty named list to ensure it's an object in JSON
+  var_importance <- setNames(list(), character(0))
+} else {
+  var_importance <- as.list(var_importance)
+}
 result <- list(
   tree_type = tree_type,
   performance = performance,
-  variable_importance = as.list(var_importance),
+  variable_importance = var_importance,
   predictions = as.numeric(predictions),
   n_nodes = nrow(tree_model$frame),
   n_obs = nrow(data),
@@ -72,7 +78,7 @@ result <- list(
         paste(as.character(knitr::kable(
           tidy_tree,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         # Fallback: create summary table
@@ -85,7 +91,7 @@ result <- list(
         paste(as.character(knitr::kable(
           tree_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       }
     ),
     interpretation = paste0(

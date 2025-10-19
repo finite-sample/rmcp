@@ -21,17 +21,19 @@ try:
     version = __version__
     release = __version__
 except ImportError:
-    version = "0.3.7"
-    release = "0.3.7"
+    version = "0.5.0"
+    release = "0.5.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
+    "sphinx.ext.autosummary", 
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.autosectionlabel",
     "myst_parser",
 ]
 
@@ -74,10 +76,16 @@ autodoc_default_options = {
     "special-members": "__init__",
     "undoc-members": True,
     "exclude-members": "__weakref__",
+    "show-inheritance": True,
 }
+autodoc_typehints = "both"
+autodoc_typehints_description_target = "documented"
+autodoc_preserve_defaults = True
 
 # autosummary
 autosummary_generate = True
+autosummary_generate_overwrite = True
+autosummary_imported_members = False
 
 # napoleon - for Google/NumPy style docstrings
 napoleon_google_docstring = True
@@ -96,7 +104,12 @@ myst_enable_extensions = [
     "deflist",
     "tasklist",
     "colon_fence",
+    "attrs_inline",
+    "attrs_block", 
 ]
+
+# autosectionlabel 
+autosectionlabel_prefix_document = True
 
 # Copy button configuration
 copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "

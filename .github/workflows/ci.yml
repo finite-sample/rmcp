@@ -295,13 +295,26 @@ jobs:
         library(styler)
         files_to_check <- list.files(c('R', 'scripts'), pattern='[.]R\$', recursive=TRUE, full.names=TRUE)
         if (length(files_to_check) > 0) {
-          style_results <- styler::style_file(files_to_check, dry='on', include_roxygen_examples = FALSE)
-          if (any(style_results\$changed)) {
-            cat('❌ R code style issues found\\n')
+          cat('Checking style for', length(files_to_check), 'R files...\\n')
+          tryCatch({
+            style_results <- styler::style_file(files_to_check, dry='on', include_roxygen_examples = FALSE)
+            if (!is.null(style_results) && !any(is.na(style_results\$changed))) {
+              if (any(style_results\$changed)) {
+                cat('❌ R code style issues found\\n')
+                quit(status=1)
+              } else {
+                cat('✅ R code style check passed\\n')
+              }
+            } else {
+              cat('❌ R code style check encountered errors\\n')
+              quit(status=1)
+            }
+          }, error = function(e) {
+            cat('❌ R styling error:', e\$message, '\\n')
             quit(status=1)
-          } else {
-            cat('✅ R code style check passed\\n')
-          }
+          })
+        } else {
+          cat('✅ No R files found to check\\n')
         }
         "
     

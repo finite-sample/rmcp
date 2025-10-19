@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "rmcp"
-version = "0.4.2"
-description = "Comprehensive Model Context Protocol server with 44 statistical analysis tools, flexible configuration, and HTTP transport"
+version = "0.5.0"
+description = "Comprehensive Model Context Protocol server with 53 statistical analysis tools, universal operation approval system, and HTTP transport"
 authors = ["Gaurav Sood <gsood07@gmail.com>"]
 license = "MIT"
 readme = "README.md"

@@ -51,7 +51,7 @@ result <- list(
         paste(as.character(knitr::kable(
           lagLead_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Lag/lead variables created successfully"

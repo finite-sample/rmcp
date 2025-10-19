@@ -77,7 +77,7 @@ result <- list(
         paste(as.character(knitr::kable(
           decomp_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Time series decomposition completed successfully"

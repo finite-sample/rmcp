@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - JSON configuration file support (`~/.rmcp/config.json`, `/etc/rmcp/config.json`)
   - Command-line option overrides with `--config` and `--debug` flags
   - Type-safe configuration validation with detailed error messages
-  - Full documentation in `docs/configuration.md`
+  - Auto-generated documentation in `docs/configuration/` via Sphinx autodoc
 
 - **🔧 Enhanced CLI Interface**: Improved command-line experience
   - Global `--config` option to specify custom configuration files

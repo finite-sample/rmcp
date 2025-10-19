@@ -29,8 +29,8 @@ if (!is.null(group_var) && !is.na(group_var)) {
 }
 p <- p + theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
-# Save to file if path provided
-if (!is.null(file_path)) {
+# Save to file if path provided and not empty
+if (!is.null(file_path) && nchar(file_path) > 0) {
   ggsave(file_path, plot = p, width = width / 100, height = height / 100, dpi = 100)
   plot_saved <- file.exists(file_path)
 } else {
@@ -63,8 +63,8 @@ result <- list(
   n_obs = length(values),
   plot_saved = plot_saved
 )
-# Add file path if provided
-if (!is.null(file_path)) {
+# Add file path if provided and not empty
+if (!is.null(file_path) && nchar(file_path) > 0) {
   result$file_path <- file_path
 }
 # Generate base64 image if requested

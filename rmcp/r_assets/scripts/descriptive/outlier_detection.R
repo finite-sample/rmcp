@@ -58,7 +58,7 @@ result <- list(
         paste(as.character(knitr::kable(
           outlier_df,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Outlier detection completed successfully"
