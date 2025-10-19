@@ -311,11 +311,11 @@ async def boxplot(context, params) -> dict[str, Any]:
             image_width=width,
             image_height=height,
         )
-        
+
         # Ensure schema compliance by mapping R script result to expected format
         stats = result.get("statistics", {})
         group_var = result.get("group_variable")
-        
+
         # Create summary_statistics in the format expected by schema
         if group_var and group_var != "NA":
             # For grouped data (not implemented in R script yet, use overall stats)
@@ -326,7 +326,7 @@ async def boxplot(context, params) -> dict[str, Any]:
                     "q3": stats.get("q3", 0),
                     "iqr": stats.get("iqr", 0),
                     "n": result.get("n_obs", 0),
-                    "outliers": stats.get("outliers_count", 0)
+                    "outliers": stats.get("outliers_count", 0),
                 }
             }
         else:
@@ -338,16 +338,16 @@ async def boxplot(context, params) -> dict[str, Any]:
                     "q3": stats.get("q3", 0),
                     "iqr": stats.get("iqr", 0),
                     "n": result.get("n_obs", 0),
-                    "outliers": stats.get("outliers_count", 0)
+                    "outliers": stats.get("outliers_count", 0),
                 }
             }
-        
+
         schema_compliant_result = {
             "plot_type": result.get("plot_type", "boxplot"),
             "variable": result.get("variable", params.get("variable", "")),
-            "summary_statistics": summary_statistics
+            "summary_statistics": summary_statistics,
         }
-        
+
         # Add optional fields if present
         if "group_variable" in result:
             schema_compliant_result["group_variable"] = result["group_variable"]
@@ -357,7 +357,7 @@ async def boxplot(context, params) -> dict[str, Any]:
             schema_compliant_result["image_data"] = result["image_data"]
         if "image_mime_type" in result:
             schema_compliant_result["image_mime_type"] = result["image_mime_type"]
-        
+
         await context.info("Box plot created successfully")
         return schema_compliant_result
     except Exception as e:
@@ -566,16 +566,20 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             image_width=width,
             image_height=height,
         )
-        
+
         # Ensure schema compliance by mapping R script result to expected format
         schema_compliant_result = {
             "plot_type": result.get("plot_type", "heatmap"),
             "correlation_matrix": result.get("correlation_matrix", {}),
             "variables": result.get("variables", []),
-            "method": result.get("statistics", {}).get("method", params.get("method", "pearson")),
-            "n_variables": result.get("statistics", {}).get("n_variables", len(result.get("variables", []))),
+            "method": result.get("statistics", {}).get(
+                "method", params.get("method", "pearson")
+            ),
+            "n_variables": result.get("statistics", {}).get(
+                "n_variables", len(result.get("variables", []))
+            ),
         }
-        
+
         # Add optional fields if present
         if "dimensions" in result:
             schema_compliant_result["dimensions"] = result["dimensions"]
@@ -583,7 +587,7 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             schema_compliant_result["image_data"] = result["image_data"]
         if "image_mime_type" in result:
             schema_compliant_result["image_mime_type"] = result["image_mime_type"]
-        
+
         await context.info("Correlation heatmap created successfully")
         return schema_compliant_result
     except Exception as e:
