@@ -219,24 +219,49 @@ class TestHTTPSTransportIntegration:
                 assert health_data["status"] == "healthy"
                 assert health_data["transport"] == "HTTP"
 
-                # Test MCP endpoint with JSON-RPC
-                mcp_response = await client.post(
+                # First initialize the session
+                init_response = await client.post(
                     "https://127.0.0.1:8444/mcp",
                     json={
                         "jsonrpc": "2.0",
                         "id": 1,
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": "2025-06-18",
+                            "capabilities": {},
+                            "clientInfo": {"name": "test-client", "version": "1.0.0"},
+                        },
+                    },
+                    headers={
+                        "Content-Type": "application/json",
+                        "MCP-Protocol-Version": "2025-06-18",
+                    },
+                )
+                assert init_response.status_code == 200
+
+                # Get session ID from response headers
+                session_id = init_response.headers.get("mcp-session-id")
+                assert session_id is not None
+
+                # Then test MCP endpoint with tools/list using the same session
+                mcp_response = await client.post(
+                    "https://127.0.0.1:8444/mcp",
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": 2,
                         "method": "tools/list",
                         "params": {},
                     },
                     headers={
                         "Content-Type": "application/json",
-                        "MCP-Protocol-Version": "2024-11-05",
+                        "MCP-Protocol-Version": "2025-06-18",
+                        "mcp-session-id": session_id,
                     },
                 )
                 assert mcp_response.status_code == 200
                 mcp_data = mcp_response.json()
                 assert mcp_data["jsonrpc"] == "2.0"
-                assert mcp_data["id"] == 1
+                assert mcp_data["id"] == 2
                 assert mcp_data["result"]["status"] == "ok"
                 assert mcp_data["result"]["method"] == "tools/list"
 
@@ -258,13 +283,24 @@ class TestHTTPSTransportIntegration:
         )
 
         # Check that FastAPI app has CORS middleware configured
-        middleware_classes = [
-            type(m.cls) if hasattr(m, "cls") else type(m)
-            for m in transport.app.user_middleware
-        ]
         from fastapi.middleware.cors import CORSMiddleware
 
-        assert CORSMiddleware in middleware_classes
+        # Debug: Print actual middleware structure
+        middleware_info = []
+        for m in transport.app.user_middleware:
+            if hasattr(m, "cls"):
+                middleware_info.append(m.cls)
+            else:
+                middleware_info.append(type(m))
+
+        # Check if CORSMiddleware is configured (could be in middleware stack)
+        has_cors = any(
+            cls == CORSMiddleware
+            or (hasattr(cls, "__name__") and "CORSMiddleware" in cls.__name__)
+            for cls in middleware_info
+        )
+
+        assert has_cors, f"CORS middleware not found. Found: {middleware_info}"
 
     def test_security_warning_for_remote_http(self, caplog):
         """Test that security warning is issued for remote HTTP binding."""
@@ -311,10 +347,10 @@ class TestHTTPSConfigurationIntegration:
         monkeypatch.setenv("RMCP_HTTP_SSL_KEYFILE", https_certificates["key_file"])
         monkeypatch.setenv("RMCP_HTTP_SSL_CERTFILE", https_certificates["cert_file"])
 
-        # Import after setting environment variables
+        # Import after setting environment variables and force reload
         from rmcp.config import get_config
 
-        config = get_config()
+        config = get_config(reload=True)
 
         # Verify configuration picked up environment variables
         assert config.http.ssl_keyfile == https_certificates["key_file"]
@@ -350,6 +386,11 @@ class TestHTTPSEdgeCases:
 
     def test_partial_ssl_configuration_cli_keyfile_only(self, https_certificates):
         """Test error when only keyfile is provided via CLI."""
+        # Clear config cache to avoid fallback values from previous tests
+        from rmcp.config import get_config
+
+        get_config(reload=True)
+
         with pytest.raises(ValueError, match="SSL certificate file is required"):
             HTTPTransport(
                 host="localhost",
@@ -360,6 +401,11 @@ class TestHTTPSEdgeCases:
 
     def test_partial_ssl_configuration_cli_certfile_only(self, https_certificates):
         """Test error when only certfile is provided via CLI."""
+        # Clear config cache to avoid fallback values from previous tests
+        from rmcp.config import get_config
+
+        get_config(reload=True)
+
         with pytest.raises(ValueError, match="SSL key file is required"):
             HTTPTransport(
                 host="localhost",
