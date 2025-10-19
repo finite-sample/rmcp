@@ -68,6 +68,9 @@ ENV_PREFIX = "RMCP_"
 ENV_MAPPINGS = {
     "RMCP_HTTP_HOST": "http.host",
     "RMCP_HTTP_PORT": "http.port",
+    "RMCP_HTTP_SSL_KEYFILE": "http.ssl_keyfile",
+    "RMCP_HTTP_SSL_CERTFILE": "http.ssl_certfile",
+    "RMCP_HTTP_SSL_KEYFILE_PASSWORD": "http.ssl_keyfile_password",
     "RMCP_HTTP_CORS_ORIGINS": "http.cors_origins",
     "RMCP_R_TIMEOUT": "r.timeout",
     "RMCP_R_SESSION_TIMEOUT": "r.session_timeout",

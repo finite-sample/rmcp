@@ -228,7 +228,10 @@ class TestHTTPSTransportIntegration:
                         "method": "tools/list",
                         "params": {},
                     },
-                    headers={"Content-Type": "application/json"},
+                    headers={
+                        "Content-Type": "application/json",
+                        "MCP-Protocol-Version": "2024-11-05",
+                    },
                 )
                 assert mcp_response.status_code == 200
                 mcp_data = mcp_response.json()
@@ -255,7 +258,7 @@ class TestHTTPSTransportIntegration:
         )
 
         # Check that FastAPI app has CORS middleware configured
-        middleware_classes = [type(m) for m in transport.app.user_middleware]
+        middleware_classes = [type(m.cls) if hasattr(m, 'cls') else type(m) for m in transport.app.user_middleware]
         from fastapi.middleware.cors import CORSMiddleware
 
         assert CORSMiddleware in middleware_classes
@@ -302,8 +305,8 @@ class TestHTTPSConfigurationIntegration:
     ):
         """Test SSL configuration through environment variables."""
         # Set environment variables
-        monkeypatch.setenv("RMCP_SSL_KEYFILE", https_certificates["key_file"])
-        monkeypatch.setenv("RMCP_SSL_CERTFILE", https_certificates["cert_file"])
+        monkeypatch.setenv("RMCP_HTTP_SSL_KEYFILE", https_certificates["key_file"])
+        monkeypatch.setenv("RMCP_HTTP_SSL_CERTFILE", https_certificates["cert_file"])
 
         # Import after setting environment variables
         from rmcp.config import get_config
@@ -406,7 +409,7 @@ class TestHTTPSDockerIntegration:
             ["mkcert", "-version"], capture_output=True, text=True, timeout=10
         )
         assert result.returncode == 0
-        assert "mkcert" in result.stdout.lower()
+        assert result.stdout.strip().startswith("v")
 
     @pytest.mark.skipif(
         not os.path.exists("/.dockerenv"),
