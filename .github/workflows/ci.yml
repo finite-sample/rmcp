@@ -73,14 +73,14 @@ jobs:
       run: |
         echo "Checking if Docker build is needed..."
         
-        # Always build on main branch or if it's a manual trigger
-        if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+        # Always build if it's a manual trigger
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "should_build=true" >> $GITHUB_OUTPUT
-          echo "🔄 Building: Main branch or manual trigger"
+          echo "🔄 Building: Manual trigger (forced)"
           exit 0
         fi
         
-        # For PRs, check if relevant files changed
+        # Check if relevant files changed (applies to both main branch and PRs)
         changed_files=$(git diff --name-only HEAD~1 HEAD)
         echo "Changed files: $changed_files"
         
