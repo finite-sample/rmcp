@@ -1,12 +1,12 @@
 # Poetry lock file (using Docker-first approach)
 poetry.lock
 
-# Git
+# Git (expensive to copy, never needed in container)
 .git
 .gitignore
 .gitattributes
 
-# Virtual environments
+# Virtual environments (never needed in container)
 .env
 .venv
 env/
@@ -19,7 +19,7 @@ venv.bak/
 rmcp_test_env/
 *_test_env/
 
-# IDEs
+# IDEs (never needed in container)
 .vscode/
 .cursor/
 .idea/
@@ -27,7 +27,7 @@ rmcp_test_env/
 *.swo
 *~
 
-# OS specific files
+# OS specific files (never needed in container)
 .DS_Store
 .DS_Store?
 ._*
@@ -36,7 +36,7 @@ rmcp_test_env/
 ehthumbs.db
 Thumbs.db
 
-# Cache and build artifacts
+# Cache and build artifacts (expensive to copy, never needed)
 __pycache__/
 *.py[cod]
 *$py.class
@@ -47,15 +47,20 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+.tox/
+.nox/
 
-# Documentation builds
+# Documentation builds (large, not needed in runtime)
 docs/_build/
 docs/.doctrees/
+docs/.docbuild/
+site/
 
-# Test artifacts
+# Test artifacts (large files, not needed in runtime)
 test_*.log
 test_*.xlsx
 test_*.csv
+test_*.json
 *.png
 *.jpg
 *.jpeg
@@ -65,18 +70,20 @@ temp_*.R
 temp_*.json
 response.json
 Rplots.pdf
+.coverage.*
+htmlcov/
 
-# SSL certificates (generated dynamically)
+# SSL certificates (generated dynamically, not needed)
 certs/
 *.pem
 *.key
 *.crt
 *.p12
 
-# Code Assistants
+# Code Assistants (not needed in container)
 .claude/
 
-# CI/CD artifacts
+# CI/CD artifacts (large, not needed in runtime)
 .github/
 
 # README and docs (not needed in runtime container)
@@ -85,5 +92,45 @@ CHANGELOG.md
 examples/
 docs/
 
-# Development scripts
+# Development and maintenance scripts (not needed in runtime)
 scripts/
+
+# Additional Docker optimization excludes
+# Docker files themselves (not needed in container)
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Node.js artifacts (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database files (not needed in container)
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files (can be large)
+*.log
+logs/
+
+# Backup files (can be large)
+*.bak
+*.backup
+*.old
+*.orig
+
+# Archive files (can be large)
+*.tar
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code workspace files
+*.code-workspace

@@ -18,7 +18,10 @@ LABEL org.opencontainers.image.vendor="RMCP Project"
 LABEL org.opencontainers.image.source="https://github.com/finite-sample/rmcp"
 
 # Install system dependencies (shared between dev and prod)
-RUN set -eux; \
+# Use cache mount for apt to dramatically speed up builds
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         python3 python3-pip python3-venv python3-dev \
@@ -35,7 +38,8 @@ RUN set -eux; \
         curl \
         # JSON processing for metadata generation
         jq; \
-    rm -rf /var/lib/apt/lists/*
+    # Clean temporary files but preserve cache mounts
+    rm -rf /tmp/* /var/tmp/*
 
 # Configure r2u binary package manager for faster installation
 RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
@@ -56,41 +60,32 @@ RUN set -eux; \
     mkcert -version
 
 # Install R packages in optimized groups (leverages r2u binary packages)
-# Group 1: Essential data manipulation and stats packages
-RUN R -q -e "install.packages(c( \
-  'jsonlite', 'dplyr', 'rlang', 'data.table', 'tidyr', \
-  'MASS', 'boot', 'survival', 'lattice' \
-))"
+# Merge groups to reduce layers and use parallel installation where possible
 
-# Group 2: Statistical modeling packages  
-RUN R -q -e "install.packages(c( \
-  'plm', 'lmtest', 'sandwich', 'AER', 'car', 'broom', \
-  'nlme', 'mgcv', 'lme4', 'glmnet' \
-))"
+# Groups 1-2: Essential data manipulation, stats, and modeling packages
+RUN --mount=type=cache,target=/tmp/downloaded_packages \
+    R -q -e "install.packages(c( \
+      'jsonlite', 'dplyr', 'rlang', 'data.table', 'tidyr', \
+      'MASS', 'boot', 'survival', 'lattice', \
+      'plm', 'lmtest', 'sandwich', 'AER', 'car', 'broom', \
+      'nlme', 'mgcv', 'lme4', 'glmnet' \
+    ), Ncpus = parallel::detectCores())"
 
-# Group 3: Time series and forecasting
-RUN R -q -e "install.packages(c( \
-  'forecast', 'vars', 'urca', 'tseries', 'zoo', 'xts', 'TTR', 'quantmod' \
-))"
+# Groups 3-4: Time series and machine learning packages  
+RUN --mount=type=cache,target=/tmp/downloaded_packages \
+    R -q -e "install.packages(c( \
+      'forecast', 'vars', 'urca', 'tseries', 'zoo', 'xts', 'TTR', 'quantmod', \
+      'e1071', 'caret', 'nnet', 'gbm', 'xgboost', 'kernlab', 'cluster', \
+      'rpart', 'randomForest' \
+    ), Ncpus = parallel::detectCores())"
 
-# Group 4: Machine learning packages
-RUN R -q -e "install.packages(c( \
-  'e1071', 'caret', 'nnet', 'gbm', 'xgboost', 'kernlab', 'cluster', \
-  'rpart', 'randomForest' \
-))"
-
-# Group 5: Visualization and formatting
-RUN R -q -e "install.packages(c( \
-  'ggplot2', 'gridExtra', 'corrplot', 'viridis', 'RColorBrewer' \
-))"
-
-# Group 6: File I/O and utilities
-RUN R -q -e "install.packages(c( \
-  'readxl', 'openxlsx', 'base64enc', 'reshape2', 'knitr', 'nortest', 'lavaan' \
-))"
-
-# Group 7: Development and testing packages
-RUN R -q -e "install.packages(c('styler','lintr','testthat'))"
+# Groups 5-7: Visualization, I/O, and development packages
+RUN --mount=type=cache,target=/tmp/downloaded_packages \
+    R -q -e "install.packages(c( \
+      'ggplot2', 'gridExtra', 'corrplot', 'viridis', 'RColorBrewer', \
+      'readxl', 'openxlsx', 'base64enc', 'reshape2', 'knitr', 'nortest', 'lavaan', \
+      'styler', 'lintr', 'testthat' \
+    ), Ncpus = parallel::detectCores())"
 
 # Verify R installation and package availability
 RUN R -q -e " \
@@ -115,10 +110,19 @@ RUN set -eux; \
         '{build_date: $build_date, r_version: $r_version, base_image: $base_image}' \
         > /opt/rmcp-base-info.json
 
-# Final cleanup
-RUN apt-get autoremove -y && \
+# Add pre-optimized Python environment to base image
+# This dramatically speeds up subsequent builds by having pip in the base
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/tmp/pip-cache \
+    pip3 install --upgrade pip setuptools wheel \
+        --cache-dir=/tmp/pip-cache
+
+# Final cleanup (preserve cache mounts)
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    apt-get autoremove -y && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
+    rm -rf /tmp/* /var/tmp/* /root/.cache
 
 WORKDIR /workspace
 CMD ["R"]

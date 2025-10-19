@@ -31,31 +31,35 @@ FROM base AS development
 # Note: R packages and mkcert are already installed in base image
 
 # Create Python virtual environment with development dependencies
+# Use cache mount for pip to dramatically speed up builds
 ENV VENV=/opt/venv
-RUN set -eux; \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/tmp/pip-cache \
+    set -eux; \
     python3 -m venv "$VENV"; \
     . "$VENV/bin/activate"; \
-    pip install --upgrade pip; \
-    pip install --no-cache-dir \
-        # Development tools
-        "black>=23.0.0" \
-        "isort>=5.12.0" \
-        "flake8>=6.0.0" \
-        "pytest>=8.0.0" \
-        "pytest-cov>=4.0.0" \
-        "pytest-asyncio>=0.21.0" \
+    pip install --upgrade pip \
+        --cache-dir=/tmp/pip-cache; \
+    pip install --cache-dir=/tmp/pip-cache \
+        # Development tools (pinned for cache stability)
+        "black==23.12.1" \
+        "isort==5.13.2" \
+        "flake8==6.1.0" \
+        "pytest==8.0.0" \
+        "pytest-cov==4.0.0" \
+        "pytest-asyncio==0.23.3" \
         # Core dependencies
-        "click>=8.1.0" \
-        "jsonschema>=4.0.0" \
-        "build>=0.10.0" \
-        # Optional HTTP transport dependencies
-        "fastapi>=0.100.0" \
-        "uvicorn>=0.20.0" \
-        "sse-starlette>=1.6.0" \
-        "httpx>=0.24.0" \
+        "click==8.1.7" \
+        "jsonschema==4.21.1" \
+        "build==1.0.3" \
+        # HTTP transport dependencies
+        "fastapi==0.109.0" \
+        "uvicorn==0.26.0" \
+        "sse-starlette==1.8.2" \
+        "httpx==0.26.0" \
         # Workflow dependencies
-        "pandas>=1.5.0" \
-        "openpyxl>=3.0.0"
+        "pandas==2.2.0" \
+        "openpyxl==3.1.2"
 
 # Ensure venv tools are first on PATH for subsequent steps/CI
 ENV PATH="$VENV/bin:$PATH"
@@ -63,6 +67,15 @@ ENV PATH="$VENV/bin:$PATH"
 # Development workspace setup
 WORKDIR /workspace
 ENV PYTHONPATH=/workspace
+
+# Copy source code for development
+COPY pyproject.toml ./
+# Create a minimal README for build
+RUN echo "# RMCP Development Environment" > README.md
+COPY rmcp/ ./rmcp/
+
+# Install RMCP in development mode
+RUN . "$VENV/bin/activate" && pip install -e .
 
 # Default to bash for development work
 CMD ["bash"]
@@ -73,40 +86,48 @@ CMD ["bash"]
 FROM base AS builder
 
 # Create Python virtual environment with minimal production dependencies
+# Use cache mount for pip to dramatically speed up builds
 ENV VENV=/opt/venv
-RUN set -eux; \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/tmp/pip-cache \
+    set -eux; \
     python3 -m venv "$VENV"; \
     . "$VENV/bin/activate"; \
-    pip install --upgrade pip; \
-    pip install --no-cache-dir \
-        # Core dependencies
-        "click>=8.1.0" \
-        "jsonschema>=4.0.0" \
-        "build>=0.10.0" \
+    pip install --upgrade pip \
+        --cache-dir=/tmp/pip-cache; \
+    pip install --cache-dir=/tmp/pip-cache \
+        # Core dependencies (pinned for cache stability)
+        "click==8.1.7" \
+        "jsonschema==4.21.1" \
+        "build==1.0.3" \
         # HTTP transport dependencies
-        "fastapi>=0.100.0" \
-        "uvicorn>=0.20.0" \
-        "sse-starlette>=1.6.0" \
-        "httpx>=0.24.0" \
+        "fastapi==0.109.0" \
+        "uvicorn==0.26.0" \
+        "sse-starlette==1.8.2" \
+        "httpx==0.26.0" \
         # Workflow dependencies
-        "pandas>=1.5.0" \
-        "openpyxl>=3.0.0"
+        "pandas==2.2.0" \
+        "openpyxl==3.1.2"
 
 # Copy and build RMCP package
 WORKDIR /build
+# Copy files in order of change frequency (metadata first, then code)
 COPY pyproject.toml ./
-COPY rmcp/ ./rmcp/
 # Create minimal README.md for build (excluded by .dockerignore)
 RUN echo "# RMCP Production Build" > README.md
-# Build wheel for production installation
-RUN . "$VENV/bin/activate" && pip wheel --no-deps . -w /build/wheels/
+COPY rmcp/ ./rmcp/
+# Build wheel for production installation with cache mount
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/tmp/build-cache \
+    . "$VENV/bin/activate" && \
+    pip wheel --no-deps . -w /build/wheels/ --cache-dir=/tmp/build-cache
 
 # ============================================================================
 # STAGE: Production Runtime (Optimized from base image)
 # ============================================================================
 FROM base AS production-base
 
-# Remove development tools to minimize size
+# Remove development tools to minimize size (aggressive cleanup)
 RUN set -eux; \
     apt-get remove -y \
         build-essential \
@@ -117,6 +138,7 @@ RUN set -eux; \
         curl; \
     apt-get autoremove -y; \
     apt-get clean; \
+    # Clean temporary files
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
 
 # ============================================================================
@@ -129,7 +151,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1
 
 # Install only runtime dependencies (no build tools)
-RUN set -eux; \
+# Use cache mount for apt to speed up package installation
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         # Python runtime (no dev packages)
@@ -143,38 +168,26 @@ RUN set -eux; \
         # R runtime dependencies
         r-base-core \
         littler; \
-    # Clean up aggressively
-    rm -rf /var/lib/apt/lists/* \
-           /tmp/* \
-           /var/tmp/* \
-           /root/.cache
+    # Clean temporary files but preserve cache mounts
+    rm -rf /tmp/* /var/tmp/* /root/.cache
 
-# Copy R packages and configuration from production-base
+# Copy R packages and configuration from production-base, then configure
 COPY --from=production-base /usr/local/lib/R /usr/local/lib/R
 COPY --from=production-base /usr/lib/R /usr/lib/R  
 COPY --from=production-base /etc/R /etc/R
-
-# Configure R for container environment
 RUN echo "options(bspm.sudo = TRUE)" >> /etc/R/Rprofile.site
 
-# Copy Python virtual environment from builder stage
+# Copy Python virtual environment and install RMCP (merged operations)
 ENV VENV=/opt/venv
 COPY --from=builder /opt/venv /opt/venv
-
-# Copy the built wheel from builder stage  
 COPY --from=builder /build/wheels/ /tmp/wheels/
-
-# Ensure venv tools are first on PATH
 ENV PATH="$VENV/bin:$PATH"
 
-# Install RMCP from pre-built wheel (as root before user switch)
-RUN pip install --no-deps /tmp/wheels/*.whl
-
-# Clean up wheels
-RUN rm -rf /tmp/wheels/
-
-# Create non-root user for security
-RUN groupadd -r rmcp && useradd -r -g rmcp -d /app -s /bin/bash rmcp
+# Install RMCP, create user, and setup directory in single layer
+RUN pip install --no-deps /tmp/wheels/*.whl && \
+    rm -rf /tmp/wheels/ && \
+    groupadd -r rmcp && \
+    useradd -r -g rmcp -d /app -s /bin/bash rmcp
 
 # Set up application directory
 WORKDIR /app
