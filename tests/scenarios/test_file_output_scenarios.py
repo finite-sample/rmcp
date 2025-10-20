@@ -100,21 +100,25 @@ class TestFileOutputScenarios:
         # Step 3: Execute iris analysis with file saving (using local test data)
         iris_analysis_code = f"""
         # Load iris data from local file (no network dependency)
-        library(readr)
-        iris_data <- read_csv("{context.iris_data_path}")
+        iris_data <- read.csv("{context.iris_data_path}")
         
-        # Create analysis plot
-        library(ggplot2)
-        p <- ggplot(iris_data, aes(x = petal_length, y = petal_width, color = species)) +
-          geom_point(size = 3, alpha = 0.7) +
-          labs(title = "Iris Species Classification", 
-               x = "Petal Length (cm)", 
-               y = "Petal Width (cm)") +
-          theme_minimal()
-        
-        # Save plot to file
+        # Create analysis plot using base R (more reliable in CI)
         plot_file <- "{context.temp_dir}/iris_analysis.png"
-        ggsave(plot_file, plot = p, width = 10, height = 6, dpi = 300)
+        png(plot_file, width = 800, height = 600, res = 100)
+        
+        # Create scatter plot with base R
+        plot(iris_data$petal_length, iris_data$petal_width, 
+             col = as.factor(iris_data$species),
+             pch = 19, 
+             main = "Iris Species Classification",
+             xlab = "Petal Length (cm)",
+             ylab = "Petal Width (cm)")
+        legend("topright", 
+               legend = unique(iris_data$species),
+               col = 1:length(unique(iris_data$species)), 
+               pch = 19)
+        
+        dev.off()
         
         # Also save data to CSV
         data_file <- "{context.temp_dir}/iris_data.csv"
@@ -127,7 +131,13 @@ class TestFileOutputScenarios:
           plot_exists = file.exists(plot_file),
           data_exists = file.exists(data_file),
           rows_analyzed = nrow(iris_data),
-          species_count = length(unique(iris_data$species))
+          species_count = length(unique(iris_data$species)),
+          debug_info = list(
+            file_size_plot = if(file.exists(plot_file)) file.size(plot_file) else 0,
+            file_size_data = if(file.exists(data_file)) file.size(data_file) else 0,
+            working_dir = getwd(),
+            temp_dir_exists = dir.exists("{context.temp_dir}")
+          )
         )
         """
 
@@ -135,14 +145,17 @@ class TestFileOutputScenarios:
             context,
             {
                 "r_code": iris_analysis_code,
-                "description": "Complete iris analysis with file saving",
-                "packages": ["readr", "ggplot2"],
+                "description": "Complete iris analysis with file saving (base R)",
+                "packages": [],  # Using base R only, no external packages needed
                 "return_image": False,
             },
         )
 
-        # Verify analysis succeeded
-        assert analysis_result["success"] is True
+        # Verify analysis succeeded with better error reporting
+        if not analysis_result["success"]:
+            error_info = analysis_result.get("error", "Unknown error")
+            pytest.fail(f"R analysis failed: {error_info}")
+
         result_data = analysis_result["result"]
         assert result_data["analysis_complete"] is True
         assert result_data["plot_exists"] is True
