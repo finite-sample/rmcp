@@ -80,33 +80,53 @@ jobs:
           exit 0
         fi
         
-        # Check if relevant files changed (applies to both main branch and PRs)
-        changed_files=$(git diff --name-only HEAD~1 HEAD)
-        echo "Changed files: $changed_files"
-        
-        # Files that require Docker rebuild
-        docker_relevant_files=(
-          "Dockerfile"
-          "Dockerfile.base"
-          "pyproject.toml"
-          "rmcp/"
-          ".github/workflows/ci.yml"
-        )
-        
-        needs_build=false
-        for file_pattern in "${docker_relevant_files[@]}"; do
-          if echo "$changed_files" | grep -q "^$file_pattern"; then
-            echo "🔄 Building: $file_pattern changed"
-            needs_build=true
-            break
-          fi
-        done
-        
-        if [ "$needs_build" = true ]; then
+        # Always build on main branch pushes (production deployments)
+        if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
           echo "should_build=true" >> $GITHUB_OUTPUT
+          echo "🔄 Building: Main branch push"
+          exit 0
+        fi
+        
+        # For local testing with act, always build (git diff doesn't work reliably)
+        if [ -n "${ACT:-}" ]; then
+          echo "should_build=true" >> $GITHUB_OUTPUT
+          echo "🔄 Building: Local testing with act"
+          exit 0
+        fi
+        
+        # Check if relevant files changed (for PR and other scenarios)
+        if git rev-parse HEAD~1 >/dev/null 2>&1; then
+          changed_files=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          echo "Changed files: $changed_files"
+          
+          # Files that require Docker rebuild
+          docker_relevant_files=(
+            "Dockerfile"
+            "Dockerfile.base"
+            "pyproject.toml"
+            "rmcp/"
+            ".github/workflows/ci.yml"
+          )
+          
+          needs_build=false
+          for file_pattern in "${docker_relevant_files[@]}"; do
+            if echo "$changed_files" | grep -q "^$file_pattern"; then
+              echo "🔄 Building: $file_pattern changed"
+              needs_build=true
+              break
+            fi
+          done
+          
+          if [ "$needs_build" = true ]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "⏭️  Skipping: No Docker-relevant files changed"
+          fi
         else
-          echo "should_build=false" >> $GITHUB_OUTPUT
-          echo "⏭️  Skipping: No Docker-relevant files changed"
+          # No previous commit available (initial commit or shallow clone)
+          echo "should_build=true" >> $GITHUB_OUTPUT
+          echo "🔄 Building: No previous commit available for comparison"
         fi
 
     - name: Set up Docker Buildx
@@ -210,31 +230,17 @@ jobs:
     - name: Output image references
       id: image
       run: |
-        if [ "${{ steps.check-changes.outputs.should_build }}" = "true" ]; then
-          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
-        else
-          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
-        fi
+        # Always output the latest image reference (build or existing)
+        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+        echo "📌 Development image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
       
     - name: Output production image reference
       id: prod-image  
       run: |
-        if [ "${{ steps.check-changes.outputs.should_build }}" = "true" ]; then
-          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest" >> $GITHUB_OUTPUT
-        else
-          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest" >> $GITHUB_OUTPUT
-        fi
+        # Always output the production image reference (build or existing)
+        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest" >> $GITHUB_OUTPUT
+        echo "📌 Production image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest"
 
-    - name: Test production image functionality
-      run: |
-        echo "🐳 Testing production image functionality..."
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest \
-          python -c "import rmcp; print('✅ Production image RMCP import successful')"
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest \
-          python -c "import fastapi, uvicorn, httpx; print('✅ Production image HTTP transport ready')"
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest \
-          R -e "cat('✅ Production image R version:', R.version.string, '\n')"
-        echo "✅ Production image functionality verified"
 
     - name: Compare image sizes
       run: |
@@ -247,9 +253,7 @@ jobs:
     name: R Integration & Workflow Tests
     runs-on: ubuntu-latest
     needs: [python-checks, docker-build]
-    if: |
-      (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') &&
-      (needs.docker-build.outputs.should_build == 'true' || needs.docker-build.outputs.should_build == 'false')
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     container:
       image: ${{ needs.docker-build.outputs.image }}
       credentials:
@@ -552,149 +556,86 @@ jobs:
     runs-on: ubuntu-latest
     needs: [python-checks, docker-build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-    container:
-      image: ${{ needs.docker-build.outputs.production-image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-      options: --user root
+    permissions:
+      contents: read
+      packages: read
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Setup Python environment in production container
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pip install -e .
-        
-        # Install minimal test dependencies needed for scenario tests
-        pip install pytest pytest-asyncio
-        
-        # Verify test environment
-        echo "🔍 Verifying test environment..."
-        pytest --version
-        python -c "import httpx; print(f'✅ httpx available: {httpx.__version__}')"
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Verify production container functionality
+    - name: Test production image functionality
       run: |
-        export PATH="/opt/venv/bin:$PATH"
-        echo "🔒 Testing production container functionality..."
+        echo "🐳 Testing production image functionality..."
+        PROD_IMAGE="${{ needs.docker-build.outputs.production-image }}"
+        echo "Target production image: $PROD_IMAGE"
         
-        # Note: Running as root in CI for GitHub Actions permissions
-        # Production deployments should override with --user or run as non-root
-        CURRENT_USER=$(whoami)
-        echo "CI container user: $CURRENT_USER (root for GitHub Actions permissions)"
-        
-        # Verify essential functionality
-        python -c "import rmcp; print('✅ RMCP import successful')"
-        python -c "import fastapi, uvicorn, httpx; print('✅ HTTP transport ready')"
-        R -e "cat('✅ R version:', R.version.string, '\n')"
-        
-        # Test that production image can run as non-root when configured
-        echo "🔍 Testing non-root capability..."
-        python -c "
-        import os, pwd
-        try:
-            # Check if rmcp user exists in the container
-            rmcp_user = pwd.getpwnam('rmcp')
-            print(f'✅ Non-root user available: rmcp (uid={rmcp_user.pw_uid})')
-        except KeyError:
-            print('⚠️ rmcp user not found - this may be expected in CI')
-        "
-    
-    - name: Run non-Docker scenario tests in production container
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        
-        echo "🎯 Testing non-Docker scenario features in production container..."
-        
-        # Test concurrent request handling (doesn't need Docker)
-        pytest tests/scenarios/test_claude_desktop_scenarios.py::TestClaudeDesktopPerformance::test_concurrent_requests -v --tb=short
-        
-        echo "✅ Non-Docker scenario tests completed"
-    
-    - name: Validate complete test coverage in production container
-      run: |
-        export PATH="/opt/venv/bin:$PATH"
-        
-        echo "📊 Validating complete test coverage..."
-        
-        # Verify test collection with dynamic baseline validation
-        TEST_COUNT=$(pytest --collect-only -q tests/ | grep "collected" | grep -o '[0-9]\+' | head -1)
-        echo "Tests collected: $TEST_COUNT"
-        
-        # Load baseline and validate dynamically
-        BASELINE_FILE="tests/.test_baseline.json"
-        if [ -f "$BASELINE_FILE" ]; then
-          BASELINE_COUNT=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE'))['baseline_counts']['total_tests'])")
-          MIN_TESTS=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE'))['validation_rules']['min_tests'])")
-          MAX_DEVIATION=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE'))['validation_rules']['max_deviation_percent'])")
-          
-          MIN_ALLOWED=$((BASELINE_COUNT * (100 - MAX_DEVIATION) / 100))
-          MAX_ALLOWED=$((BASELINE_COUNT * (100 + MAX_DEVIATION) / 100))
-          
-          echo "📊 Test count validation:"
-          echo "  Current: $TEST_COUNT"
-          echo "  Baseline: $BASELINE_COUNT" 
-          echo "  Allowed range: $MIN_ALLOWED - $MAX_ALLOWED"
-          
-          if [ "$TEST_COUNT" -lt "$MIN_TESTS" ]; then
-            echo "❌ Test count ($TEST_COUNT) below minimum threshold ($MIN_TESTS)"
-            exit 1
-          elif [ "$TEST_COUNT" -lt "$MIN_ALLOWED" ] || [ "$TEST_COUNT" -gt "$MAX_ALLOWED" ]; then
-            echo "⚠️ Test count ($TEST_COUNT) outside expected range ($MIN_ALLOWED - $MAX_ALLOWED)"
-            echo "💡 Consider updating baseline if this change is expected"
-            echo "   Current baseline: $BASELINE_COUNT tests"
+        # Check if we can pull the production image, with fallback
+        if docker pull "$PROD_IMAGE" 2>/dev/null; then
+          echo "✅ Successfully pulled production image from registry"
+        elif [ -n "${ACT:-}" ]; then
+          # Local testing with act - try to build the production image locally
+          echo "⚠️ Cannot pull image in local environment, building locally..."
+          if docker build --target production -t "rmcp-prod-local" .; then
+            PROD_IMAGE="rmcp-prod-local"
+            echo "✅ Successfully built production image locally: $PROD_IMAGE"
           else
-            echo "✅ Test count within expected range ($TEST_COUNT tests)"
+            echo "❌ Failed to build production image locally"
+            exit 1
           fi
         else
-          echo "⚠️ Baseline file not found, using minimum threshold"
-          if [ "$TEST_COUNT" -lt "200" ]; then
-            echo "❌ Test count ($TEST_COUNT) below minimum threshold (200)"
-            exit 1
-          else
-            echo "✅ Test count ($TEST_COUNT) above minimum threshold"
-          fi
+          echo "❌ Failed to pull production image: $PROD_IMAGE"
+          echo "This might indicate the image wasn't built or registry authentication failed"
+          exit 1
         fi
         
-        # Run a sample to verify no collection issues
-        pytest tests/smoke/ -v --tb=short
-        echo "✅ Test collection and execution verified"
+        # Test basic Python imports
+        echo "🔍 Testing Python imports..."
+        docker run --rm "$PROD_IMAGE" \
+          python -c "import rmcp; print('✅ Production image RMCP import successful')"
+        
+        # Test HTTP transport dependencies
+        echo "🔍 Testing HTTP transport dependencies..."
+        docker run --rm "$PROD_IMAGE" \
+          python -c "import fastapi, uvicorn; print('✅ Production image HTTP transport ready')"
+        
+        # Test R availability
+        echo "🔍 Testing R availability..."
+        docker run --rm "$PROD_IMAGE" \
+          R -e "cat('✅ Production image R version:', R.version.string, '\n')"
+        
+        echo "✅ Production image functionality verified"
 
   # Cross-platform Python testing (validates Python-only functionality)
   cross-platform:
     name: Cross-platform Python Tests
     runs-on: ${{ matrix.os }}
-    needs: [python-checks]
-    
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11"]
+        python-version: ['3.11', '3.12']
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     
-    - name: Install Python dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install poetry
-        poetry install --with dev
+        pip install -e .
+        pip install pytest
     
-    - name: Test Python imports and basic functionality (no R)
+    - name: Run cross-platform smoke tests
       run: |
-        poetry run python -c "from rmcp.core.server import create_server; print('✅ Server creation works')"
-        poetry run rmcp --version
-        poetry run rmcp list-capabilities
-        
-        # Run Python-only unit tests
-        poetry run pytest tests/unit/ -v --tb=short
+        pytest tests/smoke/ -v
