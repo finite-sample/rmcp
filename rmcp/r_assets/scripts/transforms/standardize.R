@@ -4,6 +4,9 @@
 # This script standardizes variables using different scaling methods:
 # z-score, min-max, or robust scaling for data preprocessing.
 
+# Load required libraries
+library(knitr)
+
 # Prepare data and parameters
 variables <- args$variables
 method <- args$method %||% "z_score"

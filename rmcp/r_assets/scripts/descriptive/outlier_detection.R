@@ -4,6 +4,9 @@
 # This script detects outliers in numeric data using multiple methods:
 # IQR (Interquartile Range), Z-score, and Modified Z-score approaches.
 
+# Load required libraries
+library(knitr)
+
 # Prepare data and parameters
 variable <- args$variable
 method <- args$method %||% "iqr"

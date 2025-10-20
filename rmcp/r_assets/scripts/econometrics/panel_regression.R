@@ -8,6 +8,7 @@
 library(plm)
 library(lmtest)
 library(knitr)
+library(broom)
 
 # Prepare data and parameters
 formula <- as.formula(args$formula)

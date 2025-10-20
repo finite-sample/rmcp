@@ -8,6 +8,7 @@
 library(AER)
 library(lmtest)
 library(knitr)
+library(broom)
 
 # Prepare data and parameters
 formula_str <- args$formula

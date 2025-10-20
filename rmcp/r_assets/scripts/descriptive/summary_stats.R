@@ -5,6 +5,8 @@
 # with support for grouped analysis and customizable percentiles.
 
 library(dplyr)
+library(knitr)
+library(broom)
 
 # Main script logic
 variables <- args$variables
