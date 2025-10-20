@@ -6,7 +6,7 @@
 [![Documentation](https://github.com/finite-sample/rmcp/actions/workflows/docs.yml/badge.svg)](https://finite-sample.github.io/rmcp/)
 [![License](https://img.shields.io/github/license/finite-sample/rmcp)](https://github.com/finite-sample/rmcp/blob/main/LICENSE)
 
-**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with 44 statistical analysis tools across 11 categories. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with 44 statistical analysis tools across 11 categories and **429 R packages** from systematic CRAN task views. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## 🚀 Quick Start (30 seconds)
 
@@ -77,16 +77,21 @@ Formula building, error recovery, example datasets → *"Help me build a regress
 
 ### Prerequisites
 - **Python 3.10+** 
-- **R 4.4.0+** with packages: Install all at once:
+- **R 4.4.0+** with **comprehensive package ecosystem**: RMCP uses a systematic 429-package whitelist from CRAN task views organized into 19+ categories:
 
 ```r
+# Core packages (install these first)
 install.packages(c(
-  "jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr",
-  "forecast", "vars", "urca", "tseries", "nortest", "car",
-  "rpart", "randomForest", "ggplot2", "gridExtra", "tidyr", 
-  "rlang", "knitr", "broom"
+  "jsonlite", "dplyr", "ggplot2", "broom", "plm", "forecast", 
+  "randomForest", "rpart", "caret", "AER", "vars", "mgcv"
 ))
+
+# Full ecosystem automatically available: Machine Learning (61 packages), 
+# Econometrics (55 packages), Time Series (48 packages), 
+# Bayesian Analysis (32 packages), and more
 ```
+
+**Package Selection**: Evidence-based using CRAN task views, download statistics, and 4-tier security assessment
 
 ### Install RMCP
 
@@ -165,17 +170,18 @@ rmcp start
 docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
 ```
 
-**📖 [Complete Configuration Guide →](docs/configuration.md)**
+**📖 [Complete Configuration Guide →](docs/configuration/index.rst)** (auto-generated from code)
 
 ## 🔥 Key Features
 
 - **🎯 Natural Conversation**: Ask questions in plain English, get statistical analysis
+- **📚 Comprehensive Package Ecosystem**: 429 R packages from systematic CRAN task views with 4-tier security system
 - **📊 Professional Output**: Formatted results with markdown tables and inline visualizations  
 - **🔒 Production Ready**: Full MCP protocol compliance with HTTP transport and SSE
 - **⚙️ Flexible Configuration**: Environment variables, config files, and CLI options
 - **⚡ Fast & Reliable**: 100% test success rate across all scenarios
 - **🌐 Multiple Transports**: stdio (Claude Desktop) and HTTP (web applications)
-- **🛡️ Secure**: Controlled R execution with configurable permissions
+- **🛡️ Secure**: Evidence-based package selection with security-conscious permission tiers
 
 ## 📚 Documentation
 

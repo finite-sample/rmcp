@@ -1,11 +1,59 @@
 """
 Configuration loading and management for RMCP.
 
-Implements hierarchical configuration loading with support for:
-- Environment variables
-- Configuration files (JSON)
-- Command-line overrides
-- Validation and type conversion
+This module implements hierarchical configuration loading with support for
+multiple configuration sources in priority order:
+
+1. **Command-line arguments** (highest priority)
+2. **Environment variables** (``RMCP_*`` prefix)
+3. **User configuration file** (``~/.rmcp/config.json``)
+4. **System configuration file** (``/etc/rmcp/config.json``)
+5. **Built-in defaults** (lowest priority)
+
+Features:
+    * Automatic environment variable mapping with ``RMCP_*`` prefix
+    * JSON configuration file validation with schema
+    * Type conversion and validation
+    * Configuration caching for performance
+    * Detailed error reporting with helpful messages
+
+Environment Variable Mapping:
+    All configuration options can be set via environment variables:
+
+    * ``RMCP_HTTP_HOST`` → ``http.host``
+    * ``RMCP_HTTP_PORT`` → ``http.port``
+    * ``RMCP_R_TIMEOUT`` → ``r.timeout``
+    * ``RMCP_LOG_LEVEL`` → ``logging.level``
+    * ``RMCP_DEBUG`` → ``debug``
+
+Configuration File Format:
+    JSON files with nested structure matching the configuration model::
+
+        {
+          "http": {"host": "0.0.0.0", "port": 8000},
+          "r": {"timeout": 180, "max_sessions": 20},
+          "security": {"vfs_read_only": true},
+          "logging": {"level": "DEBUG"},
+          "debug": true
+        }
+
+Examples:
+    Load configuration with custom file::
+
+        loader = ConfigLoader()
+        config = loader.load_config(config_file="/path/to/config.json")
+
+    Load with environment variables::
+
+        os.environ["RMCP_HTTP_PORT"] = "9000"
+        os.environ["RMCP_DEBUG"] = "true"
+        config = loader.load_config()
+
+    Load with CLI overrides::
+
+        config = loader.load_config(
+            cli_overrides={"debug": True, "http": {"host": "0.0.0.0"}}
+        )
 """
 
 import copy
@@ -35,15 +83,50 @@ from .schema import CONFIG_SCHEMA
 
 
 class ConfigError(Exception):
-    """Configuration-related errors."""
+    """Configuration-related errors.
+
+    Raised when configuration loading, validation, or parsing fails.
+    Provides detailed error messages to help users fix configuration issues.
+    """
 
     pass
 
 
 class ConfigLoader:
-    """Handles loading and merging configuration from multiple sources."""
+    """Handles loading and merging configuration from multiple sources.
+
+    The ConfigLoader implements the hierarchical configuration system for RMCP,
+    automatically discovering and merging configuration from multiple sources
+    in priority order.
+
+    Features:
+        * Configuration caching for performance
+        * Automatic environment variable discovery
+        * JSON schema validation
+        * Detailed error reporting
+        * Type conversion and validation
+
+    Usage:
+        The loader is typically used as a singleton to ensure consistent
+        configuration across the application::
+
+            loader = ConfigLoader()
+            config = loader.load_config()
+
+        For custom configuration scenarios::
+
+            config = loader.load_config(
+                config_file="/custom/path/config.json",
+                cli_overrides={"debug": True}
+            )
+    """
 
     def __init__(self):
+        """Initialize the configuration loader.
+
+        Creates a new configuration loader with empty cache.
+        The cache will be populated on first load_config() call.
+        """
         self._config_cache: Optional[RMCPConfig] = None
 
     def load_config(

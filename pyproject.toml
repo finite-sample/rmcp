@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "rmcp"
-version = "0.4.2"
-description = "Comprehensive Model Context Protocol server with 44 statistical analysis tools, flexible configuration, and HTTP transport"
+version = "0.5.1"
+description = "Comprehensive Model Context Protocol server with 53 statistical analysis tools, universal operation approval system, and HTTP transport"
 authors = ["Gaurav Sood <gsood07@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -44,7 +44,7 @@ all = ["fastapi", "uvicorn", "sse-starlette"]
 [tool.poetry.group.dev.dependencies]
 # Essential dependencies for cross-platform Python testing
 pytest = ">=8.2.0"
-pytest-asyncio = ">=0.24.0"
+pytest-asyncio = ">=0.21.0"
 black = ">=23.0.0"
 isort = ">=5.12.0"
 flake8 = ">=6.0.0"
@@ -86,7 +86,7 @@ addopts = [
     "--strict-config",
 ]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
+# asyncio_default_fixture_loop_scope removed for backwards compatibility with older pytest-asyncio versions
 markers = [
     "asyncio: marks tests as async",
     "local: marks tests that require local IDE setup (not run in CI)",

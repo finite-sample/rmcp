@@ -4,6 +4,9 @@
 # This script creates lagged and lead variables for time series analysis,
 # useful for autoregressive modeling and causal inference.
 
+# Load required libraries
+library(knitr)
+
 # Prepare data and parameters
 variables <- args$variables
 lags <- args$lags %||% c(1)
@@ -51,7 +54,7 @@ result <- list(
         paste(as.character(knitr::kable(
           lagLead_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Lag/lead variables created successfully"

@@ -6,6 +6,7 @@
 
 # Load required libraries
 library(randomForest)
+library(knitr)
 
 # Prepare data and parameters
 formula <- as.formula(args$formula)
@@ -116,7 +117,7 @@ result <- list(
         paste(as.character(knitr::kable(
           rf_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Random Forest model completed successfully"

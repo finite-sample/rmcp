@@ -6,6 +6,7 @@
 
 # Load required libraries
 library(cluster)
+library(knitr)
 
 # Prepare data and parameters
 variables <- args$variables
@@ -70,7 +71,7 @@ result <- list(
         paste(as.character(knitr::kable(
           cluster_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "K-means clustering completed successfully"

@@ -4,6 +4,9 @@
 # This script generates comprehensive frequency tables for categorical or discrete variables
 # with support for percentages, sorting, and missing value analysis.
 
+# Load required libraries
+library(knitr)
+
 # Prepare data and parameters
 variables <- args$variables
 sort_by <- args$sort_by %||% "frequency"

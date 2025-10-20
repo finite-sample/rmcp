@@ -7,9 +7,9 @@
 
 # Prepare data and parameters
 test_type <- args$test_type %||% "independence"
-x_var <- args$x_var
-y_var <- args$y_var
-expected_probs <- args$expected_probs
+x_var <- args$x
+y_var <- args$y
+expected_probs <- args$expected
 
 # Load required libraries
 if (test_type == "independence") {

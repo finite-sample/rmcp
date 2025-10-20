@@ -4,6 +4,9 @@
 # This script computes differences of variables for achieving stationarity
 # in time series analysis, with optional log transformation.
 
+# Load required libraries
+library(knitr)
+
 # Prepare data and parameters
 variables <- args$variables
 differences <- args$differences %||% 1
@@ -65,7 +68,7 @@ result <- list(
         paste(as.character(knitr::kable(
           diff_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Variable differences computed successfully"

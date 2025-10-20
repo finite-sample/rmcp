@@ -308,7 +308,7 @@ async def decision_tree(context, params) -> dict[str, Any]:
             "variable_importance": {
                 "type": ["object", "null"],
                 "description": "Variable importance measures (if calculated)",
-                "additionalProperties": {"type": "array", "items": {"type": "number"}},
+                "additionalProperties": {"type": "number"},
             },
             "n_trees": {
                 "type": "integer",

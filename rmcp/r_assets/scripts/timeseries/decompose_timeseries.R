@@ -4,12 +4,17 @@
 # This script decomposes time series into trend, seasonal, and remainder
 # components using additive or multiplicative decomposition methods.
 
+# Load required libraries
+library(knitr)
+
 # Prepare data and parameters
 frequency <- args$frequency %||% 12
 decomp_type <- args$type %||% "additive"
 
 # Extract values from data
-if ("values" %in% names(args)) {
+if ("data" %in% names(args) && "values" %in% names(args$data)) {
+  values <- args$data$values
+} else if ("values" %in% names(args)) {
   values <- args$values
 } else if ("value_col" %in% names(args)) {
   value_col <- args$value_col
@@ -77,7 +82,7 @@ result <- list(
         paste(as.character(knitr::kable(
           decomp_summary,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "Time series decomposition completed successfully"

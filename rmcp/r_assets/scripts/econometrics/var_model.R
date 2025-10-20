@@ -6,6 +6,7 @@
 
 # Load required libraries
 library(vars)
+library(knitr)
 
 # Prepare data and parameters
 variables <- args$variables
@@ -63,7 +64,7 @@ result <- list(
         paste(as.character(knitr::kable(
           var_summary_df,
           format = "markdown", digits = 4
-        ))
+        )), collapse = "\n")
       },
       error = function(e) {
         "VAR model fitted successfully"

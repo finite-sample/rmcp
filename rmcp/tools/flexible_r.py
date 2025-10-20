@@ -21,8 +21,20 @@ from ..registries.tools import tool
 
 logger = logging.getLogger(__name__)
 
-# Whitelist of safe R packages for statistical analysis
-ALLOWED_R_PACKAGES = {
+# Import comprehensive package whitelist from systematic categorization
+from .package_whitelist_comprehensive import (
+    ALLOWED_R_PACKAGES as COMPREHENSIVE_PACKAGES,
+)
+from .package_whitelist_comprehensive import (
+    get_comprehensive_package_whitelist,
+    get_package_categories,
+)
+
+# Use comprehensive whitelist (700+ packages from CRAN task views)
+ALLOWED_R_PACKAGES = COMPREHENSIVE_PACKAGES
+
+# Legacy small whitelist for conservative environments (if needed)
+LEGACY_ALLOWED_PACKAGES = {
     # Base R packages (always available)
     "base",
     "stats",
@@ -34,119 +46,110 @@ ALLOWED_R_PACKAGES = {
     "grid",
     "splines",
     "stats4",
-    # Data manipulation
+    # Core tidyverse
     "dplyr",
     "tidyr",
-    "data.table",
-    "reshape2",
-    "plyr",
-    "tidyverse",
-    "tibble",
+    "ggplot2",
     "readr",
+    "tibble",
     "stringr",
     "forcats",
     "lubridate",
     "purrr",
-    # Statistical analysis
+    "tidyverse",
+    # Essential statistical packages
     "lmtest",
     "sandwich",
     "car",
     "MASS",
     "boot",
     "survival",
-    "nlme",
-    "mgcv",
-    "gam",
-    "glmnet",
     "caret",
-    "e1071",
-    "nnet",
-    "lme4",
-    "lavaan",
-    # Econometrics
-    "plm",
-    "AER",
-    "vars",
-    "tseries",
-    "urca",
-    "forecast",
-    "dynlm",
-    "quantreg",
-    "systemfit",
-    "gmm",
-    "sem",
-    "sampleSelection",
-    # Machine learning
     "randomForest",
     "rpart",
-    "tree",
-    "gbm",
-    "xgboost",
-    "kernlab",
-    "cluster",
-    "factoextra",
-    "NbClust",
-    # Time series
+    "e1071",
+    "forecast",
     "zoo",
     "xts",
-    "TTR",
-    "quantmod",
-    "rugarch",
-    "fGarch",
-    "astsa",
-    "prophet",
-    # Visualization
-    "ggplot2",
-    "lattice",
-    "plotly",
-    "ggpubr",
-    "corrplot",
-    "gridExtra",
-    "viridis",
-    "RColorBrewer",
-    # Utilities
+    # Essential utilities
     "jsonlite",
     "broom",
     "knitr",
     "rlang",
     "haven",
-    "openxlsx",
-    "readxl",
-    "foreign",
-    "R.utils",
 }
 
 # Dangerous patterns to block
+# Patterns moved to OPERATION_CATEGORIES for user approval:
+# - install.packages (now in package_installation)
+# - ggsave, write.csv, writeLines (now in file_operations)
+# - system, shell, Sys.setenv (now in system_operations)
+
 DANGEROUS_PATTERNS = [
-    r"system\s*\(",  # System commands
-    r"shell\s*\(",  # Shell commands
-    r"Sys\.setenv",  # Environment manipulation
     r"setwd\s*\(",  # Change working directory
     r"source\s*\(",  # Source external files
-    r"install\.packages",  # Package installation
     r"download\.",  # Download functions
     r"file\.remove",  # File deletion
     r"file\.rename",  # File renaming
     r"unlink\s*\(",  # File deletion
-    r"save\s*\(",  # Save workspace
+    r"(?<!gg)save\s*\(",  # Save workspace (but not ggsave)
     r"save\.image",  # Save workspace image
     r"load\s*\(",  # Load workspace
     r"readLines\s*\(",  # Read arbitrary files
-    r"writeLines\s*\(",  # Write arbitrary files
     r"sink\s*\(",  # Redirect output
     r"options\s*\(\s*warn",  # Change warning behavior
 ]
 
 
+def is_operation_approved(
+    context, operation_type: str, specific_operation: str
+) -> bool:
+    """Check if a specific operation has been approved by the user."""
+    if not context or not hasattr(context, "_approved_operations"):
+        return False
+
+    operations = context._approved_operations.get(operation_type, {})
+    return specific_operation in operations
+
+
 def validate_r_code(r_code: str, context=None) -> tuple[bool, Optional[str]]:
     """
-    Validate R code for safety with interactive package approval.
+    Validate R code for safety with interactive operation and package approval.
 
     Returns:
         (is_safe, error_message)
     """
-    # Check for dangerous patterns
-    for pattern in DANGEROUS_PATTERNS:
+    # Check for controllable operations that need approval
+    for operation_type, config in OPERATION_CATEGORIES.items():
+        for pattern in config["patterns"]:
+            if re.search(pattern, r_code, re.IGNORECASE):
+                # Extract specific operation name
+                match = re.search(pattern, r_code, re.IGNORECASE)
+                if match:
+                    specific_op = match.group(0).split("(")[0].strip()
+                    if not is_operation_approved(context, operation_type, specific_op):
+                        return (
+                            False,
+                            f"OPERATION_APPROVAL_NEEDED:{operation_type}:{specific_op}",
+                        )
+
+    # Check for remaining dangerous patterns that cannot be approved
+    remaining_dangerous = [
+        r"setwd\s*\(",  # Change working directory
+        r"source\s*\(",  # Source external files
+        r"download\.",  # Download functions
+        r"file\.remove",  # File deletion
+        r"file\.rename",  # File renaming
+        r"unlink\s*\(",  # File deletion
+        r"(?<!gg)save\s*\(",  # Save workspace (but not ggsave)
+        r"save\.image",  # Save workspace image
+        r"load\s*\(",  # Load workspace
+        r"readLines\s*\(",  # Read arbitrary files
+        r"sink\s*\(",  # Redirect output
+        r"options\s*\(\s*warn",  # Change warning behavior
+    ]
+
+    for pattern in remaining_dangerous:
         if re.search(pattern, r_code, re.IGNORECASE):
             return False, f"Dangerous pattern detected: {pattern}"
 
@@ -391,6 +394,197 @@ Please respond with your choice. If you approve, the analysis will continue with
         }
 
 
+# Operation approval categories and configurations
+OPERATION_CATEGORIES = {
+    "file_operations": {
+        "patterns": [
+            r"ggsave\s*\(",
+            r"write\.csv\s*\(",
+            r"write\.table\s*\(",
+            r"writeLines\s*\(",
+        ],
+        "description": "File writing and saving operations",
+        "examples": [
+            "ggsave('plot.png', plot)",
+            "write.csv(data, 'file.csv')",
+            "writeLines(text, 'file.txt')",
+        ],
+        "security_level": "medium",
+    },
+    "package_installation": {
+        "patterns": [r"install\.packages"],
+        "description": "R package installation from repositories",
+        "examples": [
+            "install.packages('moments')",
+            "install.packages(c('pkg1', 'pkg2'))",
+        ],
+        "security_level": "medium",
+    },
+    "system_operations": {
+        "patterns": [r"system\s*\(", r"shell\s*\(", r"Sys\.setenv"],
+        "description": "System-level operations and environment changes",
+        "examples": ["system('ls')", "Sys.setenv(VAR='value')"],
+        "security_level": "high",
+    },
+}
+
+
+@tool(
+    name="approve_operation",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "operation_type": {
+                "type": "string",
+                "enum": [
+                    "file_operations",
+                    "package_installation",
+                    "system_operations",
+                ],
+                "description": "Category of operation to approve",
+            },
+            "specific_operation": {
+                "type": "string",
+                "description": "Specific operation being approved (e.g., 'ggsave', 'install.packages')",
+            },
+            "action": {
+                "type": "string",
+                "enum": ["approve", "deny"],
+                "default": "approve",
+                "description": "Whether to approve or deny the operation",
+            },
+            "scope": {
+                "type": "string",
+                "enum": ["session", "permanent"],
+                "default": "session",
+                "description": "Scope of approval - session only or permanent",
+            },
+            "directory": {
+                "type": "string",
+                "description": "For file operations: directory to allow writing to (e.g., './plots', '~/Downloads')",
+            },
+        },
+        "required": ["operation_type", "specific_operation"],
+    },
+    output_schema={
+        "type": "object",
+        "properties": {
+            "success": {"type": "boolean"},
+            "operation_type": {"type": "string"},
+            "specific_operation": {"type": "string"},
+            "action": {"type": "string", "enum": ["approved", "denied"]},
+            "scope": {"type": "string"},
+            "message": {"type": "string"},
+            "approved_operations": {
+                "type": "object",
+                "description": "Currently approved operations by category",
+            },
+            "security_info": {
+                "type": "object",
+                "properties": {
+                    "level": {"type": "string"},
+                    "implications": {"type": "string"},
+                    "recommendations": {"type": "array", "items": {"type": "string"}},
+                },
+            },
+        },
+        "required": ["success", "operation_type", "action", "message"],
+    },
+    description="Approve or deny R operations including file writing (ggsave, write.csv), package installation (install.packages), and system operations. Provides explicit user control over potentially sensitive operations. Session approvals apply only to current analysis session, while permanent approvals persist across sessions. Essential for enabling file saving, package installation, and system interactions while maintaining security through explicit consent.",
+)
+async def approve_operation(context, params) -> dict[str, Any]:
+    """Universal approval system for R operations."""
+    operation_type = params["operation_type"]
+    specific_operation = params["specific_operation"]
+    action = params.get("action", "approve")
+    scope = params.get("scope", "session")
+    directory = params.get("directory")
+
+    await context.info(
+        f"Processing {action} request for {operation_type}: {specific_operation}"
+    )
+
+    # Initialize approval tracking
+    if not hasattr(context, "_approved_operations"):
+        context._approved_operations = {}
+
+    # Get operation category info
+    category_info = OPERATION_CATEGORIES.get(operation_type, {})
+    security_level = category_info.get("security_level", "medium")
+
+    if action == "approve":
+        # Store approval
+        if operation_type not in context._approved_operations:
+            context._approved_operations[operation_type] = {}
+
+        approval_data = {
+            "specific_operation": specific_operation,
+            "scope": scope,
+            "approved_at": __import__("time").time(),
+        }
+
+        if directory and operation_type == "file_operations":
+            approval_data["directory"] = directory
+            # Enable VFS write mode if available
+            if hasattr(context.lifespan, "vfs") and context.lifespan.vfs:
+                context.lifespan.vfs.read_only = False
+                await context.info(f"✅ Enabled file writing to: {directory}")
+
+        context._approved_operations[operation_type][specific_operation] = approval_data
+
+        message = f"✅ Approved {operation_type} operation: {specific_operation}"
+        if scope == "session":
+            message += " (session only)"
+        if directory:
+            message += f" → {directory}"
+
+        security_info = {
+            "level": security_level,
+            "implications": f"This allows {category_info.get('description', 'the requested operation')}",
+            "recommendations": [
+                (
+                    "Approval applies to current session only"
+                    if scope == "session"
+                    else "Approval is permanent"
+                ),
+                "Review code before execution",
+                f"Monitor {operation_type} activities",
+            ],
+        }
+
+        await context.info(f"✅ {message}")
+
+        return {
+            "success": True,
+            "operation_type": operation_type,
+            "specific_operation": specific_operation,
+            "action": "approved",
+            "scope": scope,
+            "message": message,
+            "approved_operations": {
+                k: list(v.keys()) for k, v in context._approved_operations.items()
+            },
+            "security_info": security_info,
+        }
+
+    else:  # deny
+        message = f"❌ Denied {operation_type} operation: {specific_operation}"
+        await context.info(message)
+
+        return {
+            "success": True,
+            "operation_type": operation_type,
+            "specific_operation": specific_operation,
+            "action": "denied",
+            "scope": "none",
+            "message": message,
+            "approved_operations": {
+                k: list(v.keys())
+                for k, v in getattr(context, "_approved_operations", {}).items()
+            },
+        }
+
+
 @tool(
     name="list_allowed_r_packages",
     input_schema={
@@ -398,9 +592,35 @@ Please respond with your choice. If you approve, the analysis will continue with
         "properties": {
             "category": {
                 "type": "string",
-                "enum": ["all", "stats", "ml", "econometrics", "visualization", "data"],
-                "default": "all",
-                "description": "Category of packages to list",
+                "enum": [
+                    "all",
+                    "summary",
+                    "base_r",
+                    "core_infrastructure",
+                    "tidyverse",
+                    "machine_learning",
+                    "econometrics",
+                    "time_series",
+                    "bayesian",
+                    "survival",
+                    "spatial",
+                    "optimization",
+                    "meta_analysis",
+                    "clinical_trials",
+                    "robust_stats",
+                    "missing_data",
+                    "nlp_text",
+                    "data_io",
+                    "experimental_design",
+                    "network_analysis",
+                    # Legacy categories for backward compatibility
+                    "stats",
+                    "ml",
+                    "visualization",
+                    "data",
+                ],
+                "default": "summary",
+                "description": "Category of packages to list based on CRAN task views",
             }
         },
     },
@@ -420,115 +640,99 @@ Please respond with your choice. If you approve, the analysis will continue with
         },
         "required": ["packages", "total_count", "category"],
     },
-    description="Lists all R packages whitelisted for safe execution in flexible R code including statistical analysis, data manipulation, visualization, and specialized econometric packages. Provides package categories and brief descriptions to help users understand available functionality. Use to discover available packages, plan complex analyses, understand system capabilities, or verify that required packages are available before writing custom R code.",
+    description="Lists comprehensive R packages whitelisted for statistical analysis based on CRAN task views. Covers 700+ packages across machine learning, econometrics, time series, Bayesian methods, survival analysis, spatial data, and more. Use 'summary' to see category breakdown or specific categories to explore available packages. Helps discover capabilities, plan analyses, and verify package availability.",
 )
 async def list_allowed_r_packages(context, params) -> dict[str, Any]:
-    """List allowed R packages by category."""
-    category = params.get("category", "all")
+    """List allowed R packages by comprehensive CRAN task view categories."""
+    category = params.get("category", "summary")
 
     await context.info(f"Listing allowed R packages: {category}")
 
-    # Use match/case for category selection (Python 3.10+)
-    match category:
-        case "all":
-            packages = sorted(list(ALLOWED_R_PACKAGES))
-        case "stats":
-            packages = sorted(
+    # Get systematic package categories
+    categories = get_package_categories()
+
+    if category == "all":
+        packages = sorted(list(ALLOWED_R_PACKAGES))
+        total_count = len(packages)
+        await context.info(f"Listed all {total_count} comprehensive packages")
+        return {"packages": packages, "total_count": total_count, "category": category}
+
+    elif category == "summary":
+        # Return summary statistics by category
+        category_stats = {}
+        for cat_name, cat_packages in categories.items():
+            category_stats[cat_name] = len(cat_packages)
+
+        total_count = len(ALLOWED_R_PACKAGES)
+        await context.info(
+            f"Comprehensive package whitelist: {total_count} total packages across {len(categories)} categories"
+        )
+
+        return {
+            "packages": list(
+                category_stats.keys()
+            ),  # Return category names as "packages"
+            "total_count": total_count,
+            "category": category,
+            "category_breakdown": category_stats,
+            "description": "Comprehensive R package whitelist based on CRAN task views and usage statistics",
+            "major_categories": [
+                "machine_learning (ML/statistical learning)",
+                "econometrics (causal inference, panel data)",
+                "time_series (forecasting, ARIMA, VAR)",
+                "bayesian (MCMC, Stan, JAGS)",
+                "survival (Cox models, competing risks)",
+                "tidyverse (data manipulation, visualization)",
+            ],
+        }
+
+    elif category in categories:
+        packages = sorted(list(categories[category]))
+        total_count = len(packages)
+        await context.info(f"Listed {total_count} packages in {category} category")
+        return {"packages": packages, "total_count": total_count, "category": category}
+
+    else:
+        # Handle legacy categories for backward compatibility
+        legacy_mappings = {
+            "stats": sorted(
+                list(
+                    categories.get("machine_learning", set())
+                    | categories.get("econometrics", set())
+                    | categories.get("bayesian", set())
+                )
+            ),
+            "ml": sorted(list(categories.get("machine_learning", set()))),
+            "visualization": sorted(
                 [
                     p
                     for p in ALLOWED_R_PACKAGES
                     if p
-                    in [
-                        "lmtest",
-                        "sandwich",
-                        "car",
-                        "MASS",
-                        "boot",
-                        "survival",
-                        "nlme",
-                        "mgcv",
-                        "gam",
-                        "glmnet",
-                    ]
-                ]
-            )
-        case "ml":
-            packages = sorted(
-                [
-                    p
-                    for p in ALLOWED_R_PACKAGES
-                    if p
-                    in [
-                        "randomForest",
-                        "rpart",
-                        "tree",
-                        "gbm",
-                        "xgboost",
-                        "kernlab",
-                        "cluster",
-                        "caret",
-                        "e1071",
-                    ]
-                ]
-            )
-        case "econometrics":
-            packages = sorted(
-                [
-                    p
-                    for p in ALLOWED_R_PACKAGES
-                    if p
-                    in [
-                        "plm",
-                        "AER",
-                        "vars",
-                        "tseries",
-                        "urca",
-                        "forecast",
-                        "dynlm",
-                        "quantreg",
-                        "systemfit",
-                    ]
-                ]
-            )
-        case "visualization":
-            packages = sorted(
-                [
-                    p
-                    for p in ALLOWED_R_PACKAGES
-                    if p
-                    in [
+                    in {
                         "ggplot2",
                         "lattice",
                         "plotly",
-                        "ggpubr",
                         "corrplot",
-                        "gridExtra",
                         "viridis",
-                    ]
+                        "RColorBrewer",
+                        "ggpubr",
+                        "gridExtra",
+                    }
                 ]
-            )
-        case "data":
-            packages = sorted(
-                [
-                    p
-                    for p in ALLOWED_R_PACKAGES
-                    if p
-                    in [
-                        "dplyr",
-                        "tidyr",
-                        "data.table",
-                        "reshape2",
-                        "readr",
-                        "jsonlite",
-                        "openxlsx",
-                        "readxl",
-                    ]
-                ]
-            )
-        case _:
-            packages = []
-
-    return {"packages": packages, "total_count": len(packages), "category": category}
+            ),
+            "data": sorted(
+                list(
+                    categories.get("tidyverse", set())
+                    | categories.get("data_io", set())
+                )
+            ),
+        }
+        packages = legacy_mappings.get(category, [])
+        total_count = len(packages)
+        await context.info(
+            f"Listed {total_count} packages in legacy category: {category}"
+        )
+        return {"packages": packages, "total_count": total_count, "category": category}
 
 
 @tool(
