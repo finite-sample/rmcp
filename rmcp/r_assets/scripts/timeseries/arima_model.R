@@ -6,24 +6,38 @@
 
 # Load required libraries
 library(forecast)
+library(broom)
+library(knitr)
 
 # Prepare data
 rmcp_progress("Preparing time series data")
 
-# Extract data
-value_col <- args$value_col %||% "value"
-
-# Extract values from the specified column
-if (value_col %in% names(data)) {
-  values <- data[[value_col]]
+# Extract data - handle both direct values and data structure
+if ("values" %in% names(args$data)) {
+  # Data comes from Python schema with data.values structure
+  values <- args$data$values
+} else if ("value_col" %in% names(args)) {
+  # Legacy column-based extraction
+  value_col <- args$value_col %||% "value"
+  if (value_col %in% names(data)) {
+    values <- data[[value_col]]
+  } else {
+    # Find first numeric column
+    numeric_cols <- names(data)[sapply(data, is.numeric)]
+    if (length(numeric_cols) > 0) {
+      values <- data[[numeric_cols[1]]]
+      warning(paste("Column", value_col, "not found, using", numeric_cols[1]))
+    } else {
+      stop("No numeric columns found for time series analysis")
+    }
+  }
 } else {
-  # If value_col not found, try to find a numeric column
+  # Try to find values in data directly
   numeric_cols <- names(data)[sapply(data, is.numeric)]
   if (length(numeric_cols) > 0) {
     values <- data[[numeric_cols[1]]]
-    warning(paste("Column", value_col, "not found, using", numeric_cols[1]))
   } else {
-    stop("No numeric columns found for time series analysis")
+    stop("No numeric data found for time series analysis")
   }
 }
 # Convert to time series

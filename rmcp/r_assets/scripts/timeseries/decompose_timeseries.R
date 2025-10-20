@@ -4,6 +4,9 @@
 # This script decomposes time series into trend, seasonal, and remainder
 # components using additive or multiplicative decomposition methods.
 
+# Load required libraries
+library(knitr)
+
 # Prepare data and parameters
 frequency <- args$frequency %||% 12
 decomp_type <- args$type %||% "additive"
