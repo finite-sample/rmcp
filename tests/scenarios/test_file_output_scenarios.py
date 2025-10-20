@@ -147,7 +147,9 @@ class TestFileOutputScenarios:
         assert result_data["analysis_complete"] is True
         assert result_data["plot_exists"] is True
         assert result_data["data_exists"] is True
-        assert result_data["rows_analyzed"] == 30  # Our test data has 30 data rows (file has 30 lines total, no final newline)
+        assert (
+            result_data["rows_analyzed"] == 30
+        )  # Our test data has 30 data rows (file has 30 lines total, no final newline)
         assert result_data["species_count"] == 3
 
         # Verify files actually exist on filesystem

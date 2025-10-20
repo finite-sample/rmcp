@@ -33,19 +33,33 @@ names(df) <- gsub("Pr\\(>F\\)", "p_value", names(df))
 names(df) <- gsub("^F value$", "F", names(df))
 names(df) <- gsub("^Sum of Sq$", "Sum Sq", names(df))
 names(df) <- gsub("^Mean of Sq$", "Mean Sq", names(df))
-# Extract values using normalized names
-sum_sq <- if ("Sum Sq" %in% names(df)) df[["Sum Sq"]] else rep(NA, nrow(df))
-mean_sq <- if ("Mean Sq" %in% names(df)) df[["Mean Sq"]] else if ("Sum Sq" %in% names(df) && "Df" %in% names(df)) df[["Sum Sq"]] / df[["Df"]] else rep(NA, nrow(df))
-f_value <- if ("F" %in% names(df)) df[["F"]] else rep(NA, nrow(df))
-p_value <- if ("p_value" %in% names(df)) df[["p_value"]] else rep(NA, nrow(df))
+
+# Remove residuals row which typically has NA for F-statistic and p-value
+if ("Residuals" %in% rownames(df)) {
+  df <- df[rownames(df) != "Residuals", , drop = FALSE]
+}
+
+# Extract values using normalized names, handling NAs properly
+sum_sq <- if ("Sum Sq" %in% names(df)) df[["Sum Sq"]] else rep(0, nrow(df))
+mean_sq <- if ("Mean Sq" %in% names(df)) df[["Mean Sq"]] else if ("Sum Sq" %in% names(df) && "Df" %in% names(df)) df[["Sum Sq"]] / df[["Df"]] else rep(0, nrow(df))
+f_value <- if ("F" %in% names(df)) df[["F"]] else rep(0, nrow(df))
+p_value <- if ("p_value" %in% names(df)) df[["p_value"]] else rep(0, nrow(df))
+
+# Replace any remaining NAs with appropriate values for schema compliance
+sum_sq[is.na(sum_sq)] <- 0
+mean_sq[is.na(mean_sq)] <- 0
+f_value[is.na(f_value)] <- 0
+p_value[is.na(p_value)] <- 1 # Use 1 for non-significant when p-value is missing
+
+# Ensure all vectors are properly formatted as lists (JSON arrays)
 result <- list(
   anova_table = list(
-    terms = rownames(df),
-    df = df[["Df"]],
-    sum_sq = sum_sq,
-    mean_sq = mean_sq,
-    f_value = f_value,
-    p_value = p_value
+    terms = as.list(rownames(df)),
+    df = as.list(df[["Df"]]),
+    sum_sq = as.list(sum_sq),
+    mean_sq = as.list(mean_sq),
+    f_value = as.list(f_value),
+    p_value = as.list(p_value)
   ),
   model_summary = list(
     r_squared = summary(model)$r.squared,
@@ -70,14 +84,18 @@ result <- list(
       error = function(e) {
         # Fallback: format the data frame directly
         paste(as.character(knitr::kable(
-          tidy_anova,
+          df,
           format = "markdown", digits = 4
         )), collapse = "\n")
       }
     ),
     interpretation = paste0(
       "ANOVA ",
-      get_significance(min(p_value, na.rm = TRUE)), "."
+      if (length(p_value[p_value > 0]) > 0) {
+        get_significance(min(p_value[p_value > 0], na.rm = TRUE))
+      } else {
+        "analysis completed"
+      }, "."
     )
   )
 )

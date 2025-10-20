@@ -15,22 +15,47 @@ percentiles <- args$percentiles %||% c(0.25, 0.5, 0.75)
 
 # Select variables to analyze
 if (is.null(variables)) {
-  numeric_vars <- names(data)[sapply(data, is.numeric)]
+  # More robust numeric variable detection
+  numeric_vars <- names(data)[sapply(data, function(x) {
+    is.numeric(x) || (is.character(x) && !all(is.na(suppressWarnings(as.numeric(x)))))
+  })]
   if (length(numeric_vars) == 0) {
-    stop("No numeric variables found in data")
+    stop("No numeric or numeric-convertible variables found in data")
   }
   variables <- numeric_vars
+} else {
+  # Validate specified variables exist in data
+  missing_vars <- variables[!variables %in% names(data)]
+  if (length(missing_vars) > 0) {
+    stop(paste("Variables not found in data:", paste(missing_vars, collapse = ", ")))
+  }
 }
 
 # Function to compute detailed stats
 compute_stats <- function(x) {
+  # Check if x is numeric, if not try to convert or return error stats
+  if (!is.numeric(x)) {
+    # Try to convert to numeric
+    x_numeric <- suppressWarnings(as.numeric(as.character(x)))
+    if (all(is.na(x_numeric))) {
+      # Cannot convert to numeric, return error stats
+      return(list(
+        n = 0, n_missing = length(x), mean = NA, sd = NA, min = NA, max = NA,
+        range = NA, skewness = NA, kurtosis = NA
+      ))
+    }
+    x <- x_numeric
+  }
+
   x_clean <- x[!is.na(x)]
   if (length(x_clean) == 0) {
     return(list(
       n = 0, n_missing = length(x), mean = NA, sd = NA, min = NA, max = NA,
-      q25 = NA, median = NA, q75 = NA, skewness = NA, kurtosis = NA
+      range = NA, skewness = NA, kurtosis = NA
     ))
   }
+
+  # Basic statistics
   stats <- list(
     n = length(x_clean),
     n_missing = sum(is.na(x)),
@@ -38,10 +63,18 @@ compute_stats <- function(x) {
     sd = sd(x_clean),
     min = min(x_clean),
     max = max(x_clean),
-    range = max(x_clean) - min(x_clean),
-    skewness = (sum((x_clean - mean(x_clean))^3) / length(x_clean)) / (sd(x_clean)^3),
-    kurtosis = (sum((x_clean - mean(x_clean))^4) / length(x_clean)) / (sd(x_clean)^4) - 3
+    range = max(x_clean) - min(x_clean)
   )
+
+  # Handle skewness and kurtosis with division by zero protection
+  if (stats$sd > 0 && length(x_clean) > 1) {
+    stats$skewness <- (sum((x_clean - stats$mean)^3) / length(x_clean)) / (stats$sd^3)
+    stats$kurtosis <- (sum((x_clean - stats$mean)^4) / length(x_clean)) / (stats$sd^4) - 3
+  } else {
+    stats$skewness <- NA
+    stats$kurtosis <- NA
+  }
+
   # Add percentiles
   for (i in seq_along(percentiles)) {
     pct_name <- paste0("p", percentiles[i] * 100)

@@ -8,6 +8,7 @@ options(repos = c(CRAN = "https://cloud.r-project.org/"))
 library(ggplot2)
 library(gridExtra)
 library(rlang)
+library(knitr)
 
 # Prepare data and parameters
 formula_str <- args$formula
@@ -63,8 +64,10 @@ p4 <- ggplot(
   geom_smooth(se = FALSE, color = "red") +
   labs(title = "Residuals vs Leverage", x = "Leverage", y = "Standardized Residuals") +
   theme_minimal()
-# Combine plots
-combined_plot <- grid.arrange(p1, p2, p3, p4, ncol = 2, top = title)
+# Combine plots using arrangeGrob with null graphics device
+pdf(file = NULL) # Create null device for layout calculations
+combined_plot <- arrangeGrob(p1, p2, p3, p4, ncol = 2, top = title)
+dev.off() # Close null device
 # Save to file if path provided
 if (!is.null(file_path)) {
   ggsave(file_path, plot = combined_plot, width = width / 100, height = height / 100, dpi = 100)
