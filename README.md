@@ -6,16 +6,24 @@
 [![Documentation](https://github.com/finite-sample/rmcp/actions/workflows/docs.yml/badge.svg)](https://finite-sample.github.io/rmcp/)
 [![License](https://img.shields.io/github/license/finite-sample/rmcp)](https://github.com/finite-sample/rmcp/blob/main/LICENSE)
 
-**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with 44 statistical analysis tools across 11 categories and **429 R packages** from systematic CRAN task views. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with **52 statistical analysis tools** across 11 categories and **429 R packages** from systematic CRAN task views. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## 🚀 Quick Start (30 seconds)
+
+### 🌐 **Try the Live Server** (No Installation Required)
+
+**HTTP Server**: `https://rmcp-server-394229601724.us-central1.run.app/mcp`  
+**Interactive Docs**: `https://rmcp-server-394229601724.us-central1.run.app/docs`  
+**Health Check**: `https://rmcp-server-394229601724.us-central1.run.app/health`  
+
+### 🖥️ **Or Install Locally**
 
 ```bash
 pip install rmcp
 rmcp start
 ```
 
-That's it! RMCP is now ready to handle statistical analysis requests via Claude Desktop or any MCP client.
+That's it! RMCP is now ready to handle statistical analysis requests via Claude Desktop, Claude web, or any MCP client.
 
 **🎯 [Working examples →](examples/quick_start_guide.md)** | **🔧 [Troubleshooting →](#-quick-troubleshooting)**
 
@@ -121,6 +129,34 @@ Add to your Claude Desktop MCP configuration:
     }
   }
 }
+```
+
+### HTTP Server Integration (Claude Web)
+
+**Production Server** (ready to use):
+```
+Server URL: https://rmcp-server-394229601724.us-central1.run.app/mcp
+Interactive Docs: https://rmcp-server-394229601724.us-central1.run.app/docs
+```
+
+**Test the connection**:
+```bash
+# Health check
+curl https://rmcp-server-394229601724.us-central1.run.app/health
+
+# Initialize MCP session
+curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
+  -H "Content-Type: application/json" \
+  -H "MCP-Protocol-Version: 2025-06-18" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'
+```
+
+**Local HTTP server**:
+```bash
+# Start local HTTP server
+rmcp serve-http --host 0.0.0.0 --port 8080
+
+# Access at: http://localhost:8080/docs
 ```
 
 ### Command Line Usage

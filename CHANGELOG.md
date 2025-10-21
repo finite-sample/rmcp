@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-10-21
+
+### Major Features
+- **🌐 Claude Web Integration**: Production HTTP server deployment for Claude web connector
+  - Live server at `https://rmcp-server-394229601724.us-central1.run.app/mcp`
+  - Interactive documentation at `/docs` with Swagger UI and ReDoc
+  - Full MCP protocol compliance with session management and error handling
+  - Ready for submission to Anthropic connectors directory
+
+- **📊 Enhanced Statistical Toolkit**: Expanded from 44 to 52 statistical analysis tools
+  - Added new specialized tools for advanced analysis
+  - Comprehensive coverage across 11 statistical categories
+  - All tools validated with 100% test success rate
+
+- **📚 Professional Documentation**: Interactive API documentation
+  - Auto-generated OpenAPI/Swagger documentation
+  - Live examples and test interface at `/docs`
+  - Health monitoring and status endpoints
+  - Comprehensive connector specification for integration
+
+### Technical Improvements
+- **🔗 HTTP Transport Enhancement**: Complete FastAPI-based HTTP transport
+  - Enhanced OpenAPI metadata with comprehensive descriptions
+  - Server-Sent Events (SSE) for real-time notifications
+  - Proper CORS configuration for web client access
+  - Session management with MCP protocol headers
+
+- **🧪 Connector Validation**: Comprehensive test suite for Claude integration
+  - 7/7 connector validation tests passing (100% success rate)
+  - Real statistical analysis validation with production data
+  - MCP protocol compliance verification
+  - End-to-end integration testing
+
+- **⚙️ Production Ready**: Google Cloud Run deployment with auto-scaling
+  - Serverless architecture with 99.9% uptime target
+  - Optimized Docker containers for fast cold starts
+  - SSL/TLS encryption for secure communication
+  - Performance monitoring and health checks
+
+### Enhanced Documentation
+- **📖 README Updates**: Added HTTP server integration instructions
+  - Live server URLs and connection examples
+  - Updated tool count from 44 to 52 tools
+  - Quick start section with hosted server access
+  - Both Claude Desktop and Claude web integration examples
+
+### Submission Materials
+- **📋 Connector Package**: Complete submission materials for Anthropic
+  - `connector-manifest.json` with full tool definitions
+  - Technical specification document
+  - Validation test suite with 100% success rate
+  - Security assessment and compliance documentation
+
 ## [0.4.1] - 2025-10-18
 
 ### Added

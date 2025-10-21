@@ -100,7 +100,77 @@ class HTTPTransport(Transport):
             logger.info(
                 f"🔒 HTTPS enabled for remote binding to {self.host}:" f"{self.port}"
             )
-        self.app = FastAPI(title="RMCP HTTP Transport", version="1.0.0")
+        self.app = FastAPI(
+            title="RMCP Statistical Analysis Server",
+            version="0.5.1",
+            description="""
+# RMCP: Statistical Analysis through Natural Conversation
+
+A Model Context Protocol (MCP) server providing comprehensive statistical analysis capabilities through R.
+
+## Features
+
+- **53 Statistical Tools** across 11 categories including regression, time series, machine learning, and visualization
+- **MCP Protocol Support** - Full compatibility with Claude Desktop and other MCP clients  
+- **Professional Visualizations** - Generate inline plots and charts
+- **Flexible R Integration** - Execute both structured tools and custom R code with security validation
+- **Error Recovery** - Intelligent error diagnosis with suggested fixes
+
+## Usage
+
+This server implements the MCP (Model Context Protocol) for statistical analysis. 
+Use with Claude Desktop or other MCP clients for natural language statistical analysis.
+
+## Getting Started
+
+1. **Initialize Session**: Send an `initialize` request with proper MCP headers
+2. **List Tools**: Use `tools/list` to see available statistical analysis tools  
+3. **Execute Analysis**: Call tools like `linear_model`, `correlation_analysis`, etc.
+4. **Get Results**: Receive formatted statistical results with visualizations
+
+## Example Tools
+
+- `linear_model` - Linear and logistic regression analysis
+- `correlation_analysis` - Correlation matrices and significance testing
+- `time_series_arima` - ARIMA time series modeling and forecasting
+- `descriptive_stats` - Comprehensive descriptive statistics
+- `scatter_plot` - Professional scatter plots with trend lines
+
+## Documentation
+
+- **Interactive Docs**: Available at `/docs` (Swagger UI)
+- **Alternative Docs**: Available at `/redoc` (ReDoc)
+- **Health Check**: Available at `/health`
+- **GitHub Repository**: [https://github.com/finite-sample/rmcp](https://github.com/finite-sample/rmcp)
+
+## Protocol
+
+This server implements the Model Context Protocol (MCP) specification for statistical analysis tools.
+All requests after initialization must include the `MCP-Protocol-Version: 2025-06-18` header.
+            """.strip(),
+            contact={
+                "name": "RMCP Project",
+                "url": "https://github.com/finite-sample/rmcp",
+            },
+            license_info={
+                "name": "MIT License",
+                "url": "https://github.com/finite-sample/rmcp/blob/main/LICENSE",
+            },
+            openapi_tags=[
+                {
+                    "name": "MCP Protocol",
+                    "description": "Model Context Protocol endpoints for statistical analysis",
+                },
+                {
+                    "name": "Server Management",
+                    "description": "Health checks and server information",
+                },
+                {
+                    "name": "Real-time Communications",
+                    "description": "Server-Sent Events for notifications and progress updates",
+                },
+            ],
+        )
         self._notification_queue: queue.Queue[dict[str, Any]] = queue.Queue()
         self._setup_routes()
         self._setup_cors()
@@ -192,7 +262,28 @@ class HTTPTransport(Transport):
     def _setup_routes(self) -> None:
         """Setup HTTP routes for MCP communication."""
 
-        @self.app.post("/mcp")
+        @self.app.post(
+            "/mcp",
+            tags=["MCP Protocol"],
+            summary="MCP JSON-RPC Endpoint",
+            description="""
+            Main endpoint for Model Context Protocol communication.
+            
+            Handles JSON-RPC 2.0 requests for:
+            - Session initialization
+            - Tool listing and execution  
+            - Resource access
+            - Statistical analysis operations
+            
+            **Required Headers:**
+            - `Content-Type: application/json`
+            - `MCP-Protocol-Version: 2025-06-18` (after initialization)
+            
+            **Session Management:**
+            Sessions must be initialized before other operations.
+            """,
+            response_description="JSON-RPC 2.0 response with results or errors",
+        )
         async def handle_jsonrpc(request: Request) -> Response:
             """Handle JSON-RPC requests via POST."""
             message: dict[str, Any] | None = None
@@ -264,19 +355,34 @@ class HTTPTransport(Transport):
         # Add CORS support for MCP endpoint
         self.app.router.add_route("/mcp", handle_options, methods=["OPTIONS"])
 
-        # Backward compatibility: redirect root to /mcp
-        @self.app.post("/")
-        async def redirect_root_post(request: Request) -> Response:
-            """Redirect POST / to POST /mcp for backward compatibility."""
-            logger.info("Redirecting POST / to POST /mcp for backward compatibility")
+        # Backward compatibility: redirect root POST to /mcp
+        @self.app.post("/legacy")
+        async def redirect_legacy_post(request: Request) -> Response:
+            """Legacy POST endpoint redirects to /mcp for backward compatibility."""
+            logger.info("Redirecting legacy POST to /mcp for backward compatibility")
             return await handle_jsonrpc(request)
 
-        @self.app.options("/")
-        async def redirect_root_options(request: Request) -> Response:
-            """Redirect OPTIONS / to OPTIONS /mcp for backward compatibility."""
-            return await handle_options(request)
-
-        @self.app.get("/mcp/sse")
+        @self.app.get(
+            "/mcp/sse",
+            tags=["Real-time Communications"],
+            summary="Server-Sent Events Endpoint",
+            description="""
+            Server-Sent Events (SSE) endpoint for real-time notifications.
+            
+            Provides:
+            - Progress updates during long-running statistical operations
+            - Log messages and warnings
+            - Keep-alive signals
+            
+            **Connection:**
+            Standard EventSource connection. Events are JSON-encoded.
+            
+            **Event Types:**
+            - `notification`: Statistical analysis progress/results
+            - `keepalive`: Connection health check
+            """,
+            response_description="Server-Sent Events stream",
+        )
         async def handle_sse() -> EventSourceResponse:
             """Handle Server-Sent Events for notifications."""
 
@@ -321,7 +427,116 @@ class HTTPTransport(Transport):
             )
             return await handle_sse()
 
-        @self.app.get("/health")
+        @self.app.get(
+            "/",
+            tags=["Server Management"],
+            summary="Server Landing Page",
+            description="Landing page with server information and navigation links",
+            response_description="HTML landing page",
+        )
+        async def landing_page() -> Response:
+            """Server landing page with information and navigation."""
+            html_content = """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>RMCP Statistical Analysis Server</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                           margin: 0; padding: 40px; background: #f8f9fa; color: #333; }
+                    .container { max-width: 800px; margin: 0 auto; background: white; 
+                                padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    h1 { color: #2c3e50; margin-bottom: 10px; }
+                    .subtitle { color: #7f8c8d; font-size: 18px; margin-bottom: 30px; }
+                    .status { display: inline-block; background: #27ae60; color: white; 
+                             padding: 4px 12px; border-radius: 20px; font-size: 14px; margin-bottom: 30px; }
+                    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+                           gap: 20px; margin: 30px 0; }
+                    .card { border: 1px solid #ddd; border-radius: 6px; padding: 20px; }
+                    .card h3 { margin-top: 0; color: #2c3e50; }
+                    .btn { display: inline-block; background: #3498db; color: white; 
+                          text-decoration: none; padding: 10px 20px; border-radius: 4px; margin: 5px 0; }
+                    .btn:hover { background: #2980b9; }
+                    .btn-secondary { background: #95a5a6; }
+                    .btn-secondary:hover { background: #7f8c8d; }
+                    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; 
+                             text-align: center; color: #7f8c8d; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>🔬 RMCP Statistical Analysis Server</h1>
+                    <p class="subtitle">Statistical Analysis through Natural Conversation</p>
+                    <div class="status">✅ Server Online</div>
+                    
+                    <p>This server provides comprehensive statistical analysis capabilities through the Model Context Protocol (MCP). 
+                    Access 53 statistical tools including regression, time series analysis, machine learning, and professional visualizations.</p>
+                    
+                    <div class="grid">
+                        <div class="card">
+                            <h3>📚 Interactive Documentation</h3>
+                            <p>Explore the API with Swagger UI and ReDoc interfaces</p>
+                            <a href="/docs" class="btn">Swagger UI</a>
+                            <a href="/redoc" class="btn btn-secondary">ReDoc</a>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>🔧 Server Status</h3>
+                            <p>Monitor server health and check system status</p>
+                            <a href="/health" class="btn">Health Check</a>
+                            <a href="/mcp/sse" class="btn btn-secondary">Event Stream</a>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>💡 Getting Started</h3>
+                            <p>Learn how to use RMCP for statistical analysis</p>
+                            <a href="https://github.com/finite-sample/rmcp" class="btn">GitHub Repository</a>
+                            <a href="https://finite-sample.github.io/rmcp/" class="btn btn-secondary">Documentation</a>
+                        </div>
+                    </div>
+                    
+                    <h3>🚀 Quick Start</h3>
+                    <p><strong>For Claude Desktop Users:</strong></p>
+                    <pre style="background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto;">
+{
+  "mcpServers": {
+    "rmcp": {
+      "command": "rmcp",
+      "args": ["start"]
+    }
+  }
+}</pre>
+                    
+                    <p><strong>For HTTP API Users:</strong></p>
+                    <pre style="background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto;">
+curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \\
+  -H "Content-Type: application/json" \\
+  -H "MCP-Protocol-Version: 2025-06-18" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'</pre>
+                    
+                    <div class="footer">
+                        <p>RMCP v0.5.1 | MIT License | <a href="https://github.com/finite-sample/rmcp">GitHub</a></p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            return Response(content=html_content, media_type="text/html")
+
+        @self.app.get(
+            "/health",
+            tags=["Server Management"],
+            summary="Health Check",
+            description="""
+            Health check endpoint for monitoring server status.
+            
+            Returns server health information and transport details.
+            Useful for load balancers and monitoring systems.
+            """,
+            response_description="Server health status",
+        )
         async def health_check() -> dict[str, str]:
             """Simple health check endpoint."""
             return {"status": "healthy", "transport": "HTTP"}

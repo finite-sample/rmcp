@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "rmcp"
-version = "0.5.1"
-description = "Comprehensive Model Context Protocol server with 53 statistical analysis tools, universal operation approval system, and HTTP transport"
+version = "0.6.0"
+description = "Comprehensive Model Context Protocol server with 52 statistical analysis tools for Claude Desktop and Claude web, featuring HTTP transport, interactive documentation, and production deployment"
 authors = ["Gaurav Sood <gsood07@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-keywords = ["mcp", "r", "statistics", "econometrics", "model-context-protocol", "data-analysis", "http", "fastapi", "sse", "configuration"]
+keywords = ["mcp", "r", "statistics", "econometrics", "model-context-protocol", "data-analysis", "http", "fastapi", "sse", "configuration", "claude-web", "connector", "anthropic"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers", 
