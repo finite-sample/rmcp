@@ -11,7 +11,7 @@ try:
     def get_version() -> str:
         """
         Get the version of the RMCP package.
-        
+
         Returns:
             str: The version string of the installed package, or a fallback
                  version if the package is not installed (development mode).
@@ -21,6 +21,7 @@ try:
         except PackageNotFoundError:
             # Package is not installed - fallback for development
             return "0.0.0+unknown"
+
 except ImportError:
     # Should not happen with Python >=3.10, but keeping as safety
     def get_version() -> str:
