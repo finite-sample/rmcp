@@ -11,8 +11,8 @@ env:
   PROJECT_ID: sawasdee-189716
   SERVICE_NAME: rmcp-server
   REGION: us-central1
-  AR_REGION: us-central1  # Artifact Registry region
-  AR_REPO: rmcp-repo  # You'll need to create this
+  AR_REGION: us-central1
+  AR_REPO: rmcp-repo
   GHCR_IMAGE: ghcr.io/finite-sample/rmcp/rmcp-ci:production-latest
   AR_IMAGE: us-central1-docker.pkg.dev/sawasdee-189716/rmcp-repo/rmcp-server:latest
 
