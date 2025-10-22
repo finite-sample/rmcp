@@ -13,7 +13,6 @@ from .core.server import create_server
 from .registries.prompts import PromptsRegistry, prompt
 from .registries.resources import ResourcesRegistry, resource
 from .registries.tools import ToolsRegistry, tool
-
 from .version import get_version
 
 __version__ = get_version()
