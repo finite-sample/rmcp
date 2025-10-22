@@ -32,7 +32,7 @@ class TestHTTPTransportInitialization:
         assert transport.host == "localhost"
         assert transport.port == 8000
         assert transport.app is not None
-        assert transport.app.title == "RMCP HTTP Transport"
+        assert transport.app.title == "RMCP Statistical Analysis Server"
         assert not transport.is_running
 
     def test_custom_initialization(self):
@@ -48,7 +48,7 @@ class TestHTTPTransportInitialization:
         # Check that the app has expected routes
         route_paths = [route.path for route in transport.app.routes]
         assert "/" in route_paths
-        assert "/sse" in route_paths
+        assert "/mcp/sse" in route_paths
         assert "/health" in route_paths
 
     def test_message_handler_setting(self):
@@ -192,8 +192,8 @@ class TestHTTPTransportFastAPIIntegration:
                 for method in route.methods:
                     routes_info.append((method, route.path))
         # Check expected endpoints
-        assert ("POST", "/") in routes_info
-        assert ("GET", "/sse") in routes_info
+        assert ("POST", "/mcp") in routes_info
+        assert ("GET", "/mcp/sse") in routes_info
         assert ("GET", "/health") in routes_info
 
     def test_cors_middleware(self):

@@ -56,7 +56,7 @@ Step 1: Initialize Session
        },
        "serverInfo": {
          "name": "RMCP MCP Server",
-         "version": "0.5.1"
+         "version": "0.7.0"
        }
      }
    }
@@ -534,7 +534,7 @@ Validation Results
 ------------------
 
 **Test Date**: October 21, 2025
-**Server Version**: RMCP MCP Server v0.5.1
+**Server Version**: RMCP MCP Server v0.7.0
 **Test Environment**: Production deployment on Google Cloud Run
 
 ✅ **Session Initialization**: Working

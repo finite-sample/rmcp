@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-10-22
+
+### Breaking Changes
+- **🚨 HTTP Endpoint Cleanup**: Removed all backward compatibility endpoints
+  - Removed legacy `POST /` endpoint (use `POST /mcp` instead)
+  - Removed legacy `GET /sse` endpoint (use `GET /mcp/sse` instead)
+  - **Migration**: Update clients to use proper MCP endpoints:
+    - `POST /mcp` for JSON-RPC requests
+    - `GET /mcp/sse` for Server-Sent Events
+
+### Removed
+- **🧹 Legacy Code Removal**: Eliminated backward compatibility code
+  - Removed legacy endpoint redirects and handlers
+  - Removed `TestHTTPTransportBackwardCompatibility` test class
+  - Cleaner API surface with only official MCP protocol endpoints
+
+### Improved
+- **✨ API Clarity**: Simplified HTTP transport with clear endpoint structure
+- **📚 Documentation**: Updated all documentation to reflect proper endpoints
+- **🧪 Test Suite**: Streamlined tests to focus on current API
+
 ## [0.6.0] - 2025-10-21
 
 ### Major Features
@@ -283,8 +304,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **🌐 HTTP Transport**: Full HTTP transport implementation with Server-Sent Events
   - FastAPI-based HTTP server with MCP protocol support
-  - POST `/` endpoint for JSON-RPC requests (all 40 tools available)
-  - GET `/sse` endpoint for real-time Server-Sent Events
+  - POST `/mcp` endpoint for JSON-RPC requests (all 40 tools available)
+  - GET `/mcp/sse` endpoint for real-time Server-Sent Events
   - GET `/health` endpoint for monitoring and load balancing
   - CORS support for web applications
   - Complete `rmcp serve-http` command functionality

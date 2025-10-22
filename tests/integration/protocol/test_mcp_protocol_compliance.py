@@ -83,9 +83,11 @@ class MCPProtocolTester:
 
     async def setup_server(self):
         """Create and configure an MCP server as would be done in production."""
+        from rmcp.version import get_version
+
         self.server = create_server(
             name="RMCP Test Server",
-            version="0.3.13",
+            version=get_version(),
             description="Statistical Analysis MCP Server",
         )
         _register_builtin_tools(self.server)

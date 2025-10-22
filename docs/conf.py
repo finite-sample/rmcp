@@ -16,20 +16,21 @@ author = "Gaurav Sood"
 # Get version from package
 sys.path.insert(0, os.path.abspath(".."))
 try:
-    from rmcp import __version__
+    from rmcp.version import get_version
 
-    version = __version__
-    release = __version__
+    version = get_version()
+    release = get_version()
 except ImportError:
-    version = "0.5.1"
-    release = "0.5.1"
+    # Fallback if package not available
+    version = "0.7.0"
+    release = "0.7.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary", 
+    "sphinx.ext.autosummary",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
@@ -105,10 +106,10 @@ myst_enable_extensions = [
     "tasklist",
     "colon_fence",
     "attrs_inline",
-    "attrs_block", 
+    "attrs_block",
 ]
 
-# autosectionlabel 
+# autosectionlabel
 autosectionlabel_prefix_document = True
 
 # Copy button configuration

@@ -1,8 +1,8 @@
 """
 HTTP transport for MCP server using FastAPI.
 Provides HTTP transport following MCP specification:
-- POST / for JSON-RPC requests
-- GET /sse for Server-Sent Events (notifications)
+- POST /mcp for JSON-RPC requests
+- GET /mcp/sse for Server-Sent Events (notifications)
 """
 
 import asyncio
@@ -33,8 +33,8 @@ class HTTPTransport(Transport):
     """
     HTTP transport implementation using FastAPI.
     Provides:
-    - POST / endpoint for JSON-RPC requests
-    - GET /sse endpoint for server-initiated notifications
+    - POST /mcp endpoint for JSON-RPC requests
+    - GET /mcp/sse endpoint for server-initiated notifications
     - MCP protocol compliance with session management and security
     """
 
@@ -100,9 +100,12 @@ class HTTPTransport(Transport):
             logger.info(
                 f"🔒 HTTPS enabled for remote binding to {self.host}:" f"{self.port}"
             )
+        # Import version dynamically to avoid circular imports
+        from ..version import get_version
+
         self.app = FastAPI(
             title="RMCP Statistical Analysis Server",
-            version="0.5.1",
+            version=get_version(),
             description="""
 # RMCP: Statistical Analysis through Natural Conversation
 
@@ -355,13 +358,6 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
         # Add CORS support for MCP endpoint
         self.app.router.add_route("/mcp", handle_options, methods=["OPTIONS"])
 
-        # Backward compatibility: redirect root POST to /mcp
-        @self.app.post("/legacy")
-        async def redirect_legacy_post(request: Request) -> Response:
-            """Legacy POST endpoint redirects to /mcp for backward compatibility."""
-            logger.info("Redirecting legacy POST to /mcp for backward compatibility")
-            return await handle_jsonrpc(request)
-
         @self.app.get(
             "/mcp/sse",
             tags=["Real-time Communications"],
@@ -417,15 +413,6 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
                         break
 
             return EventSourceResponse(event_generator())
-
-        # Backward compatibility: redirect /sse to /mcp/sse
-        @self.app.get("/sse")
-        async def redirect_sse() -> EventSourceResponse:
-            """Redirect GET /sse to GET /mcp/sse for backward compatibility."""
-            logger.info(
-                "Redirecting GET /sse to GET /mcp/sse for backward compatibility"
-            )
-            return await handle_sse()
 
         @self.app.get(
             "/",
