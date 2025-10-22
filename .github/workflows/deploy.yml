@@ -1,0 +1,35 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main  # triggers on push to main
+  release:
+    types: [published]  # also triggers on new releases
+
+env:
+  PROJECT_ID: sawasdee-189716
+  SERVICE_NAME: rmcp-server
+  REGION: us-central1
+  IMAGE: ghcr.io/finite-sample/rmcp/rmcp-ci:production-latest
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy $SERVICE_NAME \
+          --image $IMAGE \
+          --region $REGION \
+          --platform managed \
+          --allow-unauthenticated
