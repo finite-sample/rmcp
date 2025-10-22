@@ -3,15 +3,18 @@ name: Deploy to Cloud Run
 on:
   push:
     branches:
-      - main  # triggers on push to main
+      - main
   release:
-    types: [published]  # also triggers on new releases
+    types: [published]
 
 env:
   PROJECT_ID: sawasdee-189716
   SERVICE_NAME: rmcp-server
   REGION: us-central1
-  IMAGE: ghcr.io/finite-sample/rmcp/rmcp-ci:production-latest
+  AR_REGION: us-central1  # Artifact Registry region
+  AR_REPO: rmcp-repo  # You'll need to create this
+  GHCR_IMAGE: ghcr.io/finite-sample/rmcp/rmcp-ci:production-latest
+  AR_IMAGE: us-central1-docker.pkg.dev/sawasdee-189716/rmcp-repo/rmcp-server:latest
 
 jobs:
   deploy:
@@ -26,10 +29,23 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
 
+    - name: Configure Docker for Artifact Registry
+      run: |
+        gcloud auth configure-docker $AR_REGION-docker.pkg.dev
+
+    - name: Pull image from GitHub Container Registry
+      run: |
+        docker pull $GHCR_IMAGE
+
+    - name: Tag and push to Artifact Registry
+      run: |
+        docker tag $GHCR_IMAGE $AR_IMAGE
+        docker push $AR_IMAGE
+
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy $SERVICE_NAME \
-          --image $IMAGE \
+          --image $AR_IMAGE \
           --region $REGION \
           --platform managed \
           --allow-unauthenticated
