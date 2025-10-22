@@ -348,10 +348,10 @@ def serve_http(
     click.echo(f"📊 Available tools: {len(server.tools._tools)}")
     click.echo("🔗 Endpoints:")
     click.echo(
-        f"   • POST {protocol}://{effective_host}:{effective_port}/ (JSON-RPC requests)"
+        f"   • POST {protocol}://{effective_host}:{effective_port}/mcp (JSON-RPC requests)"
     )
     click.echo(
-        f"   • GET  {protocol}://{effective_host}:{effective_port}/sse (Server-Sent Events)"
+        f"   • GET  {protocol}://{effective_host}:{effective_port}/mcp/sse (Server-Sent Events)"
     )
     click.echo(
         f"   • GET  {protocol}://{effective_host}:{effective_port}/health (Health check)"
