@@ -96,9 +96,7 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=uv-build-${TARGETPLATFORM} \
     set -eux; \
     export PATH="/root/.local/bin:$PATH"; \
     # Install production dependencies with HTTP extras (no dev dependencies)
-    uv sync --no-group dev --extra all; \
-    # Build wheel for production installation
-    uv build --wheel --out-dir /build/wheels/
+    uv sync --no-group dev --extra all
 
 # ============================================================================
 # STAGE: Production Runtime (Optimized from base image)
@@ -133,18 +131,13 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # (python3, python3-venv, libcurl4, libssl3, libxml2, ca-certificates, 
 #  libblas3, liblapack3, r-base-core, littler)
 
-# Copy Python virtual environment and install RMCP (merged operations)
+# Copy complete Python virtual environment (already contains RMCP + all dependencies)
 ENV VENV=/opt/venv
 COPY --from=builder /build/.venv /opt/venv
-COPY --from=builder /build/wheels/ /tmp/wheels/
 ENV PATH="$VENV/bin:$PATH"
 
-# Install RMCP, create user, and setup directory in single layer  
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    export PATH="/root/.local/bin:$PATH" && \
-    uv pip install --system --no-deps /tmp/wheels/*.whl && \
-    rm -rf /tmp/wheels/ /root/.local && \
-    groupadd -r rmcp && \
+# Create user and setup directory
+RUN groupadd -r rmcp && \
     useradd -r -g rmcp -d /app -s /bin/bash rmcp
 
 # Set up application directory
