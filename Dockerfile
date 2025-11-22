@@ -30,15 +30,12 @@ FROM base AS development
 
 # Note: R packages and mkcert are already installed in base image
 
-# Install uv and create virtual environment with development dependencies
+# Install uv for dependency management
 ARG TARGETPLATFORM
-ENV VENV=/opt/venv
 RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-${TARGETPLATFORM} \
     set -eux; \
     # Install uv
-    curl -LsSf https://astral.sh/uv/install.sh | sh; \
-    export PATH="/root/.local/bin:$PATH"; \
-    uv venv "$VENV"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Add uv to PATH
 ENV PATH="/root/.local/bin:$PATH"
@@ -57,14 +54,14 @@ RUN echo "# RMCP Development Environment" > README.md
 COPY rmcp/ ./rmcp/
 
 # Install RMCP and dependencies using uv sync
+ENV VIRTUAL_ENV=/workspace/.venv
+ENV PATH="/workspace/.venv/bin:$PATH"
 RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-sync-${TARGETPLATFORM} \
     set -eux; \
     export PATH="/root/.local/bin:$PATH"; \
-    export UV_PYTHON="$VENV/bin/python"; \
-    # Install all development dependencies and HTTP extras using the virtual environment
+    # Install all development dependencies and HTTP extras
     uv sync --group dev --extra all; \
     # Verify installation
-    . "$VENV/bin/activate"; \
     python -c "import rmcp; print('RMCP installed successfully')"
 
 # Default to bash for development work
@@ -75,15 +72,12 @@ CMD ["bash"]
 # ============================================================================
 FROM base AS builder
 
-# Install uv and create Python virtual environment with production dependencies
+# Install uv for dependency management
 ARG TARGETPLATFORM
-ENV VENV=/opt/venv
 RUN --mount=type=cache,target=/root/.cache/uv,id=uv-prod-${TARGETPLATFORM} \
     set -eux; \
     # Install uv
-    curl -LsSf https://astral.sh/uv/install.sh | sh; \
-    export PATH="/root/.local/bin:$PATH"; \
-    uv venv "$VENV"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Add uv to PATH
 ENV PATH="/root/.local/bin:$PATH"
@@ -96,10 +90,11 @@ COPY pyproject.toml ./
 RUN echo "# RMCP Production Build" > README.md
 COPY rmcp/ ./rmcp/
 # Install production dependencies and build wheel
+ENV VIRTUAL_ENV=/build/.venv
+ENV PATH="/build/.venv/bin:$PATH"
 RUN --mount=type=cache,target=/root/.cache/uv,id=uv-build-${TARGETPLATFORM} \
     set -eux; \
     export PATH="/root/.local/bin:$PATH"; \
-    export UV_PYTHON="$VENV/bin/python"; \
     # Install production dependencies with HTTP extras (no dev dependencies)
     uv sync --no-group dev --extra all; \
     # Build wheel for production installation
@@ -163,7 +158,7 @@ RUN echo "options(bspm.sudo = TRUE)" >> /etc/R/Rprofile.site
 
 # Copy Python virtual environment and install RMCP (merged operations)
 ENV VENV=/opt/venv
-COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /build/.venv /opt/venv
 COPY --from=builder /build/wheels/ /tmp/wheels/
 ENV PATH="$VENV/bin:$PATH"
 
