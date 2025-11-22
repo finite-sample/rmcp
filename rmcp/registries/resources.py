@@ -14,8 +14,9 @@ import json
 import logging
 import platform
 import sys
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from ..core.context import Context
@@ -52,8 +53,8 @@ _REQUIRED_R_PACKAGES: tuple[str, ...] = (
 
 
 def _paginate_items(
-    items: List[Dict[str, Any]], cursor: Optional[str], limit: Optional[int]
-) -> tuple[List[Dict[str, Any]], Optional[str]]:
+    items: list[dict[str, Any]], cursor: str | None, limit: int | None
+) -> tuple[list[dict[str, Any]], str | None]:
     """Return a slice of items based on cursor/limit pagination."""
     total_items = len(items)
     start_index = 0
@@ -85,22 +86,24 @@ class ResourcesRegistry:
 
     def __init__(
         self,
-        on_list_changed: Optional[Callable[[Optional[List[str]]], None]] = None,
+        on_list_changed: Callable[[list[str] | None], None] | None = None,
     ):
-        self._static_resources: Dict[str, Dict[str, Any]] = {}
-        self._memory_objects: Dict[str, Any] = {}
-        self._resource_templates: Dict[str, Dict[str, Any]] = {}
+        self._static_resources: dict[str, dict[str, Any]] = {}
+        self._memory_objects: dict[str, Any] = {}
+        self._resource_templates: dict[str, dict[str, Any]] = {}
         self._on_list_changed = on_list_changed
 
     def register_static_resource(
         self,
         uri: str,
         name: str,
-        description: Optional[str] = None,
-        mime_type: Optional[str] = None,
-        content_loader: Optional[
-            Union[str, bytes, Callable[[], Any], Callable[[], Awaitable[Any]]]
-        ] = None,
+        description: str | None = None,
+        mime_type: str | None = None,
+        content_loader: str
+        | bytes
+        | Callable[[], Any]
+        | Callable[[], Awaitable[Any]]
+        | None = None,
     ) -> None:
         """Register a static resource."""
         self._static_resources[uri] = {
@@ -117,7 +120,7 @@ class ResourcesRegistry:
         self,
         name: str,
         data: Any,
-        description: Optional[str] = None,
+        description: str | None = None,
         mime_type: str = "application/json",
     ) -> None:
         """Register an in-memory object as a resource."""
@@ -136,7 +139,7 @@ class ResourcesRegistry:
         self,
         uri_template: str,
         name: str,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> None:
         """Register a parameterized resource template."""
         self._resource_templates[uri_template] = {
@@ -149,13 +152,13 @@ class ResourcesRegistry:
     async def list_resources(
         self,
         context: Context,
-        cursor: Optional[str] = None,
-        limit: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        cursor: str | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
         """List available resources for MCP resources/list."""
-        resources: List[Dict[str, Any]] = []
+        resources: list[dict[str, Any]] = []
         for uri, resource_info in sorted(self._static_resources.items()):
-            entry: Dict[str, Any] = {"uri": uri, "name": resource_info["name"]}
+            entry: dict[str, Any] = {"uri": uri, "name": resource_info["name"]}
             if resource_info.get("description"):
                 entry["description"] = resource_info["description"]
             if resource_info.get("mimeType"):
@@ -184,12 +187,12 @@ class ResourcesRegistry:
             total=len(resources),
             next_cursor=next_cursor,
         )
-        response: Dict[str, Any] = {"resources": page}
+        response: dict[str, Any] = {"resources": page}
         if next_cursor is not None:
             response["nextCursor"] = next_cursor
         return response
 
-    async def read_resource(self, context: Context, uri: str) -> Dict[str, Any]:
+    async def read_resource(self, context: Context, uri: str) -> dict[str, Any]:
         """Read a resource for MCP resources/read."""
         try:
             parsed_uri = urlparse(uri)
@@ -212,7 +215,7 @@ class ResourcesRegistry:
             await context.error(f"Failed to read resource {uri}: {e}")
             raise
 
-    async def _read_file_resource(self, context: Context, parsed_uri) -> Dict[str, Any]:
+    async def _read_file_resource(self, context: Context, parsed_uri) -> dict[str, Any]:
         """Read file:// resource using VFS."""
         # Extract path from URI
         file_path = Path(parsed_uri.path)
@@ -262,7 +265,7 @@ class ResourcesRegistry:
 
     async def _read_memory_resource(
         self, context: Context, parsed_uri
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Read mem:// resource from memory objects."""
         # Extract object name from URI path
         path_parts = parsed_uri.path.strip("/").split("/")
@@ -289,7 +292,7 @@ class ResourcesRegistry:
         except (TypeError, ValueError) as e:
             raise ValueError(f"Failed to serialize memory object {object_name}: {e}")
 
-    async def _read_static_resource(self, context: Context, uri: str) -> Dict[str, Any]:
+    async def _read_static_resource(self, context: Context, uri: str) -> dict[str, Any]:
         """Read a pre-registered static resource."""
         resource_info = self._static_resources[uri]
         loader = resource_info.get("loader")
@@ -330,7 +333,7 @@ class ResourcesRegistry:
             ]
         }
 
-    async def _read_rmcp_resource(self, context: Context, parsed_uri) -> Dict[str, Any]:
+    async def _read_rmcp_resource(self, context: Context, parsed_uri) -> dict[str, Any]:
         """Read rmcp:// resource for catalog, env, datasets, or stored data."""
         target = parsed_uri.netloc
         server = getattr(context, "_server", None)
@@ -348,7 +351,7 @@ class ResourcesRegistry:
 
     async def _read_stored_rmcp_data(
         self, context: Context, server: Any, parsed_uri
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Read previously stored RMCP data resources (rmcp://data/{id})."""
         path_parts = parsed_uri.path.strip("/").split("/")
         if len(path_parts) != 1 or not path_parts[0]:
@@ -381,7 +384,7 @@ class ResourcesRegistry:
 
     async def _generate_catalog_resource(
         self, context: Context, server: Any, parsed_uri
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build Markdown catalog describing registered tools and minimal usage."""
         tools_registry = getattr(server, "tools", None)
         if not tools_registry:
@@ -474,7 +477,7 @@ class ResourcesRegistry:
 
     async def _generate_environment_resource(
         self, context: Context, parsed_uri
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Collect environment metadata including R and Python details."""
         package_vector = ", ".join(f'"{pkg}"' for pkg in _REQUIRED_R_PACKAGES)
         r_script = f"""
@@ -524,7 +527,7 @@ result <- list(
 
     async def _generate_dataset_resource(
         self, context: Context, server: Any, parsed_uri
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Expose built-in datasets via rmcp://dataset/{name}."""
         dataset_name = parsed_uri.path.strip("/")
         if not dataset_name:
@@ -577,7 +580,7 @@ result <- list(
             ]
         }
 
-    def _emit_list_changed(self, item_ids: Optional[List[str]] = None) -> None:
+    def _emit_list_changed(self, item_ids: list[str] | None = None) -> None:
         """Emit list changed notification when available."""
         if not self._on_list_changed:
             return
@@ -590,8 +593,8 @@ result <- list(
 def resource(
     uri: str,
     name: str,
-    description: Optional[str] = None,
-    mime_type: Optional[str] = None,
+    description: str | None = None,
+    mime_type: str | None = None,
 ):
     """
     Decorator to register a static resource.

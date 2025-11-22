@@ -105,6 +105,10 @@ ignore = [
     "E501",  # line too long, handled by formatter
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
+    "B904",  # raise ... from err - not needed for our error patterns
+    "E722",  # bare except - allowed in test cleanup
+    "E402",  # module level import not at top - conditional imports needed
+    "B023",  # function definition does not bind loop variable - false positive
 ]
 
 [tool.ruff.format]

@@ -4,8 +4,6 @@ Unit tests for formula builder tools.
 Tests natural language to R formula conversion and validation.
 """
 
-import sys
-from pathlib import Path
 from shutil import which
 
 import pytest

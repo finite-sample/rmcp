@@ -17,12 +17,10 @@ Usage:
 """
 
 import argparse
-import json
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 
 class ScriptManager:
@@ -33,7 +31,7 @@ class ScriptManager:
         self.project_root = self.scripts_dir.parent
         self.script_registry = self._discover_scripts()
 
-    def _discover_scripts(self) -> Dict[str, Dict]:
+    def _discover_scripts(self) -> dict[str, dict]:
         """Discover and catalog all scripts."""
         registry = {}
 
@@ -164,7 +162,7 @@ class ScriptManager:
                 if info["args"]:
                     print(f"      Args: {', '.join(info['args'])}")
 
-    def validate_dependencies(self, script_name: str) -> Tuple[bool, List[str]]:
+    def validate_dependencies(self, script_name: str) -> tuple[bool, list[str]]:
         """Validate script dependencies."""
         if script_name not in self.script_registry:
             return False, [f"Script '{script_name}' not found"]
@@ -177,8 +175,7 @@ class ScriptManager:
             dep_name = dep.rstrip("?")
 
             if dep_name == "python":
-                if sys.version_info < (3, 10):
-                    missing_deps.append("Python 3.10+")
+                pass
             elif dep_name == "docker":
                 result = subprocess.run(
                     ["docker", "--version"],
@@ -213,7 +210,7 @@ class ScriptManager:
 
         return len(missing_deps) == 0, missing_deps
 
-    def run_script(self, script_name: str, args: List[str] = None) -> bool:
+    def run_script(self, script_name: str, args: list[str] = None) -> bool:
         """Run a specific script."""
         if script_name not in self.script_registry:
             print(f"❌ Script '{script_name}' not found")
@@ -251,7 +248,9 @@ class ScriptManager:
         start_time = time.time()
         try:
             result = subprocess.run(
-                command, cwd=self.project_root, timeout=600  # 10 minutes max
+                command,
+                cwd=self.project_root,
+                timeout=600,  # 10 minutes max
             )
             end_time = time.time()
             duration = end_time - start_time

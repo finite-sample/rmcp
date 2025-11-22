@@ -316,7 +316,7 @@ class TestHTTPTransportSSE:
                     )
                     # Read a few events (should be empty initially)
                     events_received = 0
-                    async for line in response.aiter_lines():
+                    async for _line in response.aiter_lines():
                         events_received += 1
                         if events_received > 2:  # Just check connection works
                             break

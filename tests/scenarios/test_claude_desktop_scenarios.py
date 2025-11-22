@@ -104,7 +104,7 @@ class TestClaudeDesktopRealIntegration:
 
         # Test the exact command Claude Desktop would use
         command = rmcp_config["command"]
-        args = rmcp_config["args"]
+        rmcp_config["args"]
         env = rmcp_config.get("env", {})
 
         # Set up environment as Claude Desktop would
@@ -194,15 +194,15 @@ class TestClaudeDesktopRealIntegration:
                         and response.get("id") == 1
                     ):
                         server_info = response.get("result", {}).get("serverInfo", {})
-                        print(f"✅ Real MCP communication successful")
+                        print("✅ Real MCP communication successful")
                         print(f"   Server: {server_info.get('name', 'Unknown')}")
                         print(f"   Version: {server_info.get('version', 'Unknown')}")
                         response_found = True
                         break
 
-            assert (
-                response_found
-            ), f"No valid MCP response. stdout: {stdout[:300]}, stderr: {stderr[:300]}"
+            assert response_found, (
+                f"No valid MCP response. stdout: {stdout[:300]}, stderr: {stderr[:300]}"
+            )
 
         except subprocess.TimeoutExpired:
             process.kill()
@@ -295,9 +295,9 @@ class TestClaudeDesktopRealIntegration:
                         ]
 
                         for expected_tool in expected_tools:
-                            assert (
-                                expected_tool in tool_names
-                            ), f"Expected tool {expected_tool} not found"
+                            assert expected_tool in tool_names, (
+                                f"Expected tool {expected_tool} not found"
+                            )
 
                         print(f"   Key tools verified: {expected_tools}")
                         tools_found = True
@@ -431,9 +431,9 @@ class TestClaudeDesktopWorkflows:
                     except:
                         pass
 
-            assert (
-                len(responses) >= 2
-            ), f"Expected at least 2 responses, got {len(responses)}"
+            assert len(responses) >= 2, (
+                f"Expected at least 2 responses, got {len(responses)}"
+            )
 
             # Check successful analysis
             analysis_success = False
@@ -614,7 +614,6 @@ class TestClaudeDesktopPerformance:
         print("🤖 Testing concurrent request handling...")
 
         import httpx
-
         from rmcp.cli import _register_builtin_tools
         from rmcp.core.server import create_server
         from rmcp.transport.http import HTTPTransport
@@ -792,23 +791,23 @@ class TestClaudeDesktopPerformance:
                     print(f"   ⏱️  Total stress time: {total_stress_time:.2f}s")
 
                     # Assertions for test success
-                    assert (
-                        successful_sequential >= 4
-                    ), f"Sequential requests: {successful_sequential}/5 successful (expected ≥4)"
-                    assert (
-                        successful_concurrent >= 2
-                    ), f"Concurrent requests: {successful_concurrent}/3 successful (expected ≥2)"
-                    assert (
-                        successful_stress >= 7
-                    ), f"Stress test: {successful_stress}/10 successful (expected ≥7)"
+                    assert successful_sequential >= 4, (
+                        f"Sequential requests: {successful_sequential}/5 successful (expected ≥4)"
+                    )
+                    assert successful_concurrent >= 2, (
+                        f"Concurrent requests: {successful_concurrent}/3 successful (expected ≥2)"
+                    )
+                    assert successful_stress >= 7, (
+                        f"Stress test: {successful_stress}/10 successful (expected ≥7)"
+                    )
 
                     # Performance assertions
-                    assert (
-                        avg_sequential_time < 5.0
-                    ), f"Sequential avg time {avg_sequential_time:.2f}s too slow (expected <5s)"
-                    assert (
-                        total_concurrent_time < 10.0
-                    ), f"Concurrent time {total_concurrent_time:.2f}s too slow (expected <10s)"
+                    assert avg_sequential_time < 5.0, (
+                        f"Sequential avg time {avg_sequential_time:.2f}s too slow (expected <5s)"
+                    )
+                    assert total_concurrent_time < 10.0, (
+                        f"Concurrent time {total_concurrent_time:.2f}s too slow (expected <10s)"
+                    )
 
                     print("🎉 All concurrent request tests passed!")
 

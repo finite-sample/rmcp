@@ -165,7 +165,6 @@ MACHINE_LEARNING = {
     "BayesTree",
     "tgp",
     # Ensemble methods
-    "randomForest",
     "extraTrees",
     "Boruta",
     "varSelRF",
@@ -184,7 +183,6 @@ MACHINE_LEARNING = {
     "breakDown",
     # Feature selection
     "FSelector",
-    "Boruta",
     "RReliefF",
 }
 
@@ -203,7 +201,6 @@ ECONOMETRICS = {
     "ivpack",
     "REndo",
     # Panel data
-    "plm",
     "panelvar",
     "lfe",
     "fixest",
@@ -258,8 +255,6 @@ ECONOMETRICS = {
     # Machine learning econometrics
     "hdm",
     "glmnet",
-    "grf",
-    "DoubleML",
 }
 
 # Time Series Analysis (CRAN Task View)
@@ -289,7 +284,6 @@ TIME_SERIES = {
     "arima2",
     "KFAS",
     "dlm",
-    "bsts",
     "MARSS",
     # Multivariate time series
     "vars",
@@ -308,7 +302,6 @@ TIME_SERIES = {
     "trend",
     "bcp",
     # Frequency domain
-    "wavelets",
     "wavethresh",
     "multitaper",
     "bspec",
@@ -320,15 +313,12 @@ TIME_SERIES = {
     "EMD",
     # Missing data imputation
     "imputeTS",
-    "zoo",
-    "forecast",
     # Machine learning for time series
     "nnfor",
     "TSdeeplearning",
     "TSLSTM",
     # High frequency data
     "highfrequency",
-    "xts",
     "RcppRoll",
     # Financial time series
     "quantmod",
@@ -441,7 +431,6 @@ SURVIVAL_ANALYSIS = {
     "risksetROC",
     # Joint modeling
     "JM",
-    "JMbayes",
     "joineR",
 }
 
@@ -720,12 +709,12 @@ if __name__ == "__main__":
     categories = get_package_categories()
     total_packages = len(ALLOWED_R_PACKAGES)
 
-    print(f"Comprehensive R Package Whitelist Statistics:")
+    print("Comprehensive R Package Whitelist Statistics:")
     print(f"Total packages: {total_packages}")
-    print(f"\nPackages by category:")
+    print("\nPackages by category:")
     for category, packages in sorted(categories.items()):
         print(f"  {category}: {len(packages)} packages")
 
-    print(f"\nFirst 10 packages alphabetically:")
-    for pkg in sorted(list(ALLOWED_R_PACKAGES))[:10]:
+    print("\nFirst 10 packages alphabetically:")
+    for pkg in sorted(ALLOWED_R_PACKAGES)[:10]:
         print(f"  {pkg}")

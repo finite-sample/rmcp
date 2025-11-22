@@ -12,8 +12,9 @@ import inspect
 import json
 import logging
 import uuid
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Protocol, Sequence
+from typing import Any, Protocol
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, validate_schema
@@ -533,12 +534,12 @@ def tool(
         if not inspect.iscoroutinefunction(func):
             raise ValueError(f"Tool handler '{name}' must be an async function")
         # Store tool metadata on function for registration
-        setattr(func, "_mcp_tool_name", name)
-        setattr(func, "_mcp_tool_input_schema", input_schema)
-        setattr(func, "_mcp_tool_output_schema", output_schema)
-        setattr(func, "_mcp_tool_title", title)
-        setattr(func, "_mcp_tool_description", description)
-        setattr(func, "_mcp_tool_annotations", annotations)
+        func._mcp_tool_name = name
+        func._mcp_tool_input_schema = input_schema
+        func._mcp_tool_output_schema = output_schema
+        func._mcp_tool_title = title
+        func._mcp_tool_description = description
+        func._mcp_tool_annotations = annotations
         return func  # type: ignore
 
     return decorator

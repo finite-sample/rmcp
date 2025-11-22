@@ -597,7 +597,7 @@ def _load_config(config_file: str) -> dict:
     import json
 
     try:
-        with open(config_file, "r") as f:
+        with open(config_file) as f:
             return json.load(f)
     except Exception as e:
         logger.error(f"Failed to load config file {config_file}: {e}")

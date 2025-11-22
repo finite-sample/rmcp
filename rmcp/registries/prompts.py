@@ -8,8 +8,9 @@ Following the principle: "Ship prompts as workflows."
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Protocol
+from typing import Any, Protocol
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, validate_schema
@@ -31,8 +32,8 @@ class PromptHandler(Protocol):
 
 
 def _paginate_items(
-    items: List["PromptDefinition"], cursor: Optional[str], limit: Optional[int]
-) -> tuple[List["PromptDefinition"], Optional[str]]:
+    items: list["PromptDefinition"], cursor: str | None, limit: int | None
+) -> tuple[list["PromptDefinition"], str | None]:
     """Return a slice of prompts based on cursor/limit pagination."""
     total_items = len(items)
     start_index = 0
@@ -66,9 +67,9 @@ class PromptDefinition:
     name: str
     title: str
     description: str
-    arguments_schema: Optional[Dict[str, Any]]
+    arguments_schema: dict[str, Any] | None
     template: str
-    annotations: Optional[Dict[str, Any]] = None
+    annotations: dict[str, Any] | None = None
 
 
 class PromptsRegistry:
@@ -76,9 +77,9 @@ class PromptsRegistry:
 
     def __init__(
         self,
-        on_list_changed: Optional[Callable[[Optional[List[str]]], None]] = None,
+        on_list_changed: Callable[[list[str] | None], None] | None = None,
     ):
-        self._prompts: Dict[str, PromptDefinition] = {}
+        self._prompts: dict[str, PromptDefinition] = {}
         self._on_list_changed = on_list_changed
 
     def register(
@@ -87,8 +88,8 @@ class PromptsRegistry:
         title: str,
         description: str,
         template: str,
-        arguments_schema: Optional[Dict[str, Any]] = None,
-        annotations: Optional[Dict[str, Any]] = None,
+        arguments_schema: dict[str, Any] | None = None,
+        annotations: dict[str, Any] | None = None,
     ) -> None:
         """Register a prompt template."""
         if name in self._prompts:
@@ -107,15 +108,15 @@ class PromptsRegistry:
     async def list_prompts(
         self,
         context: Context,
-        cursor: Optional[str] = None,
-        limit: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        cursor: str | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
         """List available prompts for MCP prompts/list."""
         ordered_prompts = sorted(self._prompts.values(), key=lambda prompt: prompt.name)
         page, next_cursor = _paginate_items(ordered_prompts, cursor, limit)
-        prompts: List[Dict[str, Any]] = []
+        prompts: list[dict[str, Any]] = []
         for prompt_def in page:
-            prompt_info: Dict[str, Any] = {
+            prompt_info: dict[str, Any] = {
                 "name": prompt_def.name,
                 "title": prompt_def.title,
                 "description": prompt_def.description,
@@ -131,14 +132,14 @@ class PromptsRegistry:
             total=len(ordered_prompts),
             next_cursor=next_cursor,
         )
-        response: Dict[str, Any] = {"prompts": prompts}
+        response: dict[str, Any] = {"prompts": prompts}
         if next_cursor is not None:
             response["nextCursor"] = next_cursor
         return response
 
     async def get_prompt(
-        self, context: Context, name: str, arguments: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, context: Context, name: str, arguments: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Get a rendered prompt for MCP prompts/get."""
         if name not in self._prompts:
             raise ValueError(f"Unknown prompt: {name}")
@@ -168,7 +169,7 @@ class PromptsRegistry:
             await context.error(f"Failed to render prompt '{name}': {e}")
             raise
 
-    def _render_template(self, template: str, arguments: Dict[str, Any]) -> str:
+    def _render_template(self, template: str, arguments: dict[str, Any]) -> str:
         """Render template with arguments using simple string formatting."""
         try:
             # Use simple string formatting for now
@@ -179,7 +180,7 @@ class PromptsRegistry:
         except Exception as e:
             raise ValueError(f"Template rendering error: {e}")
 
-    def _emit_list_changed(self, item_ids: Optional[List[str]] = None) -> None:
+    def _emit_list_changed(self, item_ids: list[str] | None = None) -> None:
         """Emit list changed notification when available."""
         if not self._on_list_changed:
             return
@@ -193,8 +194,8 @@ def prompt(
     name: str,
     title: str,
     description: str,
-    arguments_schema: Optional[Dict[str, Any]] = None,
-    annotations: Optional[Dict[str, Any]] = None,
+    arguments_schema: dict[str, Any] | None = None,
+    annotations: dict[str, Any] | None = None,
 ):
     """
     Decorator to register a prompt template.
@@ -223,12 +224,12 @@ def prompt(
         # Extract template content from function
         template_content = func()
         # Store prompt metadata on function
-        setattr(func, "_mcp_prompt_name", name)
-        setattr(func, "_mcp_prompt_title", title)
-        setattr(func, "_mcp_prompt_description", description)
-        setattr(func, "_mcp_prompt_template", template_content)
-        setattr(func, "_mcp_prompt_arguments_schema", arguments_schema)
-        setattr(func, "_mcp_prompt_annotations", annotations)
+        func._mcp_prompt_name = name
+        func._mcp_prompt_title = title
+        func._mcp_prompt_description = description
+        func._mcp_prompt_template = template_content
+        func._mcp_prompt_arguments_schema = arguments_schema
+        func._mcp_prompt_annotations = annotations
         return func  # type: ignore
 
     return decorator

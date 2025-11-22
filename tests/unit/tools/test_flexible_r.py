@@ -3,12 +3,9 @@
 Schema validation unit tests for flexible R execution tools.
 Tests input schema validation and security constraints.
 """
-import sys
-from pathlib import Path
 
 import pytest
 from jsonschema import ValidationError, validate
-
 from rmcp.tools.flexible_r import execute_r_analysis, list_allowed_r_packages
 
 

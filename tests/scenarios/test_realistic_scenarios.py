@@ -9,8 +9,6 @@ Each test uses the new MCP architecture with proper tools.
 """
 
 import asyncio
-import sys
-from pathlib import Path
 
 import pytest
 
@@ -157,9 +155,9 @@ async def test_economist_scenario():
         print(f"   📈 Phillips Curve slope: {phillips_coef:.3f}")
         print(f"   📊 Phillips R²: {phillips_r2:.3f}")
         # Economic validation
-        assert (
-            gdp_unemp_corr < 0
-        ), "GDP growth and unemployment should be negatively correlated"
+        assert gdp_unemp_corr < 0, (
+            "GDP growth and unemployment should be negatively correlated"
+        )
         print("✅ PASS: Economist can analyze macroeconomic relationships")
         return True
     except Exception as e:
@@ -247,9 +245,9 @@ async def test_data_scientist_scenario():
         # Data science validation
         assert accuracy > 0.6, "Model should achieve >60% accuracy"
         assert tenure_coef < 0, "Longer tenure should reduce churn probability"
-        assert (
-            support_coef > 0
-        ), "More support tickets should increase churn probability"
+        assert support_coef > 0, (
+            "More support tickets should increase churn probability"
+        )
         print("✅ PASS: Data scientist can build churn prediction model")
         return True
     except Exception as e:
@@ -326,9 +324,9 @@ async def test_researcher_scenario():
         print(f"   👥 Sample size: {treatment_model['n_obs']} participants")
         # Research standards
         assert treatment_coef > 0, "Treatment should have positive effect"
-        assert (
-            treatment_pvalue < 0.05
-        ), "Treatment effect should be statistically significant"
+        assert treatment_pvalue < 0.05, (
+            "Treatment effect should be statistically significant"
+        )
         assert baseline_coef > 0, "Baseline should predict outcome"
         assert r_squared > 0.7, "Model should have good explanatory power"
         print("✅ PASS: Researcher can analyze treatment effects")

@@ -3,7 +3,6 @@ Tests for configuration data models.
 """
 
 import pytest
-
 from rmcp.config.models import (
     HTTPConfig,
     LoggingConfig,

@@ -10,16 +10,12 @@ These tests execute real R scripts with sample data and validate the
 JSON output against the tool's declared output schema.
 """
 
-import asyncio
-import sys
-from pathlib import Path
 from shutil import which
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 import pytest_asyncio
-from jsonschema import ValidationError, validate
-
+from jsonschema import ValidationError
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.schemas import validate_schema
 from rmcp.tools import (
@@ -128,8 +124,8 @@ class TestSchemaValidation:
     }
 
     async def _validate_tool_output(
-        self, tool_func, params: Dict[str, Any], context: Context
-    ) -> Dict[str, Any]:
+        self, tool_func, params: dict[str, Any], context: Context
+    ) -> dict[str, Any]:
         """Execute tool and validate output against schema."""
         tool_name = tool_func._mcp_tool_name
         output_schema = tool_func._mcp_tool_output_schema
@@ -450,7 +446,6 @@ class TestSchemaConsistency:
                     hasattr(attr, "_mcp_tool_output_schema")
                     and attr._mcp_tool_output_schema is not None
                 ):
-
                     schema = attr._mcp_tool_output_schema
                     tool_name = attr._mcp_tool_name
 
@@ -480,9 +475,7 @@ class TestSchemaConsistency:
                             )
 
         if schema_issues:
-            pytest.fail(
-                f"Schema consistency issues found:\n" + "\n".join(schema_issues)
-            )
+            pytest.fail("Schema consistency issues found:\n" + "\n".join(schema_issues))
 
     def test_schema_field_types_are_valid(self):
         """
@@ -523,7 +516,6 @@ class TestSchemaConsistency:
                     hasattr(attr, "_mcp_tool_output_schema")
                     and attr._mcp_tool_output_schema is not None
                 ):
-
                     schema = attr._mcp_tool_output_schema
                     tool_name = attr._mcp_tool_name
 
@@ -552,14 +544,14 @@ class TestSchemaConsistency:
                     check_types(schema)
 
         if type_issues:
-            pytest.fail(f"Schema type issues found:\n" + "\n".join(type_issues))
+            pytest.fail("Schema type issues found:\n" + "\n".join(type_issues))
 
 
 # Utility functions for debugging schema validation failures
 
 
 def analyze_schema_mismatch(
-    actual_output: Dict[str, Any], expected_schema: Dict[str, Any]
+    actual_output: dict[str, Any], expected_schema: dict[str, Any]
 ) -> str:
     """
     Analyze and provide detailed information about schema mismatches.

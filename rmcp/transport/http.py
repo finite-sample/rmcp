@@ -10,7 +10,8 @@ import json
 import logging
 import queue
 import uuid
-from typing import Any, AsyncIterator, Dict
+from collections.abc import AsyncIterator
+from typing import Any
 from urllib.parse import urlparse
 
 try:
@@ -59,7 +60,7 @@ class HTTPTransport(Transport):
         )
 
         # Session management
-        self._sessions: Dict[str, Dict[str, Any]] = {}
+        self._sessions: dict[str, dict[str, Any]] = {}
         self._initialized_sessions: set[str] = set()
 
         # SSL/TLS configuration validation
@@ -98,7 +99,7 @@ class HTTPTransport(Transport):
             )
         elif not self._is_localhost and self.is_https:
             logger.info(
-                f"🔒 HTTPS enabled for remote binding to {self.host}:" f"{self.port}"
+                f"🔒 HTTPS enabled for remote binding to {self.host}:{self.port}"
             )
         # Import version dynamically to avoid circular imports
         from ..version import get_version
@@ -114,20 +115,20 @@ A Model Context Protocol (MCP) server providing comprehensive statistical analys
 ## Features
 
 - **53 Statistical Tools** across 11 categories including regression, time series, machine learning, and visualization
-- **MCP Protocol Support** - Full compatibility with Claude Desktop and other MCP clients  
+- **MCP Protocol Support** - Full compatibility with Claude Desktop and other MCP clients
 - **Professional Visualizations** - Generate inline plots and charts
 - **Flexible R Integration** - Execute both structured tools and custom R code with security validation
 - **Error Recovery** - Intelligent error diagnosis with suggested fixes
 
 ## Usage
 
-This server implements the MCP (Model Context Protocol) for statistical analysis. 
+This server implements the MCP (Model Context Protocol) for statistical analysis.
 Use with Claude Desktop or other MCP clients for natural language statistical analysis.
 
 ## Getting Started
 
 1. **Initialize Session**: Send an `initialize` request with proper MCP headers
-2. **List Tools**: Use `tools/list` to see available statistical analysis tools  
+2. **List Tools**: Use `tools/list` to see available statistical analysis tools
 3. **Execute Analysis**: Call tools like `linear_model`, `correlation_analysis`, etc.
 4. **Get Results**: Receive formatted statistical results with visualizations
 
@@ -271,17 +272,17 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
             summary="MCP JSON-RPC Endpoint",
             description="""
             Main endpoint for Model Context Protocol communication.
-            
+
             Handles JSON-RPC 2.0 requests for:
             - Session initialization
-            - Tool listing and execution  
+            - Tool listing and execution
             - Resource access
             - Statistical analysis operations
-            
+
             **Required Headers:**
             - `Content-Type: application/json`
             - `MCP-Protocol-Version: 2025-06-18` (after initialization)
-            
+
             **Session Management:**
             Sessions must be initialized before other operations.
             """,
@@ -364,15 +365,15 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
             summary="Server-Sent Events Endpoint",
             description="""
             Server-Sent Events (SSE) endpoint for real-time notifications.
-            
+
             Provides:
             - Progress updates during long-running statistical operations
             - Log messages and warnings
             - Keep-alive signals
-            
+
             **Connection:**
             Standard EventSource connection. Events are JSON-encoded.
-            
+
             **Event Types:**
             - `notification`: Statistical analysis progress/results
             - `keepalive`: Connection health check
@@ -431,24 +432,24 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>RMCP Statistical Analysis Server</title>
                 <style>
-                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                            margin: 0; padding: 40px; background: #f8f9fa; color: #333; }
-                    .container { max-width: 800px; margin: 0 auto; background: white; 
+                    .container { max-width: 800px; margin: 0 auto; background: white;
                                 padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
                     h1 { color: #2c3e50; margin-bottom: 10px; }
                     .subtitle { color: #7f8c8d; font-size: 18px; margin-bottom: 30px; }
-                    .status { display: inline-block; background: #27ae60; color: white; 
+                    .status { display: inline-block; background: #27ae60; color: white;
                              padding: 4px 12px; border-radius: 20px; font-size: 14px; margin-bottom: 30px; }
-                    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+                    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
                            gap: 20px; margin: 30px 0; }
                     .card { border: 1px solid #ddd; border-radius: 6px; padding: 20px; }
                     .card h3 { margin-top: 0; color: #2c3e50; }
-                    .btn { display: inline-block; background: #3498db; color: white; 
+                    .btn { display: inline-block; background: #3498db; color: white;
                           text-decoration: none; padding: 10px 20px; border-radius: 4px; margin: 5px 0; }
                     .btn:hover { background: #2980b9; }
                     .btn-secondary { background: #95a5a6; }
                     .btn-secondary:hover { background: #7f8c8d; }
-                    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; 
+                    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;
                              text-align: center; color: #7f8c8d; }
                 </style>
             </head>
@@ -457,10 +458,10 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
                     <h1>🔬 RMCP Statistical Analysis Server</h1>
                     <p class="subtitle">Statistical Analysis through Natural Conversation</p>
                     <div class="status">✅ Server Online</div>
-                    
-                    <p>This server provides comprehensive statistical analysis capabilities through the Model Context Protocol (MCP). 
+
+                    <p>This server provides comprehensive statistical analysis capabilities through the Model Context Protocol (MCP).
                     Access 53 statistical tools including regression, time series analysis, machine learning, and professional visualizations.</p>
-                    
+
                     <div class="grid">
                         <div class="card">
                             <h3>📚 Interactive Documentation</h3>
@@ -468,14 +469,14 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
                             <a href="/docs" class="btn">Swagger UI</a>
                             <a href="/redoc" class="btn btn-secondary">ReDoc</a>
                         </div>
-                        
+
                         <div class="card">
                             <h3>🔧 Server Status</h3>
                             <p>Monitor server health and check system status</p>
                             <a href="/health" class="btn">Health Check</a>
                             <a href="/mcp/sse" class="btn btn-secondary">Event Stream</a>
                         </div>
-                        
+
                         <div class="card">
                             <h3>💡 Getting Started</h3>
                             <p>Learn how to use RMCP for statistical analysis</p>
@@ -483,7 +484,7 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
                             <a href="https://finite-sample.github.io/rmcp/" class="btn btn-secondary">Documentation</a>
                         </div>
                     </div>
-                    
+
                     <h3>🚀 Quick Start</h3>
                     <p><strong>For Claude Desktop Users:</strong></p>
                     <pre style="background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto;">
@@ -495,14 +496,14 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
     }
   }
 }</pre>
-                    
+
                     <p><strong>For HTTP API Users:</strong></p>
                     <pre style="background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto;">
 curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \\
   -H "Content-Type: application/json" \\
   -H "MCP-Protocol-Version: 2025-06-18" \\
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'</pre>
-                    
+
                     <div class="footer">
                         <p>RMCP v0.5.1 | MIT License | <a href="https://github.com/finite-sample/rmcp">GitHub</a></p>
                     </div>
@@ -518,7 +519,7 @@ curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \\
             summary="Health Check",
             description="""
             Health check endpoint for monitoring server status.
-            
+
             Returns server health information and transport details.
             Useful for load balancers and monitoring systems.
             """,

@@ -4,7 +4,6 @@ Tests the approve_operation tool and validation logic.
 """
 
 import pytest
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.tools.flexible_r import (
     OPERATION_CATEGORIES,
@@ -170,7 +169,7 @@ class TestOperationCategories:
         assert "package_installation" in OPERATION_CATEGORIES
         assert "system_operations" in OPERATION_CATEGORIES
 
-        for category, config in OPERATION_CATEGORIES.items():
+        for _category, config in OPERATION_CATEGORIES.items():
             assert "patterns" in config
             assert "description" in config
             assert "examples" in config

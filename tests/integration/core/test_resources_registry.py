@@ -5,12 +5,9 @@ Tests resource endpoints using real R execution instead of mocks.
 """
 
 import json
-import sys
-from pathlib import Path
 from shutil import which
 
 import pytest
-
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.helpers import load_example

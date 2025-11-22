@@ -14,7 +14,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
 from rmcp.transport.http import HTTPTransport
 
 
@@ -131,7 +130,7 @@ class TestHTTPSTransportIntegration:
 
     def test_ssl_certificate_validation_missing_cert(self, temp_cert_dir):
         """Test that missing certificate file is caught during validation."""
-        nonexistent_cert = temp_cert_dir / "nonexistent.pem"
+        temp_cert_dir / "nonexistent.pem"
         nonexistent_key = temp_cert_dir / "nonexistent-key.pem"
 
         # Create key file but not cert file
@@ -211,7 +210,6 @@ class TestHTTPSTransportIntegration:
 
             # Create HTTPS client that accepts self-signed certificates
             async with httpx.AsyncClient(verify=False, timeout=10.0) as client:
-
                 # Test health endpoint
                 health_response = await client.get("https://127.0.0.1:8444/health")
                 assert health_response.status_code == 200
@@ -309,7 +307,7 @@ class TestHTTPSTransportIntegration:
         caplog.set_level(logging.WARNING)
 
         # Create HTTP transport bound to all interfaces (insecure)
-        transport = HTTPTransport(host="0.0.0.0", port=8000)
+        HTTPTransport(host="0.0.0.0", port=8000)
 
         # Check that warning was logged
         assert any("SECURITY WARNING" in record.message for record in caplog.records)
@@ -322,7 +320,7 @@ class TestHTTPSTransportIntegration:
         caplog.set_level(logging.INFO)
 
         # Create HTTPS transport bound to all interfaces (secure)
-        transport = HTTPTransport(
+        HTTPTransport(
             host="0.0.0.0",
             port=8443,
             ssl_keyfile=https_certificates["key_file"],

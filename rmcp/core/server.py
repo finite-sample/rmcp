@@ -10,12 +10,12 @@ Following the principle: "A single shell centralizes initialization and teardown
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, Optional
+from typing import Any
 
 try:
-    from mcp import LoggingLevel
     from mcp.types import (
         LATEST_PROTOCOL_VERSION,
         Implementation,
@@ -56,7 +56,7 @@ from .context import Context, LifespanState, RequestState
 # from mcp import Server, initialize_server
 # from mcp.types import Request, Response, Notification
 logger = logging.getLogger(__name__)
-_transport_context: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+_transport_context: ContextVar[dict[str, Any] | None] = ContextVar(
     "rmcp_transport_context", default=None
 )
 
@@ -363,7 +363,7 @@ All tools provide professionally formatted output with markdown tables, statisti
         method: str,
         progress_token: str | None = None,
         tool_invocation_id: str | None = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Context:
         """
         Create execution context for a request.

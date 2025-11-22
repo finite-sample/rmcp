@@ -8,13 +8,10 @@ using RMCP's enhanced capabilities.
 import asyncio
 import json
 import os
-import sys
-from pathlib import Path
 from shutil import which
 
 # Add rmcp to path
 import pytest
-
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.fileops import data_info, read_csv, read_excel, read_json
@@ -27,6 +24,7 @@ from rmcp.tools.regression import (
     linear_model,
     logistic_regression,
 )
+
 from tests.utils import extract_json_content
 
 pytestmark = [

@@ -3,10 +3,10 @@
 Test script to simulate the exact Claude Desktop scenario that was failing.
 This tests Excel file loading and scatter plot generation.
 """
+
 import asyncio
 import sys
 import tempfile
-from pathlib import Path
 from shutil import which
 
 import pandas as pd
@@ -17,6 +17,7 @@ from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.fileops import read_excel
 from rmcp.tools.visualization import scatter_plot
+
 from tests.utils import extract_json_content
 
 pytestmark = pytest.mark.skipif(

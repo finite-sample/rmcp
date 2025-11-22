@@ -12,7 +12,7 @@ import logging
 import mimetypes
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from ..config import get_config
 
@@ -37,10 +37,10 @@ class VFS:
 
     def __init__(
         self,
-        allowed_roots: List[Path],
+        allowed_roots: list[Path],
         read_only: bool = None,
         max_file_size: int = None,
-        allowed_mime_types: Optional[List[str]] = None,
+        allowed_mime_types: list[str] | None = None,
     ):
         self.allowed_roots = [root.resolve() for root in allowed_roots]
 
@@ -81,7 +81,7 @@ class VFS:
             f"read_only={read_only}, max_size={max_file_size}"
         )
 
-    def _resolve_and_validate_path(self, path: Union[str, Path]) -> Path:
+    def _resolve_and_validate_path(self, path: str | Path) -> Path:
         """Resolve path and validate against allowed roots."""
         try:
             # Resolve path to handle symlinks and relative paths
@@ -98,8 +98,7 @@ class VFS:
         # Not under any allowed root
         allowed_roots_str = ", ".join(str(root) for root in self.allowed_roots)
         raise VFSError(
-            f"Path access denied: {resolved_path}. "
-            f"Allowed roots: [{allowed_roots_str}]"
+            f"Path access denied: {resolved_path}. Allowed roots: [{allowed_roots_str}]"
         )
 
     def _check_file_constraints(self, path: Path) -> None:
@@ -122,7 +121,7 @@ class VFS:
                 f"Allowed types: {self.allowed_mime_types}"
             )
 
-    def read_file(self, path: Union[str, Path]) -> bytes:
+    def read_file(self, path: str | Path) -> bytes:
         """Read file with security checks."""
         resolved_path = self._resolve_and_validate_path(path)
         self._check_file_constraints(resolved_path)
@@ -131,10 +130,10 @@ class VFS:
                 content = f.read()
             logger.debug(f"Read file: {resolved_path} ({len(content)} bytes)")
             return content
-        except (OSError, IOError) as e:
+        except OSError as e:
             raise VFSError(f"Failed to read file {resolved_path}: {e}")
 
-    def read_text(self, path: Union[str, Path], encoding: str = "utf-8") -> str:
+    def read_text(self, path: str | Path, encoding: str = "utf-8") -> str:
         """Read text file with security checks."""
         content = self.read_file(path)
         try:
@@ -142,7 +141,7 @@ class VFS:
         except UnicodeDecodeError as e:
             raise VFSError(f"Failed to decode file {path} as {encoding}: {e}")
 
-    def list_directory(self, path: Union[str, Path]) -> List[Dict[str, Any]]:
+    def list_directory(self, path: str | Path) -> list[dict[str, Any]]:
         """List directory contents with security checks."""
         resolved_path = self._resolve_and_validate_path(path)
         if not resolved_path.is_dir():
@@ -163,15 +162,15 @@ class VFS:
                             "mime_type": mime_type,
                         }
                     )
-                except (OSError, IOError):
+                except OSError:
                     # Skip entries we can't stat
                     continue
             logger.debug(f"Listed directory: {resolved_path} ({len(entries)} entries)")
             return entries
-        except (OSError, IOError) as e:
+        except OSError as e:
             raise VFSError(f"Failed to list directory {resolved_path}: {e}")
 
-    def write_file(self, path: Union[str, Path], content: bytes) -> None:
+    def write_file(self, path: str | Path, content: bytes) -> None:
         """Write file with security checks."""
         if self.read_only:
             raise VFSError("VFS is configured as read-only")
@@ -187,11 +186,11 @@ class VFS:
             with open(resolved_path, "wb") as f:
                 f.write(content)
             logger.debug(f"Wrote file: {resolved_path} ({len(content)} bytes)")
-        except (OSError, IOError) as e:
+        except OSError as e:
             raise VFSError(f"Failed to write file {resolved_path}: {e}")
 
     def write_text(
-        self, path: Union[str, Path], content: str, encoding: str = "utf-8"
+        self, path: str | Path, content: str, encoding: str = "utf-8"
     ) -> None:
         """Write text file with security checks."""
         try:
@@ -200,7 +199,7 @@ class VFS:
         except UnicodeEncodeError as e:
             raise VFSError(f"Failed to encode content as {encoding}: {e}")
 
-    def file_info(self, path: Union[str, Path]) -> Dict[str, Any]:
+    def file_info(self, path: str | Path) -> dict[str, Any]:
         """Get file information with security checks."""
         resolved_path = self._resolve_and_validate_path(path)
         if not resolved_path.exists():
@@ -219,5 +218,5 @@ class VFS:
                 "readable": os.access(resolved_path, os.R_OK),
                 "writable": os.access(resolved_path, os.W_OK) and not self.read_only,
             }
-        except (OSError, IOError) as e:
+        except OSError as e:
             raise VFSError(f"Failed to get file info for {resolved_path}: {e}")

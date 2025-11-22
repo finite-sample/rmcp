@@ -57,11 +57,10 @@ Examples:
 """
 
 import copy
-import functools
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 try:
     import jsonschema
@@ -127,12 +126,12 @@ class ConfigLoader:
         Creates a new configuration loader with empty cache.
         The cache will be populated on first load_config() call.
         """
-        self._config_cache: Optional[RMCPConfig] = None
+        self._config_cache: RMCPConfig | None = None
 
     def load_config(
         self,
-        config_file: Optional[Union[str, Path]] = None,
-        overrides: Optional[Dict[str, Any]] = None,
+        config_file: str | Path | None = None,
+        overrides: dict[str, Any] | None = None,
         validate: bool = True,
     ) -> RMCPConfig:
         """
@@ -175,8 +174,8 @@ class ConfigLoader:
         return self._dict_to_config(config_dict)
 
     def _load_config_file(
-        self, config_file: Optional[Union[str, Path]] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, config_file: str | Path | None = None
+    ) -> dict[str, Any] | None:
         """Load configuration from JSON file."""
         config_paths = []
 
@@ -190,10 +189,10 @@ class ConfigLoader:
         for config_path in config_paths:
             if config_path.exists() and config_path.is_file():
                 try:
-                    with open(config_path, "r", encoding="utf-8") as f:
+                    with open(config_path, encoding="utf-8") as f:
                         config_data = json.load(f)
                     return config_data
-                except (json.JSONDecodeError, IOError) as e:
+                except (OSError, json.JSONDecodeError) as e:
                     if config_file:
                         # If explicitly specified, raise error
                         raise ConfigError(
@@ -207,7 +206,7 @@ class ConfigLoader:
 
         return None
 
-    def _load_environment_config(self) -> Dict[str, Any]:
+    def _load_environment_config(self) -> dict[str, Any]:
         """Load configuration from environment variables."""
         env_config = {}
 
@@ -242,7 +241,7 @@ class ConfigLoader:
         # String value
         return value
 
-    def _set_nested_value(self, config_dict: Dict[str, Any], path: str, value: Any):
+    def _set_nested_value(self, config_dict: dict[str, Any], path: str, value: Any):
         """Set a nested dictionary value using dot notation."""
         keys = path.split(".")
         current = config_dict
@@ -255,8 +254,8 @@ class ConfigLoader:
         current[keys[-1]] = value
 
     def _merge_config(
-        self, base: Dict[str, Any], override: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, base: dict[str, Any], override: dict[str, Any]
+    ) -> dict[str, Any]:
         """Recursively merge configuration dictionaries."""
         result = copy.deepcopy(base)
 
@@ -272,14 +271,14 @@ class ConfigLoader:
 
         return result
 
-    def _validate_config(self, config_dict: Dict[str, Any]):
+    def _validate_config(self, config_dict: dict[str, Any]):
         """Validate configuration against JSON schema."""
         try:
             jsonschema.validate(config_dict, CONFIG_SCHEMA)
         except jsonschema.ValidationError as e:
             raise ConfigError(f"Configuration validation failed: {e.message}")
 
-    def _dict_to_config(self, config_dict: Dict[str, Any]) -> RMCPConfig:
+    def _dict_to_config(self, config_dict: dict[str, Any]) -> RMCPConfig:
         """Convert configuration dictionary to typed RMCPConfig object."""
         try:
             http_config = HTTPConfig(**config_dict.get("http", {}))
@@ -302,7 +301,7 @@ class ConfigLoader:
 
 # Global configuration instance
 _config_loader = ConfigLoader()
-_global_config: Optional[RMCPConfig] = None
+_global_config: RMCPConfig | None = None
 
 
 def get_config(reload: bool = False) -> RMCPConfig:
@@ -324,8 +323,8 @@ def get_config(reload: bool = False) -> RMCPConfig:
 
 
 def load_config(
-    config_file: Optional[Union[str, Path]] = None,
-    overrides: Optional[Dict[str, Any]] = None,
+    config_file: str | Path | None = None,
+    overrides: dict[str, Any] | None = None,
     validate: bool = True,
 ) -> RMCPConfig:
     """

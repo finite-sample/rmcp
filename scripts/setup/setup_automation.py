@@ -19,7 +19,6 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 
 class RMCPSetupAutomation:
@@ -41,7 +40,7 @@ class RMCPSetupAutomation:
             print(f"ℹ️  {message}")
 
     def run_command(
-        self, command: List[str], timeout: int = 30
+        self, command: list[str], timeout: int = 30
     ) -> tuple[bool, str, str]:
         """Run command and return (success, stdout, stderr)."""
         try:
@@ -391,7 +390,7 @@ docker-compose up
         self.log(f"Sample configurations created in: {samples_dir}", "SUCCESS")
         return True
 
-    def run_setup(self, components: List[str]) -> bool:
+    def run_setup(self, components: list[str]) -> bool:
         """Run setup for specified components."""
         print("🛠️ RMCP Automated Setup")
         print("=" * 40)

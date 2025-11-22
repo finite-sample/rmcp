@@ -34,9 +34,8 @@ Usage Examples:
     >>> print(report["summary"])
 """
 
-import json
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 from jsonschema import ValidationError, validate
 
@@ -68,15 +67,15 @@ class SchemaDriftDetector:
     """
 
     def __init__(self):
-        self.violations: List[Dict[str, Any]] = []
-        self.warnings: List[Dict[str, Any]] = []
+        self.violations: list[dict[str, Any]] = []
+        self.warnings: list[dict[str, Any]] = []
 
     def analyze_output(
         self,
         tool_name: str,
-        actual_output: Dict[str, Any],
-        declared_schema: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        actual_output: dict[str, Any],
+        declared_schema: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Analyze actual R output against declared schema and detect drift.
 
@@ -147,9 +146,9 @@ class SchemaDriftDetector:
 
     def _analyze_object_schema(
         self,
-        actual_output: Dict[str, Any],
-        declared_schema: Dict[str, Any],
-        analysis: Dict[str, Any],
+        actual_output: dict[str, Any],
+        declared_schema: dict[str, Any],
+        analysis: dict[str, Any],
     ) -> None:
         """
         Analyze object schema for field and type drift.
@@ -288,7 +287,7 @@ class SchemaDriftDetector:
 
         return actual_type == expected_type
 
-    def _generate_recommendations(self, analysis: Dict[str, Any]) -> None:
+    def _generate_recommendations(self, analysis: dict[str, Any]) -> None:
         """
         Generate actionable recommendations based on analysis.
 
@@ -355,14 +354,14 @@ class SchemaConsistencyChecker:
     """
 
     def __init__(self):
-        self.tool_schemas: Dict[str, Dict[str, Any]] = {}
-        self.common_patterns: Dict[str, List[str]] = {}
+        self.tool_schemas: dict[str, dict[str, Any]] = {}
+        self.common_patterns: dict[str, list[str]] = {}
 
-    def add_tool_schema(self, tool_name: str, schema: Dict[str, Any]) -> None:
+    def add_tool_schema(self, tool_name: str, schema: dict[str, Any]) -> None:
         """Add a tool's schema for consistency analysis."""
         self.tool_schemas[tool_name] = schema
 
-    def analyze_consistency(self) -> Dict[str, Any]:
+    def analyze_consistency(self) -> dict[str, Any]:
         """
         Analyze schemas for consistency patterns and violations.
 
@@ -430,7 +429,7 @@ class SchemaConsistencyChecker:
         return analysis
 
     def _detect_naming_inconsistencies(
-        self, field_types: Dict[str, Dict[str, List[str]]], analysis: Dict[str, Any]
+        self, field_types: dict[str, dict[str, list[str]]], analysis: dict[str, Any]
     ) -> None:
         """
         Detect potential naming inconsistencies across tool schemas.
@@ -528,7 +527,7 @@ class SchemaConsistencyChecker:
         distance = edit_distance(field1.lower(), field2.lower())
         return 1 - (distance / max_len)
 
-    def _generate_consistency_recommendations(self, analysis: Dict[str, Any]) -> None:
+    def _generate_consistency_recommendations(self, analysis: dict[str, Any]) -> None:
         """
         Generate recommendations for improving schema consistency.
 
@@ -577,10 +576,10 @@ class SchemaConsistencyChecker:
 
 def validate_tool_output_with_diagnostics(
     tool_name: str,
-    actual_output: Dict[str, Any],
-    declared_schema: Dict[str, Any],
+    actual_output: dict[str, Any],
+    declared_schema: dict[str, Any],
     include_drift_analysis: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Comprehensive validation with detailed diagnostics.
 
@@ -673,7 +672,7 @@ def validate_tool_output_with_diagnostics(
     return report
 
 
-def generate_schema_validation_report(validation_results: List[Dict[str, Any]]) -> str:
+def generate_schema_validation_report(validation_results: list[dict[str, Any]]) -> str:
     """
     Generate a human-readable schema validation report.
 
@@ -786,8 +785,6 @@ def generate_schema_validation_report(validation_results: List[Dict[str, Any]]) 
 # CLI utility for running schema validation
 if __name__ == "__main__":
     import argparse
-    import sys
-    from pathlib import Path
 
     parser = argparse.ArgumentParser(description="RMCP Schema Validation Utility")
     parser.add_argument("--tool", help="Validate specific tool only")

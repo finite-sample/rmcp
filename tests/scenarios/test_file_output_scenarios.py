@@ -3,13 +3,10 @@ File output scenario tests for the RMCP approval system.
 Tests real file creation and validation with the approval workflow.
 """
 
-import asyncio
-import os
 import tempfile
 from pathlib import Path
 
 import pytest
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.security.vfs import VFS
 from rmcp.tools.flexible_r import approve_operation, execute_r_analysis
@@ -101,29 +98,29 @@ class TestFileOutputScenarios:
         iris_analysis_code = f"""
         # Load iris data from local file (no network dependency)
         iris_data <- read.csv("{context.iris_data_path}")
-        
+
         # Create analysis plot using base R (more reliable in CI)
         plot_file <- "{context.temp_dir}/iris_analysis.png"
         png(plot_file, width = 800, height = 600, res = 100)
-        
+
         # Create scatter plot with base R
-        plot(iris_data$petal_length, iris_data$petal_width, 
+        plot(iris_data$petal_length, iris_data$petal_width,
              col = as.factor(iris_data$species),
-             pch = 19, 
+             pch = 19,
              main = "Iris Species Classification",
              xlab = "Petal Length (cm)",
              ylab = "Petal Width (cm)")
-        legend("topright", 
+        legend("topright",
                legend = unique(iris_data$species),
-               col = 1:length(unique(iris_data$species)), 
+               col = 1:length(unique(iris_data$species)),
                pch = 19)
-        
+
         dev.off()
-        
+
         # Also save data to CSV
         data_file <- "{context.temp_dir}/iris_data.csv"
         write.csv(iris_data, data_file, row.names = FALSE)
-        
+
         result <- list(
           analysis_complete = TRUE,
           plot_file = plot_file,
@@ -297,17 +294,17 @@ class TestFileOutputScenarios:
           y = (1:10)^2,
           category = rep(c("A", "B"), 5)
         )
-        
+
         # Save as CSV
         write.csv(data, "{context.temp_dir}/data.csv", row.names = FALSE)
-        
+
         # Create and save plot as PNG
         library(ggplot2)
-        p <- ggplot(data, aes(x = x, y = y, color = category)) + 
-          geom_point(size = 3) + 
+        p <- ggplot(data, aes(x = x, y = y, color = category)) +
+          geom_point(size = 3) +
           theme_minimal()
         ggsave("{context.temp_dir}/plot.png", plot = p, width = 8, height = 6)
-        
+
         # Save text summary
         summary_text <- c(
           "Analysis Summary",
@@ -316,10 +313,10 @@ class TestFileOutputScenarios:
           paste("Categories:", paste(unique(data$category), collapse = ", "))
         )
         writeLines(summary_text, "{context.temp_dir}/summary.txt")
-        
+
         result <- list(
           csv_exists = file.exists("{context.temp_dir}/data.csv"),
-          png_exists = file.exists("{context.temp_dir}/plot.png"), 
+          png_exists = file.exists("{context.temp_dir}/plot.png"),
           txt_exists = file.exists("{context.temp_dir}/summary.txt"),
           files_created = 3
         )
@@ -390,9 +387,9 @@ class TestFileOutputScenarios:
             unauthorized_file.unlink()
 
         # After R execution, the unauthorized file should not exist
-        assert (
-            not unauthorized_file.exists()
-        ), "VFS security was bypassed - unauthorized file was created"
+        assert not unauthorized_file.exists(), (
+            "VFS security was bypassed - unauthorized file was created"
+        )
 
         # The operation should have been blocked by approval system
         if not result["success"]:

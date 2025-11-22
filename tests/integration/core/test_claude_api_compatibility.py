@@ -10,12 +10,9 @@ This test suite verifies that:
 """
 
 import json
-import sys
-from pathlib import Path
 
 import pytest
 from jsonschema import ValidationError, validate
-
 from rmcp.cli import _register_builtin_tools
 from rmcp.core.server import create_server
 from rmcp.tools.flexible_r import execute_r_analysis
@@ -47,7 +44,7 @@ class TestClaudeAPISchemaCompliance:
 
             # Check if top-level schema contains problematic keywords
             if isinstance(schema, dict):
-                schema_str = json.dumps(schema)
+                json.dumps(schema)
                 # Check for these keywords at the top level of the schema
                 if any(key in schema for key in ["oneOf", "allOf", "anyOf"]):
                     problematic_tools.append(
@@ -69,9 +66,9 @@ class TestClaudeAPISchemaCompliance:
             )
         else:
             print("✅ All tools have Claude-compatible schemas")
-            assert (
-                tools_checked >= 44
-            ), f"Expected at least 44 tools, found {tools_checked}"
+            assert tools_checked >= 44, (
+                f"Expected at least 44 tools, found {tools_checked}"
+            )
 
     def test_decision_tree_flattened_schema(self):
         """Test that decision_tree's flattened schema still validates properly."""

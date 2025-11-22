@@ -6,10 +6,8 @@ This script tests the RMCP server's compatibility with Claude's MCP connector sy
 by simulating the requests that Claude would make when using RMCP as a connector.
 """
 
-import json
 import os
-import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 
@@ -79,7 +77,7 @@ class ClaudeConnectorTester:
             print(f"❌ MCP Initialization Error: {e}")
             return False
 
-    def test_tools_list(self) -> Dict[str, Any]:
+    def test_tools_list(self) -> dict[str, Any]:
         """Test tools/list endpoint (as Claude would call)."""
         if not self.session_id:
             print("❌ No session ID available for tools/list test")
@@ -104,7 +102,7 @@ class ClaudeConnectorTester:
                 # Print first few tools for verification
                 for i, tool in enumerate(tools[:5]):
                     print(
-                        f"   Tool {i+1}: {tool.get('name')} - {tool.get('description', 'No description')}"
+                        f"   Tool {i + 1}: {tool.get('name')} - {tool.get('description', 'No description')}"
                     )
 
                 return tools_data
@@ -118,8 +116,8 @@ class ClaudeConnectorTester:
             return {}
 
     def test_tool_execution(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any]:
         """Test individual tool execution (as Claude would call)."""
         if not self.session_id:
             print(f"❌ No session ID available for {tool_name} test")
@@ -169,7 +167,7 @@ class ClaudeConnectorTester:
             print(f"❌ Tool {tool_name} Error: {e}")
             return {}
 
-    def test_claude_api_integration(self, claude_api_key: Optional[str] = None) -> bool:
+    def test_claude_api_integration(self, claude_api_key: str | None = None) -> bool:
         """Test actual Claude API integration with RMCP connector."""
         if not claude_api_key:
             print(
@@ -203,7 +201,7 @@ class ClaudeConnectorTester:
 
             if response.ok:
                 claude_response = response.json()
-                print(f"✅ Claude API Integration: Success")
+                print("✅ Claude API Integration: Success")
                 print(
                     f"   Claude Response: {claude_response.get('content', 'No content')}"
                 )
@@ -218,8 +216,8 @@ class ClaudeConnectorTester:
             return False
 
     def run_comprehensive_test(
-        self, claude_api_key: Optional[str] = None
-    ) -> Dict[str, bool]:
+        self, claude_api_key: str | None = None
+    ) -> dict[str, bool]:
         """Run all connector tests."""
         print("🧪 RMCP Claude Connector Integration Test")
         print("=" * 50)
@@ -301,13 +299,13 @@ class ClaudeConnectorTester:
             status = "✅ PASS" if passed_test else "❌ FAIL"
             print(f"{test_name:20} : {status}")
 
-        print(f"\nOverall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
+        print(f"\nOverall: {passed}/{total} tests passed ({passed / total * 100:.1f}%)")
 
         if passed == total:
             print("\n🎉 ALL TESTS PASSED! Connector is ready for Claude integration.")
         else:
             print(
-                f"\n⚠️  {total-passed} test(s) failed. Review issues before submission."
+                f"\n⚠️  {total - passed} test(s) failed. Review issues before submission."
             )
 
         return results

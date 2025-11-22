@@ -4,9 +4,8 @@ MCP Protocol validation tests for all RMCP tools.
 Tests complete MCP protocol integration flow for each tool with mocked R responses,
 ensuring all tool paths work end-to-end without requiring R environment.
 """
-import sys
+
 from contextlib import ExitStack
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -63,7 +62,8 @@ from rmcp.tools.visualization import (
     scatter_plot,
     time_series_plot,
 )
-from tests.utils import extract_json_content, extract_text_summary
+
+from tests.utils import extract_text_summary
 
 # Test data sets - minimal viable data for each category
 BASIC_DATA = {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]}

@@ -11,7 +11,7 @@ Following the principle: "No hand-rolled JSON-RPC, no 'close enough' message sha
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class JSONRPCError(Exception):
         self.data = data
         self.request_id = request_id
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-RPC error response format."""
         error_obj = {"code": self.code, "message": self.message}
         if self.data is not None:
@@ -49,11 +49,11 @@ class JSONRPCMessage:
     """Parsed JSON-RPC message."""
 
     jsonrpc: str
-    id: Optional[Union[str, int, None]] = None
-    method: Optional[str] = None
-    params: Optional[Union[Dict[str, Any], list]] = None
-    result: Optional[Any] = None
-    error: Optional[Dict[str, Any]] = None
+    id: str | int | None | None = None
+    method: str | None = None
+    params: dict[str, Any] | list | None = None
+    result: Any | None = None
+    error: dict[str, Any] | None = None
 
     @property
     def is_request(self) -> bool:
@@ -77,7 +77,7 @@ class JSONRPCEnvelope:
     """JSON-RPC 2.0 message envelope handler."""
 
     @staticmethod
-    def encode(message: Dict[str, Any]) -> str:
+    def encode(message: dict[str, Any]) -> str:
         """
         Encode message to single-line JSON for stdio transport.
         Following the principle: "One JSON-RPC message per line."
@@ -172,33 +172,33 @@ class JSONRPCEnvelope:
     @staticmethod
     def create_request(
         method: str,
-        params: Optional[Union[Dict[str, Any], list]] = None,
-        request_id: Union[str, int] = "1",
-    ) -> Dict[str, Any]:
+        params: dict[str, Any] | list | None = None,
+        request_id: str | int = "1",
+    ) -> dict[str, Any]:
         """Create a JSON-RPC 2.0 request."""
-        request: Dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": request_id}
+        request: dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": request_id}
         if params is not None:
             request["params"] = params
         return request
 
     @staticmethod
     def create_notification(
-        method: str, params: Optional[Union[Dict[str, Any], list]] = None
-    ) -> Dict[str, Any]:
+        method: str, params: dict[str, Any] | list | None = None
+    ) -> dict[str, Any]:
         """Create a JSON-RPC 2.0 notification."""
-        notification: Dict[str, Any] = {"jsonrpc": "2.0", "method": method}
+        notification: dict[str, Any] = {"jsonrpc": "2.0", "method": method}
         if params is not None:
             notification["params"] = params
         return notification
 
     @staticmethod
-    def create_response(request_id: Union[str, int], result: Any) -> Dict[str, Any]:
+    def create_response(request_id: str | int, result: Any) -> dict[str, Any]:
         """Create a JSON-RPC 2.0 success response."""
         return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
     @staticmethod
     def create_error_response(
-        request_id: Union[str, int, None], error: JSONRPCError
-    ) -> Dict[str, Any]:
+        request_id: str | int | None, error: JSONRPCError
+    ) -> dict[str, Any]:
         """Create a JSON-RPC 2.0 error response."""
         return error.to_dict()

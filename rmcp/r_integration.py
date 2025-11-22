@@ -285,9 +285,9 @@ write_json(result, "{result_path_safe}", auto_unbox = TRUE)
                 error_msg = f"""R script failed with return code {process.returncode}
 COMMAND: {r_path} --slave --no-restore --file={script_path}
 STDOUT:
-{process.stdout or '(empty)'}
+{process.stdout or "(empty)"}
 STDERR:
-{process.stderr or '(empty)'}
+{process.stderr or "(empty)"}
 ENVIRONMENT:
 {env_info}"""
                 stderr = process.stderr or ""
@@ -349,11 +349,11 @@ Original error: {stderr.strip()}"""
                 )
             # Read results
             try:
-                with open(result_path, "r") as f:
+                with open(result_path) as f:
                     result = json.load(f)
                 logger.debug(f"R script executed successfully, result: {result}")
                 return result
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 exc = RExecutionError("R script did not produce output file")
                 exc.add_note(f"Expected output file: {result_path}")
                 exc.add_note(
@@ -515,9 +515,9 @@ if (exists("result")) {{
 
                     # Run stdout and stderr monitoring concurrently using TaskGroup (Python 3.11+)
                     async with asyncio.TaskGroup() as tg:
-                        stdout_task = tg.create_task(read_stdout())
-                        stderr_task = tg.create_task(monitor_stderr())
-                        wait_task = tg.create_task(
+                        tg.create_task(read_stdout())
+                        tg.create_task(monitor_stderr())
+                        tg.create_task(
                             asyncio.wait_for(
                                 proc.wait(), timeout=get_config().r.timeout
                             )
@@ -533,12 +533,12 @@ if (exists("result")) {{
                     proc.terminate()
                     try:
                         await asyncio.wait_for(proc.wait(), timeout=0.5)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         logger.warning("R process didn't terminate gracefully, killing")
                         proc.kill()
                         await proc.wait()
                     raise
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.error("R script execution timed out")
                     proc.kill()
                     await proc.wait()
@@ -564,9 +564,9 @@ if (exists("result")) {{
                     error_msg = f"""R script failed with return code {proc.returncode}
 COMMAND: {r_path} --slave --no-restore --file={script_path}
 STDOUT:
-{stdout or '(empty)'}
+{stdout or "(empty)"}
 STDERR:
-{stderr or '(empty)'}
+{stderr or "(empty)"}
 ENVIRONMENT:
 {env_info}"""
                     stderr = stderr or ""
@@ -703,7 +703,7 @@ Original error:
                     )
                 # Read and parse results
                 try:
-                    with open(result_path, "r") as f:
+                    with open(result_path) as f:
                         result_json = f.read()
                         result = json.loads(result_json)
                         result_info = (
@@ -1046,7 +1046,7 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
                     diagnosis["error"] = (
                         f"R --version failed with return code {proc.returncode}: {stderr.decode()}"
                     )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 diagnosis["error"] = "R --version timed out after 30 seconds"
             except Exception as e:
                 diagnosis["error"] = f"Failed to get R version: {str(e)}"
@@ -1084,7 +1084,7 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
                     diagnosis["error"] = (
                         f"R basic test failed (code {proc.returncode}): {stderr.decode()}"
                     )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 diagnosis["error"] = "R basic test timed out after 30 seconds"
             except Exception as e:
                 diagnosis["error"] = f"R basic test failed: {str(e)}"
