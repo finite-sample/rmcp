@@ -40,10 +40,12 @@ dev = [
     # Essential dependencies for cross-platform Python testing
     "pytest>=8.2.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
     "ruff>=0.4.0",
     # Workflow test dependencies (Excel file creation)
     "pandas>=1.5.0",
     "openpyxl>=3.0.0",
+    "httpx>=0.25.0",
     # Note: R integration tests run in Docker, not via uv
 ]
 docs = [

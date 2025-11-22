@@ -38,25 +38,7 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-${TARGETPLATFORM} \
     # Install uv
     curl -LsSf https://astral.sh/uv/install.sh | sh; \
     . /root/.cargo/env; \
-    uv venv "$VENV"; \
-    . "$VENV/bin/activate"; \
-    uv pip install \
-        # Development tools
-        "ruff>=0.4.0" \
-        "pytest>=8.2.0" \
-        "pytest-cov>=4.0.0" \
-        "pytest-asyncio>=0.21.0" \
-        # Core dependencies
-        "click>=8.1.0" \
-        "jsonschema>=4.0.0" \
-        # HTTP transport dependencies
-        "fastapi>=0.100.0" \
-        "uvicorn>=0.20.0" \
-        "sse-starlette>=1.6.0" \
-        "httpx>=0.25.0" \
-        # Workflow dependencies
-        "pandas>=1.5.0" \
-        "openpyxl>=3.0.0"
+    uv venv "$VENV"
 
 # Add uv to PATH
 ENV PATH="/root/.cargo/bin:$PATH"
@@ -74,10 +56,16 @@ COPY pyproject.toml ./
 RUN echo "# RMCP Development Environment" > README.md
 COPY rmcp/ ./rmcp/
 
-# Install RMCP in development mode
-RUN . "$VENV/bin/activate" && \
-    . /root/.cargo/env && \
-    uv pip install -e .
+# Install RMCP and dependencies using uv sync
+RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-sync-${TARGETPLATFORM} \
+    set -eux; \
+    . /root/.cargo/env; \
+    export UV_PYTHON="$VENV/bin/python"; \
+    # Install all development dependencies and HTTP extras using the virtual environment
+    uv sync --group dev --extra all; \
+    # Verify installation
+    . "$VENV/bin/activate"; \
+    python -c "import rmcp; print('RMCP installed successfully')"
 
 # Default to bash for development work
 CMD ["bash"]
@@ -87,27 +75,15 @@ CMD ["bash"]
 # ============================================================================
 FROM base AS builder
 
-# Install uv and create Python virtual environment with minimal production dependencies
+# Install uv and create Python virtual environment with production dependencies
+ARG TARGETPLATFORM
 ENV VENV=/opt/venv
 RUN --mount=type=cache,target=/root/.cache/uv,id=uv-prod-${TARGETPLATFORM} \
     set -eux; \
     # Install uv
     curl -LsSf https://astral.sh/uv/install.sh | sh; \
     . /root/.cargo/env; \
-    uv venv "$VENV"; \
-    . "$VENV/bin/activate"; \
-    uv pip install \
-        # Core dependencies
-        "click>=8.1.0" \
-        "jsonschema>=4.0.0" \
-        # HTTP transport dependencies
-        "fastapi>=0.100.0" \
-        "uvicorn>=0.20.0" \
-        "sse-starlette>=1.6.0" \
-        "httpx>=0.25.0" \
-        # Workflow dependencies
-        "pandas>=1.5.0" \
-        "openpyxl>=3.0.0"
+    uv venv "$VENV"
 
 # Add uv to PATH
 ENV PATH="/root/.cargo/bin:$PATH"
@@ -119,10 +95,14 @@ COPY pyproject.toml ./
 # Create minimal README.md for build (excluded by .dockerignore)
 RUN echo "# RMCP Production Build" > README.md
 COPY rmcp/ ./rmcp/
-# Build wheel for production installation with uv
+# Install production dependencies and build wheel
 RUN --mount=type=cache,target=/root/.cache/uv,id=uv-build-${TARGETPLATFORM} \
-    . "$VENV/bin/activate" && \
-    . /root/.cargo/env && \
+    set -eux; \
+    . /root/.cargo/env; \
+    export UV_PYTHON="$VENV/bin/python"; \
+    # Install production dependencies with HTTP extras (no dev dependencies)
+    uv sync --no-group dev --extra all; \
+    # Build wheel for production installation
     uv build --wheel --out-dir /build/wheels/
 
 # ============================================================================
