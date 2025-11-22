@@ -37,11 +37,11 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-${TARGETPLATFORM} \
     set -eux; \
     # Install uv
     curl -LsSf https://astral.sh/uv/install.sh | sh; \
-    . /root/.cargo/env; \
+    export PATH="/root/.local/bin:$PATH"; \
     uv venv "$VENV"
 
 # Add uv to PATH
-ENV PATH="/root/.cargo/bin:$PATH"
+ENV PATH="/root/.local/bin:$PATH"
 
 # Ensure venv tools are first on PATH for subsequent steps/CI
 ENV PATH="$VENV/bin:$PATH"
@@ -59,7 +59,7 @@ COPY rmcp/ ./rmcp/
 # Install RMCP and dependencies using uv sync
 RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-sync-${TARGETPLATFORM} \
     set -eux; \
-    . /root/.cargo/env; \
+    export PATH="/root/.local/bin:$PATH"; \
     export UV_PYTHON="$VENV/bin/python"; \
     # Install all development dependencies and HTTP extras using the virtual environment
     uv sync --group dev --extra all; \
@@ -82,11 +82,11 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=uv-prod-${TARGETPLATFORM} \
     set -eux; \
     # Install uv
     curl -LsSf https://astral.sh/uv/install.sh | sh; \
-    . /root/.cargo/env; \
+    export PATH="/root/.local/bin:$PATH"; \
     uv venv "$VENV"
 
 # Add uv to PATH
-ENV PATH="/root/.cargo/bin:$PATH"
+ENV PATH="/root/.local/bin:$PATH"
 
 # Copy and build RMCP package
 WORKDIR /build
@@ -98,7 +98,7 @@ COPY rmcp/ ./rmcp/
 # Install production dependencies and build wheel
 RUN --mount=type=cache,target=/root/.cache/uv,id=uv-build-${TARGETPLATFORM} \
     set -eux; \
-    . /root/.cargo/env; \
+    export PATH="/root/.local/bin:$PATH"; \
     export UV_PYTHON="$VENV/bin/python"; \
     # Install production dependencies with HTTP extras (no dev dependencies)
     uv sync --no-group dev --extra all; \
@@ -169,9 +169,9 @@ ENV PATH="$VENV/bin:$PATH"
 
 # Install RMCP, create user, and setup directory in single layer  
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    . /root/.cargo/env && \
+    export PATH="/root/.local/bin:$PATH" && \
     uv pip install --system --no-deps /tmp/wheels/*.whl && \
-    rm -rf /tmp/wheels/ /root/.cargo && \
+    rm -rf /tmp/wheels/ /root/.local && \
     groupadd -r rmcp && \
     useradd -r -g rmcp -d /app -s /bin/bash rmcp
 
