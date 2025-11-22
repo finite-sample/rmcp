@@ -23,26 +23,29 @@ jobs:
       with:
         python-version: "3.11"
     
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+    
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install black isort flake8 click jsonschema pytest pytest-asyncio
-        pip install -e .
+        uv sync --group dev
+        uv pip install -e .
     
     - name: Run linting
       run: |
-        black --check rmcp tests streamlit scripts
-        isort --check-only rmcp tests streamlit scripts
-        flake8 rmcp tests streamlit scripts
+        uv run ruff check .
+        uv run ruff format --check .
     
     - name: Run Python-only unit tests
       run: |
         # Test CLI basic functionality
-        rmcp --version
-        rmcp list-capabilities > /dev/null
+        uv run rmcp --version
+        uv run rmcp list-capabilities > /dev/null
         
         # Run all unit tests (Python-only, schema validation, etc.)
-        pytest tests/unit/ -v --tb=short
+        uv run pytest tests/unit/ -v --tb=short
 
   # Build Docker images for R testing (both development and production)  
   docker-build:
@@ -470,11 +473,14 @@ jobs:
       with:
         python-version: "3.11"
     
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+    
     - name: Install dependencies for scenario tests
       run: |
-        python -m pip install --upgrade pip
-        pip install poetry
-        poetry install --with dev
+        uv sync --group dev
         
         echo "🐳 Verifying Docker availability..."
         docker --version
@@ -522,31 +528,31 @@ jobs:
         echo "Using production image: $RMCP_PRODUCTION_IMAGE"
         
         # Test basic Docker functionality
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_basic_functionality -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_basic_functionality -v --tb=short
         
         # Test production image functionality (uses pre-built image)
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_production_image_functionality -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_production_image_functionality -v --tb=short
         
         # Test security configuration
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_security_configuration -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_security_configuration -v --tb=short
         
         # Test environment variables and volume mounts
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_environment_variables -v --tb=short
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_volume_mounts -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_environment_variables -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_volume_mounts -v --tb=short
         
         # Test R environment
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_r_environment_validation -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_r_environment_validation -v --tb=short
         
         # Test end-to-end workflows  
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_mcp_protocol_communication -v --tb=short
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_complete_analysis_workflow -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_mcp_protocol_communication -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_complete_analysis_workflow -v --tb=short
         
         # Test performance and resource usage
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_performance_benchmarks -v --tb=short
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_resource_usage -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_performance_benchmarks -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_resource_usage -v --tb=short
         
         # Test platform-specific features (cross-platform compatibility)
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerCrossplatformCompatibility::test_docker_platform_specific_features -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerCrossplatformCompatibility::test_docker_platform_specific_features -v --tb=short
         
         echo "✅ All Docker scenario tests completed"
     
@@ -630,12 +636,16 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-        pip install pytest pytest-asyncio
+        uv sync --group dev
+        uv pip install -e .
     
     - name: Run cross-platform smoke tests
       run: |
-        pytest tests/smoke/ -v
+        uv run pytest tests/smoke/ -v

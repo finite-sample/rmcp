@@ -30,37 +30,36 @@ FROM base AS development
 
 # Note: R packages and mkcert are already installed in base image
 
-# Create Python virtual environment with development dependencies
-# Use cache mount for pip to dramatically speed up builds
+# Install uv and create virtual environment with development dependencies
 ARG TARGETPLATFORM
 ENV VENV=/opt/venv
-RUN --mount=type=cache,target=/root/.cache/pip,id=pip-dev-${TARGETPLATFORM} \
-    --mount=type=cache,target=/tmp/pip-cache,id=pip-dev-temp-${TARGETPLATFORM} \
+RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-${TARGETPLATFORM} \
     set -eux; \
-    python3 -m venv "$VENV"; \
+    # Install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh; \
+    . /root/.cargo/env; \
+    uv venv "$VENV"; \
     . "$VENV/bin/activate"; \
-    pip install --upgrade pip \
-        --cache-dir=/tmp/pip-cache; \
-    pip install --cache-dir=/tmp/pip-cache \
-        # Development tools (pinned for cache stability)
-        "black==23.12.1" \
-        "isort==5.13.2" \
-        "flake8==6.1.0" \
-        "pytest==8.2.0" \
-        "pytest-cov==4.0.0" \
-        "pytest-asyncio==0.24.0" \
+    uv pip install \
+        # Development tools
+        "ruff>=0.4.0" \
+        "pytest>=8.2.0" \
+        "pytest-cov>=4.0.0" \
+        "pytest-asyncio>=0.21.0" \
         # Core dependencies
-        "click==8.1.7" \
-        "jsonschema==4.21.1" \
-        "build==1.0.3" \
+        "click>=8.1.0" \
+        "jsonschema>=4.0.0" \
         # HTTP transport dependencies
-        "fastapi==0.109.0" \
-        "uvicorn==0.26.0" \
-        "sse-starlette==1.8.2" \
-        "httpx==0.26.0" \
+        "fastapi>=0.100.0" \
+        "uvicorn>=0.20.0" \
+        "sse-starlette>=1.6.0" \
+        "httpx>=0.25.0" \
         # Workflow dependencies
-        "pandas==2.2.0" \
-        "openpyxl==3.1.2"
+        "pandas>=1.5.0" \
+        "openpyxl>=3.0.0"
+
+# Add uv to PATH
+ENV PATH="/root/.cargo/bin:$PATH"
 
 # Ensure venv tools are first on PATH for subsequent steps/CI
 ENV PATH="$VENV/bin:$PATH"
@@ -76,7 +75,9 @@ RUN echo "# RMCP Development Environment" > README.md
 COPY rmcp/ ./rmcp/
 
 # Install RMCP in development mode
-RUN . "$VENV/bin/activate" && pip install -e .
+RUN . "$VENV/bin/activate" && \
+    . /root/.cargo/env && \
+    uv pip install -e .
 
 # Default to bash for development work
 CMD ["bash"]
@@ -86,29 +87,30 @@ CMD ["bash"]
 # ============================================================================
 FROM base AS builder
 
-# Create Python virtual environment with minimal production dependencies
-# Use cache mount for pip to dramatically speed up builds
+# Install uv and create Python virtual environment with minimal production dependencies
 ENV VENV=/opt/venv
-RUN --mount=type=cache,target=/root/.cache/pip,id=pip-prod-${TARGETPLATFORM} \
-    --mount=type=cache,target=/tmp/pip-cache,id=pip-prod-temp-${TARGETPLATFORM} \
+RUN --mount=type=cache,target=/root/.cache/uv,id=uv-prod-${TARGETPLATFORM} \
     set -eux; \
-    python3 -m venv "$VENV"; \
+    # Install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh; \
+    . /root/.cargo/env; \
+    uv venv "$VENV"; \
     . "$VENV/bin/activate"; \
-    pip install --upgrade pip \
-        --cache-dir=/tmp/pip-cache; \
-    pip install --cache-dir=/tmp/pip-cache \
-        # Core dependencies (pinned for cache stability)
-        "click==8.1.7" \
-        "jsonschema==4.21.1" \
-        "build==1.0.3" \
+    uv pip install \
+        # Core dependencies
+        "click>=8.1.0" \
+        "jsonschema>=4.0.0" \
         # HTTP transport dependencies
-        "fastapi==0.109.0" \
-        "uvicorn==0.26.0" \
-        "sse-starlette==1.8.2" \
-        "httpx==0.26.0" \
+        "fastapi>=0.100.0" \
+        "uvicorn>=0.20.0" \
+        "sse-starlette>=1.6.0" \
+        "httpx>=0.25.0" \
         # Workflow dependencies
-        "pandas==2.2.0" \
-        "openpyxl==3.1.2"
+        "pandas>=1.5.0" \
+        "openpyxl>=3.0.0"
+
+# Add uv to PATH
+ENV PATH="/root/.cargo/bin:$PATH"
 
 # Copy and build RMCP package
 WORKDIR /build
@@ -117,11 +119,11 @@ COPY pyproject.toml ./
 # Create minimal README.md for build (excluded by .dockerignore)
 RUN echo "# RMCP Production Build" > README.md
 COPY rmcp/ ./rmcp/
-# Build wheel for production installation with cache mount
-RUN --mount=type=cache,target=/root/.cache/pip,id=pip-build-${TARGETPLATFORM} \
-    --mount=type=cache,target=/tmp/build-cache,id=build-cache-${TARGETPLATFORM} \
+# Build wheel for production installation with uv
+RUN --mount=type=cache,target=/root/.cache/uv,id=uv-build-${TARGETPLATFORM} \
     . "$VENV/bin/activate" && \
-    pip wheel --no-deps . -w /build/wheels/ --cache-dir=/tmp/build-cache
+    . /root/.cargo/env && \
+    uv build --wheel --out-dir /build/wheels/
 
 # ============================================================================
 # STAGE: Production Runtime (Optimized from base image)
@@ -185,9 +187,11 @@ COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /build/wheels/ /tmp/wheels/
 ENV PATH="$VENV/bin:$PATH"
 
-# Install RMCP, create user, and setup directory in single layer
-RUN pip install --no-deps /tmp/wheels/*.whl && \
-    rm -rf /tmp/wheels/ && \
+# Install RMCP, create user, and setup directory in single layer  
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    . /root/.cargo/env && \
+    uv pip install --system --no-deps /tmp/wheels/*.whl && \
+    rm -rf /tmp/wheels/ /root/.cargo && \
     groupadd -r rmcp && \
     useradd -r -g rmcp -d /app -s /bin/bash rmcp
 

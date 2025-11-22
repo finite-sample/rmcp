@@ -11,14 +11,14 @@ RMCP (R Model Context Protocol) is a statistical analysis server that bridges AI
 
 **For Python-only development (cross-platform):**
 ```bash
-poetry install --with dev        # Install minimal Python dependencies
-poetry run rmcp start            # Start server in stdio mode (no R tools)
-poetry run rmcp serve-http       # Start HTTP server with SSE
+uv sync --group dev              # Install minimal Python dependencies
+uv run rmcp start                # Start server in stdio mode (no R tools)
+uv run rmcp serve-http           # Start HTTP server with SSE
 
 # Use configuration options
-poetry run rmcp --debug start    # Enable debug mode
-poetry run rmcp --config config.json start  # Use custom config file
-RMCP_LOG_LEVEL=DEBUG poetry run rmcp start  # Use environment variables
+uv run rmcp --debug start        # Enable debug mode
+uv run rmcp --config config.json start  # Use custom config file
+RMCP_LOG_LEVEL=DEBUG uv run rmcp start  # Use environment variables
 ```
 
 **For R integration development (Docker-based):**
@@ -38,12 +38,11 @@ docker run -p 8000:8000 rmcp-production rmcp http                          # Pro
 
 ### Testing (Hybrid Strategy)
 
-**Python-only tests (cross-platform via Poetry):**
+**Python-only tests (cross-platform via uv):**
 ```bash
-poetry run pytest tests/unit/    # Schema validation, JSON-RPC, transport
-poetry run black --check .       # Code formatting
-poetry run isort --check .       # Import sorting
-poetry run flake8 .              # Linting
+uv run pytest tests/unit/        # Schema validation, JSON-RPC, transport
+uv run ruff check .              # Linting and import sorting
+uv run ruff format --check .     # Code formatting check
 ```
 
 **Complete integration tests (Docker-based):**
@@ -58,18 +57,17 @@ docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -
 ### Code Quality
 ```bash
 # Python formatting (cross-platform)
-poetry run black rmcp tests streamlit
-poetry run isort rmcp tests streamlit  
-poetry run flake8 rmcp tests streamlit
-poetry run mypy rmcp
+uv run ruff check --fix .         # Auto-fix linting issues and sort imports
+uv run ruff format .              # Format code
+uv run mypy rmcp
 
 # R formatting (Docker-based)
 docker run -v $(pwd):/workspace rmcp-dev R -e "library(styler); style_file(list.files('rmcp/r_assets', pattern='[.]R$', recursive=TRUE, full.names=TRUE))"
 
 # Documentation building (cross-platform)
-poetry run sphinx-build docs docs/_build       # Build documentation
-poetry run sphinx-build -b html docs docs/_build/html  # HTML output
-poetry run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
+uv run sphinx-build docs docs/_build       # Build documentation
+uv run sphinx-build -b html docs docs/_build/html  # HTML output
+uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
 ```
 
 ## Architecture
@@ -188,15 +186,15 @@ act pull_request --var GITHUB_REF=refs/pull/1/merge  # Test PR behavior
 **Prevent local vs CI environment drift:**
 
 ```bash
-# 1. Verify Python package versions match between Poetry and Docker
-poetry export --dev --without-hashes > requirements-poetry.txt
+# 1. Verify Python package versions match between uv and Docker
+uv export --no-hashes > requirements-uv.txt
 docker run --rm rmcp-test:latest pip freeze > requirements-docker.txt
-diff requirements-poetry.txt requirements-docker.txt
+diff requirements-uv.txt requirements-docker.txt
 
 # 2. Test pytest configuration consistency
-poetry run pytest --collect-only tests/smoke/ > pytest-poetry.log
+uv run pytest --collect-only tests/smoke/ > pytest-uv.log
 docker run --rm -v $(pwd):/workspace rmcp-test:latest pytest --collect-only /workspace/tests/smoke/ > pytest-docker.log
-diff pytest-poetry.log pytest-docker.log
+diff pytest-uv.log pytest-docker.log
 
 # 3. Validate R environment consistency
 docker run --rm rmcp-test:latest R -e "cat('R packages:', length(.packages(all.available=TRUE)), '\n')"
@@ -290,14 +288,14 @@ This protocol ensures CI failures are caught locally, maintaining the 99%+ build
 
 **Why Hybrid?**
 - **Docker**: Ensures consistent R environment for integration testing (complex R package dependencies)
-- **Poetry**: Enables cross-platform Python testing on Mac/Windows/Linux (important for CLI tools)
-- **Optimized**: No 179KB `poetry.lock` in repository (regenerated locally as needed)
-- **Flexible**: Developers can choose lightweight Poetry setup or full Docker environment
+- **uv**: Enables fast cross-platform Python testing on Mac/Windows/Linux (important for CLI tools)
+- **Optimized**: No lock file in repository (uv handles dependency resolution efficiently)
+- **Flexible**: Developers can choose lightweight uv setup or full Docker environment
 
 **When to use what:**
-- **Local development**: Poetry for Python development, schema changes, CLI testing
+- **Local development**: uv for Python development, schema changes, CLI testing
 - **R tool development**: Docker for testing actual R integration and statistical computations
-- **CI/CD**: Docker for R tests, Poetry for cross-platform Python validation
+- **CI/CD**: Docker for R tests, uv for cross-platform Python validation
 
 ## Configuration System
 

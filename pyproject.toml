@@ -1,9 +1,9 @@
-[tool.poetry]
+[project]
 name = "rmcp"
 version = "0.7.0"
 description = "Comprehensive Model Context Protocol server with 52 statistical analysis tools for Claude Desktop and Claude web, featuring HTTP transport, interactive documentation, and production deployment"
-authors = ["Gaurav Sood <gsood07@gmail.com>"]
-license = "MIT"
+authors = [{name = "Gaurav Sood", email = "gsood07@gmail.com"}]
+license = {text = "MIT"}
 readme = "README.md"
 keywords = ["mcp", "r", "statistics", "econometrics", "model-context-protocol", "data-analysis", "http", "fastapi", "sse", "configuration", "claude-web", "connector", "anthropic"]
 classifiers = [
@@ -21,58 +21,52 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Distributed Computing",
 ]
-packages = [{include = "rmcp"}]
-include = ["CITATION.cff"]
+requires-python = ">=3.11"
 
-[tool.poetry.dependencies]
-python = ">=3.11"
-click = ">=8.1.0"
-jsonschema = ">=4.0.0"
-# R integration dependencies  
-# subprocess module is built-in for Python 3.8+
+dependencies = [
+    "click>=8.1.0",
+    "jsonschema>=4.0.0",
+    # R integration dependencies  
+    # subprocess module is built-in for Python 3.8+
+]
 
-# Optional dependencies for HTTP transport
-fastapi = {version = ">=0.100.0", optional = true}
-uvicorn = {version = ">=0.20.0", optional = true}
-sse-starlette = {version = ">=1.6.0", optional = true}
+[project.optional-dependencies]
+http = ["fastapi>=0.100.0", "uvicorn>=0.20.0", "sse-starlette>=1.6.0"]
+all = ["fastapi>=0.100.0", "uvicorn>=0.20.0", "sse-starlette>=1.6.0"]
 
-[tool.poetry.extras]
-http = ["fastapi", "uvicorn", "sse-starlette"]
-all = ["fastapi", "uvicorn", "sse-starlette"]
+[dependency-groups]
+# Hybrid approach: Docker for R integration, uv for cross-platform Python testing
+dev = [
+    # Essential dependencies for cross-platform Python testing
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.4.0",
+    # Workflow test dependencies (Excel file creation)
+    "pandas>=1.5.0",
+    "openpyxl>=3.0.0",
+    # Note: R integration tests run in Docker, not via uv
+]
+docs = [
+    # Documentation build dependencies
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+    "myst-parser>=0.18.0",
+    # Additional Sphinx extensions used in conf.py
+    "sphinx-copybutton>=0.5.0",
+]
 
-# Hybrid approach: Docker for R integration, Poetry for cross-platform Python testing
-[tool.poetry.group.dev.dependencies]
-# Essential dependencies for cross-platform Python testing
-pytest = ">=8.2.0"
-pytest-asyncio = ">=0.21.0"
-black = ">=23.0.0"
-isort = ">=5.12.0"
-flake8 = ">=6.0.0"
-# Workflow test dependencies (Excel file creation)
-pandas = ">=1.5.0"
-openpyxl = ">=3.0.0"
-# Note: R integration tests run in Docker, not via Poetry
-
-[tool.poetry.group.docs.dependencies]
-# Documentation build dependencies
-sphinx = ">=5.0.0"
-sphinx-rtd-theme = ">=1.0.0"
-myst-parser = ">=0.18.0"
-# Additional Sphinx extensions used in conf.py
-sphinx-copybutton = {version = ">=0.5.0", optional = true}
-
-[tool.poetry.scripts]
+[project.scripts]
 rmcp = "rmcp.cli:cli"
 
-[tool.poetry.urls]
+[project.urls]
 Homepage = "https://github.com/finite-sample/rmcp"
 Repository = "https://github.com/finite-sample/rmcp"
 Documentation = "https://github.com/finite-sample/rmcp#readme"
 Issues = "https://github.com/finite-sample/rmcp/issues"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 # Tool configurations
 [tool.pytest.ini_options]
@@ -92,33 +86,32 @@ markers = [
     "local: marks tests that require local IDE setup (not run in CI)",
 ]
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ['py311', 'py312', 'py313']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg  
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
+target-version = "py311"
+src = ["rmcp", "tests", "docs", "streamlit"]
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-line_length = 88
-src_paths = ["rmcp", "tests", "docs", "streamlit"]
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
 
 [tool.mypy]
 python_version = "3.11"
