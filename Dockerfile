@@ -122,39 +122,16 @@ RUN set -eux; \
 # ============================================================================
 # STAGE: Production Runtime (Final minimal environment)
 # ============================================================================
-FROM ubuntu:noble AS production
+FROM production-base AS production
 
+ARG TARGETPLATFORM
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Install only runtime dependencies (no build tools)
-# Use cache mount for apt downloads only (avoid lock conflicts)
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-prod-${TARGETPLATFORM} \
-    set -eux; \
-    # Clean any existing locks and ensure clean state
-    rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        # Python runtime (no dev packages)
-        python3 python3-venv \
-        # Runtime libraries for compiled packages
-        libcurl4 libssl3 libxml2 \
-        # Essential utilities
-        ca-certificates \
-        # Runtime math libraries
-        libblas3 liblapack3 \
-        # R runtime dependencies
-        r-base-core \
-        littler; \
-    # Clean package lists and temporary files
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
-
-# Copy R packages and configuration from production-base, then configure
-COPY --from=production-base /usr/local/lib/R /usr/local/lib/R
-COPY --from=production-base /usr/lib/R /usr/lib/R  
-COPY --from=production-base /etc/R /etc/R
-RUN echo "options(bspm.sudo = TRUE)" >> /etc/R/Rprofile.site
+# Note: Runtime dependencies already installed in production-base
+# (python3, python3-venv, libcurl4, libssl3, libxml2, ca-certificates, 
+#  libblas3, liblapack3, r-base-core, littler)
 
 # Copy Python virtual environment and install RMCP (merged operations)
 ENV VENV=/opt/venv
