@@ -285,12 +285,14 @@ jobs:
     
     - name: Setup Python environment in container
       run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pip install -e .
+        # RMCP is already installed in the Docker development image via uv sync
+        # PATH is already configured in Docker image: /workspace/.venv/bin:$PATH
+        echo "Using pre-installed RMCP from Docker image"
+        which python
+        which rmcp
     
     - name: Verify R and Python integration
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         python --version
         R --version | head -1
         python -c "from rmcp.r_integration import diagnose_r_installation; import json; print(json.dumps(diagnose_r_installation(), indent=2))"
@@ -327,7 +329,6 @@ jobs:
     
     - name: Diagnose environment before testing
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         echo "=== Environment Diagnostics ==="
         echo "Working directory: $(pwd)"
         echo "Python version: $(python --version)"
@@ -350,7 +351,6 @@ jobs:
     
     - name: Run smoke tests (basic functionality)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         # Ensure R is in PATH for skip condition checks  
         which R && export R_AVAILABLE=1 || export R_AVAILABLE=0
         echo "R available: $R_AVAILABLE"
@@ -358,24 +358,20 @@ jobs:
     
     - name: Run protocol tests (MCP protocol validation)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         which R && echo "✅ R available for protocol tests" || echo "⚠️ R not available"
         pytest tests/integration/protocol/ -v --tb=short --cov=rmcp --cov-append
     
     - name: Run integration tests - tools (R tool integration)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         which R && echo "✅ R available for tool integration tests" || echo "❌ R required but not available"
         pytest tests/integration/tools/ -v --tb=short --cov=rmcp --cov-append
     
     - name: Run integration tests - transport (HTTP transport)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         pytest tests/integration/transport/ -v --tb=short --cov=rmcp --cov-append
     
     - name: Test HTTPS functionality with mkcert
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         echo "🔒 Testing HTTPS functionality..."
         
         # Verify mkcert is available (installed in Dockerfile)
@@ -428,13 +424,11 @@ jobs:
     
     - name: Run integration tests - core (server & registries)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         which R && echo "✅ R available for core integration tests" || echo "⚠️ R not available"
         pytest tests/integration/core/ -v --tb=short --cov=rmcp --cov-append
     
     - name: Run scenario tests (end-to-end user scenarios)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         which R && echo "✅ R available for scenario tests" || echo "❌ R required but not available"
         pytest tests/scenarios/ -v --tb=short --cov=rmcp --cov-append
     
@@ -449,7 +443,6 @@ jobs:
     
     - name: Test CLI and MCP protocol
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         # Verify CLI works with R integration
         rmcp --version
         rmcp list-capabilities
