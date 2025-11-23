@@ -149,19 +149,22 @@ RUN python3 -m venv /opt/venv && \
     groupadd -r rmcp && \
     useradd -r -g rmcp -d /app -s /bin/bash rmcp
 
-# Set up application directory
+# Set up application directory and entrypoint
 WORKDIR /app
-RUN chown rmcp:rmcp /app
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh && \
+    chown rmcp:rmcp /app
 
 # Switch to non-root user
 USER rmcp
 
-# Health check
+# Health check (works for both stdio and HTTP modes)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import rmcp; print('RMCP OK')" || exit 1
 
-# Default to stdio mode for MCP protocol
-CMD ["rmcp", "start"]
+# Use entrypoint that detects environment (Cloud Run vs local)
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD []
 
 # Metadata
 LABEL org.opencontainers.image.title="RMCP (R Model Context Protocol)"
