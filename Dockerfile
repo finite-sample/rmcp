@@ -140,7 +140,7 @@ ENV PATH="$VENV/bin:$PATH"
 
 # Create fresh virtual environment and install RMCP
 RUN python3 -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-deps /tmp/wheels/*.whl && \
+    /opt/venv/bin/pip install /tmp/wheels/*.whl && \
     rm -rf /tmp/wheels/ && \
     groupadd -r rmcp && \
     useradd -r -g rmcp -d /app -s /bin/bash rmcp
