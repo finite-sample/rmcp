@@ -98,7 +98,9 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=uv-build-${TARGETPLATFORM} \
     # Install production dependencies with HTTP extras (no dev dependencies)
     uv sync --no-group dev --extra all; \
     # Build wheel for production installation
-    uv build --wheel --out-dir /build/wheels/
+    uv build --wheel --out-dir /build/wheels/; \
+    # Export dependencies including extras for production
+    uv pip freeze > /build/requirements.txt
 
 # ============================================================================
 # STAGE: Production Runtime (Optimized from base image)
@@ -133,15 +135,17 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # (python3, python3-venv, libcurl4, libssl3, libxml2, ca-certificates, 
 #  libblas3, liblapack3, r-base-core, littler)
 
-# Copy wheels from builder and install RMCP in fresh virtual environment
+# Copy wheels and requirements from builder
 ENV VENV=/opt/venv
 COPY --from=builder /build/wheels/ /tmp/wheels/
+COPY --from=builder /build/requirements.txt /tmp/requirements.txt
 ENV PATH="$VENV/bin:$PATH"
 
-# Create fresh virtual environment and install RMCP
+# Create fresh virtual environment and install RMCP with all dependencies
 RUN python3 -m venv /opt/venv && \
-    /opt/venv/bin/pip install /tmp/wheels/*.whl && \
-    rm -rf /tmp/wheels/ && \
+    /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
+    /opt/venv/bin/pip install --no-deps /tmp/wheels/*.whl && \
+    rm -rf /tmp/wheels/ /tmp/requirements.txt && \
     groupadd -r rmcp && \
     useradd -r -g rmcp -d /app -s /bin/bash rmcp
 
