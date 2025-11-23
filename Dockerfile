@@ -99,8 +99,8 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=uv-build-${TARGETPLATFORM} \
     uv sync --no-group dev --extra all; \
     # Build wheel for production installation
     uv build --wheel --out-dir /build/wheels/; \
-    # Export dependencies including extras for production
-    uv pip freeze > /build/requirements.txt
+    # Export dependencies including extras for production (exclude editable installs)
+    uv pip freeze | grep -v "^-e " > /build/requirements.txt
 
 # ============================================================================
 # STAGE: Production Runtime (Optimized from base image)
