@@ -138,7 +138,10 @@ ENV PATH="$VENV/bin:$PATH"
 
 # Create fresh virtual environment and install RMCP with HTTP extras
 RUN python3 -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-cache-dir /tmp/wheels/*.whl[all] && \
+    cd /tmp/wheels && \
+    WHEEL_FILE=$(ls *.whl) && \
+    /opt/venv/bin/pip install --no-cache-dir "${WHEEL_FILE}[all]" && \
+    cd / && \
     rm -rf /tmp/wheels/ && \
     groupadd -r rmcp && \
     useradd -r -g rmcp -d /app -s /bin/bash rmcp
