@@ -48,4 +48,9 @@ jobs:
           --image $AR_IMAGE \
           --region $REGION \
           --platform managed \
-          --allow-unauthenticated
+          --allow-unauthenticated \
+          --command rmcp \
+          --args serve-http,--host,0.0.0.0,--port,8080 \
+          --port 8080 \
+          --memory 2Gi \
+          --timeout 300
