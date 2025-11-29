@@ -24,31 +24,48 @@ classifiers = [
 requires-python = ">=3.11"
 
 dependencies = [
-    "click>=8.1.0",
-    "jsonschema>=4.0.0",
-    # R integration dependencies
+    "click>=8.1.0",        # CLI interface
+    "jsonschema>=4.0.0",   # Schema validation
+    "psutil>=5.0.0",       # R process management
     # subprocess module is built-in for Python 3.8+
 ]
 
 [project.optional-dependencies]
-http = ["fastapi>=0.100.0", "uvicorn>=0.20.0", "sse-starlette>=1.6.0", "httpx>=0.25.0"]
-all = ["fastapi>=0.100.0", "uvicorn>=0.20.0", "sse-starlette>=1.6.0", "httpx>=0.25.0"]
+http = [
+    # HTTP transport
+    "fastapi>=0.100.0", 
+    "uvicorn>=0.20.0", 
+    "sse-starlette>=1.6.0", 
+    "httpx>=0.25.0",
+    # Test needs (superset includes what tests require)
+    "pandas>=1.5.0",           # Test Excel file creation
+    "openpyxl>=3.0.0",         # Test Excel support
+]
+all = [
+    # HTTP transport
+    "fastapi>=0.100.0", 
+    "uvicorn>=0.20.0", 
+    "sse-starlette>=1.6.0", 
+    "httpx>=0.25.0",
+    # Test needs (superset includes what tests require)
+    "pandas>=1.5.0",           # Test Excel file creation
+    "openpyxl>=3.0.0",         # Test Excel support
+]
 
 [dependency-groups]
 # Hybrid approach: Docker for R integration, uv for cross-platform Python testing
 dev = [
-    # Essential dependencies for cross-platform Python testing
+    # Development and testing tools
     "pytest>=8.2.0",
-    "pytest-asyncio>=0.21.0",
+    "pytest-asyncio>=0.21.0", 
     "pytest-cov>=4.0.0",
     "ruff>=0.4.0",
-    # Code quality and pre-commit hooks
     "pre-commit>=3.8.0",
-    # Workflow test dependencies (Excel file creation)
-    "pandas>=1.5.0",
-    "openpyxl>=3.0.0",
-    "httpx>=0.25.0",
-    # Note: R integration tests run in Docker, not via uv
+    # Test scaffolding dependencies (what tests actually import)
+    "httpx>=0.25.0",           # For HTTP transport tests
+    "pandas>=1.5.0",           # For Excel test scenario creation
+    "openpyxl>=3.0.0",         # For Excel test support
+    "numpy>=1.21.0",           # For Docker test validation
 ]
 docs = [
     # Documentation build dependencies
