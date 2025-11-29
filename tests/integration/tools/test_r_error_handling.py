@@ -171,9 +171,9 @@ class TestRealRErrors:
                 "required",
                 "both",
             ]
-            assert any(
-                keyword in error_lower for keyword in expected_errors
-            ), f"Error should mention statistical or variable issues: {error_msg}"
+            assert any(keyword in error_lower for keyword in expected_errors), (
+                f"Error should mention statistical or variable issues: {error_msg}"
+            )
             print(
                 f"✅ Small sample chi-square error properly identified: {error_msg[:100]}..."
             )
@@ -397,9 +397,9 @@ class TestErrorMessageQuality:
 
                 # Error message quality checks
                 assert len(error_msg) > 20, "Error message should be descriptive"
-                assert not error_msg.startswith(
-                    "Traceback"
-                ), "Should not expose raw stack traces"
+                assert not error_msg.startswith("Traceback"), (
+                    "Should not expose raw stack traces"
+                )
 
                 # Should contain helpful information
                 error_lower = error_msg.lower()
@@ -417,9 +417,9 @@ class TestErrorMessageQuality:
                     ]
                 )
 
-                assert (
-                    has_helpful_info
-                ), f"Error message should be helpful: {error_msg[:100]}"
+                assert has_helpful_info, (
+                    f"Error message should be helpful: {error_msg[:100]}"
+                )
 
                 print(f"✅ {scenario['description']} error message quality verified")
                 print(f"   Message: {error_msg[:80]}...")
@@ -456,9 +456,9 @@ class TestErrorMessageQuality:
                 ]
             )
 
-            assert (
-                has_helpful_info
-            ), f"Error should provide helpful context: {error_msg}"
+            assert has_helpful_info, (
+                f"Error should provide helpful context: {error_msg}"
+            )
 
             print("✅ Error context preserved: provides helpful guidance")
             print(f"   Error: {error_msg[:100]}...")

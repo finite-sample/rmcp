@@ -111,22 +111,22 @@ class MCPProtocolTester:
     def validate_response_structure(self, response: dict, request_id: int = None):
         """Validate that response follows JSON-RPC 2.0 and MCP format."""
         assert "jsonrpc" in response, "Response missing jsonrpc field"
-        assert (
-            response["jsonrpc"] == "2.0"
-        ), f"Invalid jsonrpc version: {response['jsonrpc']}"
+        assert response["jsonrpc"] == "2.0", (
+            f"Invalid jsonrpc version: {response['jsonrpc']}"
+        )
 
         if request_id is not None:
             assert "id" in response, "Response missing id field"
-            assert (
-                response["id"] == request_id
-            ), f"Response id mismatch: {response['id']} != {request_id}"
+            assert response["id"] == request_id, (
+                f"Response id mismatch: {response['id']} != {request_id}"
+            )
 
         # Must have either result or error, not both
         has_result = "result" in response
         has_error = "error" in response
-        assert (
-            has_result != has_error
-        ), "Response must have exactly one of 'result' or 'error'"
+        assert has_result != has_error, (
+            "Response must have exactly one of 'result' or 'error'"
+        )
 
         return response
 
@@ -226,9 +226,9 @@ async def test_mcp_tool_execution(mcp_tester):
 
     # Extract JSON content using utility function (supports both old and new formats)
     json_content = extract_json_content_from_mcp_response(response)
-    assert (
-        json_content is not None
-    ), f"Tool response missing JSON content. Response: {response}"
+    assert json_content is not None, (
+        f"Tool response missing JSON content. Response: {response}"
+    )
     assert "coefficients" in json_content, "Linear model missing coefficients"
     assert "r_squared" in json_content, "Linear model missing r_squared"
 
@@ -342,9 +342,9 @@ async def test_stdio_transport_compliance():
                 except json.JSONDecodeError:
                     continue
 
-        assert (
-            initialize_response is not None
-        ), f"No initialize response found in stdout: {stdout}"
+        assert initialize_response is not None, (
+            f"No initialize response found in stdout: {stdout}"
+        )
         assert initialize_response["jsonrpc"] == "2.0", "Invalid JSON-RPC version"
         assert "result" in initialize_response, "Initialize response missing result"
 
@@ -421,9 +421,9 @@ def test_mcp_protocol_version_compatibility():
     # or initialization response
 
     # For now, we'll check that we can handle the expected version format
-    assert (
-        expected_version.count("-") == 2
-    ), "Protocol version should be YYYY-MM-DD format"
+    assert expected_version.count("-") == 2, (
+        "Protocol version should be YYYY-MM-DD format"
+    )
     year, month, day = expected_version.split("-")
     assert len(year) == 4 and year.isdigit(), "Year should be 4 digits"
     assert len(month) == 2 and month.isdigit(), "Month should be 2 digits"

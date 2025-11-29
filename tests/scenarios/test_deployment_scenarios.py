@@ -84,9 +84,9 @@ class TestDockerWorkflowValidation:
             timeout=30,
         )
 
-        assert (
-            test_result.returncode == 0
-        ), f"Basic functionality test failed: {test_result.stderr}"
+        assert test_result.returncode == 0, (
+            f"Basic functionality test failed: {test_result.stderr}"
+        )
         assert "RMCP imported successfully" in test_result.stdout
         print("✅ Basic functionality verified in Docker")
 
@@ -142,9 +142,9 @@ class TestDockerWorkflowValidation:
                         response_found = True
                         break
 
-            assert (
-                response_found
-            ), f"No valid MCP response in Docker. stdout: {stdout[:300]}"
+            assert response_found, (
+                f"No valid MCP response in Docker. stdout: {stdout[:300]}"
+            )
 
         except subprocess.TimeoutExpired:
             process.kill()
@@ -217,9 +217,9 @@ class TestDockerWorkflowValidation:
                             pass
 
                 # Check that we got responses for all requests
-                assert (
-                    len(responses) >= 3
-                ), f"Expected at least 3 analysis responses, got {len(responses)}"
+                assert len(responses) >= 3, (
+                    f"Expected at least 3 analysis responses, got {len(responses)}"
+                )
 
                 # Verify specific analysis results
                 summary_success = any(
@@ -289,9 +289,9 @@ class TestDockerWorkflowValidation:
                     break
 
             assert response_received, "No initialize response in performance test"
-            assert (
-                total_time < 15.0
-            ), f"Docker initialization too slow: {total_time:.2f}s"
+            assert total_time < 15.0, (
+                f"Docker initialization too slow: {total_time:.2f}s"
+            )
 
             print(f"✅ Docker performance: {total_time:.2f}s initialization")
 
@@ -330,9 +330,9 @@ class TestDockerWorkflowValidation:
             timeout=30,
         )
 
-        assert (
-            resource_test.returncode == 0
-        ), f"Resource test failed: {resource_test.stderr}"
+        assert resource_test.returncode == 0, (
+            f"Resource test failed: {resource_test.stderr}"
+        )
         assert "Server created with" in resource_test.stdout
 
         print("✅ Resource usage test passed (512MB limit)")
@@ -377,9 +377,9 @@ class TestDockerWorkflowValidation:
                 timeout=15,
             )
 
-            assert (
-                pkg_test.returncode == 0
-            ), f"Package {package} not available in Docker"
+            assert pkg_test.returncode == 0, (
+                f"Package {package} not available in Docker"
+            )
             assert "OK" in pkg_test.stdout, f"Package {package} failed to load"
 
         print(f"✅ Key R packages available: {packages_to_test}")
@@ -561,9 +561,9 @@ class TestDockerProductionScenarios:
                 timeout=15,
             )
 
-            assert (
-                volume_test.returncode == 0
-            ), f"Volume mount test failed: {volume_test.stderr}"
+            assert volume_test.returncode == 0, (
+                f"Volume mount test failed: {volume_test.stderr}"
+            )
             assert "Loaded 3 rows" in volume_test.stdout
             print("✅ Volume mounts working in Docker")
 
@@ -698,9 +698,9 @@ class TestDockerCrossplatformCompatibility:
                 print(f"      R-squared: {r_squared:.4f}")
 
                 # Verify reasonable statistical results (should be consistent across platforms)
-                assert (
-                    1.8 <= coefficient <= 2.2
-                ), f"Unexpected coefficient: {coefficient}"
+                assert 1.8 <= coefficient <= 2.2, (
+                    f"Unexpected coefficient: {coefficient}"
+                )
                 assert 0.9 <= r_squared <= 1.0, f"Unexpected R-squared: {r_squared}"
 
             except (json.JSONDecodeError, KeyError) as e:

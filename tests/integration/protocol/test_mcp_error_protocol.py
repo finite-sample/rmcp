@@ -109,9 +109,9 @@ class TestMCPErrorProtocolCompliance:
 
         error = response["error"]
         assert error["code"] == -32603, "Unknown tool should be internal error (-32603)"
-        assert (
-            "unknown tool" in error["message"].lower()
-        ), "Message should mention unknown tool"
+        assert "unknown tool" in error["message"].lower(), (
+            "Message should mention unknown tool"
+        )
 
         print("✅ Unknown tool error protocol compliance verified")
         print(f"   Error code: {error['code']}")
@@ -271,9 +271,9 @@ class TestMCPErrorProtocolCompliance:
 
             # Messages should be complete sentences
             assert len(message) > 10, "Error messages should be descriptive"
-            assert message[
-                0
-            ].isupper(), "Error messages should start with capital letter"
+            assert message[0].isupper(), (
+                "Error messages should start with capital letter"
+            )
 
             # Should not contain raw technical details
             assert "traceback" not in message.lower(), "Should not expose stack traces"
@@ -302,9 +302,9 @@ class TestMCPErrorProtocolCompliance:
         response_time = end_time - start_time
 
         # Error responses should be fast (< 1 second)
-        assert (
-            response_time < 1.0
-        ), f"Error response took {response_time:.2f}s (should be < 1s)"
+        assert response_time < 1.0, (
+            f"Error response took {response_time:.2f}s (should be < 1s)"
+        )
 
         # Should still be properly formatted
         self.validate_jsonrpc_error_structure(response, request_id=555)
