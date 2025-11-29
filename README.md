@@ -12,9 +12,9 @@
 
 ### 🌐 **Try the Live Server** (No Installation Required)
 
-**HTTP Server**: `https://rmcp-server-394229601724.us-central1.run.app/mcp`  
-**Interactive Docs**: `https://rmcp-server-394229601724.us-central1.run.app/docs`  
-**Health Check**: `https://rmcp-server-394229601724.us-central1.run.app/health`  
+**HTTP Server**: `https://rmcp-server-394229601724.us-central1.run.app/mcp`
+**Interactive Docs**: `https://rmcp-server-394229601724.us-central1.run.app/docs`
+**Health Check**: `https://rmcp-server-394229601724.us-central1.run.app/health`
 
 ### 🖥️ **Or Install Locally**
 
@@ -29,13 +29,13 @@ That's it! RMCP is now ready to handle statistical analysis requests via Claude 
 
 ## ✨ What Can RMCP Do?
 
-### 📊 **Regression & Economics** 
+### 📊 **Regression & Economics**
 Linear regression, logistic models, panel data, instrumental variables → *"Analyze ROI of marketing spend"*
 
 ### ⏰ **Time Series & Forecasting**
 ARIMA models, decomposition, stationarity testing → *"Forecast next quarter's sales"*
 
-### 🧠 **Machine Learning** 
+### 🧠 **Machine Learning**
 Clustering, decision trees, random forests → *"Segment customers by behavior"*
 
 ### 📈 **Statistical Testing**
@@ -74,7 +74,7 @@ Formula building, error recovery, example datasets → *"Help me build a regress
 
 **Result:** *"Strong support for Okun's Law: correlation r = -0.944. Higher GDP growth significantly reduces unemployment."*
 
-### Customer Analytics  
+### Customer Analytics
 **You:** *"Predict customer churn using tenure and monthly charges"*
 
 **Claude:** *"I'll build a logistic regression model for churn prediction..."*
@@ -84,18 +84,18 @@ Formula building, error recovery, example datasets → *"Help me build a regress
 ## 📦 Installation
 
 ### Prerequisites
-- **Python 3.10+** 
+- **Python 3.10+**
 - **R 4.4.0+** with **comprehensive package ecosystem**: RMCP uses a systematic 429-package whitelist from CRAN task views organized into 19+ categories:
 
 ```r
 # Core packages (install these first)
 install.packages(c(
-  "jsonlite", "dplyr", "ggplot2", "broom", "plm", "forecast", 
+  "jsonlite", "dplyr", "ggplot2", "broom", "plm", "forecast",
   "randomForest", "rpart", "caret", "AER", "vars", "mgcv"
 ))
 
-# Full ecosystem automatically available: Machine Learning (61 packages), 
-# Econometrics (55 packages), Time Series (48 packages), 
+# Full ecosystem automatically available: Machine Learning (61 packages),
+# Econometrics (55 packages), Time Series (48 packages),
 # Bayesian Analysis (32 packages), and more
 ```
 
@@ -212,7 +212,7 @@ docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
 
 - **🎯 Natural Conversation**: Ask questions in plain English, get statistical analysis
 - **📚 Comprehensive Package Ecosystem**: 429 R packages from systematic CRAN task views with 4-tier security system
-- **📊 Professional Output**: Formatted results with markdown tables and inline visualizations  
+- **📊 Professional Output**: Formatted results with markdown tables and inline visualizations
 - **🔒 Production Ready**: Full MCP protocol compliance with HTTP transport and SSE
 - **⚙️ Flexible Configuration**: Environment variables, config files, and CLI options
 - **⚡ Fast & Reliable**: 100% test success rate across all scenarios
@@ -234,13 +234,13 @@ docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
 RMCP has been tested with real-world scenarios achieving **100% success rate**:
 
 - ✅ **Business Analysts**: Sales forecasting with 97.9% R², $4.70 ROI per marketing dollar
-- ✅ **Economists**: Macroeconomic analysis confirming Okun's Law (r=-0.944)  
+- ✅ **Economists**: Macroeconomic analysis confirming Okun's Law (r=-0.944)
 - ✅ **Data Scientists**: Customer churn prediction with 100% accuracy
 - ✅ **Researchers**: Treatment effect analysis with significant results (p<0.001)
 
 ## 🤝 Contributing
 
-We welcome contributions! 
+We welcome contributions!
 
 ```bash
 git clone https://github.com/finite-sample/rmcp.git

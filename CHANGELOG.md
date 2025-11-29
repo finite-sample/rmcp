@@ -217,7 +217,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **📁 Package Structure**: Improved maintainability and modularity
   - R scripts now editable and lintable as separate files
-  - Clear separation between Python tool logic and R statistical computations  
+  - Clear separation between Python tool logic and R statistical computations
   - Preserved all existing functionality including special "_formatting" fields
   - Enhanced developer experience for R script maintenance
 
@@ -235,7 +235,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tools now work with varying output formats without validation errors
   - Input validation preserved to catch user errors
   - Fixes 9+ schema validation errors in smoke tests
-  
+
 - **📊 Correlation Analysis**: Fixed economist scenario test
   - Corrected correlation matrix indexing from numeric to key-based access
   - All 4 realistic E2E scenarios now pass (100% success)
@@ -293,7 +293,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Developer Experience
 - **✅ 100% Test Success**: All test categories now passing
   - Unit tests: ✅ 21/21 passing
-  - Integration tests: ✅ 21/21 passing  
+  - Integration tests: ✅ 21/21 passing
   - HTTP transport tests: ✅ 19/19 passing
   - Tool tests: ✅ 35/35 passing
 - **🚀 Improved CI/CD**: Better test reliability and error reporting
@@ -344,7 +344,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🌐 Multi-Transport**: Both stdio and HTTP transports fully tested and documented
 
 ### Technical Details
-- **🧪 Comprehensive Test Suite**: 
+- **🧪 Comprehensive Test Suite**:
   - 21 unit tests for schema validation (100% pass rate)
   - 31/40 tools passing integration tests (77.5% coverage)
   - 100% E2E test success rate
@@ -363,7 +363,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Enhanced
 - **🔥 Correlation Heatmaps**: Color-coded matrices with inline statistical analysis
-- **📈 Scatter Plots**: Trend lines and grouping with immediate visual feedback  
+- **📈 Scatter Plots**: Trend lines and grouping with immediate visual feedback
 - **📊 Histograms**: Distribution analysis with density overlays displayed inline
 - **📦 Box Plots**: Quartile analysis and outlier detection with visual confirmation
 - **⏱️ Time Series Plots**: Trend analysis with forecasting visualized instantly
@@ -503,9 +503,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Core MCP Server**: Basic Model Context Protocol server implementation
 - **R Integration**: Execute R scripts for econometric analysis
-- **Tool Suite**: 
+- **Tool Suite**:
   - Linear regression (`linear_model`)
-  - Panel data analysis (`panel_model`) 
+  - Panel data analysis (`panel_model`)
   - Instrumental variables (`iv_regression`)
   - Diagnostic tests (`diagnostics`)
   - Correlation analysis (`correlation`)
@@ -542,7 +542,7 @@ pytest tests/test_common.py -v
 # Format code
 black rmcp tests
 
-# Sort imports  
+# Sort imports
 isort rmcp tests
 
 # Lint code

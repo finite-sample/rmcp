@@ -139,7 +139,7 @@ class JSONRPCEnvelope:
                 )
             # Params are optional, but if present must be object or array
             if message.params is not None:
-                if not isinstance(message.params, (dict, list)):
+                if not isinstance(message.params, dict | list):
                     raise JSONRPCError(
                         JSONRPCError.INVALID_REQUEST,
                         "Params must be object or array",

@@ -34,7 +34,7 @@ cat <<EOF | rmcp start
       "investment": [18.2, 19.1, 20.4, 17.8, 21.2, 19.8]
     },
     "var1": "gdp_growth",
-    "var2": "investment", 
+    "var2": "investment",
     "method": "pearson"
   }
 }
@@ -118,7 +118,7 @@ EOF
 
 **Results:**
 - Germany: Highest average growth (2.08%)
-- USA: Strong performance (2.25%)  
+- USA: Strong performance (2.25%)
 - UK: More modest growth (1.93%)
 
 ## Economic Interpretation
@@ -148,7 +148,7 @@ For publication-quality research, consider:
 ```
 
 2. **Instrumental variables** for endogenous regressors:
-```bash  
+```bash
 # Use iv_regression tool if investment might be endogenous
 ```
 

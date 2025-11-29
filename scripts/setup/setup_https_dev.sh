@@ -35,7 +35,7 @@ print_error() {
 # Check if mkcert is installed
 if ! command -v mkcert &> /dev/null; then
     echo -e "${YELLOW}📦 mkcert not found. Installing...${NC}"
-    
+
     # Detect OS and install mkcert
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS
@@ -133,7 +133,7 @@ mv *localhost*-key.pem localhost-key.pem 2>/dev/null || true
 if [[ ! -f "localhost.pem" ]]; then
     CERT_FILE=$(find . -name "*+*.pem" -not -name "*key.pem" | head -1)
     KEY_FILE=$(find . -name "*key.pem" | head -1)
-    
+
     if [[ -n "$CERT_FILE" ]] && [[ -n "$KEY_FILE" ]]; then
         mv "$CERT_FILE" localhost.pem
         mv "$KEY_FILE" localhost-key.pem
@@ -144,22 +144,22 @@ fi
 # Verify certificates were created
 if [[ -f "localhost.pem" ]] && [[ -f "localhost-key.pem" ]]; then
     print_status "SSL certificates generated successfully"
-    
+
     # Show certificate info
     echo -e "${BLUE}📋 Certificate Information:${NC}"
     echo "  Certificate: $CERTS_DIR/localhost.pem"
     echo "  Private Key: $CERTS_DIR/localhost-key.pem"
     echo "  Valid for domains: $DOMAIN_LIST"
-    
+
     # Show certificate details
     echo -e "${BLUE}🔍 Certificate Details:${NC}"
     openssl x509 -in localhost.pem -text -noout | grep -A 1 "Subject:"
     openssl x509 -in localhost.pem -text -noout | grep -A 5 "Subject Alternative Name"
-    
+
     # Show expiration date
     EXPIRY=$(openssl x509 -in localhost.pem -noout -enddate | cut -d= -f2)
     echo "  Expires: $EXPIRY"
-    
+
 else
     print_error "Failed to generate SSL certificates"
     exit 1

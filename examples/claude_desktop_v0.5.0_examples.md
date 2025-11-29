@@ -101,7 +101,7 @@ Test multiple tools with data transformations:
 ```
 Perform a comprehensive analysis of the sales data:
 1. Load and describe the data
-2. Create lagged variables for time series analysis  
+2. Create lagged variables for time series analysis
 3. Standardize the sales values using z-score method
 4. Detect outliers and winsorize at 5%-95% percentiles
 5. Save all intermediate datasets and final visualization
@@ -175,7 +175,7 @@ Test approval system under concurrent requests:
 **Prompt:**
 ```
 Create three different visualizations in parallel:
-1. Sales trend over time  
+1. Sales trend over time
 2. Sales distribution by product
 3. Regional performance comparison
 Save each to separate files with descriptive names.
@@ -230,7 +230,7 @@ After running these examples with approvals, you should find:
 # Check RMCP status
 poetry run rmcp --debug start
 
-# Verify file permissions  
+# Verify file permissions
 ls -la /tmp/
 
 # Check R environment in Docker

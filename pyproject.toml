@@ -1,6 +1,6 @@
 [project]
 name = "rmcp"
-version = "0.7.0"
+version = "0.8.0"
 description = "Comprehensive Model Context Protocol server with 52 statistical analysis tools for Claude Desktop and Claude web, featuring HTTP transport, interactive documentation, and production deployment"
 authors = [{name = "Gaurav Sood", email = "gsood07@gmail.com"}]
 license = {text = "MIT"}
@@ -8,7 +8,7 @@ readme = "README.md"
 keywords = ["mcp", "r", "statistics", "econometrics", "model-context-protocol", "data-analysis", "http", "fastapi", "sse", "configuration", "claude-web", "connector", "anthropic"]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers", 
+    "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -26,7 +26,7 @@ requires-python = ">=3.11"
 dependencies = [
     "click>=8.1.0",
     "jsonschema>=4.0.0",
-    # R integration dependencies  
+    # R integration dependencies
     # subprocess module is built-in for Python 3.8+
 ]
 
@@ -42,6 +42,8 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.4.0",
+    # Code quality and pre-commit hooks
+    "pre-commit>=3.8.0",
     # Workflow test dependencies (Excel file creation)
     "pandas>=1.5.0",
     "openpyxl>=3.0.0",
@@ -55,6 +57,8 @@ docs = [
     "myst-parser>=0.18.0",
     # Additional Sphinx extensions used in conf.py
     "sphinx-copybutton>=0.5.0",
+    # MyST extensions
+    "linkify-it-py>=2.0.0",
 ]
 
 [project.scripts]
@@ -78,7 +82,7 @@ module-root = "."
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-python_classes = ["Test*"] 
+python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
     "-v",
@@ -160,7 +164,7 @@ exclude_lines = [
     "def __repr__",
     "if self.debug:",
     "if settings.DEBUG",
-    "raise AssertionError", 
+    "raise AssertionError",
     "raise NotImplementedError",
     "if 0:",
     "if __name__ == .__main__.:",

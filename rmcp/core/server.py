@@ -187,6 +187,7 @@ All tools provide professionally formatted output with markdown tables, statisti
     ) -> "MCPServer":
         """
         Configure server security and operational settings.
+
         Args:
             allowed_paths: List of filesystem paths the server can access.
                 If None, defaults to current working directory.
@@ -195,8 +196,10 @@ All tools provide professionally formatted output with markdown tables, statisti
             read_only: Whether filesystem access is read-only.
                 Recommended for production deployments.
             **settings: Additional configuration options passed to lifespan state.
+
         Returns:
             Self for method chaining.
+
         Example:
             >>> server.configure(
             ...     allowed_paths=["/data", "/models"],

@@ -387,9 +387,9 @@ class TestFileOutputScenarios:
             unauthorized_file.unlink()
 
         # After R execution, the unauthorized file should not exist
-        assert not unauthorized_file.exists(), (
-            "VFS security was bypassed - unauthorized file was created"
-        )
+        assert (
+            not unauthorized_file.exists()
+        ), "VFS security was bypassed - unauthorized file was created"
 
         # The operation should have been blocked by approval system
         if not result["success"]:

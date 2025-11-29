@@ -122,18 +122,23 @@ from ..registries.tools import tool
 async def linear_model(context, params) -> dict[str, Any]:
     """
     Fit ordinary least squares (OLS) linear regression model.
+
     This tool performs comprehensive linear regression analysis using R's lm() function.
     It supports weighted regression, missing value handling, and returns detailed
     model diagnostics including coefficients, significance tests, and goodness-of-fit.
+
     Args:
         context: Request execution context for logging and progress
         params: Dictionary containing:
+
             - data: Dataset as dict of column_name -> [values]
             - formula: R formula string (e.g., "y ~ x1 + x2")
             - weights: Optional array of observation weights
             - na_action: How to handle missing values ("na.omit", "na.exclude", "na.fail")
+
     Returns:
         Dictionary containing:
+
             - coefficients: Model coefficients by variable name
             - std_errors: Standard errors of coefficients
             - t_values: t-statistics for coefficient tests
@@ -146,6 +151,7 @@ async def linear_model(context, params) -> dict[str, Any]:
             - fitted_values: Predicted values for each observation
             - residuals: Model residuals
             - n_obs: Number of observations used
+
     Example:
         >>> # Simple linear regression
         >>> data = {
@@ -275,23 +281,29 @@ async def linear_model(context, params) -> dict[str, Any]:
 async def correlation_analysis(context, params) -> dict[str, Any]:
     """
     Compute correlation matrix with significance testing.
+
     This tool calculates pairwise correlations between numeric variables using
     Pearson, Spearman, or Kendall methods. It includes significance tests for
     each correlation and handles missing values appropriately.
+
     Args:
         context: Request execution context for logging and progress
         params: Dictionary containing:
+
             - data: Dataset as dict of column_name -> [values]
             - variables: Optional list of variable names to include
             - method: Correlation method ("pearson", "spearman", "kendall")
             - use: Missing value handling strategy
+
     Returns:
         Dictionary containing:
+
             - correlation_matrix: Pairwise correlations as nested dict
             - significance_tests: p-values for each correlation
             - sample_sizes: Number of complete observations for each pair
             - variables_used: List of variables included in analysis
             - method_used: Correlation method applied
+
     Example:
         >>> # Basic correlation analysis
         >>> data = {

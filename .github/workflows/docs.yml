@@ -9,7 +9,7 @@ on:
       - 'README.md'
       - 'CONTRIBUTING.md'
       - '.github/workflows/docs.yml'
-  
+
   # Allow manual trigger
   workflow_dispatch:
 

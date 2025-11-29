@@ -50,7 +50,7 @@ install.packages(c("jsonlite", "dplyr", "ggplot2"))
 # Statistical packages
 install.packages(c("forecast", "broom", "cluster", "rpart", "randomForest"))
 
-# Econometrics packages  
+# Econometrics packages
 install.packages(c("plm", "lmtest", "sandwich", "AER", "vars"))
 
 # Development tools
@@ -138,16 +138,16 @@ params <- validate_json_input(input_data, required = c("data"))
 tryCatch({
   # Your statistical analysis here
   result <- your_analysis_function(params$data)
-  
+
   # Format output
   output <- format_json_output(
     result = result,
     summary = "Analysis completed successfully"
   )
-  
+
   # Output JSON
   cat(safe_json(output))
-  
+
 }, error = function(e) {
   # Error handling
   error_output <- list(
@@ -177,10 +177,10 @@ The R package integrates with the main RMCP CI/CD pipeline:
   run: |
     cd rmcp/r_assets
     ./validate_r.R
-    
+
 - name: Run R Tests
   run: |
-    cd rmcp/r_assets  
+    cd rmcp/r_assets
     ./run_tests.R
 ```
 

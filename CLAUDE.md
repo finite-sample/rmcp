@@ -112,7 +112,7 @@ uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
 
 **Tier 3: Complete User Scenarios (End-to-end)**
 - **Scenario tests** (`tests/scenarios/`): Full user workflows and deployment scenarios:
-  - `test_realistic_scenarios.py`: Statistical analysis pipelines  
+  - `test_realistic_scenarios.py`: Statistical analysis pipelines
   - `test_claude_desktop_scenarios.py`: Claude Desktop integration flows (includes concurrent load testing)
   - `test_excel_plotting_scenarios.py`: File workflow scenarios
   - `test_deployment_scenarios.py`: Docker environment validation, production builds, multi-platform testing
@@ -121,7 +121,7 @@ uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
 - **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (tests all 53 tools with real R)
 
 **Complete Test Coverage**: Docker environment includes **all 240+ tests** with comprehensive coverage across all components:
-- ✅ **R Integration**: 53 statistical tools with real R execution  
+- ✅ **R Integration**: 53 statistical tools with real R execution
 - ✅ **HTTP Transport**: FastAPI, uvicorn, SSE streaming, session management
 - ✅ **Core MCP Protocol**: JSON-RPC 2.0, tool calls, capabilities, error handling
 - ✅ **Configuration System**: Environment variables, config files, hierarchical loading
@@ -156,7 +156,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.base --cach
 # 4. Test both fresh and cached build scenarios (prevents workflow logic errors)
 # Fresh build scenario:
 docker buildx build --no-cache --target development -t rmcp-fresh:latest .
-# Cached build scenario: 
+# Cached build scenario:
 docker buildx build --target development -t rmcp-cached:latest .
 ```
 
@@ -226,7 +226,7 @@ echo "# Test comment" >> README.md
 git add . && git commit -m "Test: non-docker change"
 # Push and verify CI skips Docker builds
 
-# 2. Test workflow with Docker changes (should trigger builds)  
+# 2. Test workflow with Docker changes (should trigger builds)
 git checkout -b test-trigger-build
 echo "# Test comment" >> Dockerfile
 git add . && git commit -m "Test: docker change"
@@ -256,7 +256,7 @@ git add . && git commit -m "Test: docker change"
    ```bash
    # Use act to test both cached and fresh build paths
    act -j docker-build --var should_build=true
-   act -j docker-build --var should_build=false  
+   act -j docker-build --var should_build=false
    ```
 
 4. **Verify multi-platform compatibility**:
@@ -272,7 +272,7 @@ git add . && git commit -m "Test: docker change"
 
 - **Always**: Before committing changes to `Dockerfile*`, `.github/workflows/`, `pyproject.toml`
 - **Docker optimizations**: When modifying cache strategies, base images, or build stages
-- **Dependency updates**: When upgrading pytest, Python packages, or R packages  
+- **Dependency updates**: When upgrading pytest, Python packages, or R packages
 - **CI logic changes**: When modifying conditional steps, build matrices, or attestation workflows
 - **Pre-release**: Before tagging releases or major feature merges
 
@@ -303,7 +303,7 @@ RMCP includes a comprehensive configuration management system that supports:
 
 ### **Configuration Sources (Priority Order)**
 1. **Command-line arguments** (highest priority)
-2. **Environment variables** (`RMCP_*` prefix)  
+2. **Environment variables** (`RMCP_*` prefix)
 3. **User config file** (`~/.rmcp/config.json`)
 4. **System config file** (`/etc/rmcp/config.json`)
 5. **Built-in defaults** (lowest priority)
@@ -355,7 +355,7 @@ OPERATION_CATEGORIES = {
     },
     "package_installation": {
         "patterns": [r"install\.packages"],
-        "description": "R package installation from repositories", 
+        "description": "R package installation from repositories",
         "security_level": "medium",
     },
     "system_operations": {
@@ -369,7 +369,7 @@ OPERATION_CATEGORIES = {
 ### **User Workflow**
 
 1. **Operation Detection**: When R code contains approval-required patterns, execution pauses
-2. **User Notification**: Clear description of operation and security implications shown  
+2. **User Notification**: Clear description of operation and security implications shown
 3. **Approval Decision**: User accepts/denies with session-wide persistence
 4. **Execution**: Approved operations proceed, denied operations are blocked
 5. **Session Memory**: Decisions persist for the current session to avoid repetitive prompts
@@ -393,7 +393,7 @@ ggsave("plot.png", plot=p)  # ← Triggers approval request
 
 **Package Installation:**
 ```r
-# Requires approval for package installation  
+# Requires approval for package installation
 install.packages("tidyverse")  # ← Triggers approval request
 library(tidyverse)             # ← Proceeds without approval
 ```
@@ -423,7 +423,7 @@ OPERATION_CATEGORIES["database_operations"] = {
 def test_approval_required():
     context = create_test_context()
     code = 'ggsave("test.png")'
-    
+
     # Should require approval
     result = await validate_r_code(context, code)
     assert result["requires_approval"] is True
@@ -473,7 +473,7 @@ RMCP v0.5.1 introduces a **systematic, evidence-based R package whitelist** with
    - Base R, essential tidyverse, fundamental statistical packages
    - Examples: `ggplot2`, `dplyr`, `MASS`, `survival`, `Matrix`
 
-2. **Tier 2 - User Approval (56 packages)**: Extended functionality  
+2. **Tier 2 - User Approval (56 packages)**: Extended functionality
    - Popular ML, econometrics, time series packages
    - Examples: `caret`, `randomForest`, `forecast`, `AER`, `rstan`
 
@@ -489,7 +489,7 @@ RMCP v0.5.1 introduces a **systematic, evidence-based R package whitelist** with
 
 **Risk Categorization** by security impact:
 - **System Access**: 4 packages (R.utils, unix, etc.)
-- **Network Access**: 8 packages (curl, httr, etc.) 
+- **Network Access**: 8 packages (curl, httr, etc.)
 - **File Operations**: 8 packages (readr, openxlsx, etc.)
 - **Code Execution**: 8 packages (Rcpp, devtools, etc.)
 - **External Dependencies**: 7 packages (rJava, database drivers, etc.)

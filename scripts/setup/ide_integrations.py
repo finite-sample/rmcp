@@ -76,9 +76,9 @@ class TestClaudeDesktopIntegration:
                 assert "command" in rmcp_config, "RMCP config missing command"
                 assert "args" in rmcp_config, "RMCP config missing args"
                 assert rmcp_config["command"] == "rmcp", "RMCP command should be 'rmcp'"
-                assert "start" in rmcp_config["args"], (
-                    "RMCP args should include 'start'"
-                )
+                assert (
+                    "start" in rmcp_config["args"]
+                ), "RMCP args should include 'start'"
             else:
                 pytest.skip("RMCP not configured in Claude Desktop")
 
@@ -125,9 +125,9 @@ class TestClaudeDesktopIntegration:
                     response_line = line
                     break
 
-            assert response_line is not None, (
-                f"No JSON response found. stdout: {stdout}, stderr: {stderr}"
-            )
+            assert (
+                response_line is not None
+            ), f"No JSON response found. stdout: {stdout}, stderr: {stderr}"
 
             response = json.loads(response_line)
             assert response["jsonrpc"] == "2.0"
@@ -369,9 +369,9 @@ class TestRMCPServerSetup:
                         print("Sample analysis successful")
                         break
 
-            assert response_found, (
-                f"No successful response found. stdout: {stdout}, stderr: {stderr}"
-            )
+            assert (
+                response_found
+            ), f"No successful response found. stdout: {stdout}, stderr: {stderr}"
 
         except subprocess.TimeoutExpired:
             process.kill()

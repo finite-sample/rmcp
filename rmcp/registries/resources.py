@@ -302,7 +302,7 @@ class ResourcesRegistry:
             content = resource_info.get(
                 "description", f"Static resource: {resource_info['name']}"
             )
-        elif isinstance(loader, (str, bytes)):
+        elif isinstance(loader, str | bytes):
             content = loader
         else:
             result = loader()
@@ -598,6 +598,7 @@ def resource(
 ):
     """
     Decorator to register a static resource.
+
     Usage:
         @resource(
             uri="static://example",

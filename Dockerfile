@@ -13,7 +13,7 @@ FROM ghcr.io/finite-sample/rmcp/rmcp-base:latest AS base
 # Base image already contains:
 # - rocker/r2u:noble with optimized R package installation
 # - All required system dependencies (Python, build tools, SSL, etc.)
-# - 50+ R packages for statistical analysis, ML, and visualization  
+# - 50+ R packages for statistical analysis, ML, and visualization
 # - mkcert for HTTPS development
 # - Optimized configurations and cleanup
 
@@ -128,7 +128,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1
 
 # Note: Runtime dependencies already installed in production-base
-# (python3, python3-venv, libcurl4, libssl3, libxml2, ca-certificates, 
+# (python3, python3-venv, libcurl4, libssl3, libxml2, ca-certificates,
 #  libblas3, liblapack3, r-base-core, littler)
 
 # Copy wheel from builder

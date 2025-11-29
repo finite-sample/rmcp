@@ -54,9 +54,9 @@ class TestAllToolSchemas:
     ):
         """Test that all tools have valid input schemas and accept realistic data."""
         # Verify tool has schema
-        assert hasattr(tool_func, "_mcp_tool_input_schema"), (
-            f"{tool_name} missing input schema"
-        )
+        assert hasattr(
+            tool_func, "_mcp_tool_input_schema"
+        ), f"{tool_name} missing input schema"
 
         schema = tool_func._mcp_tool_input_schema
         assert isinstance(schema, dict), f"{tool_name} schema is not a dict"
@@ -80,9 +80,9 @@ class TestAllToolSchemas:
         assert callable(tool_func), f"{tool_name} is not callable"
 
         # Verify tool has return type annotation
-        assert hasattr(tool_func, "__annotations__"), (
-            f"{tool_name} missing type annotations"
-        )
+        assert hasattr(
+            tool_func, "__annotations__"
+        ), f"{tool_name} missing type annotations"
         annotations = tool_func.__annotations__
         assert "return" in annotations, f"{tool_name} missing return type annotation"
 
@@ -92,24 +92,24 @@ class TestAllToolSchemas:
     ):
         """Test that all tools have complete metadata."""
         # Check for required MCP tool attributes
-        assert hasattr(tool_func, "_mcp_tool_name"), (
-            f"{tool_name} missing _mcp_tool_name"
-        )
-        assert hasattr(tool_func, "_mcp_tool_description"), (
-            f"{tool_name} missing _mcp_tool_description"
-        )
-        assert hasattr(tool_func, "_mcp_tool_input_schema"), (
-            f"{tool_name} missing _mcp_tool_input_schema"
-        )
+        assert hasattr(
+            tool_func, "_mcp_tool_name"
+        ), f"{tool_name} missing _mcp_tool_name"
+        assert hasattr(
+            tool_func, "_mcp_tool_description"
+        ), f"{tool_name} missing _mcp_tool_description"
+        assert hasattr(
+            tool_func, "_mcp_tool_input_schema"
+        ), f"{tool_name} missing _mcp_tool_input_schema"
 
         # Verify metadata values
         assert tool_func._mcp_tool_name == tool_name, f"{tool_name} name mismatch"
-        assert isinstance(tool_func._mcp_tool_description, str), (
-            f"{tool_name} description not string"
-        )
-        assert len(tool_func._mcp_tool_description) > 0, (
-            f"{tool_name} empty description"
-        )
+        assert isinstance(
+            tool_func._mcp_tool_description, str
+        ), f"{tool_name} description not string"
+        assert (
+            len(tool_func._mcp_tool_description) > 0
+        ), f"{tool_name} empty description"
 
 
 class TestToolSchemaStructure:
@@ -124,12 +124,12 @@ class TestToolSchemaStructure:
 
         if "data" in schema.get("properties", {}):
             data_schema = schema["properties"]["data"]
-            assert data_schema["type"] == "object", (
-                f"{tool_name} data parameter should be object type"
-            )
-            assert "properties" in data_schema, (
-                f"{tool_name} data parameter missing properties"
-            )
+            assert (
+                data_schema["type"] == "object"
+            ), f"{tool_name} data parameter should be object type"
+            assert (
+                "properties" in data_schema
+            ), f"{tool_name} data parameter missing properties"
 
     @pytest.mark.parametrize("tool_name,tool_func,test_input", get_test_tools())
     def test_required_fields_present(
@@ -140,16 +140,16 @@ class TestToolSchemaStructure:
 
         if "required" in schema:
             required_fields = schema["required"]
-            assert isinstance(required_fields, list), (
-                f"{tool_name} required should be list"
-            )
+            assert isinstance(
+                required_fields, list
+            ), f"{tool_name} required should be list"
 
             # Check that all required fields exist in properties
             properties = schema.get("properties", {})
             for field in required_fields:
-                assert field in properties, (
-                    f"{tool_name} required field '{field}' not in properties"
-                )
+                assert (
+                    field in properties
+                ), f"{tool_name} required field '{field}' not in properties"
 
     @pytest.mark.parametrize("tool_name,tool_func,test_input", get_test_tools())
     def test_enum_values_validation(
@@ -162,13 +162,13 @@ class TestToolSchemaStructure:
             if isinstance(obj, dict):
                 if "enum" in obj:
                     enum_values = obj["enum"]
-                    assert isinstance(enum_values, list), (
-                        f"{tool_name} enum should be list"
-                    )
+                    assert isinstance(
+                        enum_values, list
+                    ), f"{tool_name} enum should be list"
                     assert len(enum_values) > 0, f"{tool_name} enum should not be empty"
-                    assert len(set(enum_values)) == len(enum_values), (
-                        f"{tool_name} enum has duplicates"
-                    )
+                    assert len(set(enum_values)) == len(
+                        enum_values
+                    ), f"{tool_name} enum has duplicates"
 
                 for value in obj.values():
                     check_enum_in_schema(value)

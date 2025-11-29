@@ -93,7 +93,7 @@ Real-world integration testing that requires external services and can't run in 
 - **Features**: Real Claude Desktop communication, MCP protocol validation
 - **Dependencies**: Claude Desktop, Python 3.10+
 
-**`docker_workflows.py`** - Docker Workflow Validation  
+**`docker_workflows.py`** - Docker Workflow Validation
 - **Purpose**: Complete Docker workflow testing
 - **Usage**: `python scripts/testing/integration/docker_workflows.py`
 - **Features**: Full Docker environment validation, statistical workflows
@@ -106,7 +106,7 @@ Local environment setup, validation, and configuration automation.
 **`validate_local_setup.py`** - Local Environment Validation
 - **Purpose**: Validate and auto-fix local development environment
 - **Usage**: `python scripts/setup/validate_local_setup.py [--auto-fix]`
-- **Features**: 
+- **Features**:
   - Python, R, Docker environment checks
   - Claude Desktop configuration validation
   - IDE integration testing

@@ -186,24 +186,30 @@ def check_r_version() -> tuple[bool, str]:
 def execute_r_script(script: str, args: dict[str, Any]) -> dict[str, Any]:
     """
     Execute an R script with arguments and return JSON results.
+
     This function creates a complete R execution environment by:
+
     1. Writing arguments to a temporary JSON file
     2. Creating an R script that loads jsonlite and reads the arguments
     3. Appending the user's R code
     4. Writing results to a JSON output file
     5. Executing R and parsing the results
     6. Cleaning up all temporary files
+
     Args:
         script: R code to execute. Must set a 'result' variable with output.
             The script has access to an 'args' variable containing the arguments.
         args: Dictionary of arguments available to R script as 'args' variable.
             All values must be JSON-serializable.
+
     Returns:
         Dictionary containing the R script results (contents of 'result' variable).
+
     Raises:
         RExecutionError: If R script execution fails, with detailed error info
         FileNotFoundError: If R is not installed or not in PATH
         json.JSONDecodeError: If R script produces invalid JSON output
+
     Example:
         >>> # Calculate statistics on a dataset
         >>> r_code = '''

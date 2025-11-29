@@ -50,7 +50,7 @@ An interactive web interface demonstrating RMCP's econometric capabilities with 
 - **Correlation Analysis**: Pearson and Spearman correlations
 - **Outlier Detection**: Identify and analyze outliers
 
-### 📊 Regression Analysis  
+### 📊 Regression Analysis
 - **Linear Regression**: Simple and multiple regression
 - **Logistic Regression**: Binary outcome modeling
 - **Panel Regression**: Fixed effects, random effects
@@ -122,7 +122,7 @@ The app works with any CSV file. Your data should have:
 ## 🛠️ Technical Details
 
 - **Backend**: R statistical computing via subprocess
-- **Frontend**: Streamlit web interface  
+- **Frontend**: Streamlit web interface
 - **AI Integration**: Anthropic Claude API
 - **Data Processing**: Pandas DataFrames
 - **Visualization**: R ggplot2 + Plotly integration
@@ -137,7 +137,7 @@ The app works with any CSV file. Your data should have:
 
 Perfect for:
 - **Academic Research**: Econometric analysis for papers
-- **Business Analytics**: Market research and forecasting  
+- **Business Analytics**: Market research and forecasting
 - **Policy Analysis**: Causal inference and impact evaluation
 - **Financial Modeling**: Risk analysis and portfolio optimization
 - **Data Science**: Exploratory analysis and feature engineering

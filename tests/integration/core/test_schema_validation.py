@@ -270,8 +270,8 @@ class TestSchemaValidation:
 
         # Additional semantic validation
         stats = result["statistics"]["values"]
-        assert isinstance(stats["mean"], (int, float))
-        assert isinstance(stats["sd"], (int, float))
+        assert isinstance(stats["mean"], int | float)
+        assert isinstance(stats["sd"], int | float)
         assert stats["n"] == len(
             self.SAMPLE_DATA["descriptive"]["numeric_data"]["values"]
         )
@@ -309,7 +309,7 @@ class TestSchemaValidation:
             "Welch's t-test",
         ]
         assert 0 <= result["p_value"] <= 1
-        assert isinstance(result["statistic"], (int, float))
+        assert isinstance(result["statistic"], int | float)
 
     @pytest.mark.asyncio
     async def test_kmeans_clustering_schema(self, context):

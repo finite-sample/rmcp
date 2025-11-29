@@ -14,7 +14,7 @@ RMCP visualization tools now return both comprehensive statistical analysis **an
 
 # RMCP responds with:
 # 1. 📊 Interactive heatmap displayed inline with color-coded correlation strengths
-# 2. 📋 Statistical analysis: correlation matrix with exact values and significance tests  
+# 2. 📋 Statistical analysis: correlation matrix with exact values and significance tests
 # 3. 💡 Insights: "Strong positive correlation (r=0.89) between marketing and sales"
 # 4. 🎨 Professional ggplot2 styling ready for presentations
 ```
@@ -26,7 +26,7 @@ RMCP visualization tools now return both comprehensive statistical analysis **an
 - Visual: Color intensity shows correlation strength (-1 to +1)
 - Analysis: p-values, confidence intervals, sample sizes
 
-**📈 scatter_plot**: Interactive scatter plots with trend lines and grouping  
+**📈 scatter_plot**: Interactive scatter plots with trend lines and grouping
 - Perfect for: Regression analysis, outlier detection, group comparisons
 - Visual: Points, trend lines, confidence bands, group colors
 - Analysis: Correlation coefficients, R², regression equations
@@ -38,7 +38,7 @@ RMCP visualization tools now return both comprehensive statistical analysis **an
 
 **📦 boxplot**: Quartile analysis with outlier detection
 - Perfect for: Comparing distributions, finding outliers
-- Visual: Boxes, whiskers, outlier points, group comparisons  
+- Visual: Boxes, whiskers, outlier points, group comparisons
 - Analysis: Quartiles, IQR, outlier counts, group statistics
 
 **⏱️ time_series_plot**: Temporal analysis with trend forecasting
@@ -78,7 +78,7 @@ RMCP visualization tools now return both comprehensive statistical analysis **an
 
 ```json
 {
-  "tool": "scatter_plot", 
+  "tool": "scatter_plot",
   "arguments": {
     "data": {
       "x": [1, 2, 3, 4, 5, 6, 7, 8],
@@ -86,7 +86,7 @@ RMCP visualization tools now return both comprehensive statistical analysis **an
       "group": ["A", "A", "B", "B", "A", "A", "B", "B"]
     },
     "x": "x",
-    "y": "y", 
+    "y": "y",
     "group": "group",
     "title": "Sales vs Marketing by Region"
   }
@@ -133,7 +133,7 @@ Tools now return multiple content types:
       "text": "{\"correlation_matrix\": [[1.0, 0.95], [0.95, 1.0]], ...}"
     },
     {
-      "type": "image", 
+      "type": "image",
       "data": "iVBORw0KGgoAAAANSUhEUgAAA...",
       "mimeType": "image/png"
     }

@@ -58,17 +58,17 @@ init_msg = {
 print(f\"Sending MCP message: {json.dumps(init_msg)}\")
 
 process = subprocess.Popen([\"rmcp\", \"start\"],
-                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, text=True)
 
 try:
     stdout, stderr = process.communicate(
         input=json.dumps(init_msg) + \"\n\", timeout=10)
-    
+
     print(f\"Return code: {process.returncode}\")
     print(f\"STDOUT ({len(stdout)} chars): {repr(stdout[:500])}\")
     print(f\"STDERR ({len(stderr)} chars): {repr(stderr[:500])}\")
-    
+
     # Look for JSON response
     found_json = False
     for line in stdout.strip().split(\"\n\"):
@@ -82,13 +82,13 @@ try:
                 break
             except (json.JSONDecodeError, AssertionError) as e:
                 print(f\"❌ Invalid JSON response: {e}\")
-    
+
     if not found_json:
         print(\"❌ No valid JSON MCP response found\")
         print(\"Full stdout lines:\")
         for i, line in enumerate(stdout.strip().split(\"\n\")):
             print(f\"  {i}: {repr(line)}\")
-        
+
 except subprocess.TimeoutExpired:
     process.kill()
     print(\"❌ MCP server timeout - process killed\")

@@ -66,9 +66,9 @@ class TestClaudeAPISchemaCompliance:
             )
         else:
             print("✅ All tools have Claude-compatible schemas")
-            assert tools_checked >= 44, (
-                f"Expected at least 44 tools, found {tools_checked}"
-            )
+            assert (
+                tools_checked >= 44
+            ), f"Expected at least 44 tools, found {tools_checked}"
 
     def test_decision_tree_flattened_schema(self):
         """Test that decision_tree's flattened schema still validates properly."""

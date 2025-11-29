@@ -51,7 +51,7 @@ source_suffix = {
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "furo"
-html_static_path = ["_static"]
+html_static_path = []
 html_title = f"RMCP {version} Documentation"
 
 # Theme options for Furo
@@ -111,14 +111,13 @@ intersphinx_mapping = {
 # MyST parser configuration
 myst_enable_extensions = [
     "deflist",
-    "tasklist", 
+    "tasklist",
     "colon_fence",
     "attrs_inline",
     "attrs_block",
     "fieldlist",
     "substitution",
     "dollarmath",
-    "linkify",
 ]
 
 # Enable including content from other files

@@ -166,15 +166,15 @@ class TestClaudeErrorExperienceScenarios:
             "numeric",
             "character",
         ]
-        assert any(indicator in error_lower for indicator in data_issue_indicators), (
-            f"Error should explain data issue clearly: {error_msg}"
-        )
+        assert any(
+            indicator in error_lower for indicator in data_issue_indicators
+        ), f"Error should explain data issue clearly: {error_msg}"
 
         # Should not be overly technical
         technical_jargon = ["traceback", "exception", "stderr", "subprocess", "jsonrpc"]
-        assert not any(jargon in error_lower for jargon in technical_jargon), (
-            f"Error should avoid technical jargon: {error_msg}"
-        )
+        assert not any(
+            jargon in error_lower for jargon in technical_jargon
+        ), f"Error should avoid technical jargon: {error_msg}"
 
         # Step 2: Use suggest_fix for guidance
         fix_result = await simulate_claude_analysis(
@@ -198,9 +198,9 @@ class TestClaudeErrorExperienceScenarios:
             "use",
             "convert",
         ]
-        assert any(action in suggestions_text for action in helpful_actions), (
-            f"Suggestions should be actionable: {suggestions}"
-        )
+        assert any(
+            action in suggestions_text for action in helpful_actions
+        ), f"Suggestions should be actionable: {suggestions}"
 
         print("✅ Novice user error experience validated")
         print("   Error clarity: Clear explanation of data issues")
@@ -276,9 +276,9 @@ class TestClaudeErrorExperienceScenarios:
                 "fitted",
                 "probabilities",
             ]
-            assert any(term in error_lower for term in statistical_terms), (
-                f"Error should use appropriate statistical terminology: {error_msg}"
-            )
+            assert any(
+                term in error_lower for term in statistical_terms
+            ), f"Error should use appropriate statistical terminology: {error_msg}"
 
         # Step 2: Get expert guidance
         fix_result = await simulate_claude_analysis(
@@ -338,9 +338,9 @@ class TestClaudeErrorExperienceScenarios:
             "path",
             "cannot access",
         ]
-        assert any(indicator in error_lower for indicator in file_indicators), (
-            f"Error should clearly indicate file issue: {error_msg}"
-        )
+        assert any(
+            indicator in error_lower for indicator in file_indicators
+        ), f"Error should clearly indicate file issue: {error_msg}"
 
         # Should preserve file path for debugging
         assert (
@@ -368,9 +368,9 @@ class TestClaudeErrorExperienceScenarios:
             "directory",
             "absolute path",
         ]
-        assert any(help_item in suggestions_text for help_item in file_help), (
-            f"Should suggest file troubleshooting steps: {suggestions}"
-        )
+        assert any(
+            help_item in suggestions_text for help_item in file_help
+        ), f"Should suggest file troubleshooting steps: {suggestions}"
 
         print("✅ Business analyst file error experience validated")
         print("   Error clarity: File issue clearly identified")
@@ -417,9 +417,9 @@ class TestClaudeErrorExperienceScenarios:
                 "target",
                 "feature",
             ]
-            assert any(concept in error_lower for concept in ml_concepts), (
-                f"Error should use ML terminology appropriately: {error_msg}"
-            )
+            assert any(
+                concept in error_lower for concept in ml_concepts
+            ), f"Error should use ML terminology appropriately: {error_msg}"
 
         # Step 2: Validate data for ML suitability
         validation_result = await simulate_claude_analysis(
@@ -446,9 +446,9 @@ class TestClaudeErrorExperienceScenarios:
                 "target",
                 "feature",
             ]
-            assert any(issue in issues_text for issue in ml_issues), (
-                f"Should identify ML-specific data issues: {warnings + errors}"
-            )
+            assert any(
+                issue in issues_text for issue in ml_issues
+            ), f"Should identify ML-specific data issues: {warnings + errors}"
 
         print("✅ Data scientist ML error experience validated")
 
@@ -534,9 +534,9 @@ class TestClaudeErrorExperienceScenarios:
 
         # Verify recovery workflow quality
         successful_steps = sum(1 for _, success, _ in recovery_steps if success)
-        assert successful_steps >= 2, (
-            f"At least 2 recovery steps should succeed: {recovery_steps}"
-        )
+        assert (
+            successful_steps >= 2
+        ), f"At least 2 recovery steps should succeed: {recovery_steps}"
 
         print("✅ Progressive error recovery workflow validated")
         print(f"   Recovery steps: {[step[0] for step in recovery_steps]}")
@@ -578,9 +578,9 @@ class TestErrorMessageQualityForClaude:
                 error_msg = result["error"]
 
                 # Error messages should be conversational
-                assert not error_msg.startswith("Error:"), (
-                    "Should not start with 'Error:'"
-                )
+                assert not error_msg.startswith(
+                    "Error:"
+                ), "Should not start with 'Error:'"
                 assert len(error_msg.split()) > 3, "Should be more than just error code"
 
                 # Should provide context
@@ -635,9 +635,9 @@ class TestErrorMessageQualityForClaude:
             specific_needs = ["data", "observations", "samples", "values", "more"]
             mentions_needs = any(need in error_lower for need in specific_needs)
 
-            assert has_actionable or mentions_needs, (
-                f"Error should be actionable or mention needs: {error_msg}"
-            )
+            assert (
+                has_actionable or mentions_needs
+            ), f"Error should be actionable or mention needs: {error_msg}"
 
             print("✅ Error message actionability verified")
 
@@ -664,9 +664,9 @@ class TestErrorMessageQualityForClaude:
             error_msg = result["error"]
 
             # Should preserve variable names for Claude to reference
-            assert "sales_q1" in error_msg or "marketing_budget" in error_msg, (
-                "Should preserve variable names"
-            )
+            assert (
+                "sales_q1" in error_msg or "marketing_budget" in error_msg
+            ), "Should preserve variable names"
 
             # Should preserve analysis type context
             analysis_context = ["correlation", "pearson", "variables"]
