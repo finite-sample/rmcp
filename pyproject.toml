@@ -51,7 +51,7 @@ dev = [
 docs = [
     # Documentation build dependencies
     "sphinx>=5.0.0",
-    "sphinx-rtd-theme>=1.0.0",
+    "furo>=2024.0.0",
     "myst-parser>=0.18.0",
     # Additional Sphinx extensions used in conf.py
     "sphinx-copybutton>=0.5.0",
@@ -67,8 +67,12 @@ Documentation = "https://github.com/finite-sample/rmcp#readme"
 Issues = "https://github.com/finite-sample/rmcp/issues"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+# uv build backend configuration
+[tool.uv.build-backend]
+module-root = "."
 
 # Tool configurations
 [tool.pytest.ini_options]

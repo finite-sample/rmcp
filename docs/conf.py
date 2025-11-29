@@ -50,22 +50,30 @@ source_suffix = {
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 html_static_path = ["_static"]
 html_title = f"RMCP {version} Documentation"
 
-# Theme options
+# Theme options for Furo
 html_theme_options = {
-    "analytics_id": "",
-    "logo_only": False,
-    "display_version": True,
-    "prev_next_buttons_location": "bottom",
-    "style_external_links": False,
-    "collapse_navigation": True,
-    "sticky_navigation": True,
-    "navigation_depth": 4,
-    "includehidden": True,
-    "titles_only": False,
+    # Enable navigation with keyboard arrows
+    "navigation_with_keys": True,
+    # Show edit button on top of page (if source is available)
+    "top_of_page_buttons": ["edit", "view"],
+    # Light mode CSS variables for branding
+    "light_css_variables": {
+        "color-brand-primary": "#0066CC",
+        "color-brand-content": "#0066CC",
+        "font-stack": "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif",
+        "font-stack--monospace": "SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace",
+    },
+    # Dark mode CSS variables
+    "dark_css_variables": {
+        "color-brand-primary": "#4A9EFF",
+        "color-brand-content": "#4A9EFF",
+    },
+    # Sidebar configuration
+    "sidebar_hide_name": False,
 }
 
 # -- Extension configuration -------------------------------------------------
@@ -103,11 +111,19 @@ intersphinx_mapping = {
 # MyST parser configuration
 myst_enable_extensions = [
     "deflist",
-    "tasklist",
+    "tasklist", 
     "colon_fence",
     "attrs_inline",
     "attrs_block",
+    "fieldlist",
+    "substitution",
+    "dollarmath",
+    "linkify",
 ]
+
+# Enable including content from other files
+myst_heading_anchors = 3
+myst_fence_as_directive = ["note", "warning", "error"]
 
 # autosectionlabel
 autosectionlabel_prefix_document = True
