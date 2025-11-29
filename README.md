@@ -290,3 +290,4 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start
 ---
 
 **Ready to turn conversations into statistical insights?** Install RMCP and start analyzing data through AI assistants today! 🚀
+# Test comment
