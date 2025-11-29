@@ -4,7 +4,7 @@ repos:
     rev: v0.6.9
     hooks:
       - id: ruff
-        args: [ --fix, --unsafe-fixes ]
+        # Only check, don't fix (prevents conflicts with ruff-format)
         types_or: [ python, pyi, jupyter ]
       - id: ruff-format
         types_or: [ python, pyi, jupyter ]
