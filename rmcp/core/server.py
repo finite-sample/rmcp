@@ -44,6 +44,11 @@ except Exception:  # pragma: no cover - optional dependency
         "alert",
         "emergency",
     ]
+# Supported MCP protocol versions (latest first)
+_SUPPORTED_PROTOCOL_VERSIONS = tuple(
+    dict.fromkeys((_PROTOCOL_VERSION, "2025-06-18"))
+)
+
 # Import version from __init__ at runtime to avoid circular imports
 from ..registries.prompts import PromptsRegistry
 from ..registries.resources import ResourcesRegistry
@@ -466,6 +471,15 @@ All tools provide professionally formatted output with markdown tables, statisti
         Returns:
             Initialize response with server capabilities
         """
+        requested_version = params.get("protocolVersion")
+        if requested_version and requested_version not in _SUPPORTED_PROTOCOL_VERSIONS:
+            raise ValueError(
+                "Unsupported protocol version requested: "
+                f"{requested_version}. Supported versions: "
+                f"{', '.join(_SUPPORTED_PROTOCOL_VERSIONS)}"
+            )
+        protocol_version = requested_version or _PROTOCOL_VERSION
+
         client_info = params.get("clientInfo", {})
         logger.info(
             f"Initializing MCP connection with client: "
@@ -480,7 +494,7 @@ All tools provide professionally formatted output with markdown tables, statisti
                 logging=LoggingCapability(),
             )
             initialize_result = InitializeResult(
-                protocolVersion=_PROTOCOL_VERSION,
+                protocolVersion=protocol_version,
                 capabilities=capabilities,
                 serverInfo=Implementation(name=self.name, version=self.version),
                 instructions=self.description or None,
@@ -495,7 +509,7 @@ All tools provide professionally formatted output with markdown tables, statisti
             "completion": {},
         }
         result = {
-            "protocolVersion": _PROTOCOL_VERSION,
+            "protocolVersion": protocol_version,
             "capabilities": capabilities_dict,
             "serverInfo": {"name": self.name, "version": self.version},
         }
