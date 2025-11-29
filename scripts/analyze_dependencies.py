@@ -14,7 +14,7 @@ from pathlib import Path
 def extract_python_imports(file_path: Path) -> set[str]:
     """Extract third-party package imports from Python file."""
     try:
-        with open(file_path, encoding='utf-8') as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         tree = ast.parse(content)
@@ -24,26 +24,50 @@ def extract_python_imports(file_path: Path) -> set[str]:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     # Get top-level package name
-                    pkg = alias.name.split('.')[0]
+                    pkg = alias.name.split(".")[0]
                     imports.add(pkg)
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     # Get top-level package name
-                    pkg = node.module.split('.')[0]
+                    pkg = node.module.split(".")[0]
                     imports.add(pkg)
 
         # Filter out standard library and relative imports
         stdlib_modules = {
-            'asyncio', 'base64', 'copy', 'inspect', 'json', 'logging',
-            'mimetypes', 'os', 'platform', 'queue', 're', 'shutil',
-            'subprocess', 'sys', 'tempfile', 'time', 'uuid', 'abc',
-            'collections', 'contextlib', 'contextvars', 'dataclasses',
-            'enum', 'pathlib', 'typing', 'unittest', 'urllib'
+            "asyncio",
+            "base64",
+            "copy",
+            "inspect",
+            "json",
+            "logging",
+            "mimetypes",
+            "os",
+            "platform",
+            "queue",
+            "re",
+            "shutil",
+            "subprocess",
+            "sys",
+            "tempfile",
+            "time",
+            "uuid",
+            "abc",
+            "collections",
+            "contextlib",
+            "contextvars",
+            "dataclasses",
+            "enum",
+            "pathlib",
+            "typing",
+            "unittest",
+            "urllib",
         }
 
         third_party = imports - stdlib_modules
         # Remove relative imports and rmcp internal imports
-        third_party = {pkg for pkg in third_party if not pkg.startswith('.') and pkg != 'rmcp'}
+        third_party = {
+            pkg for pkg in third_party if not pkg.startswith(".") and pkg != "rmcp"
+        }
 
         return third_party
 
@@ -55,7 +79,7 @@ def extract_python_imports(file_path: Path) -> set[str]:
 def extract_r_libraries(file_path: Path) -> set[str]:
     """Extract R package dependencies from R script."""
     try:
-        with open(file_path, encoding='utf-8') as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         libraries = set()
@@ -132,7 +156,7 @@ def analyze_rmcp_dependencies():
 
     print("\n🐍 pyproject.toml Production Dependencies:")
     print("# Core dependencies:")
-    print(f'dependencies = {sorted(python_deps)}')
+    print(f"dependencies = {sorted(python_deps)}")
 
     if test_only_deps:
         print("\n# Dev dependencies (test scaffolding):")
@@ -140,15 +164,15 @@ def analyze_rmcp_dependencies():
         # Add version constraints for known packages
         versioned_test_deps = []
         for dep in test_list:
-            if dep == 'pytest':
+            if dep == "pytest":
                 versioned_test_deps.append('"pytest>=8.2.0"')
-            elif dep == 'pandas':
+            elif dep == "pandas":
                 versioned_test_deps.append('"pandas>=1.5.0"')
-            elif dep == 'openpyxl':
+            elif dep == "openpyxl":
                 versioned_test_deps.append('"openpyxl>=3.0.0"')
             else:
                 versioned_test_deps.append(f'"{dep}"')
-        print(f'dev = {versioned_test_deps}')
+        print(f"dev = {versioned_test_deps}")
 
     print("\n📦 Docker Base Image R Packages Required:")
     print("# Critical R packages for RMCP functionality:")
@@ -157,12 +181,14 @@ def analyze_rmcp_dependencies():
         end_char = "," if i < len(r_list) - 1 else ""
         print(f'  "{pkg}"{end_char}')
 
-    print(f"\n✅ Analysis complete! Found {len(python_deps)} Python + {len(r_deps)} R dependencies.")
+    print(
+        f"\n✅ Analysis complete! Found {len(python_deps)} Python + {len(r_deps)} R dependencies."
+    )
 
     return {
-        'python_core': python_deps,
-        'python_test': test_only_deps,
-        'r_packages': r_deps
+        "python_core": python_deps,
+        "python_test": test_only_deps,
+        "r_packages": r_deps,
     }
 
 
