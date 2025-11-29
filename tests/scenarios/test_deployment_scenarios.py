@@ -89,7 +89,7 @@ def _ensure_production_image():
         image_name,
         "python",
         "-c",
-        "import rmcp, fastapi, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil; print('RMCP production superset ready')",
+        "import rmcp, fastapi, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil; print('✅ Basic dependencies validated')",
     ]
 
     validation_result = subprocess.run(
