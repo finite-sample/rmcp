@@ -33,7 +33,7 @@ try:
     _SUPPORTED_LOG_LEVELS = ["debug", "info", "warning", "error"]
 except Exception:  # pragma: no cover - optional dependency
     _MCP_TYPES_AVAILABLE = False
-    _PROTOCOL_VERSION = "2025-06-18"
+    _PROTOCOL_VERSION = "2025-11-25"
     _SUPPORTED_LOG_LEVELS = [
         "debug",
         "info",
