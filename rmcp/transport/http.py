@@ -150,7 +150,8 @@ Use with Claude Desktop or other MCP clients for natural language statistical an
 ## Protocol
 
 This server implements the Model Context Protocol (MCP) specification for statistical analysis tools.
-All requests after initialization must include the `MCP-Protocol-Version: 2025-06-18` header.
+All requests after initialization must include the `MCP-Protocol-Version` header. Use `2025-11-25`
+for the latest spec (preferred); `2025-06-18` remains supported for compatibility.
             """.strip(),
             contact={
                 "name": "RMCP Project",
@@ -218,16 +219,29 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
     def _validate_protocol_version(self, request: Request, method: str) -> None:
         """Validate MCP-Protocol-Version header according to MCP specification."""
         protocol_version = request.headers.get("mcp-protocol-version")
-        supported_versions = ("2025-06-18",)
+        supported_versions = ("2025-11-25", "2025-06-18")
+        preferred_version = supported_versions[0]
 
         if method == "initialize":
             # Initialize requests don't require the header (it's set after negotiation)
-            if protocol_version and protocol_version not in supported_versions:
+            if not protocol_version:
+                # Default to the latest version when the client doesn't specify one
+                request.state.protocol_version = preferred_version
+                return
+            if protocol_version not in supported_versions:
                 raise HTTPException(
                     400,
                     f"Unsupported protocol version: {protocol_version}. "
                     f"Supported versions: {', '.join(supported_versions)}",
                 )
+            if protocol_version != preferred_version:
+                logger.info(
+                    "Client requested older MCP protocol version %s; "
+                    "preferring %s for responses",
+                    protocol_version,
+                    preferred_version,
+                )
+            request.state.protocol_version = protocol_version
         else:
             # All non-initialize requests MUST include the MCP-Protocol-Version header
             if not protocol_version:
@@ -281,7 +295,8 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
 
             **Required Headers:**
             - `Content-Type: application/json`
-            - `MCP-Protocol-Version: 2025-06-18` (after initialization)
+            - `MCP-Protocol-Version: 2025-11-25` (preferred after initialization; `2025-06-18`
+              remains supported)
 
             **Session Management:**
             Sessions must be initialized before other operations.
@@ -501,8 +516,8 @@ All requests after initialization must include the `MCP-Protocol-Version: 2025-0
                     <pre style="background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto;">
 curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \\
   -H "Content-Type: application/json" \\
-  -H "MCP-Protocol-Version: 2025-06-18" \\
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'</pre>
+  -H "MCP-Protocol-Version: 2025-11-25" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'</pre>
 
                     <div class="footer">
                         <p>RMCP v0.5.1 | MIT License | <a href="https://github.com/finite-sample/rmcp">GitHub</a></p>

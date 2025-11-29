@@ -1,8 +1,9 @@
 """
 MCP Protocol Compliance Tests
 
-Tests that RMCP correctly implements the Model Context Protocol 2025-06-18 specification
-that Claude Desktop, Cursor, VS Code, and other MCP clients expect.
+Tests that RMCP correctly implements the Model Context Protocol 2025-11-25 specification
+while maintaining compatibility with the 2025-06-18 clients that Claude Desktop, Cursor,
+VS Code, and other MCP clients expect.
 
 These tests simulate the exact JSON-RPC message sequences that IDEs send.
 """
@@ -411,7 +412,7 @@ async def test_complete_mcp_conversation():
 def test_mcp_protocol_version_compatibility():
     """Test that RMCP declares compatibility with the correct MCP version."""
     # This test doesn't need async since it's just checking constants
-    expected_version = "2025-06-18"
+    expected_version = "2025-11-25"
 
     # Check that our server reports the correct protocol version
     # This would be checked during initialization in real usage
