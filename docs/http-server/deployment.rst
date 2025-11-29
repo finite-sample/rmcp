@@ -606,8 +606,8 @@ Application Monitoring
    # Detailed server info via MCP initialize
    curl -X POST http://localhost:8000/mcp \\
      -H "Content-Type: application/json" \\
-     -H "MCP-Protocol-Version: 2025-06-18" \\
-     -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"monitor","version":"1.0"}}}'
+     -H "MCP-Protocol-Version: 2025-11-25" \\
+     -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"monitor","version":"1.0"}}}'
 
 **Prometheus Metrics** (optional):
 

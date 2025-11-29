@@ -225,14 +225,14 @@ class TestHTTPSTransportIntegration:
                         "id": 1,
                         "method": "initialize",
                         "params": {
-                            "protocolVersion": "2025-06-18",
+                            "protocolVersion": "2025-11-25",
                             "capabilities": {},
                             "clientInfo": {"name": "test-client", "version": "1.0.0"},
                         },
                     },
                     headers={
                         "Content-Type": "application/json",
-                        "MCP-Protocol-Version": "2025-06-18",
+                        "MCP-Protocol-Version": "2025-11-25",
                     },
                 )
                 assert init_response.status_code == 200
@@ -252,7 +252,7 @@ class TestHTTPSTransportIntegration:
                     },
                     headers={
                         "Content-Type": "application/json",
-                        "MCP-Protocol-Version": "2025-06-18",
+                        "MCP-Protocol-Version": "2025-11-25",
                         "mcp-session-id": session_id,
                     },
                 )

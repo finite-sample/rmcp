@@ -38,7 +38,7 @@ HTTP Server
    # Using RMCP HTTP server
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \\
      -H "Content-Type: application/json" \\
-     -H "MCP-Protocol-Version: 2025-06-18" \\
+     -H "MCP-Protocol-Version: 2025-11-25" \\
      -H "MCP-Session-Id: your-session-id" \\
      -d '{
        "jsonrpc": "2.0",
@@ -87,7 +87,7 @@ HTTP Server
 
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \\
      -H "Content-Type: application/json" \\
-     -H "MCP-Protocol-Version: 2025-06-18" \\
+     -H "MCP-Protocol-Version: 2025-11-25" \\
      -H "MCP-Session-Id: your-session-id" \\
      -d '{
        "jsonrpc": "2.0",
@@ -140,7 +140,7 @@ HTTP Server
 
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \\
      -H "Content-Type: application/json" \\
-     -H "MCP-Protocol-Version: 2025-06-18" \\
+     -H "MCP-Protocol-Version: 2025-11-25" \\
      -H "MCP-Session-Id: your-session-id" \\
      -d '{
        "jsonrpc": "2.0",

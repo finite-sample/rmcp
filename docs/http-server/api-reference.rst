@@ -27,10 +27,16 @@ MCP Protocol Endpoint
    Main Model Context Protocol communication endpoint.
 
    **Request Headers:**
-   
+
    - ``Content-Type: application/json``
-   - ``MCP-Protocol-Version: 2025-06-18`` *(required after initialization)*
+   - ``MCP-Protocol-Version: 2025-11-25`` *(required after initialization)*
    - ``MCP-Session-Id: <session-id>`` *(included automatically after initialization)*
+
+   .. note::
+
+      Requests that omit ``MCP-Protocol-Version`` or use any value other than
+      ``2025-11-25`` receive a ``400`` response. The same version must also be
+      provided in the ``initialize`` payload.
 
    **JSON-RPC 2.0 Request Body:**
 
@@ -107,7 +113,7 @@ Initialize Session
      "id": 1, 
      "method": "initialize",
      "params": {
-       "protocolVersion": "2025-06-18",
+       "protocolVersion": "2025-11-25",
        "capabilities": {},
        "clientInfo": {
          "name": "my-client",
@@ -124,7 +130,7 @@ Initialize Session
      "jsonrpc": "2.0",
      "id": 1,
      "result": {
-       "protocolVersion": "2025-06-18", 
+       "protocolVersion": "2025-11-25", 
        "capabilities": {
          "tools": {"listChanged": false},
          "resources": {"subscribe": true, "listChanged": true},

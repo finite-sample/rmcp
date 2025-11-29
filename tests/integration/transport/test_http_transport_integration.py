@@ -83,7 +83,7 @@ class TestHTTPTransportMCPCompliance:
                     "id": 1,
                     "method": "initialize",
                     "params": {
-                        "protocolVersion": "2025-06-18",
+                        "protocolVersion": "2025-11-25",
                         "capabilities": {},
                         "clientInfo": {"name": "test-client", "version": "1.0.0"},
                     },
@@ -129,7 +129,7 @@ class TestHTTPTransportMCPCompliance:
                     "id": 1,
                     "method": "initialize",
                     "params": {
-                        "protocolVersion": "2025-06-18",
+                        "protocolVersion": "2025-11-25",
                         "capabilities": {},
                         "clientInfo": {"name": "test-client", "version": "1.0.0"},
                     },
@@ -148,7 +148,7 @@ class TestHTTPTransportMCPCompliance:
                 headers = {}
                 if session_id:
                     headers["Mcp-Session-Id"] = session_id
-                headers["MCP-Protocol-Version"] = "2025-06-18"
+                headers["MCP-Protocol-Version"] = "2025-11-25"
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/mcp",
                     json=tools_request,
@@ -190,7 +190,7 @@ class TestHTTPTransportMCPCompliance:
                     "id": 1,
                     "method": "initialize",
                     "params": {
-                        "protocolVersion": "2025-06-18",
+                        "protocolVersion": "2025-11-25",
                         "capabilities": {},
                         "clientInfo": {"name": "test-client", "version": "1.0.0"},
                     },
@@ -212,7 +212,7 @@ class TestHTTPTransportMCPCompliance:
                 headers = {}
                 if session_id:
                     headers["Mcp-Session-Id"] = session_id
-                headers["MCP-Protocol-Version"] = "2025-06-18"
+                headers["MCP-Protocol-Version"] = "2025-11-25"
                 response = await client.post(
                     f"http://127.0.0.1:{transport.port}/mcp",
                     json=tool_call_request,
@@ -225,6 +225,70 @@ class TestHTTPTransportMCPCompliance:
                 assert data["id"] == 3
                 assert "result" in data
                 assert "content" in data["result"]
+        finally:
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_rejects_missing_or_invalid_protocol_header(self):
+        """Non-initialize requests must include the negotiated protocol header."""
+        transport = HTTPTransport(host="127.0.0.1", port=8005)
+        server = create_server()
+        from rmcp.cli import _register_builtin_tools
+
+        _register_builtin_tools(server)
+        transport.set_message_handler(server.create_message_handler(transport))
+        server_task = asyncio.create_task(transport.run())
+        await asyncio.sleep(0.1)
+        try:
+            async with httpx.AsyncClient() as client:
+                init_request = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-11-25",
+                        "capabilities": {},
+                        "clientInfo": {"name": "test-client", "version": "1.0.0"},
+                    },
+                }
+                init_response = await client.post(
+                    f"http://127.0.0.1:{transport.port}/mcp",
+                    json=init_request,
+                    timeout=5.0,
+                )
+                session_id = init_response.headers.get("Mcp-Session-Id")
+
+                tools_request = {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/list",
+                    "params": {},
+                }
+
+                # Missing header should be rejected
+                missing_header_response = await client.post(
+                    f"http://127.0.0.1:{transport.port}/mcp",
+                    json=tools_request,
+                    headers={"Mcp-Session-Id": session_id} if session_id else {},
+                    timeout=5.0,
+                )
+                assert missing_header_response.status_code == 400
+
+                # Invalid version should also be rejected
+                invalid_header_response = await client.post(
+                    f"http://127.0.0.1:{transport.port}/mcp",
+                    json=tools_request,
+                    headers={
+                        "Mcp-Session-Id": session_id,
+                        "MCP-Protocol-Version": "2025-06-18",
+                    },
+                    timeout=5.0,
+                )
+                assert invalid_header_response.status_code == 400
         finally:
             server_task.cancel()
             try:

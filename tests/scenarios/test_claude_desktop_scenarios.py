@@ -163,7 +163,7 @@ class TestClaudeDesktopRealIntegration:
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2025-06-18",
+                "protocolVersion": "2025-11-25",
                 "capabilities": {"tools": {}},
                 "clientInfo": {"name": "Claude Desktop", "version": "1.0.0"},
             },
@@ -261,7 +261,7 @@ class TestClaudeDesktopRealIntegration:
                 "id": 1,
                 "method": "initialize",
                 "params": {
-                    "protocolVersion": "2025-06-18",
+                    "protocolVersion": "2025-11-25",
                     "capabilities": {"tools": {}},
                     "clientInfo": {"name": "Claude Desktop", "version": "1.0.0"},
                 },
@@ -371,7 +371,7 @@ class TestClaudeDesktopWorkflows:
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2025-06-18",
+                "protocolVersion": "2025-11-25",
                 "capabilities": {"tools": {}},
                 "clientInfo": {"name": "Claude Desktop E2E Test", "version": "1.0.0"},
             },
@@ -576,7 +576,7 @@ class TestClaudeDesktopPerformance:
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2025-06-18",
+                "protocolVersion": "2025-11-25",
                 "capabilities": {"tools": {}},
                 "clientInfo": {"name": "Performance Test", "version": "1.0.0"},
             },
@@ -651,7 +651,7 @@ class TestClaudeDesktopPerformance:
                         "id": 1,
                         "method": "initialize",
                         "params": {
-                            "protocolVersion": "2025-06-18",
+                            "protocolVersion": "2025-11-25",
                             "capabilities": {},
                             "clientInfo": {
                                 "name": "concurrent-test",

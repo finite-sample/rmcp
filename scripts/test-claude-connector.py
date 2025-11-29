@@ -45,14 +45,14 @@ class ClaudeConnectorTester:
                 self.mcp_url,
                 headers={
                     "Content-Type": "application/json",
-                    "MCP-Protocol-Version": "2025-06-18",
+                    "MCP-Protocol-Version": "2025-11-25",
                 },
                 json={
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "initialize",
                     "params": {
-                        "protocolVersion": "2025-06-18",
+                        "protocolVersion": "2025-11-25",
                         "capabilities": {},
                         "clientInfo": {
                             "name": "claude-web-connector-test",
@@ -88,7 +88,7 @@ class ClaudeConnectorTester:
                 self.mcp_url,
                 headers={
                     "Content-Type": "application/json",
-                    "MCP-Protocol-Version": "2025-06-18",
+                    "MCP-Protocol-Version": "2025-11-25",
                     "MCP-Session-Id": self.session_id,
                 },
                 json={"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
@@ -128,7 +128,7 @@ class ClaudeConnectorTester:
                 self.mcp_url,
                 headers={
                     "Content-Type": "application/json",
-                    "MCP-Protocol-Version": "2025-06-18",
+                    "MCP-Protocol-Version": "2025-11-25",
                     "MCP-Session-Id": self.session_id,
                 },
                 json={

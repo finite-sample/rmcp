@@ -277,7 +277,7 @@ Example response structure:
 # Test MCP protocol compliance
 curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
   -H "Content-Type: application/json" \
-  -H "MCP-Protocol-Version: 2025-06-18" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize",...}'
 
 # Verify tools/list endpoint

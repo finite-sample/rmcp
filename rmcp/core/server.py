@@ -28,12 +28,12 @@ try:
     )
 
     _MCP_TYPES_AVAILABLE = True
-    _PROTOCOL_VERSION = LATEST_PROTOCOL_VERSION
+    _PROTOCOL_VERSION = "2025-11-25"
     # Use fallback log levels since LoggingLevel.__args__ may not be available
     _SUPPORTED_LOG_LEVELS = ["debug", "info", "warning", "error"]
 except Exception:  # pragma: no cover - optional dependency
     _MCP_TYPES_AVAILABLE = False
-    _PROTOCOL_VERSION = "2025-06-18"
+    _PROTOCOL_VERSION = "2025-11-25"
     _SUPPORTED_LOG_LEVELS = [
         "debug",
         "info",
@@ -463,6 +463,14 @@ All tools provide professionally formatted output with markdown tables, statisti
         Returns:
             Initialize response with server capabilities
         """
+        protocol_version = params.get("protocolVersion")
+        if protocol_version != _PROTOCOL_VERSION:
+            raise ValueError(
+                "Unsupported protocol version: "
+                f"{protocol_version or 'missing'}. "
+                f"Server supports {_PROTOCOL_VERSION}.",
+            )
+
         client_info = params.get("clientInfo", {})
         logger.info(
             f"Initializing MCP connection with client: "
@@ -882,6 +890,8 @@ All tools provide professionally formatted output with markdown tables, statisti
                 "requires" in error_message.lower()
                 and "parameter" in error_message.lower()
             ):
+                error_code = -32602  # Invalid params
+            elif "unsupported protocol version" in error_message.lower():
                 error_code = -32602  # Invalid params
             else:
                 error_code = -32603  # Internal error

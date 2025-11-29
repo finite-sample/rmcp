@@ -413,7 +413,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Claude Desktop Compatibility**: Fixed MCP protocol version mismatch
-  - Updated protocol version from `2024-11-05` to `2025-06-18` to match Claude Desktop expectations
+  - Updated protocol version from `2024-11-05` to `2025-11-25` to match Claude Desktop expectations
   - Verified end-to-end integration with Claude Desktop works perfectly
   - All 33 statistical tools now accessible through natural conversation
 

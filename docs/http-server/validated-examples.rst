@@ -5,6 +5,12 @@ Validated Working Examples
 
 These examples have been tested against the live RMCP server and are guaranteed to work.
 
+.. note::
+
+   The MCP endpoint enforces ``MCP-Protocol-Version: 2025-11-25`` on every
+   request. Using an older version string will result in a ``400`` response
+   before the JSON-RPC body is processed.
+
 Business Performance Analysis
 -----------------------------
 
@@ -23,13 +29,13 @@ Step 1: Initialize Session
 
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
      -H "Content-Type: application/json" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -d '{
        "jsonrpc": "2.0",
        "id": 1,
        "method": "initialize",
        "params": {
-         "protocolVersion": "2025-06-18",
+         "protocolVersion": "2025-11-25",
          "capabilities": {},
          "clientInfo": {
            "name": "business-analyst",
@@ -46,7 +52,7 @@ Step 1: Initialize Session
      "jsonrpc": "2.0",
      "id": 1,
      "result": {
-       "protocolVersion": "2025-06-18",
+       "protocolVersion": "2025-11-25",
        "capabilities": {
          "tools": {"listChanged": false},
          "resources": {"subscribe": true, "listChanged": true},
@@ -72,7 +78,7 @@ Analyze how marketing spend and customer satisfaction impact sales.
 
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
      -H "Content-Type: application/json" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -H "MCP-Session-Id: YOUR_SESSION_ID" \
      -d '{
        "jsonrpc": "2.0",
@@ -141,7 +147,7 @@ Examine relationships between all business metrics.
 
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
      -H "Content-Type: application/json" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -H "MCP-Session-Id: YOUR_SESSION_ID" \
      -d '{
        "jsonrpc": "2.0",
@@ -228,14 +234,14 @@ Complete working Python client based on the validated examples:
                f"{self.base_url}/mcp",
                headers={
                    "Content-Type": "application/json",
-                   "MCP-Protocol-Version": "2025-06-18"
+                   "MCP-Protocol-Version": "2025-11-25"
                },
                json={
                    "jsonrpc": "2.0",
                    "id": 1,
                    "method": "initialize",
                    "params": {
-                       "protocolVersion": "2025-06-18",
+                       "protocolVersion": "2025-11-25",
                        "capabilities": {},
                        "clientInfo": {
                            "name": "business-analytics",
@@ -260,7 +266,7 @@ Complete working Python client based on the validated examples:
                f"{self.base_url}/mcp",
                headers={
                    "Content-Type": "application/json",
-                   "MCP-Protocol-Version": "2025-06-18",
+                   "MCP-Protocol-Version": "2025-11-25",
                    "MCP-Session-Id": self.session_id
                },
                json={
@@ -289,7 +295,7 @@ Complete working Python client based on the validated examples:
                f"{self.base_url}/mcp",
                headers={
                    "Content-Type": "application/json",
-                   "MCP-Protocol-Version": "2025-06-18",
+                   "MCP-Protocol-Version": "2025-11-25",
                    "MCP-Session-Id": self.session_id
                },
                json={
@@ -350,14 +356,14 @@ JavaScript Client Implementation
                method: 'POST',
                headers: {
                    'Content-Type': 'application/json',
-                   'MCP-Protocol-Version': '2025-06-18'
+                   'MCP-Protocol-Version': '2025-11-25'
                },
                body: JSON.stringify({
                    jsonrpc: '2.0',
                    id: 1,
                    method: 'initialize',
                    params: {
-                       protocolVersion: '2025-06-18',
+                       protocolVersion: '2025-11-25',
                        capabilities: {},
                        clientInfo: {
                            name: 'business-analytics-js',
@@ -384,7 +390,7 @@ JavaScript Client Implementation
                method: 'POST',
                headers: {
                    'Content-Type': 'application/json',
-                   'MCP-Protocol-Version': '2025-06-18',
+                   'MCP-Protocol-Version': '2025-11-25',
                    'MCP-Session-Id': this.sessionId
                },
                body: JSON.stringify({
@@ -414,7 +420,7 @@ JavaScript Client Implementation
                method: 'POST',
                headers: {
                    'Content-Type': 'application/json',
-                   'MCP-Protocol-Version': '2025-06-18',
+                   'MCP-Protocol-Version': '2025-11-25',
                    'MCP-Session-Id': this.sessionId
                },
                body: JSON.stringify({

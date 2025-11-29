@@ -106,7 +106,7 @@ class TestDockerWorkflowValidation:
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2025-06-18",
+                "protocolVersion": "2025-11-25",
                 "capabilities": {"tools": {}},
                 "clientInfo": {"name": "Docker E2E Test", "version": "1.0.0"},
             },
@@ -182,7 +182,7 @@ class TestDockerWorkflowValidation:
             # Copy file to container and run analysis
             workflow_commands = [
                 # Initialize MCP
-                '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"clientInfo":{"name":"Docker Workflow","version":"1.0.0"}}}',
+                '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"tools":{}},"clientInfo":{"name":"Docker Workflow","version":"1.0.0"}}}',
                 # Load data (simplified - in real scenario would use file operations)
                 '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"summary_stats","arguments":{"data":{"month":[1,2,3,4,5],"sales":[1000,1200,1100,1300,1250],"marketing":[200,250,220,280,260]},"variables":["sales","marketing"]}}}',
                 # Run correlation analysis
@@ -265,7 +265,7 @@ class TestDockerWorkflowValidation:
         # Test initialization time
         start_time = time.time()
 
-        init_request = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"clientInfo":{"name":"Performance Test","version":"1.0.0"}}}'
+        init_request = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"tools":{}},"clientInfo":{"name":"Performance Test","version":"1.0.0"}}}'
 
         process = subprocess.Popen(
             ["docker", "run", "--rm", "-i", production_image, "rmcp", "start"],

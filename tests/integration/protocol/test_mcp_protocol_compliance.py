@@ -1,7 +1,7 @@
 """
 MCP Protocol Compliance Tests
 
-Tests that RMCP correctly implements the Model Context Protocol 2025-06-18 specification
+Tests that RMCP correctly implements the Model Context Protocol 2025-11-25 specification
 that Claude Desktop, Cursor, VS Code, and other MCP clients expect.
 
 These tests simulate the exact JSON-RPC message sequences that IDEs send.
@@ -143,7 +143,7 @@ async def test_mcp_initialize_handshake(mcp_tester):
     """Test MCP initialization sequence as done by Claude Desktop."""
     # Step 1: Client sends initialize request
     initialize_params = {
-        "protocolVersion": "2025-06-18",
+        "protocolVersion": "2025-11-25",
         "capabilities": {"tools": {}, "resources": {}, "prompts": {}},
         "clientInfo": {"name": "Test Claude Desktop", "version": "1.0.0"},
     }
@@ -161,6 +161,11 @@ async def test_mcp_initialize_handshake(mcp_tester):
     server_info = result["serverInfo"]
     assert "name" in server_info, "serverInfo missing name"
     assert "version" in server_info, "serverInfo missing version"
+
+    # Validate negotiated protocol version
+    assert (
+        result["protocolVersion"] == "2025-11-25"
+    ), "Server must echo the negotiated protocol version"
 
     # Check capabilities
     capabilities = result["capabilities"]
@@ -314,7 +319,7 @@ async def test_stdio_transport_compliance():
         "id": 1,
         "method": "initialize",
         "params": {
-            "protocolVersion": "2025-06-18",
+            "protocolVersion": "2025-11-25",
             "capabilities": {"tools": {}},
             "clientInfo": {"name": "Test Client", "version": "1.0.0"},
         },
@@ -368,7 +373,7 @@ async def test_complete_mcp_conversation():
     init_response = await tester.send_request(
         "initialize",
         {
-            "protocolVersion": "2025-06-18",
+            "protocolVersion": "2025-11-25",
             "capabilities": {"tools": {}},
             "clientInfo": {"name": "Test IDE", "version": "1.0.0"},
         },
@@ -408,10 +413,32 @@ async def test_complete_mcp_conversation():
     tester.validate_response_structure(prompts_response, 5)
 
 
+@pytest.mark.asyncio
+async def test_rejects_unsupported_protocol_version():
+    """Ensure server rejects initialize calls using outdated protocol versions."""
+    tester = MCPProtocolTester()
+    await tester.setup_server()
+
+    response = await tester.send_request(
+        "initialize",
+        {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {},
+            "clientInfo": {"name": "Test IDE", "version": "1.0.0"},
+        },
+        200,
+    )
+
+    tester.validate_response_structure(response, 200)
+    assert "error" in response, "Unsupported protocol version should return an error"
+    assert response["error"].get("code") == -32602
+    assert "Unsupported protocol version" in response["error"].get("message", "")
+
+
 def test_mcp_protocol_version_compatibility():
     """Test that RMCP declares compatibility with the correct MCP version."""
     # This test doesn't need async since it's just checking constants
-    expected_version = "2025-06-18"
+    expected_version = "2025-11-25"
 
     # Check that our server reports the correct protocol version
     # This would be checked during initialization in real usage

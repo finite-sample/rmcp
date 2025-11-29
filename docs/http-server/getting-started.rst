@@ -37,17 +37,24 @@ Quick Start
 
 All MCP communication requires session initialization:
 
+.. note::
+
+   The server enforces the ``2025-11-25`` protocol version. Initialization
+   requests using a different ``protocolVersion`` are rejected, and every
+   subsequent request must include the matching ``MCP-Protocol-Version``
+   header.
+
 .. code-block:: bash
 
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
      -H "Content-Type: application/json" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -d '{
        "jsonrpc": "2.0",
        "id": 1,
        "method": "initialize",
        "params": {
-         "protocolVersion": "2025-06-18",
+         "protocolVersion": "2025-11-25",
          "capabilities": {},
          "clientInfo": {
            "name": "my-client",
@@ -64,7 +71,7 @@ All MCP communication requires session initialization:
      "jsonrpc": "2.0",
      "id": 1,
      "result": {
-       "protocolVersion": "2025-06-18",
+       "protocolVersion": "2025-11-25",
        "capabilities": {
          "tools": {"listChanged": false},
          "resources": {"subscribe": true, "listChanged": true}
@@ -85,7 +92,7 @@ After initialization, list statistical analysis tools:
 
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
      -H "Content-Type: application/json" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -H "MCP-Session-Id: your-session-id" \
      -d '{
        "jsonrpc": "2.0",
@@ -111,7 +118,7 @@ Call statistical tools with your data:
 
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
      -H "Content-Type: application/json" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -H "MCP-Session-Id: your-session-id" \
      -d '{
        "jsonrpc": "2.0",
@@ -166,14 +173,14 @@ Python Client
                f"{self.base_url}/mcp",
                headers={
                    "Content-Type": "application/json",
-                   "MCP-Protocol-Version": "2025-06-18"
+                   "MCP-Protocol-Version": "2025-11-25"
                },
                json={
                    "jsonrpc": "2.0",
                    "id": 1,
                    "method": "initialize",
                    "params": {
-                       "protocolVersion": "2025-06-18",
+                       "protocolVersion": "2025-11-25",
                        "capabilities": {},
                        "clientInfo": {"name": "python-client", "version": "1.0"}
                    }
@@ -195,7 +202,7 @@ Python Client
                f"{self.base_url}/mcp",
                headers={
                    "Content-Type": "application/json",
-                   "MCP-Protocol-Version": "2025-06-18",
+                   "MCP-Protocol-Version": "2025-11-25",
                    "MCP-Session-Id": self.session_id
                },
                json={
@@ -235,14 +242,14 @@ JavaScript Client
                method: 'POST',
                headers: {
                    'Content-Type': 'application/json',
-                   'MCP-Protocol-Version': '2025-06-18'
+                   'MCP-Protocol-Version': '2025-11-25'
                },
                body: JSON.stringify({
                    jsonrpc: '2.0',
                    id: 1,
                    method: 'initialize',
                    params: {
-                       protocolVersion: '2025-06-18',
+                       protocolVersion: '2025-11-25',
                        capabilities: {},
                        clientInfo: { name: 'js-client', version: '1.0' }
                    }
@@ -266,7 +273,7 @@ JavaScript Client
                method: 'POST',
                headers: {
                    'Content-Type': 'application/json',
-                   'MCP-Protocol-Version': '2025-06-18',
+                   'MCP-Protocol-Version': '2025-11-25',
                    'MCP-Session-Id': this.sessionId
                },
                body: JSON.stringify({
@@ -327,7 +334,7 @@ Business Analytics
    # Analyze marketing ROI
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
      -H "Content-Type: application/json" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -H "MCP-Session-Id: your-session-id" \
      -d '{
        "jsonrpc": "2.0",
@@ -351,7 +358,7 @@ Time Series Forecasting
    # Forecast future values
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
      -H "Content-Type: application/json" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -H "MCP-Session-Id: your-session-id" \
      -d '{
        "jsonrpc": "2.0",
@@ -375,7 +382,7 @@ Customer Analytics
    # Predict customer churn
    curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
      -H "Content-Type: application/json" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -H "MCP-Session-Id: your-session-id" \
      -d '{
        "jsonrpc": "2.0",
@@ -424,7 +431,7 @@ A: Always send an ``initialize`` request first and include the returned session 
 
 **Q: Missing MCP-Protocol-Version header error?**
 
-A: All requests after initialization must include ``MCP-Protocol-Version: 2025-06-18`` header.
+A: All requests after initialization must include ``MCP-Protocol-Version: 2025-11-25`` header.
 
 **Q: CORS errors in browser?**
 

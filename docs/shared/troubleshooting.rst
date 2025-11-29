@@ -16,7 +16,7 @@ MCP Protocol Errors
 .. code-block:: bash
 
    # Add this header to all requests after initialization
-   -H "MCP-Protocol-Version: 2025-06-18"
+   -H "MCP-Protocol-Version: 2025-11-25"
 
 **Problem**: "Session not initialized"
 
@@ -27,18 +27,18 @@ MCP Protocol Errors
    # Initialize session before other operations
    curl -X POST server/mcp \\
      -H "Content-Type: application/json" \\
-     -H "MCP-Protocol-Version: 2025-06-18" \\
+     -H "MCP-Protocol-Version: 2025-11-25" \\
      -d '{"jsonrpc":"2.0","id":1,"method":"initialize",...}'
 
 **Problem**: "Unsupported protocol version"
 
-**Solution**: Use the correct protocol version (2025-06-18):
+**Solution**: Use the correct protocol version (2025-11-25):
 
 .. code-block:: json
 
    {
      "params": {
-       "protocolVersion": "2025-06-18"
+       "protocolVersion": "2025-11-25"
      }
    }
 
@@ -104,7 +104,7 @@ Network Connectivity
        method: 'POST',
        headers: {
            'Content-Type': 'application/json',
-           'MCP-Protocol-Version': '2025-06-18'
+           'MCP-Protocol-Version': '2025-11-25'
        },
        body: JSON.stringify(request)
    });
@@ -489,7 +489,7 @@ Test Basic Functionality
    curl -f http://localhost:8000/health
    
    # Test MCP initialization
-   echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' | rmcp start
+   echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' | rmcp start
    
    # Test simple operation
    python -c "import rmcp; print(rmcp.descriptive_stats([1,2,3,4,5]))"
