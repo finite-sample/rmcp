@@ -1089,11 +1089,13 @@ dependencies = [
 [package.optional-dependencies]
 all = [
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "sse-starlette" },
     { name = "uvicorn" },
 ]
 http = [
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "sse-starlette" },
     { name = "uvicorn" },
 ]
@@ -1122,6 +1124,8 @@ requires-dist = [
     { name = "click", specifier = ">=8.1.0" },
     { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.100.0" },
     { name = "fastapi", marker = "extra == 'http'", specifier = ">=0.100.0" },
+    { name = "httpx", marker = "extra == 'all'", specifier = ">=0.25.0" },
+    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.25.0" },
     { name = "jsonschema", specifier = ">=4.0.0" },
     { name = "sse-starlette", marker = "extra == 'all'", specifier = ">=1.6.0" },
     { name = "sse-starlette", marker = "extra == 'http'", specifier = ">=1.6.0" },

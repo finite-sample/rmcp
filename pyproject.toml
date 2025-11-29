@@ -31,8 +31,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-http = ["fastapi>=0.100.0", "uvicorn>=0.20.0", "sse-starlette>=1.6.0"]
-all = ["fastapi>=0.100.0", "uvicorn>=0.20.0", "sse-starlette>=1.6.0"]
+http = ["fastapi>=0.100.0", "uvicorn>=0.20.0", "sse-starlette>=1.6.0", "httpx>=0.25.0"]
+all = ["fastapi>=0.100.0", "uvicorn>=0.20.0", "sse-starlette>=1.6.0", "httpx>=0.25.0"]
 
 [dependency-groups]
 # Hybrid approach: Docker for R integration, uv for cross-platform Python testing
