@@ -45,9 +45,7 @@ except Exception:  # pragma: no cover - optional dependency
         "emergency",
     ]
 # Supported MCP protocol versions (latest first)
-_SUPPORTED_PROTOCOL_VERSIONS = tuple(
-    dict.fromkeys((_PROTOCOL_VERSION, "2025-06-18"))
-)
+_SUPPORTED_PROTOCOL_VERSIONS = tuple(dict.fromkeys((_PROTOCOL_VERSION, "2025-06-18")))
 
 # Import version from __init__ at runtime to avoid circular imports
 from ..registries.prompts import PromptsRegistry
