@@ -25,6 +25,7 @@ except ImportError as e:
         "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp[http]"
     ) from e
 from ..config import get_config
+from ..core.server import _SUPPORTED_PROTOCOL_VERSIONS
 from .base import Transport
 
 logger = logging.getLogger(__name__)
@@ -219,7 +220,7 @@ for the latest spec (preferred); `2025-06-18` remains supported for compatibilit
     def _validate_protocol_version(self, request: Request, method: str) -> None:
         """Validate MCP-Protocol-Version header according to MCP specification."""
         protocol_version = request.headers.get("mcp-protocol-version")
-        supported_versions = ("2025-11-25", "2025-06-18")
+        supported_versions = _SUPPORTED_PROTOCOL_VERSIONS
         preferred_version = supported_versions[0]
 
         if method == "initialize":
@@ -325,6 +326,11 @@ for the latest spec (preferred); `2025-06-18` remains supported for compatibilit
                 self._check_session_initialized(session_id, method)
                 # Track initialize completion
                 if method == "initialize":
+                    params = message.setdefault("params", {})
+                    if "protocolVersion" not in params and hasattr(
+                        request.state, "protocol_version"
+                    ):
+                        params["protocolVersion"] = request.state.protocol_version
                     self._initialized_sessions.add(session_id)
                     self._sessions[session_id]["initialized"] = True
                 # Process through message handler
