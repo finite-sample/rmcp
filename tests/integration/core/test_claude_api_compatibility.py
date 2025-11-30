@@ -314,7 +314,7 @@ class TestClaudeCodeIntegration:
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "initialize",
-                "params": {"protocolVersion": "0.1.0", "capabilities": {"tools": {}}},
+                "params": {"protocolVersion": "2025-06-18", "capabilities": {"tools": {}}},
             }
 
             init_resp = await server_with_all_tools.handle_request(init_req)
