@@ -3,6 +3,7 @@
 Integration tests for RMCP server functionality that requires R.
 Tests R availability, CLI functionality, and full server integration.
 """
+
 import subprocess
 import sys
 from pathlib import Path
@@ -28,13 +29,13 @@ def test_r_availability():
             print(f"✅ R is available: {version_line}")
         else:
             print("❌ R not working properly")
-            assert False, "R not working properly"
+            raise AssertionError("R not working properly")
     except subprocess.TimeoutExpired:
         print("❌ R command timed out")
-        assert False, "R command timed out"
+        raise AssertionError("R command timed out")
     except FileNotFoundError:
         print("❌ R not found - install R to use RMCP")
-        assert False, "R not found"
+        raise AssertionError("R not found")
 
 
 def test_cli_basic():
@@ -68,15 +69,15 @@ def test_cli_basic():
             continue  # Try next command
         except subprocess.TimeoutExpired:
             print(f"❌ {description} timed out")
-            assert False, f"{description} timed out"
+            raise AssertionError(f"{description} timed out")
         except Exception as e:
             print(f"⚠️  {description} failed: {e}")
             continue  # Try next command
 
     # If we get here, none of the commands worked
-    assert (
-        False
-    ), "All CLI test commands failed - neither 'rmcp --version' nor 'poetry run rmcp --version' worked"
+    raise AssertionError(
+        "All CLI test commands failed - neither 'rmcp --version' nor 'poetry run rmcp --version' worked"
+    )
 
 
 def test_server_with_r_integration():
@@ -106,7 +107,7 @@ def test_server_with_r_integration():
 
     except Exception as e:
         print(f"❌ Server R integration failed: {e}")
-        assert False, f"Server R integration failed: {e}"
+        raise AssertionError(f"Server R integration failed: {e}")
 
 
 def main():

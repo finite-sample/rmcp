@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from shutil import which
-from typing import Any, Callable, Dict
+from typing import Any
 
 import pytest
-
 from rmcp.tools.regression import (
     correlation_analysis,
     linear_model,
     logistic_regression,
 )
+
 from tests.utils import extract_json_content
 
 pytestmark = pytest.mark.skipif(
@@ -26,8 +27,8 @@ def mcp_server(server_factory):
 
 
 def _tool_call_request(
-    tool_name: str, arguments: Dict[str, Any], *, request_id: int
-) -> Dict[str, Any]:
+    tool_name: str, arguments: dict[str, Any], *, request_id: int
+) -> dict[str, Any]:
     return {
         "jsonrpc": "2.0",
         "id": request_id,
@@ -36,7 +37,7 @@ def _tool_call_request(
     }
 
 
-def _parse_result(response: Dict[str, Any]) -> Dict[str, Any]:
+def _parse_result(response: dict[str, Any]) -> dict[str, Any]:
     assert "result" in response, f"Response missing result payload: {response!r}"
     result = response["result"]
     assert not result.get("isError", False), f"Tool reported error: {result!r}"
@@ -56,7 +57,7 @@ async def test_tool_discovery(mcp_server, context_factory):
     }
 
 
-def _assert_business_analysis(result: Dict[str, Any]) -> None:
+def _assert_business_analysis(result: dict[str, Any]) -> None:
     marketing_coef = result["coefficients"]["marketing"]
     r_squared = result["r_squared"]
     p_value = result["p_values"]["marketing"]
@@ -65,15 +66,15 @@ def _assert_business_analysis(result: Dict[str, Any]) -> None:
     assert p_value < 0.05, "Marketing effect should be statistically significant"
 
 
-def _assert_economist_analysis(result: Dict[str, Any]) -> None:
+def _assert_economist_analysis(result: dict[str, Any]) -> None:
     correlation = result["correlation_matrix"]["gdp_growth"]["unemployment"]
-    assert (
-        correlation < 0
-    ), "GDP growth and unemployment should be negatively correlated"
+    assert correlation < 0, (
+        "GDP growth and unemployment should be negatively correlated"
+    )
     assert abs(correlation) > 0.5, "Correlation should be substantial"
 
 
-def _assert_data_scientist_analysis(result: Dict[str, Any]) -> None:
+def _assert_data_scientist_analysis(result: dict[str, Any]) -> None:
     accuracy = result.get("accuracy", 0)
     tenure_coef = result["coefficients"]["tenure_months"]
     charges_coef = result["coefficients"]["monthly_charges"]
@@ -128,8 +129,8 @@ def _assert_data_scientist_analysis(result: Dict[str, Any]) -> None:
 async def test_mcp_tool_calls(
     mcp_server,
     tool_name: str,
-    arguments: Dict[str, Any],
-    validator: Callable[[Dict[str, Any]], None],
+    arguments: dict[str, Any],
+    validator: Callable[[dict[str, Any]], None],
 ):
     """Exercise representative MCP tool calls and validate the returned results."""
     response = await mcp_server.handle_request(

@@ -5,10 +5,10 @@ Defines the schema used to validate configuration files and ensure
 proper structure and types.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 # JSON Schema for RMCP configuration
-CONFIG_SCHEMA: Dict[str, Any] = {
+CONFIG_SCHEMA: dict[str, Any] = {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "RMCP Configuration Schema",
     "description": "Configuration schema for R Model Context Protocol (RMCP) server",

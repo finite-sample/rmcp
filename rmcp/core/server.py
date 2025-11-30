@@ -10,12 +10,12 @@ Following the principle: "A single shell centralizes initialization and teardown
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, Optional
+from typing import Any
 
 try:
-    from mcp import LoggingLevel
     from mcp.types import (
         LATEST_PROTOCOL_VERSION,
         Implementation,
@@ -33,7 +33,7 @@ try:
     _SUPPORTED_LOG_LEVELS = ["debug", "info", "warning", "error"]
 except Exception:  # pragma: no cover - optional dependency
     _MCP_TYPES_AVAILABLE = False
-    _PROTOCOL_VERSION = "2025-06-18"
+    _PROTOCOL_VERSION = "2025-11-25"
     _SUPPORTED_LOG_LEVELS = [
         "debug",
         "info",
@@ -44,6 +44,9 @@ except Exception:  # pragma: no cover - optional dependency
         "alert",
         "emergency",
     ]
+# Supported MCP protocol versions (latest first)
+_SUPPORTED_PROTOCOL_VERSIONS = tuple(dict.fromkeys((_PROTOCOL_VERSION, "2025-06-18")))
+
 # Import version from __init__ at runtime to avoid circular imports
 from ..registries.prompts import PromptsRegistry
 from ..registries.resources import ResourcesRegistry
@@ -56,7 +59,7 @@ from .context import Context, LifespanState, RequestState
 # from mcp import Server, initialize_server
 # from mcp.types import Request, Response, Notification
 logger = logging.getLogger(__name__)
-_transport_context: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+_transport_context: ContextVar[dict[str, Any] | None] = ContextVar(
     "rmcp_transport_context", default=None
 )
 
@@ -187,6 +190,7 @@ All tools provide professionally formatted output with markdown tables, statisti
     ) -> "MCPServer":
         """
         Configure server security and operational settings.
+
         Args:
             allowed_paths: List of filesystem paths the server can access.
                 If None, defaults to current working directory.
@@ -195,8 +199,10 @@ All tools provide professionally formatted output with markdown tables, statisti
             read_only: Whether filesystem access is read-only.
                 Recommended for production deployments.
             **settings: Additional configuration options passed to lifespan state.
+
         Returns:
             Self for method chaining.
+
         Example:
             >>> server.configure(
             ...     allowed_paths=["/data", "/models"],
@@ -363,7 +369,7 @@ All tools provide professionally formatted output with markdown tables, statisti
         method: str,
         progress_token: str | None = None,
         tool_invocation_id: str | None = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Context:
         """
         Create execution context for a request.
@@ -463,6 +469,15 @@ All tools provide professionally formatted output with markdown tables, statisti
         Returns:
             Initialize response with server capabilities
         """
+        requested_version = params.get("protocolVersion")
+        if requested_version and requested_version not in _SUPPORTED_PROTOCOL_VERSIONS:
+            raise ValueError(
+                "Unsupported protocol version requested: "
+                f"{requested_version}. Supported versions: "
+                f"{', '.join(_SUPPORTED_PROTOCOL_VERSIONS)}"
+            )
+        protocol_version = requested_version or _PROTOCOL_VERSION
+
         client_info = params.get("clientInfo", {})
         logger.info(
             f"Initializing MCP connection with client: "
@@ -477,7 +492,7 @@ All tools provide professionally formatted output with markdown tables, statisti
                 logging=LoggingCapability(),
             )
             initialize_result = InitializeResult(
-                protocolVersion=_PROTOCOL_VERSION,
+                protocolVersion=protocol_version,
                 capabilities=capabilities,
                 serverInfo=Implementation(name=self.name, version=self.version),
                 instructions=self.description or None,
@@ -492,7 +507,7 @@ All tools provide professionally formatted output with markdown tables, statisti
             "completion": {},
         }
         result = {
-            "protocolVersion": _PROTOCOL_VERSION,
+            "protocolVersion": protocol_version,
             "capabilities": capabilities_dict,
             "serverInfo": {"name": self.name, "version": self.version},
         }

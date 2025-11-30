@@ -4,8 +4,6 @@ Unit tests for helper tools.
 Tests error recovery, data validation, and example dataset loading.
 """
 
-import sys
-from pathlib import Path
 from shutil import which
 
 import pytest

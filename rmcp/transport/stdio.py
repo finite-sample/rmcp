@@ -11,7 +11,8 @@ Following mature MCP patterns: "stdio servers never print to stdout."
 import asyncio
 import logging
 import sys
-from typing import Any, AsyncIterator, Union
+from collections.abc import AsyncIterator
+from typing import Any
 
 # Windows-specific imports
 if sys.platform == "win32":
@@ -39,7 +40,7 @@ class StdioTransport(Transport):
     def __init__(self, max_workers: int = 2):
         super().__init__("stdio")
         self._stdin_reader: asyncio.StreamReader = None
-        self._stdout_writer: Union[asyncio.StreamWriter, Any] = None
+        self._stdout_writer: asyncio.StreamWriter | Any = None
         self._shutdown_event = asyncio.Event()
         self._max_workers = max_workers
 
@@ -250,7 +251,7 @@ class StdioTransport(Transport):
                         # Send error response if we can determine request ID
                         error_response = e.to_dict()
                         await self.send_message(error_response)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Timeout is expected, just check if we should continue
                     continue
                 except Exception as e:

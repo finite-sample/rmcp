@@ -3,7 +3,7 @@
 # Import required packages
 import(jsonlite)
 import(dplyr)
-importFrom(ggplot2, ggplot, aes, geom_point, geom_line, geom_histogram, 
+importFrom(ggplot2, ggplot, aes, geom_point, geom_line, geom_histogram,
            geom_boxplot, labs, theme_minimal, ggsave)
 importFrom(forecast, Arima, auto.arima, forecast, accuracy, decompose)
 importFrom(broom, tidy, glance)

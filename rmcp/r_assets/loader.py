@@ -7,12 +7,11 @@ infrastructure injection using a template-based approach.
 
 import logging
 from pathlib import Path
-from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 # Cache for loaded scripts to improve performance
-_script_cache: Dict[str, str] = {}
+_script_cache: dict[str, str] = {}
 
 
 def get_r_assets_path() -> Path:
@@ -64,7 +63,7 @@ def get_r_script(category: str, script_name: str, include_common: bool = True) -
     if not template_path.exists():
         raise FileNotFoundError(f"R template not found: {template_path}")
 
-    with open(template_path, "r", encoding="utf-8") as f:
+    with open(template_path, encoding="utf-8") as f:
         template = f.read()
 
     # Load main script
@@ -76,7 +75,7 @@ def get_r_script(category: str, script_name: str, include_common: bool = True) -
             f"Available scripts in '{category}': {available_scripts}"
         )
 
-    with open(script_path, "r", encoding="utf-8") as f:
+    with open(script_path, encoding="utf-8") as f:
         main_script = f.read()
 
     # Load utilities if requested
@@ -109,7 +108,7 @@ def get_common_utilities() -> str:
     # Load main utilities
     if utils_path.exists():
         try:
-            with open(utils_path, "r", encoding="utf-8") as f:
+            with open(utils_path, encoding="utf-8") as f:
                 script_parts.append(f.read())
         except Exception as e:
             logger.warning(f"Failed to read R utilities: {e}")
@@ -117,7 +116,7 @@ def get_common_utilities() -> str:
     # Load formatting utilities
     if formatting_path.exists():
         try:
-            with open(formatting_path, "r", encoding="utf-8") as f:
+            with open(formatting_path, encoding="utf-8") as f:
                 if script_parts:  # Add separator if we have utils
                     script_parts.append("")
                 script_parts.append("# === FORMATTING UTILITIES ===")
@@ -128,7 +127,7 @@ def get_common_utilities() -> str:
     return "\n".join(script_parts)
 
 
-def list_available_scripts(category: Optional[str] = None) -> Dict[str, list]:
+def list_available_scripts(category: str | None = None) -> dict[str, list]:
     """List all available R scripts by category."""
     r_assets_path = get_r_assets_path()
     scripts_path = r_assets_path / "scripts"
@@ -162,7 +161,7 @@ def clear_script_cache():
     logger.info("R script cache cleared")
 
 
-def get_cache_stats() -> Dict[str, int]:
+def get_cache_stats() -> dict[str, int]:
     """Get statistics about the R script cache."""
     return {
         "cached_scripts": len(_script_cache),

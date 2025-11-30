@@ -18,17 +18,17 @@ Design principles:
 - Graceful degradation when tools are unavailable
 """
 
-import ast
 import asyncio
 import json
 import logging
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any
 
 from .core.context import Context
 from .r_integration import execute_r_script_async
-from .registries.tools import ToolHandler, tool
+from .registries.tools import tool
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +41,11 @@ class RToolMetadata:
         script_path: Path,
         name: str,
         description: str,
-        input_schema: Dict[str, Any],
-        output_schema: Optional[Dict[str, Any]] = None,
-        category: Optional[str] = None,
-        dependencies: Optional[List[str]] = None,
-        examples: Optional[List[Dict[str, Any]]] = None,
+        input_schema: dict[str, Any],
+        output_schema: dict[str, Any] | None = None,
+        category: str | None = None,
+        dependencies: list[str] | None = None,
+        examples: list[dict[str, Any]] | None = None,
     ):
         self.script_path = script_path
         self.name = name
@@ -66,7 +66,7 @@ class RToolDiscovery:
     convention and can automatically register them as MCP tools.
     """
 
-    def __init__(self, script_directories: Optional[List[Path]] = None):
+    def __init__(self, script_directories: list[Path] | None = None):
         """
         Initialize tool discovery.
 
@@ -74,9 +74,9 @@ class RToolDiscovery:
             script_directories: Directories to scan for R scripts
         """
         self.script_directories = script_directories or []
-        self.discovered_tools: Dict[str, RToolMetadata] = {}
-        self.registered_tools: Set[str] = set()
-        self._file_mtimes: Dict[Path, float] = {}
+        self.discovered_tools: dict[str, RToolMetadata] = {}
+        self.registered_tools: set[str] = set()
+        self._file_mtimes: dict[Path, float] = {}
 
     def add_script_directory(self, directory: Path) -> None:
         """Add a directory to scan for R tools."""
@@ -88,7 +88,7 @@ class RToolDiscovery:
 
     async def discover_tools(
         self, force_refresh: bool = False
-    ) -> Dict[str, RToolMetadata]:
+    ) -> dict[str, RToolMetadata]:
         """
         Discover R tools in configured directories.
 
@@ -135,9 +135,7 @@ class RToolDiscovery:
         logger.info(f"Discovered {len(discovered)} R tools")
         return discovered
 
-    async def _extract_tool_metadata(
-        self, script_path: Path
-    ) -> Optional[RToolMetadata]:
+    async def _extract_tool_metadata(self, script_path: Path) -> RToolMetadata | None:
         """Extract MCP tool metadata from R script."""
         try:
             content = script_path.read_text(encoding="utf-8")
@@ -180,7 +178,7 @@ class RToolDiscovery:
 
         return None
 
-    def _parse_rmcp_metadata(self, content: str) -> Optional[Dict[str, Any]]:
+    def _parse_rmcp_metadata(self, content: str) -> dict[str, Any] | None:
         """Parse RMCP tool metadata from R script comments."""
         # Look for RMCP metadata block
         metadata_pattern = r"#\s*RMCP-TOOL-START\s*\n(.*?)\n#\s*RMCP-TOOL-END"
@@ -197,10 +195,10 @@ class RToolDiscovery:
 
         return None
 
-    def _infer_input_schema(self, content: str) -> Dict[str, Any]:
+    def _infer_input_schema(self, content: str) -> dict[str, Any]:
         """Infer input schema from R script content."""
         # Basic schema inference based on common patterns
-        schema: Dict[str, Any] = {"type": "object", "properties": {}}
+        schema: dict[str, Any] = {"type": "object", "properties": {}}
 
         # Look for common parameter patterns
         if "args$data" in content:
@@ -280,8 +278,8 @@ class RToolDiscovery:
             input_schema=metadata.input_schema,
         )
         async def dynamic_r_tool(
-            context: Context, params: Dict[str, Any]
-        ) -> Dict[str, Any]:
+            context: Context, params: dict[str, Any]
+        ) -> dict[str, Any]:
             """Dynamically generated R tool."""
             try:
                 # Check dependencies
@@ -315,7 +313,7 @@ class RToolDiscovery:
         return dynamic_r_tool
 
     async def _check_dependencies(
-        self, dependencies: List[str], context: Context
+        self, dependencies: list[str], context: Context
     ) -> None:
         """Check if R package dependencies are available."""
         for package in dependencies:
@@ -328,7 +326,7 @@ class RToolDiscovery:
 
             try:
                 await execute_r_script_async(check_script, {}, context)
-            except Exception as e:
+            except Exception:
                 raise Exception(f"Missing R package dependency: {package}")
 
     async def register_discovered_tools(self, tools_registry) -> int:
@@ -365,10 +363,10 @@ class RToolComposer:
 
     def __init__(self, discovery: RToolDiscovery):
         self.discovery = discovery
-        self.workflows: Dict[str, Dict[str, Any]] = {}
+        self.workflows: dict[str, dict[str, Any]] = {}
 
     async def create_workflow(
-        self, name: str, steps: List[Dict[str, Any]], description: Optional[str] = None
+        self, name: str, steps: list[dict[str, Any]], description: str | None = None
     ) -> None:
         """Create a multi-step analytical workflow."""
         workflow = {
@@ -391,8 +389,8 @@ class RToolComposer:
         logger.info(f"Created workflow: {name} with {len(steps)} steps")
 
     async def execute_workflow(
-        self, workflow_name: str, initial_data: Dict[str, Any], context: Context
-    ) -> Dict[str, Any]:
+        self, workflow_name: str, initial_data: dict[str, Any], context: Context
+    ) -> dict[str, Any]:
         """Execute a multi-step workflow."""
         if workflow_name not in self.workflows:
             raise ValueError(f"Workflow '{workflow_name}' not found")
@@ -414,7 +412,7 @@ class RToolComposer:
             execution_params = {**workflow_data, **step_params}
 
             await context.progress(
-                f"Executing step {i+1}: {tool_name}", i + 1, len(steps)
+                f"Executing step {i + 1}: {tool_name}", i + 1, len(steps)
             )
 
             try:
@@ -432,7 +430,7 @@ class RToolComposer:
                     workflow_data.update(step_result)
 
             except Exception as e:
-                await context.error(f"Workflow step {i+1} failed: {e}")
+                await context.error(f"Workflow step {i + 1} failed: {e}")
                 return {
                     "workflow": workflow_name,
                     "failed_at_step": i + 1,
@@ -453,7 +451,7 @@ class RToolComposer:
 
 
 # Global discovery instance
-_tool_discovery: Optional[RToolDiscovery] = None
+_tool_discovery: RToolDiscovery | None = None
 
 
 def get_tool_discovery() -> RToolDiscovery:
@@ -465,7 +463,7 @@ def get_tool_discovery() -> RToolDiscovery:
 
 
 async def initialize_tool_discovery(
-    script_directories: Optional[List[Path]] = None,
+    script_directories: list[Path] | None = None,
 ) -> None:
     """Initialize tool discovery with script directories."""
     discovery = get_tool_discovery()

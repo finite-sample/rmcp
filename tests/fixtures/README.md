@@ -17,7 +17,7 @@ RMCP uses a straightforward testing approach:
 - Test pure Python logic: No R needed, test Python code directly
 - Located in `tests/unit/`
 
-### Integration Tests  
+### Integration Tests
 - Test full MCP protocol with real R execution
 - Located in `tests/integration/`
 
@@ -37,7 +37,7 @@ pytestmark = pytest.mark.skipif(
 ## Key Benefits
 
 1. **Simple**: No complex mocking infrastructure to maintain
-2. **Accurate**: Tests the actual R integration, not simulated behavior  
+2. **Accurate**: Tests the actual R integration, not simulated behavior
 3. **Fast**: R scripts execute quickly in tests
 4. **Reliable**: Catches real integration issues immediately
 5. **Maintainable**: Changes to R scripts are immediately reflected in tests

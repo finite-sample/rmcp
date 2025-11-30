@@ -16,7 +16,7 @@ These tools enhance the AI assistant's ability to provide context-aware
 statistical analysis recommendations and data manipulation suggestions.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..core.context import Context
 from ..registries.tools import tool
@@ -50,7 +50,7 @@ from ..registries.tools import tool
         },
     },
 )
-async def list_r_objects(context: Context, params: Dict[str, Any]) -> Dict[str, Any]:
+async def list_r_objects(context: Context, params: dict[str, Any]) -> dict[str, Any]:
     """
     List all objects in the R workspace with metadata.
 
@@ -69,25 +69,25 @@ async def list_r_objects(context: Context, params: Dict[str, Any]) -> Dict[str, 
     pattern <- "{pattern}"
     include_hidden <- {str(include_hidden).lower()}
     sort_by <- "{sort_by}"
-    
+
     # Get all objects
     if (include_hidden) {{
         all_objects <- ls(envir = .GlobalEnv, all.names = TRUE)
     }} else {{
         all_objects <- ls(envir = .GlobalEnv)
     }}
-    
+
     # Filter by pattern if provided
     if (nchar(pattern) > 0) {{
         all_objects <- all_objects[grepl(pattern, all_objects)]
     }}
-    
+
     # Get detailed information for each object
     object_info <- list()
     for (obj_name in all_objects) {{
         tryCatch({{
             obj <- get(obj_name, envir = .GlobalEnv)
-            
+
             # Basic metadata
             info <- list(
                 name = obj_name,
@@ -97,7 +97,7 @@ async def list_r_objects(context: Context, params: Dict[str, Any]) -> Dict[str, 
                 length = length(obj),
                 size_bytes = as.numeric(object.size(obj))
             )
-            
+
             # Additional info based on object type
             if (is.data.frame(obj)) {{
                 info$rows <- nrow(obj)
@@ -118,7 +118,7 @@ async def list_r_objects(context: Context, params: Dict[str, Any]) -> Dict[str, 
                     info$mean <- mean(obj, na.rm = TRUE)
                 }}
             }}
-            
+
             # Check if it's a model object
             if ("lm" %in% class(obj) || "glm" %in% class(obj) || "aov" %in% class(obj)) {{
                 info$is_model <- TRUE
@@ -127,7 +127,7 @@ async def list_r_objects(context: Context, params: Dict[str, Any]) -> Dict[str, 
                     info$r_squared <- summary(obj)$r.squared
                 }}
             }}
-            
+
             object_info[[obj_name]] <- info
         }}, error = function(e) {{
             object_info[[obj_name]] <- list(
@@ -136,7 +136,7 @@ async def list_r_objects(context: Context, params: Dict[str, Any]) -> Dict[str, 
             )
         }})
     }}
-    
+
     # Sort objects
     if (sort_by == "size") {{
         object_info <- object_info[order(sapply(object_info, function(x) x$size_bytes %||% 0), decreasing = TRUE)]
@@ -145,13 +145,13 @@ async def list_r_objects(context: Context, params: Dict[str, Any]) -> Dict[str, 
     }} else {{
         object_info <- object_info[order(names(object_info))]
     }}
-    
+
     # Summary statistics
     total_objects <- length(object_info)
     total_size <- sum(sapply(object_info, function(x) x$size_bytes %||% 0))
-    
+
     class_counts <- table(sapply(object_info, function(x) x$class %||% "unknown"))
-    
+
     result <- list(
         objects = object_info,
         summary = list(
@@ -215,7 +215,7 @@ async def list_r_objects(context: Context, params: Dict[str, Any]) -> Dict[str, 
         "required": ["object_name"],
     },
 )
-async def inspect_r_object(context: Context, params: Dict[str, Any]) -> Dict[str, Any]:
+async def inspect_r_object(context: Context, params: dict[str, Any]) -> dict[str, Any]:
     """
     Inspect a specific R object in detail.
 
@@ -234,7 +234,7 @@ async def inspect_r_object(context: Context, params: Dict[str, Any]) -> Dict[str
     include_summary <- {str(include_summary).lower()}
     include_structure <- {str(include_structure).lower()}
     max_preview_rows <- {max_preview_rows}
-    
+
     # Check if object exists
     if (!exists(object_name, envir = .GlobalEnv)) {{
         result <- list(
@@ -243,7 +243,7 @@ async def inspect_r_object(context: Context, params: Dict[str, Any]) -> Dict[str
         )
     }} else {{
         obj <- get(object_name, envir = .GlobalEnv)
-        
+
         # Basic information
         info <- list(
             exists = TRUE,
@@ -255,12 +255,12 @@ async def inspect_r_object(context: Context, params: Dict[str, Any]) -> Dict[str
             size_bytes = as.numeric(object.size(obj)),
             attributes = attributes(obj)
         )
-        
+
         # Structure information
         if (include_structure) {{
             info$structure <- capture.output(str(obj))
         }}
-        
+
         # Detailed analysis based on object type
         if (is.data.frame(obj)) {{
             info$data_frame_info <- list(
@@ -270,32 +270,32 @@ async def inspect_r_object(context: Context, params: Dict[str, Any]) -> Dict[str
                 column_types = sapply(obj, class),
                 row_names_sample = head(rownames(obj), 5)
             )
-            
+
             # Preview data
             if (nrow(obj) > 0) {{
                 preview_rows <- min(max_preview_rows, nrow(obj))
                 info$preview <- head(obj, preview_rows)
             }}
-            
+
             # Summary statistics
             if (include_summary) {{
                 numeric_cols <- sapply(obj, is.numeric)
                 if (any(numeric_cols)) {{
                     info$numeric_summary <- summary(obj[numeric_cols])
                 }}
-                
+
                 factor_cols <- sapply(obj, is.factor)
                 if (any(factor_cols)) {{
                     info$factor_summary <- lapply(obj[factor_cols], function(x) table(x, useNA = "ifany"))
                 }}
             }}
-            
+
         }} else if (is.matrix(obj)) {{
             info$matrix_info <- list(
                 dimensions = dim(obj),
                 dimnames = dimnames(obj)
             )
-            
+
             if (include_summary && is.numeric(obj)) {{
                 info$summary_stats <- list(
                     min = min(obj, na.rm = TRUE),
@@ -304,31 +304,31 @@ async def inspect_r_object(context: Context, params: Dict[str, Any]) -> Dict[str
                     median = median(obj, na.rm = TRUE)
                 )
             }}
-            
+
         }} else if (is.list(obj)) {{
             info$list_info <- list(
                 elements = length(obj),
                 element_names = names(obj),
                 element_classes = sapply(obj, class)
             )
-            
+
             # Preview first few elements
             if (length(obj) > 0) {{
                 preview_count <- min(3, length(obj))
                 info$element_preview <- obj[1:preview_count]
             }}
-            
+
         }} else if (is.vector(obj)) {{
             info$vector_info <- list(
                 length = length(obj),
                 names = names(obj)
             )
-            
+
             # Preview values
             if (length(obj) > 0) {{
                 preview_count <- min(10, length(obj))
                 info$value_preview <- obj[1:preview_count]
-                
+
                 if (is.numeric(obj) && include_summary) {{
                     info$summary_stats <- list(
                         min = min(obj, na.rm = TRUE),
@@ -341,7 +341,7 @@ async def inspect_r_object(context: Context, params: Dict[str, Any]) -> Dict[str
                 }}
             }}
         }}
-        
+
         # Special handling for model objects
         if ("lm" %in% class(obj) || "glm" %in% class(obj)) {{
             model_summary <- summary(obj)
@@ -355,7 +355,7 @@ async def inspect_r_object(context: Context, params: Dict[str, Any]) -> Dict[str
                 call = deparse(obj$call)
             )
         }}
-        
+
         result <- info
     }}
     """
@@ -391,7 +391,7 @@ async def inspect_r_object(context: Context, params: Dict[str, Any]) -> Dict[str
         },
     },
 )
-async def list_r_packages(context: Context, params: Dict[str, Any]) -> Dict[str, Any]:
+async def list_r_packages(context: Context, params: dict[str, Any]) -> dict[str, Any]:
     """
     List loaded R packages with their functions and metadata.
 
@@ -404,41 +404,41 @@ async def list_r_packages(context: Context, params: Dict[str, Any]) -> Dict[str,
 
     r_script = f"""
     include_base <- {str(include_base).lower()}
-    specific_package <- "{package_name or ''}"
-    
+    specific_package <- "{package_name or ""}"
+
     # Get loaded packages
     loaded_packages <- search()
-    
+
     # Filter out non-package items
     package_items <- loaded_packages[grepl("^package:", loaded_packages)]
     package_names <- gsub("^package:", "", package_items)
-    
+
     # Filter base packages if requested
     if (!include_base) {{
         base_packages <- c("base", "stats", "graphics", "grDevices", "utils", "datasets", "methods")
         package_names <- package_names[!package_names %in% base_packages]
     }}
-    
+
     # Filter to specific package if requested
     if (nchar(specific_package) > 0) {{
         package_names <- package_names[package_names == specific_package]
     }}
-    
+
     # Get detailed info for each package
     package_info <- list()
-    
+
     for (pkg in package_names) {{
         tryCatch({{
             # Get package description
             desc <- packageDescription(pkg)
-            
+
             # Get exported functions
             exports <- ls(paste0("package:", pkg))
-            
+
             # Categorize functions
             functions <- exports[sapply(exports, function(x) is.function(get(x, paste0("package:", pkg))))]
             datasets <- exports[sapply(exports, function(x) is.data.frame(get(x, paste0("package:", pkg))) || is.matrix(get(x, paste0("package:", pkg))))]
-            
+
             package_info[[pkg]] <- list(
                 name = pkg,
                 title = desc$Title %||% "No title",
@@ -456,7 +456,7 @@ async def list_r_packages(context: Context, params: Dict[str, Any]) -> Dict[str,
             )
         }})
     }}
-    
+
     result <- list(
         packages = package_info,
         summary = list(
@@ -491,8 +491,8 @@ async def list_r_packages(context: Context, params: Dict[str, Any]) -> Dict[str,
     },
 )
 async def get_r_session_info(
-    context: Context, params: Dict[str, Any]
-) -> Dict[str, Any]:
+    context: Context, params: dict[str, Any]
+) -> dict[str, Any]:
     """
     Get comprehensive information about the R session environment.
 
@@ -509,41 +509,41 @@ async def get_r_session_info(
         platform = R.version$platform,
         arch = R.version$arch,
         os = R.version$os,
-        
+
         # Session details
         working_directory = getwd(),
         temp_directory = tempdir(),
         user = Sys.getenv("USER"),
         locale = Sys.getlocale(),
-        
+
         # Memory and performance
         memory_limit = memory.limit(),
         memory_size = memory.size(),
-        
+
         # Search path and loaded packages
         search_path = search(),
         loaded_namespaces = loadedNamespaces(),
-        
+
         # Capabilities
         capabilities = capabilities(),
-        
+
         # Session startup info
         session_start = .rmcp_session_start %||% "Unknown",
         session_id = .rmcp_session_id %||% "stateless",
-        
+
         # Object counts
         global_objects = length(ls(envir = .GlobalEnv)),
         workspace_size = sum(sapply(ls(envir = .GlobalEnv), function(x) object.size(get(x))))
     )
-    
+
     # Get available packages (installed)
     available_packages <- installed.packages()
     session_info$installed_packages <- nrow(available_packages)
     session_info$package_versions <- available_packages[, c("Package", "Version")]
-    
+
     # System information
     session_info$system_info <- Sys.info()
-    
+
     result <- session_info
     """
 

@@ -13,7 +13,7 @@ Security Features:
 
 import logging
 import re
-from typing import Any, Optional
+from typing import Any
 
 from ..core.schemas import table_schema
 from ..r_integration import execute_r_script_async, execute_r_script_with_image_async
@@ -26,7 +26,6 @@ from .package_whitelist_comprehensive import (
     ALLOWED_R_PACKAGES as COMPREHENSIVE_PACKAGES,
 )
 from .package_whitelist_comprehensive import (
-    get_comprehensive_package_whitelist,
     get_package_categories,
 )
 
@@ -112,7 +111,7 @@ def is_operation_approved(
     return specific_operation in operations
 
 
-def validate_r_code(r_code: str, context=None) -> tuple[bool, Optional[str]]:
+def validate_r_code(r_code: str, context=None) -> tuple[bool, str | None]:
     """
     Validate R code for safety with interactive operation and package approval.
 
@@ -652,7 +651,7 @@ async def list_allowed_r_packages(context, params) -> dict[str, Any]:
     categories = get_package_categories()
 
     if category == "all":
-        packages = sorted(list(ALLOWED_R_PACKAGES))
+        packages = sorted(ALLOWED_R_PACKAGES)
         total_count = len(packages)
         await context.info(f"Listed all {total_count} comprehensive packages")
         return {"packages": packages, "total_count": total_count, "category": category}
@@ -687,7 +686,7 @@ async def list_allowed_r_packages(context, params) -> dict[str, Any]:
         }
 
     elif category in categories:
-        packages = sorted(list(categories[category]))
+        packages = sorted(categories[category])
         total_count = len(packages)
         await context.info(f"Listed {total_count} packages in {category} category")
         return {"packages": packages, "total_count": total_count, "category": category}
@@ -696,13 +695,11 @@ async def list_allowed_r_packages(context, params) -> dict[str, Any]:
         # Handle legacy categories for backward compatibility
         legacy_mappings = {
             "stats": sorted(
-                list(
-                    categories.get("machine_learning", set())
-                    | categories.get("econometrics", set())
-                    | categories.get("bayesian", set())
-                )
+                categories.get("machine_learning", set())
+                | categories.get("econometrics", set())
+                | categories.get("bayesian", set())
             ),
-            "ml": sorted(list(categories.get("machine_learning", set()))),
+            "ml": sorted(categories.get("machine_learning", set())),
             "visualization": sorted(
                 [
                     p
@@ -721,10 +718,7 @@ async def list_allowed_r_packages(context, params) -> dict[str, Any]:
                 ]
             ),
             "data": sorted(
-                list(
-                    categories.get("tidyverse", set())
-                    | categories.get("data_io", set())
-                )
+                categories.get("tidyverse", set()) | categories.get("data_io", set())
             ),
         }
         packages = legacy_mappings.get(category, [])

@@ -4,7 +4,7 @@ Natural language to R formula conversion and validation.
 """
 
 import re
-from typing import Any, List
+from typing import Any
 
 from ..core.schemas import table_schema
 from ..r_assets.loader import get_r_script
@@ -200,9 +200,9 @@ async def build_formula(context, params) -> dict[str, Any]:
     return result
 
 
-def _generate_formula_alternatives(base_formula: str, analysis_type: str) -> List[str]:
+def _generate_formula_alternatives(base_formula: str, analysis_type: str) -> list[str]:
     """Generate alternative formula specifications."""
-    alternatives: List[str] = []
+    alternatives: list[str] = []
     if "~" not in base_formula:
         return alternatives
     outcome, predictors = base_formula.split("~", 1)
@@ -273,7 +273,7 @@ def _interpret_formula(formula: str) -> str:
     return interpretation
 
 
-def _get_improvement_suggestions(description: str, formula: str) -> List[str]:
+def _get_improvement_suggestions(description: str, formula: str) -> list[str]:
     """Generate suggestions for improving the formula."""
     suggestions = []
     if not formula:
@@ -300,7 +300,7 @@ def _get_improvement_suggestions(description: str, formula: str) -> List[str]:
     return suggestions
 
 
-def _get_formula_examples(analysis_type: str) -> List[dict[str, str]]:
+def _get_formula_examples(analysis_type: str) -> list[dict[str, str]]:
     """Get example formulas for different analysis types."""
     examples = {
         "regression": [

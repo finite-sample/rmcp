@@ -22,7 +22,7 @@ import asyncio
 import json
 import logging
 import uuid
-from typing import Any, Dict, Optional, Set
+from typing import Any
 
 from .core.context import Context
 from .registries.tools import tool
@@ -39,15 +39,15 @@ class CallbackManager:
     """
 
     def __init__(self):
-        self.active_callbacks: Dict[str, Dict[str, Any]] = {}
-        self.callback_permissions: Dict[str, Set[str]] = {}
+        self.active_callbacks: dict[str, dict[str, Any]] = {}
+        self.callback_permissions: dict[str, set[str]] = {}
         self.callback_timeout = 300.0  # 5 minutes default
 
     def register_callback(
         self,
         callback_id: str,
         context: Context,
-        allowed_tools: Optional[Set[str]] = None,
+        allowed_tools: set[str] | None = None,
     ) -> None:
         """Register a callback session for R → Python communication."""
         self.active_callbacks[callback_id] = {
@@ -66,8 +66,8 @@ class CallbackManager:
             logger.info(f"Unregistered callback session: {callback_id}")
 
     async def handle_callback(
-        self, callback_id: str, tool_name: str, parameters: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, callback_id: str, tool_name: str, parameters: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle a callback request from R."""
         if callback_id not in self.active_callbacks:
             return {
@@ -99,7 +99,6 @@ class CallbackManager:
             context = callback_info["context"]
 
             # Import here to avoid circular imports
-            from .core.server import MCPServer
 
             server = context._server
 
@@ -174,8 +173,8 @@ def get_callback_manager() -> CallbackManager:
     },
 )
 async def create_r_callback_session(
-    context: Context, params: Dict[str, Any]
-) -> Dict[str, Any]:
+    context: Context, params: dict[str, Any]
+) -> dict[str, Any]:
     """
     Create a callback session that allows R scripts to call back to Python MCP tools.
 
@@ -235,7 +234,7 @@ async def create_r_callback_session(
         "required": ["callback_id", "tool_name", "parameters"],
     },
 )
-async def handle_r_callback(context: Context, params: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_r_callback(context: Context, params: dict[str, Any]) -> dict[str, Any]:
     """
     Handle a callback request from an R script.
 
@@ -269,14 +268,14 @@ def create_r_callback_utilities() -> str:
 # Initialize callback system
 rmcp_init_callback <- function(callback_config) {
   .rmcp_callback_config <<- callback_config
-  
+
   # Create temporary file for callback communication
   .rmcp_callback_file <<- tempfile(pattern = "rmcp_callback_", fileext = ".json")
-  
+
   cat("RMCP callback system initialized\\n")
   cat("Callback ID:", callback_config$callback_id, "\\n")
   cat("Allowed tools:", paste(callback_config$allowed_tools, collapse = ", "), "\\n")
-  
+
   return(TRUE)
 }
 
@@ -285,13 +284,13 @@ rmcp_callback <- function(tool_name, parameters = list()) {
   if (is.null(.rmcp_callback_config)) {
     stop("Callback system not initialized. Call rmcp_init_callback() first.")
   }
-  
+
   # Check if tool is allowed
-  if (length(.rmcp_callback_config$allowed_tools) > 0 && 
+  if (length(.rmcp_callback_config$allowed_tools) > 0 &&
       !tool_name %in% .rmcp_callback_config$allowed_tools) {
     stop(paste("Tool", tool_name, "not allowed for callbacks"))
   }
-  
+
   # Prepare callback request
   callback_request <- list(
     callback_id = .rmcp_callback_config$callback_id,
@@ -299,14 +298,14 @@ rmcp_callback <- function(tool_name, parameters = list()) {
     parameters = parameters,
     timestamp = as.numeric(Sys.time())
   )
-  
+
   # Write request to file
   write(toJSON(callback_request, auto_unbox = TRUE), .rmcp_callback_file)
-  
+
   # Signal Python to handle callback (this is a simplified version)
   # In practice, this would use a more sophisticated IPC mechanism
   cat("RMCP_CALLBACK:", .rmcp_callback_file, "\\n", file = stderr())
-  
+
   # For now, return a placeholder response
   # Real implementation would wait for Python response
   return(list(
@@ -327,10 +326,10 @@ rmcp_progress_callback <- function(message, current = NULL, total = NULL) {
       timestamp = as.numeric(Sys.time()),
       callback_id = .rmcp_callback_config$callback_id
     )
-    
+
     cat("RMCP_PROGRESS_CALLBACK:", toJSON(progress_data, auto_unbox = TRUE), "\\n", file = stderr())
   }
-  
+
   # Also call regular progress function
   if (exists("rmcp_progress")) {
     rmcp_progress(message, current, total)
@@ -359,10 +358,10 @@ rmcp_cleanup_callback <- function() {
   if (!is.null(.rmcp_callback_file) && file.exists(.rmcp_callback_file)) {
     unlink(.rmcp_callback_file)
   }
-  
+
   .rmcp_callback_config <<- NULL
   .rmcp_callback_file <<- NULL
-  
+
   cat("RMCP callback system cleaned up\\n")
 }
 
@@ -398,8 +397,8 @@ cat("RMCP bidirectional communication utilities loaded\\n")
     },
 )
 async def setup_r_bidirectional(
-    context: Context, params: Dict[str, Any]
-) -> Dict[str, Any]:
+    context: Context, params: dict[str, Any]
+) -> dict[str, Any]:
     """
     Set up bidirectional communication in an R session.
 
@@ -428,19 +427,19 @@ async def setup_r_bidirectional(
         setup_script = f"""
         # Load RMCP callback utilities
         {create_r_callback_utilities()}
-        
+
         # Initialize callback system
         callback_config <- {json.dumps(callback_config)}
         rmcp_init_callback(callback_config)
-        
+
         # Test callback system
         cat("Bidirectional communication ready\\n")
-        
+
         result <- list(
             bidirectional_enabled = TRUE,
             callback_id = callback_config$callback_id,
             allowed_tools = callback_config$allowed_tools,
-            session_id = "{session_id or 'default'}"
+            session_id = "{session_id or "default"}"
         )
         """
 
@@ -469,8 +468,8 @@ async def setup_r_bidirectional(
     input_schema={"type": "object", "properties": {}},
 )
 async def list_callback_sessions(
-    context: Context, params: Dict[str, Any]
-) -> Dict[str, Any]:
+    context: Context, params: dict[str, Any]
+) -> dict[str, Any]:
     """
     List all active callback sessions.
 

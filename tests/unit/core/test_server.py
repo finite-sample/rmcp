@@ -3,30 +3,30 @@
 Unit tests for RMCP server core functionality (Python-only).
 Tests that don't require R execution.
 """
-import sys
-from pathlib import Path
 
-import pytest
+import sys
 
 
 def test_dependencies():
     """Test that required Python dependencies are available."""
+    import importlib.util
+
     print("🔍 Testing Dependencies")
     print("-" * 40)
-    try:
-        import click
 
+    # Check click availability
+    if importlib.util.find_spec("click") is not None:
         print("✅ click available")
-    except ImportError:
+    else:
         print("❌ click missing - install with: pip install click")
-        assert False, "click missing"
-    try:
-        import jsonschema
+        raise AssertionError("click missing")
 
+    # Check jsonschema availability
+    if importlib.util.find_spec("jsonschema") is not None:
         print("✅ jsonschema available")
-    except ImportError:
+    else:
         print("❌ jsonschema missing - install with: pip install jsonschema")
-        assert False, "jsonschema missing"
+        raise AssertionError("jsonschema missing")
 
 
 def test_basic_server_import():
@@ -35,21 +35,25 @@ def test_basic_server_import():
     print("-" * 40)
     try:
         # Try to import core components
-        from rmcp.core.context import Context, LifespanState
+        import importlib.util
 
-        print("✅ Core context imported")
+        if importlib.util.find_spec("rmcp.core.context") is not None:
+            print("✅ Core context module available")
+        else:
+            raise ImportError("rmcp.core.context module not found")
+
         from rmcp.core.server import create_server
 
         print("✅ Server creation imported")
         # Try to create basic server
-        server = create_server()
+        create_server()
         print("✅ Server created successfully")
     except ImportError as e:
         print(f"❌ Import error: {e}")
-        assert False, f"Import error: {e}"
+        raise AssertionError(f"Import error: {e}")
     except Exception as e:
         print(f"❌ Server creation failed: {e}")
-        assert False, f"Server creation failed: {e}"
+        raise AssertionError(f"Server creation failed: {e}")
 
 
 # R-dependent tests and CLI tests moved to tests/integration/test_server_integration.py

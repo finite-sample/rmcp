@@ -126,9 +126,9 @@ class TestHTTPTransportMessageHandling:
         """Test that receive_messages is not used in HTTP transport."""
         transport = HTTPTransport()
         # This should be a no-op iterator
-        async for message in transport.receive_messages():
+        async for _message in transport.receive_messages():
             # Should never execute
-            assert False, "receive_messages should not yield anything"
+            raise AssertionError("receive_messages should not yield anything")
 
 
 class TestHTTPTransportErrorHandling:

@@ -3,6 +3,7 @@
 Basic smoke tests for RMCP core functionality.
 These tests verify that basic server and CLI functionality works without requiring R.
 """
+
 import pytest
 
 
@@ -55,7 +56,7 @@ class TestCLISmoke:
         from rmcp.cli import cli
 
         # Check if version command exists in CLI commands
-        commands = getattr(cli, "commands", {})
+        getattr(cli, "commands", {})
         # Version might be handled by click's built-in --version flag
         assert cli is not None
 

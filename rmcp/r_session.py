@@ -22,12 +22,11 @@ import asyncio
 import json
 import logging
 import subprocess
-import tempfile
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from .core.context import Context
 from .r_integration import RExecutionError, get_r_binary_path
@@ -43,10 +42,10 @@ class RSessionInfo:
     working_directory: Path
     created_at: float
     last_accessed: float
-    process_id: Optional[int] = None
-    workspace_objects: Set[str] = field(default_factory=set)
-    packages_loaded: Set[str] = field(default_factory=set)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    process_id: int | None = None
+    workspace_objects: set[str] = field(default_factory=set)
+    packages_loaded: set[str] = field(default_factory=set)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def is_active(self) -> bool:
         """Check if session is still active."""
@@ -63,7 +62,6 @@ class RSessionInfo:
             # Fallback if psutil not available
             try:
                 import os
-                import signal
 
                 os.kill(self.process_id, 0)
                 return True
@@ -92,11 +90,11 @@ class RSessionManager:
             session_timeout: Session timeout in seconds (default: 1 hour)
             max_sessions: Maximum number of concurrent sessions
         """
-        self._sessions: Dict[str, RSessionInfo] = {}
-        self._session_processes: Dict[str, asyncio.subprocess.Process] = {}
+        self._sessions: dict[str, RSessionInfo] = {}
+        self._session_processes: dict[str, asyncio.subprocess.Process] = {}
         self._session_timeout = session_timeout
         self._max_sessions = max_sessions
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
 
     async def start_manager(self) -> None:
@@ -127,8 +125,8 @@ class RSessionManager:
     async def get_or_create_session(
         self,
         context: Context,
-        session_id: Optional[str] = None,
-        working_directory: Optional[Path] = None,
+        session_id: str | None = None,
+        working_directory: Path | None = None,
     ) -> str:
         """
         Get existing session or create a new one.
@@ -164,7 +162,7 @@ class RSessionManager:
         self,
         context: Context,
         session_id: str,
-        working_directory: Optional[Path] = None,
+        working_directory: Path | None = None,
     ) -> str:
         """Create a new R session."""
         # Check session limits
@@ -223,17 +221,17 @@ class RSessionManager:
             install.packages("jsonlite", repos = "https://cran.r-project.org")
             library(jsonlite)
         }}
-        
+
         # Set up session metadata
         .rmcp_session_id <- "{session_id}"
         .rmcp_session_start <- Sys.time()
-        
+
         # Define helper functions for session management
         .rmcp_list_objects <- function() {{
             objects_info <- ls.str(envir = .GlobalEnv, max.level = 1)
             return(ls(envir = .GlobalEnv))
         }}
-        
+
         .rmcp_get_object_info <- function(name) {{
             if (!exists(name, envir = .GlobalEnv)) {{
                 return(list(exists = FALSE))
@@ -248,7 +246,7 @@ class RSessionManager:
                 summary = capture.output(str(obj))
             )
         }}
-        
+
         # Session ready
         cat("RMCP session initialized\\n")
         """
@@ -259,8 +257,8 @@ class RSessionManager:
             await context.warn(f"Session initialization warning: {e}")
 
     async def execute_in_session(
-        self, session_id: str, script: str, args: Dict[str, Any], context: Context
-    ) -> Dict[str, Any]:
+        self, session_id: str, script: str, args: dict[str, Any], context: Context
+    ) -> dict[str, Any]:
         """
         Execute R script in specific session.
 
@@ -288,11 +286,11 @@ class RSessionManager:
         execution_script = f"""
         # Inject arguments
         args <- {json.dumps(args)}
-        
+
         # Execute user script
         tryCatch({{
             {script}
-            
+
             # Return result
             if (exists("result")) {{
                 cat(toJSON(result, auto_unbox = TRUE))
@@ -308,7 +306,7 @@ class RSessionManager:
 
     async def _execute_in_session(
         self, session_id: str, script: str, context: Context
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute script in session and return results."""
         process = self._session_processes.get(session_id)
         if not process:
@@ -334,7 +332,7 @@ class RSessionManager:
             await self._remove_session(session_id)
             raise RExecutionError(f"Session execution failed: {e}")
 
-    async def list_sessions(self) -> List[Dict[str, Any]]:
+    async def list_sessions(self) -> list[dict[str, Any]]:
         """List all active sessions with their metadata."""
         sessions = []
         for session_id, session_info in self._sessions.items():
@@ -353,7 +351,7 @@ class RSessionManager:
                 )
         return sessions
 
-    async def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_session_info(self, session_id: str) -> dict[str, Any] | None:
         """Get detailed information about a specific session."""
         if session_id not in self._sessions:
             return None
@@ -391,7 +389,7 @@ class RSessionManager:
                 process.terminate()
                 try:
                     await asyncio.wait_for(process.wait(), timeout=5.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     process.kill()
                     await process.wait()
             except Exception as e:
@@ -446,7 +444,7 @@ class RSessionManager:
 
 
 # Global session manager instance
-_session_manager: Optional[RSessionManager] = None
+_session_manager: RSessionManager | None = None
 
 
 def get_session_manager() -> RSessionManager:

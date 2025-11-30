@@ -5,12 +5,10 @@ Tests all new tool categories without CLI transport complexity.
 
 import asyncio
 import sys
-from pathlib import Path
 from shutil import which
 
 # Add rmcp to path
 import pytest
-
 from rmcp.core.context import Context
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
@@ -45,6 +43,7 @@ from rmcp.tools.visualization import (
     scatter_plot,
     time_series_plot,
 )
+
 from tests.utils import extract_json_content
 
 pytestmark = pytest.mark.skipif(

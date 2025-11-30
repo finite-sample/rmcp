@@ -6,7 +6,6 @@ security with usability by categorizing packages into permission tiers.
 """
 
 from enum import Enum
-from typing import Dict, List, Set
 
 from .package_security import (
     TOP_DOWNLOADED_PACKAGES,
@@ -70,7 +69,7 @@ def get_package_tier(package_name: str) -> PackageTier:
     return PackageTier.USER_APPROVAL
 
 
-def get_tier1_packages() -> Set[str]:
+def get_tier1_packages() -> set[str]:
     """
     Get Tier 1 packages: Auto-approved core packages.
 
@@ -139,7 +138,7 @@ def get_tier1_packages() -> Set[str]:
     return tier1
 
 
-def get_tier2_packages() -> Set[str]:
+def get_tier2_packages() -> set[str]:
     """
     Get Tier 2 packages: User approval required.
 
@@ -211,7 +210,7 @@ def get_tier2_packages() -> Set[str]:
     return tier2
 
 
-def get_tier3_packages() -> Set[str]:
+def get_tier3_packages() -> set[str]:
     """
     Get Tier 3 packages: Admin approval required.
 
@@ -283,7 +282,7 @@ def get_tier3_packages() -> Set[str]:
     return tier3
 
 
-def get_high_risk_packages() -> Set[str]:
+def get_high_risk_packages() -> set[str]:
     """
     Get packages considered high-risk for security.
 
@@ -323,7 +322,7 @@ def get_high_risk_packages() -> Set[str]:
     }
 
 
-def get_packages_by_tier() -> Dict[PackageTier, Set[str]]:
+def get_packages_by_tier() -> dict[PackageTier, set[str]]:
     """
     Get packages organized by permission tier.
 
@@ -338,7 +337,7 @@ def get_packages_by_tier() -> Dict[PackageTier, Set[str]]:
     }
 
 
-def get_tier_statistics() -> Dict:
+def get_tier_statistics() -> dict:
     """
     Get statistics about package distribution across tiers.
 
@@ -351,7 +350,7 @@ def get_tier_statistics() -> Dict:
     for tier, packages in tiers.items():
         stats[tier.value] = {
             "count": len(packages),
-            "examples": sorted(list(packages))[:5],
+            "examples": sorted(packages)[:5],
         }
 
     total_packages = sum(len(packages) for packages in tiers.values())
@@ -360,7 +359,7 @@ def get_tier_statistics() -> Dict:
     return stats
 
 
-def check_package_permission(package_name: str) -> Dict:
+def check_package_permission(package_name: str) -> dict:
     """
     Check the permission requirements for a specific package.
 

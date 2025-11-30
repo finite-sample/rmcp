@@ -8,9 +8,10 @@ Following the principle: "Makes cross-cutting features universal without globals
 """
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Optional, Self
+from typing import TYPE_CHECKING, Any, Optional, Self
 
 if TYPE_CHECKING:
     from .server import MCPServer
@@ -22,9 +23,9 @@ class RequestState:
 
     request_id: str
     method: str
-    progress_token: Optional[str] = None
-    tool_invocation_id: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    progress_token: str | None = None
+    tool_invocation_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
     cancelled: bool = False
 
     def is_cancelled(self) -> bool:
@@ -41,23 +42,23 @@ class LifespanState:
     """Lifespan state shared across requests."""
 
     # Configuration
-    settings: Dict[str, Any] = field(default_factory=dict)
+    settings: dict[str, Any] = field(default_factory=dict)
     # Security
     allowed_paths: list[Path] = field(default_factory=list)
     read_only: bool = True
     # Caching
-    cache_root: Optional[Path] = None
-    content_cache: Dict[str, Any] = field(default_factory=dict)
+    cache_root: Path | None = None
+    content_cache: dict[str, Any] = field(default_factory=dict)
     # Resources
-    resource_mounts: Dict[str, Path] = field(default_factory=dict)
+    resource_mounts: dict[str, Path] = field(default_factory=dict)
     # Virtual File System (for security isolation)
-    vfs: Optional[Any] = None
+    vfs: Any | None = None
     # Logging
     current_log_level: str = "info"
     # R Session Management
     r_session_enabled: bool = False
     r_session_timeout: float = 3600.0  # 1 hour default
-    default_r_session_id: Optional[str] = None
+    default_r_session_id: str | None = None
 
 
 @dataclass
@@ -71,10 +72,8 @@ class Context:
     request: RequestState
     lifespan: LifespanState
     # Progress/logging callbacks
-    _progress_callback: Optional[Callable[[str, int, int], Awaitable[None]]] = None
-    _log_callback: Optional[Callable[[str, str, Dict[str, Any]], Awaitable[None]]] = (
-        None
-    )
+    _progress_callback: Callable[[str, int, int], Awaitable[None]] | None = None
+    _log_callback: Callable[[str, str, dict[str, Any]], Awaitable[None]] | None = None
     # Server reference for accessing resources
     _server: Optional["MCPServer"] = None
 
@@ -84,13 +83,12 @@ class Context:
         request_id: str,
         method: str,
         lifespan_state: LifespanState,
-        progress_token: Optional[str] = None,
-        tool_invocation_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        progress_callback: Optional[Callable[[str, int, int], Awaitable[None]]] = None,
-        log_callback: Optional[
-            Callable[[str, str, Dict[str, Any]], Awaitable[None]]
-        ] = None,
+        progress_token: str | None = None,
+        tool_invocation_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        progress_callback: Callable[[str, int, int], Awaitable[None]] | None = None,
+        log_callback: Callable[[str, str, dict[str, Any]], Awaitable[None]]
+        | None = None,
     ) -> Self:
         """Create a new context for a request."""
         request_state = RequestState(
@@ -155,7 +153,7 @@ class Context:
                 f"Allowed roots: {[str(p) for p in self.lifespan.allowed_paths]}"
             )
 
-    def get_cache_path(self, key: str) -> Optional[Path]:
+    def get_cache_path(self, key: str) -> Path | None:
         """Get cache path for key if caching is enabled."""
         if self.lifespan.cache_root:
             return self.lifespan.cache_root / key
@@ -166,7 +164,7 @@ class Context:
         """Check if R session management is enabled."""
         return self.lifespan.r_session_enabled
 
-    def get_r_session_id(self) -> Optional[str]:
+    def get_r_session_id(self) -> str | None:
         """Get the R session ID for this context."""
         # Check for session ID in request metadata first
         session_id = self.request.metadata.get("r_session_id")
@@ -181,8 +179,8 @@ class Context:
         self.request.metadata["r_session_id"] = session_id
 
     async def get_or_create_r_session(
-        self, working_directory: Optional[Path] = None
-    ) -> Optional[str]:
+        self, working_directory: Path | None = None
+    ) -> str | None:
         """Get or create an R session for this context."""
         if not self.is_r_session_enabled():
             return None
@@ -207,8 +205,8 @@ class Context:
             return None
 
     async def execute_r_with_session(
-        self, script: str, args: Dict[str, Any], use_session: bool = True
-    ) -> Dict[str, Any]:
+        self, script: str, args: dict[str, Any], use_session: bool = True
+    ) -> dict[str, Any]:
         """
         Execute R script with optional session support.
 

@@ -13,13 +13,11 @@ Usage:
 
 import argparse
 import json
-import os
 import platform
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 
 class IDEConfigValidator:
@@ -30,7 +28,7 @@ class IDEConfigValidator:
         self.rmcp_available = shutil.which("rmcp") is not None
         self.r_available = shutil.which("R") is not None
 
-    def get_config_paths(self) -> Dict[str, List[Path]]:
+    def get_config_paths(self) -> dict[str, list[Path]]:
         """Get potential config file paths for each IDE."""
         home = Path.home()
 
@@ -76,7 +74,7 @@ class IDEConfigValidator:
 
         return paths
 
-    def validate_claude_desktop(self) -> Tuple[bool, str, Dict]:
+    def validate_claude_desktop(self) -> tuple[bool, str, dict]:
         """Validate Claude Desktop configuration."""
         config_paths = self.get_config_paths()["claude"]
 
@@ -130,7 +128,7 @@ class IDEConfigValidator:
 
         return False, "Claude Desktop config file not found", {}
 
-    def validate_vscode(self) -> Tuple[bool, str, Dict]:
+    def validate_vscode(self) -> tuple[bool, str, dict]:
         """Validate VS Code configuration."""
         config_paths = self.get_config_paths()["vscode"]
 
@@ -179,7 +177,7 @@ class IDEConfigValidator:
 
         return False, "No MCP configuration found in VS Code settings", {}
 
-    def validate_cursor(self) -> Tuple[bool, str, Dict]:
+    def validate_cursor(self) -> tuple[bool, str, dict]:
         """Validate Cursor configuration."""
         config_paths = self.get_config_paths()["cursor"]
 
@@ -210,7 +208,7 @@ class IDEConfigValidator:
 
         return False, "No MCP configuration found in Cursor settings", {}
 
-    def test_rmcp_server(self) -> Tuple[bool, str]:
+    def test_rmcp_server(self) -> tuple[bool, str]:
         """Test that RMCP server can start and respond."""
         if not self.rmcp_available:
             return False, "rmcp command not found in PATH"
@@ -266,7 +264,7 @@ class IDEConfigValidator:
         except Exception as e:
             return False, f"RMCP server test failed: {e}"
 
-    def create_sample_configs(self) -> Dict[str, str]:
+    def create_sample_configs(self) -> dict[str, str]:
         """Create sample configuration files."""
         configs = {
             "claude_desktop_config.json": {
@@ -372,7 +370,7 @@ Cursor Setup Instructions:
         else:
             return "Unknown IDE. Supported IDEs: claude, vscode, cursor"
 
-    def run_full_validation(self) -> Dict[str, any]:
+    def run_full_validation(self) -> dict[str, any]:
         """Run validation for all IDEs and components."""
         results = {
             "system_info": {
@@ -436,7 +434,7 @@ def main():
     if args.create_samples:
         print("Creating sample configuration files...")
         created = validator.create_sample_configs()
-        for filename, path in created.items():
+        for _filename, path in created.items():
             print(f"Created: {path}")
         return
 

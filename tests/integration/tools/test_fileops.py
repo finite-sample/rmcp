@@ -3,11 +3,10 @@
 Schema validation and functional tests for file operation tools.
 Tests input schema validation and file operations without R execution where possible.
 """
+
 import json
 import os
-import sys
 import tempfile
-from pathlib import Path
 from shutil import which
 
 import pytest

@@ -17,34 +17,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.11"
-    
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install black isort flake8 click jsonschema pytest pytest-asyncio
-        pip install -e .
-    
+        uv sync --group dev
+        uv pip install -e .
+
     - name: Run linting
       run: |
-        black --check rmcp tests streamlit scripts
-        isort --check-only rmcp tests streamlit scripts
-        flake8 rmcp tests streamlit scripts
-    
+        uv run ruff check .
+        uv run ruff format --check .
+
     - name: Run Python-only unit tests
       run: |
         # Test CLI basic functionality
-        rmcp --version
-        rmcp list-capabilities > /dev/null
-        
-        # Run all unit tests (Python-only, schema validation, etc.)
-        pytest tests/unit/ -v --tb=short
+        uv run rmcp --version
+        uv run rmcp list-capabilities > /dev/null
 
-  # Build Docker images for R testing (both development and production)  
+        # Run all unit tests (Python-only, schema validation, etc.)
+        uv run pytest tests/unit/ -v --tb=short
+
+  # Build Docker images for R testing (both development and production)
   docker-build:
     name: Build R Testing Environment
     runs-on: ubuntu-latest
@@ -61,7 +64,7 @@ jobs:
       digest: ${{ steps.build.outputs.digest }}
       production-digest: ${{ steps.prod-build.outputs.digest }}
       should_build: ${{ steps.check-changes.outputs.should_build }}
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -72,33 +75,33 @@ jobs:
       id: check-changes
       run: |
         echo "Checking if Docker build is needed..."
-        
+
         # Always build if it's a manual trigger
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "should_build=true" >> $GITHUB_OUTPUT
           echo "🔄 Building: Manual trigger (forced)"
           exit 0
         fi
-        
+
         # Always build on main branch pushes (production deployments)
         if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
           echo "should_build=true" >> $GITHUB_OUTPUT
           echo "🔄 Building: Main branch push"
           exit 0
         fi
-        
+
         # For local testing with act, always build (git diff doesn't work reliably)
         if [ -n "${ACT:-}" ]; then
           echo "should_build=true" >> $GITHUB_OUTPUT
           echo "🔄 Building: Local testing with act"
           exit 0
         fi
-        
+
         # Check if relevant files changed (for PR and other scenarios)
         if git rev-parse HEAD~1 >/dev/null 2>&1; then
           changed_files=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
           echo "Changed files: $changed_files"
-          
+
           # Files that require Docker rebuild
           docker_relevant_files=(
             "Dockerfile"
@@ -107,7 +110,7 @@ jobs:
             "rmcp/"
             ".github/workflows/ci.yml"
           )
-          
+
           needs_build=false
           for file_pattern in "${docker_relevant_files[@]}"; do
             if echo "$changed_files" | grep -q "^$file_pattern"; then
@@ -116,7 +119,7 @@ jobs:
               break
             fi
           done
-          
+
           if [ "$needs_build" = true ]; then
             echo "should_build=true" >> $GITHUB_OUTPUT
           else
@@ -152,7 +155,7 @@ jobs:
           type=sha,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Extract metadata for production image  
+    - name: Extract metadata for production image
       id: prod-meta
       if: steps.check-changes.outputs.should_build == 'true'
       uses: docker/metadata-action@v5
@@ -210,7 +213,7 @@ jobs:
       run: |
         echo "Using existing development image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
         echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
-        
+
     - name: Generate artifact attestation for development image
       if: steps.check-changes.outputs.should_build == 'true'
       uses: actions/attest-build-provenance@v1
@@ -226,16 +229,16 @@ jobs:
         subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         subject-digest: ${{ steps.prod-build.outputs.digest }}
         push-to-registry: true
-    
+
     - name: Output image references
       id: image
       run: |
         # Always output the latest image reference (build or existing)
         echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
         echo "📌 Development image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-      
+
     - name: Output production image reference
-      id: prod-image  
+      id: prod-image
       run: |
         # Always output the production image reference (build or existing)
         echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest" >> $GITHUB_OUTPUT
@@ -260,11 +263,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
       options: --user root
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     - name: Report build optimization status
       run: |
         if [ "${{ needs.docker-build.outputs.should_build }}" = "true" ]; then
@@ -279,19 +282,21 @@ jobs:
           echo "📈 Build time saved: ~15-20 minutes"
         fi
         echo "🐳 Container image: ${{ needs.docker-build.outputs.image }}"
-    
+
     - name: Setup Python environment in container
       run: |
-        export PATH="/opt/venv/bin:$PATH"
-        pip install -e .
-    
+        # RMCP is already installed in the Docker development image via uv sync
+        # PATH is already configured in Docker image: /workspace/.venv/bin:$PATH
+        echo "Using pre-installed RMCP from Docker image"
+        which python
+        which rmcp
+
     - name: Verify R and Python integration
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         python --version
         R --version | head -1
         python -c "from rmcp.r_integration import diagnose_r_installation; import json; print(json.dumps(diagnose_r_installation(), indent=2))"
-    
+
     - name: Run R code style checks
       run: |
         cd rmcp/r_assets
@@ -321,10 +326,9 @@ jobs:
           cat('✅ No R files found to check\\n')
         }
         "
-    
+
     - name: Diagnose environment before testing
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         echo "=== Environment Diagnostics ==="
         echo "Working directory: $(pwd)"
         echo "Python version: $(python --version)"
@@ -344,45 +348,40 @@ jobs:
         echo "=== File System Check ==="
         ls -la tests/
         ls -la tests/smoke/
-    
+
     - name: Run smoke tests (basic functionality)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
-        # Ensure R is in PATH for skip condition checks  
+        # Ensure R is in PATH for skip condition checks
         which R && export R_AVAILABLE=1 || export R_AVAILABLE=0
         echo "R available: $R_AVAILABLE"
         pytest tests/smoke/ -v --tb=short --cov=rmcp --cov-report=xml
-    
+
     - name: Run protocol tests (MCP protocol validation)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         which R && echo "✅ R available for protocol tests" || echo "⚠️ R not available"
         pytest tests/integration/protocol/ -v --tb=short --cov=rmcp --cov-append
-    
+
     - name: Run integration tests - tools (R tool integration)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         which R && echo "✅ R available for tool integration tests" || echo "❌ R required but not available"
         pytest tests/integration/tools/ -v --tb=short --cov=rmcp --cov-append
-    
+
     - name: Run integration tests - transport (HTTP transport)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         pytest tests/integration/transport/ -v --tb=short --cov=rmcp --cov-append
-    
+
     - name: Test HTTPS functionality with mkcert
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         echo "🔒 Testing HTTPS functionality..."
-        
+
         # Verify mkcert is available (installed in Dockerfile)
         mkcert -version
-        
+
         # Generate test certificates
         mkdir -p /tmp/test-certs
         cd /tmp/test-certs
         mkcert -cert-file test.pem -key-file test-key.pem localhost 127.0.0.1
-        
+
         # Test HTTPS configuration validation
         python -c "
         from rmcp.transport.http import HTTPTransport
@@ -395,12 +394,12 @@ jobs:
         assert transport.is_https == True
         print('✅ HTTPS transport configuration validated')
         "
-        
+
         # Test HTTPS server startup (quick test)
         timeout 10 python -c "
         import asyncio
         from rmcp.transport.http import HTTPTransport
-        
+
         async def test_https():
             transport = HTTPTransport(
                 host='127.0.0.1',
@@ -408,33 +407,31 @@ jobs:
                 ssl_keyfile='/tmp/test-certs/test-key.pem',
                 ssl_certfile='/tmp/test-certs/test.pem'
             )
-            
+
             async def mock_handler(msg):
                 return {'jsonrpc': '2.0', 'id': msg.get('id'), 'result': 'ok'}
-            
+
             transport.set_message_handler(mock_handler)
             await transport.startup()
             print('✅ HTTPS server startup successful')
             await transport.shutdown()
             print('✅ HTTPS server shutdown successful')
-        
+
         asyncio.run(test_https())
         " || echo "⚠️ HTTPS server test timed out (expected in CI)"
-        
+
         echo "✅ HTTPS functionality tests completed"
-    
+
     - name: Run integration tests - core (server & registries)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         which R && echo "✅ R available for core integration tests" || echo "⚠️ R not available"
         pytest tests/integration/core/ -v --tb=short --cov=rmcp --cov-append
-    
+
     - name: Run scenario tests (end-to-end user scenarios)
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         which R && echo "✅ R available for scenario tests" || echo "❌ R required but not available"
         pytest tests/scenarios/ -v --tb=short --cov=rmcp --cov-append
-    
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
@@ -443,14 +440,13 @@ jobs:
         name: comprehensive-coverage
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_TOKEN }}
-    
+
     - name: Test CLI and MCP protocol
       run: |
-        export PATH="/opt/venv/bin:$PATH"
         # Verify CLI works with R integration
         rmcp --version
         rmcp list-capabilities
-        
+
         # Test basic MCP protocol with R tools
         echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -20
 
@@ -460,26 +456,29 @@ jobs:
     runs-on: ubuntu-latest
     needs: [python-checks, docker-build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.11"
-    
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+
     - name: Install dependencies for scenario tests
       run: |
-        python -m pip install --upgrade pip
-        pip install poetry
-        poetry install --with dev
-        
+        uv sync --group dev
+
         echo "🐳 Verifying Docker availability..."
         docker --version
         docker info
-    
+
     # Authenticate to pull production image built in docker-build job
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -487,16 +486,16 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Verify Docker authentication and pull production image
       env:
         PRODUCTION_IMAGE: ${{ needs.docker-build.outputs.production-image }}
       run: |
         echo "🔍 Verifying Docker authentication..."
         docker info | grep -E "(Username|Registry)"
-        
+
         echo "🔍 Production image to test: $PRODUCTION_IMAGE"
-        
+
         echo "🔍 Attempting to pull production image..."
         if docker pull "$PRODUCTION_IMAGE"; then
           echo "✅ Production image pulled successfully"
@@ -508,48 +507,48 @@ jobs:
           export RMCP_PRODUCTION_IMAGE="rmcp-prod-fallback"
           echo "✅ Local production image built: $RMCP_PRODUCTION_IMAGE"
         fi
-        
+
         # Verify the image exists and works
         echo "🔍 Testing image availability..."
         docker images | grep rmcp || echo "No RMCP images found"
-        
+
         # Export for subsequent steps
         echo "RMCP_PRODUCTION_IMAGE=$RMCP_PRODUCTION_IMAGE" >> $GITHUB_ENV
-    
+
     - name: Run Docker deployment scenario tests
       run: |
         echo "🎯 Testing Docker deployment scenarios..."
         echo "Using production image: $RMCP_PRODUCTION_IMAGE"
-        
+
         # Test basic Docker functionality
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_basic_functionality -v --tb=short
-        
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_basic_functionality -v --tb=short
+
         # Test production image functionality (uses pre-built image)
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_production_image_functionality -v --tb=short
-        
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_production_image_functionality -v --tb=short
+
         # Test security configuration
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_security_configuration -v --tb=short
-        
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_security_configuration -v --tb=short
+
         # Test environment variables and volume mounts
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_environment_variables -v --tb=short
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_volume_mounts -v --tb=short
-        
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_environment_variables -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerProductionScenarios::test_docker_volume_mounts -v --tb=short
+
         # Test R environment
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_r_environment_validation -v --tb=short
-        
-        # Test end-to-end workflows  
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_mcp_protocol_communication -v --tb=short
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_complete_analysis_workflow -v --tb=short
-        
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_r_environment_validation -v --tb=short
+
+        # Test end-to-end workflows
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_mcp_protocol_communication -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_complete_analysis_workflow -v --tb=short
+
         # Test performance and resource usage
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_performance_benchmarks -v --tb=short
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_resource_usage -v --tb=short
-        
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_performance_benchmarks -v --tb=short
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerWorkflowValidation::test_docker_resource_usage -v --tb=short
+
         # Test platform-specific features (cross-platform compatibility)
-        poetry run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerCrossplatformCompatibility::test_docker_platform_specific_features -v --tb=short
-        
+        uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerCrossplatformCompatibility::test_docker_platform_specific_features -v --tb=short
+
         echo "✅ All Docker scenario tests completed"
-    
+
   # Container-based tests for production image validation
   production-container-tests:
     name: Production Container Tests
@@ -559,24 +558,24 @@ jobs:
     permissions:
       contents: read
       packages: read
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     - name: Log in to Container Registry
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Test production image functionality
       run: |
         echo "🐳 Testing production image functionality..."
         PROD_IMAGE="${{ needs.docker-build.outputs.production-image }}"
         echo "Target production image: $PROD_IMAGE"
-        
+
         # Check if we can pull the production image, with fallback
         if docker pull "$PROD_IMAGE" 2>/dev/null; then
           echo "✅ Successfully pulled production image from registry"
@@ -595,22 +594,22 @@ jobs:
           echo "This might indicate the image wasn't built or registry authentication failed"
           exit 1
         fi
-        
+
         # Test basic Python imports
         echo "🔍 Testing Python imports..."
         docker run --rm "$PROD_IMAGE" \
           python -c "import rmcp; print('✅ Production image RMCP import successful')"
-        
+
         # Test HTTP transport dependencies
         echo "🔍 Testing HTTP transport dependencies..."
         docker run --rm "$PROD_IMAGE" \
           python -c "import fastapi, uvicorn; print('✅ Production image HTTP transport ready')"
-        
+
         # Test R availability
         echo "🔍 Testing R availability..."
         docker run --rm "$PROD_IMAGE" \
           R -e "cat('✅ Production image R version:', R.version.string, '\n')"
-        
+
         echo "✅ Production image functionality verified"
 
   # Cross-platform Python testing (validates Python-only functionality)
@@ -621,21 +620,25 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.11', '3.12']
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-        pip install pytest pytest-asyncio
-    
+        uv sync --group dev
+        uv pip install -e .
+
     - name: Run cross-platform smoke tests
       run: |
-        pytest tests/smoke/ -v
+        uv run pytest tests/smoke/ -v

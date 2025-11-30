@@ -6,18 +6,16 @@ Tests that require R execution have been moved to integration tests.
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Awaitable, Callable
-from pathlib import Path
 from typing import Any
 
 import pytest
-
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.formula_builder import build_formula
 from rmcp.tools.helpers import suggest_fix
 from rmcp.tools.regression import linear_model
+
 from tests.utils import extract_json_content, extract_text_summary
 
 
@@ -29,7 +27,7 @@ async def _call_tool(
     """Invoke ``tool`` through the MCP server and return the JSON-RPC response."""
     server = create_server()
     register_tool_functions(server.tools, tool, *extra_tools)
-    tool_name = getattr(tool, "_mcp_tool_name")
+    tool_name = tool._mcp_tool_name
     request = {
         "jsonrpc": "2.0",
         "id": 1,

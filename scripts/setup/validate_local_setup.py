@@ -20,7 +20,6 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 
 class LocalEnvironmentValidator:
@@ -45,8 +44,8 @@ class LocalEnvironmentValidator:
             print(f"ℹ️  {message}")
 
     def run_command(
-        self, command: List[str], timeout: int = 30
-    ) -> Tuple[bool, str, str]:
+        self, command: list[str], timeout: int = 30
+    ) -> tuple[bool, str, str]:
         """Run command and return (success, stdout, stderr)."""
         try:
             result = subprocess.run(
@@ -274,7 +273,7 @@ class LocalEnvironmentValidator:
 
                     # Validate command is accessible
                     command = server_config.get("command", "")
-                    args = server_config.get("args", [])
+                    server_config.get("args", [])
                     env = server_config.get("env", {})
 
                     test_env = os.environ.copy()

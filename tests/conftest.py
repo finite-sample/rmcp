@@ -6,7 +6,6 @@ from collections.abc import Callable
 from typing import Any
 
 import pytest
-
 from rmcp.core.context import Context
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions

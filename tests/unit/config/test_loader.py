@@ -4,12 +4,9 @@ Tests for configuration loading functionality.
 
 import json
 import os
-import tempfile
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from rmcp.config.loader import ConfigError, ConfigLoader
 from rmcp.config.models import RMCPConfig
 

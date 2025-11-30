@@ -4,7 +4,7 @@ on:
   # Run weekly on Sundays at 3 AM UTC
   schedule:
     - cron: '0 3 * * 0'
-  
+
   # Allow manual triggering
   workflow_dispatch:
     inputs:
@@ -13,7 +13,7 @@ on:
         required: false
         default: false
         type: boolean
-  
+
   # Trigger when base image dependencies change
   push:
     branches: [main]
@@ -32,7 +32,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-      
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -53,18 +53,18 @@ jobs:
         # Check if base image exists and get its creation date
         if docker manifest inspect ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest >/dev/null 2>&1; then
           echo "Base image exists"
-          
+
           # Get image creation date (simplified check)
           CREATION_DATE=$(docker manifest inspect ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest | jq -r '.history[0].created // empty')
-          
+
           if [ -n "$CREATION_DATE" ]; then
             # Check if image is older than 7 days
             CREATION_TIMESTAMP=$(date -d "$CREATION_DATE" +%s 2>/dev/null || echo "0")
             CURRENT_TIMESTAMP=$(date +%s)
             AGE_DAYS=$(( (CURRENT_TIMESTAMP - CREATION_TIMESTAMP) / 86400 ))
-            
+
             echo "Image age: $AGE_DAYS days"
-            
+
             if [ "$AGE_DAYS" -lt 7 ] && [ "${{ github.event.inputs.force_rebuild }}" != "true" ]; then
               echo "Image is recent (< 7 days old) and no force rebuild requested"
               echo "rebuild_needed=false" >> $GITHUB_OUTPUT
@@ -114,34 +114,34 @@ jobs:
       if: steps.check-rebuild.outputs.rebuild_needed == 'true'
       run: |
         echo "🧪 Testing base image functionality..."
-        
+
         # Test R availability and packages
         docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest R -e "
         cat('✅ R version:', R.version.string, '\n')
-        
+
         # Test key packages
         library(jsonlite)
-        library(dplyr) 
+        library(dplyr)
         library(ggplot2)
         library(forecast)
         library(randomForest)
         cat('✅ Key R packages loaded successfully\n')
-        
+
         # Count total packages
         pkg_count <- length(.packages(all.available=TRUE))
         cat('📦 Total packages available:', pkg_count, '\n')
-        
+
         if (pkg_count < 100) {
           stop('❌ Too few packages installed')
         }
         "
-        
+
         # Test mkcert availability
         docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest mkcert -version
-        
+
         # Test Python availability
         docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest python3 --version
-        
+
         echo "✅ Base image tests passed"
 
     - name: Update image metadata
@@ -149,12 +149,12 @@ jobs:
       run: |
         # Extract and display build information
         docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest cat /opt/rmcp-base-info.json | jq .
-        
+
         echo "📊 Base image build completed:"
         echo "  Registry: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}"
         echo "  Tags: ${{ steps.meta.outputs.tags }}"
         echo "  Platforms: linux/amd64,linux/arm64"
-        
+
         # Get final image size
         docker images --filter "reference=${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}" --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
 
@@ -164,7 +164,7 @@ jobs:
         echo "📦 **Base Image Updated**" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "The RMCP base R environment has been rebuilt with:" >> $GITHUB_STEP_SUMMARY
-        echo "- 🔄 Latest system packages" >> $GITHUB_STEP_SUMMARY  
+        echo "- 🔄 Latest system packages" >> $GITHUB_STEP_SUMMARY
         echo "- 📊 All R statistical packages" >> $GITHUB_STEP_SUMMARY
         echo "- 🔒 mkcert for HTTPS development" >> $GITHUB_STEP_SUMMARY
         echo "- 🐍 Python development environment" >> $GITHUB_STEP_SUMMARY

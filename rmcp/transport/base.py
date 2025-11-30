@@ -6,7 +6,8 @@ enabling clean composition at the server edge.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional
+from collections.abc import AsyncIterator, Awaitable, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +25,12 @@ class Transport(ABC):
     def __init__(self, name: str):
         self.name = name
         self._running = False
-        self._message_handler: Optional[
-            Callable[[Dict[str, Any]], Awaitable[Dict[str, Any] | None]]
-        ] = None
+        self._message_handler: (
+            Callable[[dict[str, Any]], Awaitable[dict[str, Any] | None]] | None
+        ) = None
 
     def set_message_handler(
-        self, handler: Callable[[Dict[str, Any]], Awaitable[Dict[str, Any] | None]]
+        self, handler: Callable[[dict[str, Any]], Awaitable[dict[str, Any] | None]]
     ) -> None:
         """Set the message handler that will process incoming messages."""
         self._message_handler = handler
@@ -47,7 +48,7 @@ class Transport(ABC):
         self._running = False
 
     @abstractmethod
-    def receive_messages(self) -> AsyncIterator[Dict[str, Any]]:
+    def receive_messages(self) -> AsyncIterator[dict[str, Any]]:
         """
         Async iterator that yields incoming messages.
         Messages are already parsed from transport format (JSON-RPC).
@@ -55,7 +56,7 @@ class Transport(ABC):
         pass
 
     @abstractmethod
-    async def send_message(self, message: Dict[str, Any]) -> None:
+    async def send_message(self, message: dict[str, Any]) -> None:
         """
         Send a message via the transport.
         Message will be encoded to transport format (JSON-RPC).
@@ -97,8 +98,8 @@ class Transport(ABC):
             await self.shutdown()
 
     def _create_error_response(
-        self, request: Dict[str, Any], error: Exception
-    ) -> Optional[Dict[str, Any]]:
+        self, request: dict[str, Any], error: Exception
+    ) -> dict[str, Any] | None:
         """Create an error response for a failed request."""
         request_id = request.get("id")
         if request_id is None:

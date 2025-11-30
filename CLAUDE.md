@@ -11,14 +11,14 @@ RMCP (R Model Context Protocol) is a statistical analysis server that bridges AI
 
 **For Python-only development (cross-platform):**
 ```bash
-poetry install --with dev        # Install minimal Python dependencies
-poetry run rmcp start            # Start server in stdio mode (no R tools)
-poetry run rmcp serve-http       # Start HTTP server with SSE
+uv sync --group dev              # Install minimal Python dependencies
+uv run rmcp start                # Start server in stdio mode (no R tools)
+uv run rmcp serve-http           # Start HTTP server with SSE
 
 # Use configuration options
-poetry run rmcp --debug start    # Enable debug mode
-poetry run rmcp --config config.json start  # Use custom config file
-RMCP_LOG_LEVEL=DEBUG poetry run rmcp start  # Use environment variables
+uv run rmcp --debug start        # Enable debug mode
+uv run rmcp --config config.json start  # Use custom config file
+RMCP_LOG_LEVEL=DEBUG uv run rmcp start  # Use environment variables
 ```
 
 **For R integration development (Docker-based):**
@@ -38,12 +38,11 @@ docker run -p 8000:8000 rmcp-production rmcp http                          # Pro
 
 ### Testing (Hybrid Strategy)
 
-**Python-only tests (cross-platform via Poetry):**
+**Python-only tests (cross-platform via uv):**
 ```bash
-poetry run pytest tests/unit/    # Schema validation, JSON-RPC, transport
-poetry run black --check .       # Code formatting
-poetry run isort --check .       # Import sorting
-poetry run flake8 .              # Linting
+uv run pytest tests/unit/        # Schema validation, JSON-RPC, transport
+uv run ruff check .              # Linting and import sorting
+uv run ruff format --check .     # Code formatting check
 ```
 
 **Complete integration tests (Docker-based):**
@@ -58,18 +57,17 @@ docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -
 ### Code Quality
 ```bash
 # Python formatting (cross-platform)
-poetry run black rmcp tests streamlit
-poetry run isort rmcp tests streamlit  
-poetry run flake8 rmcp tests streamlit
-poetry run mypy rmcp
+uv run ruff check --fix .         # Auto-fix linting issues and sort imports
+uv run ruff format .              # Format code
+uv run mypy rmcp
 
 # R formatting (Docker-based)
 docker run -v $(pwd):/workspace rmcp-dev R -e "library(styler); style_file(list.files('rmcp/r_assets', pattern='[.]R$', recursive=TRUE, full.names=TRUE))"
 
 # Documentation building (cross-platform)
-poetry run sphinx-build docs docs/_build       # Build documentation
-poetry run sphinx-build -b html docs docs/_build/html  # HTML output
-poetry run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
+uv run sphinx-build docs docs/_build       # Build documentation
+uv run sphinx-build -b html docs docs/_build/html  # HTML output
+uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
 ```
 
 ## Architecture
@@ -114,7 +112,7 @@ poetry run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
 
 **Tier 3: Complete User Scenarios (End-to-end)**
 - **Scenario tests** (`tests/scenarios/`): Full user workflows and deployment scenarios:
-  - `test_realistic_scenarios.py`: Statistical analysis pipelines  
+  - `test_realistic_scenarios.py`: Statistical analysis pipelines
   - `test_claude_desktop_scenarios.py`: Claude Desktop integration flows (includes concurrent load testing)
   - `test_excel_plotting_scenarios.py`: File workflow scenarios
   - `test_deployment_scenarios.py`: Docker environment validation, production builds, multi-platform testing
@@ -123,7 +121,7 @@ poetry run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
 - **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (tests all 53 tools with real R)
 
 **Complete Test Coverage**: Docker environment includes **all 240+ tests** with comprehensive coverage across all components:
-- ✅ **R Integration**: 53 statistical tools with real R execution  
+- ✅ **R Integration**: 53 statistical tools with real R execution
 - ✅ **HTTP Transport**: FastAPI, uvicorn, SSE streaming, session management
 - ✅ **Core MCP Protocol**: JSON-RPC 2.0, tool calls, capabilities, error handling
 - ✅ **Configuration System**: Environment variables, config files, hierarchical loading
@@ -158,7 +156,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.base --cach
 # 4. Test both fresh and cached build scenarios (prevents workflow logic errors)
 # Fresh build scenario:
 docker buildx build --no-cache --target development -t rmcp-fresh:latest .
-# Cached build scenario: 
+# Cached build scenario:
 docker buildx build --target development -t rmcp-cached:latest .
 ```
 
@@ -188,15 +186,15 @@ act pull_request --var GITHUB_REF=refs/pull/1/merge  # Test PR behavior
 **Prevent local vs CI environment drift:**
 
 ```bash
-# 1. Verify Python package versions match between Poetry and Docker
-poetry export --dev --without-hashes > requirements-poetry.txt
+# 1. Verify Python package versions match between uv and Docker
+uv export --no-hashes > requirements-uv.txt
 docker run --rm rmcp-test:latest pip freeze > requirements-docker.txt
-diff requirements-poetry.txt requirements-docker.txt
+diff requirements-uv.txt requirements-docker.txt
 
 # 2. Test pytest configuration consistency
-poetry run pytest --collect-only tests/smoke/ > pytest-poetry.log
+uv run pytest --collect-only tests/smoke/ > pytest-uv.log
 docker run --rm -v $(pwd):/workspace rmcp-test:latest pytest --collect-only /workspace/tests/smoke/ > pytest-docker.log
-diff pytest-poetry.log pytest-docker.log
+diff pytest-uv.log pytest-docker.log
 
 # 3. Validate R environment consistency
 docker run --rm rmcp-test:latest R -e "cat('R packages:', length(.packages(all.available=TRUE)), '\n')"
@@ -228,7 +226,7 @@ echo "# Test comment" >> README.md
 git add . && git commit -m "Test: non-docker change"
 # Push and verify CI skips Docker builds
 
-# 2. Test workflow with Docker changes (should trigger builds)  
+# 2. Test workflow with Docker changes (should trigger builds)
 git checkout -b test-trigger-build
 echo "# Test comment" >> Dockerfile
 git add . && git commit -m "Test: docker change"
@@ -258,7 +256,7 @@ git add . && git commit -m "Test: docker change"
    ```bash
    # Use act to test both cached and fresh build paths
    act -j docker-build --var should_build=true
-   act -j docker-build --var should_build=false  
+   act -j docker-build --var should_build=false
    ```
 
 4. **Verify multi-platform compatibility**:
@@ -274,7 +272,7 @@ git add . && git commit -m "Test: docker change"
 
 - **Always**: Before committing changes to `Dockerfile*`, `.github/workflows/`, `pyproject.toml`
 - **Docker optimizations**: When modifying cache strategies, base images, or build stages
-- **Dependency updates**: When upgrading pytest, Python packages, or R packages  
+- **Dependency updates**: When upgrading pytest, Python packages, or R packages
 - **CI logic changes**: When modifying conditional steps, build matrices, or attestation workflows
 - **Pre-release**: Before tagging releases or major feature merges
 
@@ -290,14 +288,14 @@ This protocol ensures CI failures are caught locally, maintaining the 99%+ build
 
 **Why Hybrid?**
 - **Docker**: Ensures consistent R environment for integration testing (complex R package dependencies)
-- **Poetry**: Enables cross-platform Python testing on Mac/Windows/Linux (important for CLI tools)
-- **Optimized**: No 179KB `poetry.lock` in repository (regenerated locally as needed)
-- **Flexible**: Developers can choose lightweight Poetry setup or full Docker environment
+- **uv**: Enables fast cross-platform Python testing on Mac/Windows/Linux (important for CLI tools)
+- **Optimized**: No lock file in repository (uv handles dependency resolution efficiently)
+- **Flexible**: Developers can choose lightweight uv setup or full Docker environment
 
 **When to use what:**
-- **Local development**: Poetry for Python development, schema changes, CLI testing
+- **Local development**: uv for Python development, schema changes, CLI testing
 - **R tool development**: Docker for testing actual R integration and statistical computations
-- **CI/CD**: Docker for R tests, Poetry for cross-platform Python validation
+- **CI/CD**: Docker for R tests, uv for cross-platform Python validation
 
 ## Configuration System
 
@@ -305,7 +303,7 @@ RMCP includes a comprehensive configuration management system that supports:
 
 ### **Configuration Sources (Priority Order)**
 1. **Command-line arguments** (highest priority)
-2. **Environment variables** (`RMCP_*` prefix)  
+2. **Environment variables** (`RMCP_*` prefix)
 3. **User config file** (`~/.rmcp/config.json`)
 4. **System config file** (`/etc/rmcp/config.json`)
 5. **Built-in defaults** (lowest priority)
@@ -357,7 +355,7 @@ OPERATION_CATEGORIES = {
     },
     "package_installation": {
         "patterns": [r"install\.packages"],
-        "description": "R package installation from repositories", 
+        "description": "R package installation from repositories",
         "security_level": "medium",
     },
     "system_operations": {
@@ -371,7 +369,7 @@ OPERATION_CATEGORIES = {
 ### **User Workflow**
 
 1. **Operation Detection**: When R code contains approval-required patterns, execution pauses
-2. **User Notification**: Clear description of operation and security implications shown  
+2. **User Notification**: Clear description of operation and security implications shown
 3. **Approval Decision**: User accepts/denies with session-wide persistence
 4. **Execution**: Approved operations proceed, denied operations are blocked
 5. **Session Memory**: Decisions persist for the current session to avoid repetitive prompts
@@ -395,7 +393,7 @@ ggsave("plot.png", plot=p)  # ← Triggers approval request
 
 **Package Installation:**
 ```r
-# Requires approval for package installation  
+# Requires approval for package installation
 install.packages("tidyverse")  # ← Triggers approval request
 library(tidyverse)             # ← Proceeds without approval
 ```
@@ -425,7 +423,7 @@ OPERATION_CATEGORIES["database_operations"] = {
 def test_approval_required():
     context = create_test_context()
     code = 'ggsave("test.png")'
-    
+
     # Should require approval
     result = await validate_r_code(context, code)
     assert result["requires_approval"] is True
@@ -475,7 +473,7 @@ RMCP v0.5.1 introduces a **systematic, evidence-based R package whitelist** with
    - Base R, essential tidyverse, fundamental statistical packages
    - Examples: `ggplot2`, `dplyr`, `MASS`, `survival`, `Matrix`
 
-2. **Tier 2 - User Approval (56 packages)**: Extended functionality  
+2. **Tier 2 - User Approval (56 packages)**: Extended functionality
    - Popular ML, econometrics, time series packages
    - Examples: `caret`, `randomForest`, `forecast`, `AER`, `rstan`
 
@@ -491,7 +489,7 @@ RMCP v0.5.1 introduces a **systematic, evidence-based R package whitelist** with
 
 **Risk Categorization** by security impact:
 - **System Access**: 4 packages (R.utils, unix, etc.)
-- **Network Access**: 8 packages (curl, httr, etc.) 
+- **Network Access**: 8 packages (curl, httr, etc.)
 - **File Operations**: 8 packages (readr, openxlsx, etc.)
 - **Code Execution**: 8 packages (Rcpp, devtools, etc.)
 - **External Dependencies**: 7 packages (rJava, database drivers, etc.)

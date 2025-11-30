@@ -15,15 +15,10 @@ These tests simulate the actual user experience with Claude Desktop
 when statistical analyses encounter R errors or warnings.
 """
 
-import asyncio
 import os
-import sys
-from pathlib import Path
 from shutil import which
-from typing import Any, Dict, List
 
 import pytest
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
@@ -36,6 +31,7 @@ from rmcp.tools.regression import (
     logistic_regression,
 )
 from rmcp.tools.statistical_tests import chi_square_test, normality_test, t_test
+
 from tests.utils import extract_json_content, extract_text_summary
 
 # Add rmcp to path
@@ -117,7 +113,7 @@ async def simulate_claude_analysis(server, tool_name, arguments, user_intent):
             else:
                 # Success case
                 result_data = extract_json_content(response)
-                print(f"✅ Analysis completed successfully")
+                print("✅ Analysis completed successfully")
                 return {"success": True, "data": result_data, "response": response}
         else:
             # JSON-RPC error
@@ -170,15 +166,15 @@ class TestClaudeErrorExperienceScenarios:
             "numeric",
             "character",
         ]
-        assert any(
-            indicator in error_lower for indicator in data_issue_indicators
-        ), f"Error should explain data issue clearly: {error_msg}"
+        assert any(indicator in error_lower for indicator in data_issue_indicators), (
+            f"Error should explain data issue clearly: {error_msg}"
+        )
 
         # Should not be overly technical
         technical_jargon = ["traceback", "exception", "stderr", "subprocess", "jsonrpc"]
-        assert not any(
-            jargon in error_lower for jargon in technical_jargon
-        ), f"Error should avoid technical jargon: {error_msg}"
+        assert not any(jargon in error_lower for jargon in technical_jargon), (
+            f"Error should avoid technical jargon: {error_msg}"
+        )
 
         # Step 2: Use suggest_fix for guidance
         fix_result = await simulate_claude_analysis(
@@ -202,12 +198,12 @@ class TestClaudeErrorExperienceScenarios:
             "use",
             "convert",
         ]
-        assert any(
-            action in suggestions_text for action in helpful_actions
-        ), f"Suggestions should be actionable: {suggestions}"
+        assert any(action in suggestions_text for action in helpful_actions), (
+            f"Suggestions should be actionable: {suggestions}"
+        )
 
-        print(f"✅ Novice user error experience validated")
-        print(f"   Error clarity: Clear explanation of data issues")
+        print("✅ Novice user error experience validated")
+        print("   Error clarity: Clear explanation of data issues")
         print(f"   Guidance quality: {len(suggestions)} actionable suggestions")
 
     @pytest.mark.asyncio
@@ -280,9 +276,9 @@ class TestClaudeErrorExperienceScenarios:
                 "fitted",
                 "probabilities",
             ]
-            assert any(
-                term in error_lower for term in statistical_terms
-            ), f"Error should use appropriate statistical terminology: {error_msg}"
+            assert any(term in error_lower for term in statistical_terms), (
+                f"Error should use appropriate statistical terminology: {error_msg}"
+            )
 
         # Step 2: Get expert guidance
         fix_result = await simulate_claude_analysis(
@@ -312,7 +308,7 @@ class TestClaudeErrorExperienceScenarios:
                 solution in suggestions_text for solution in statistical_solutions
             ), f"Should suggest statistical solutions: {suggestions}"
 
-        print(f"✅ Researcher statistical warning experience validated")
+        print("✅ Researcher statistical warning experience validated")
 
     @pytest.mark.asyncio
     async def test_business_analyst_file_error_experience(self, claude_server, context):
@@ -342,9 +338,9 @@ class TestClaudeErrorExperienceScenarios:
             "path",
             "cannot access",
         ]
-        assert any(
-            indicator in error_lower for indicator in file_indicators
-        ), f"Error should clearly indicate file issue: {error_msg}"
+        assert any(indicator in error_lower for indicator in file_indicators), (
+            f"Error should clearly indicate file issue: {error_msg}"
+        )
 
         # Should preserve file path for debugging
         assert (
@@ -372,12 +368,12 @@ class TestClaudeErrorExperienceScenarios:
             "directory",
             "absolute path",
         ]
-        assert any(
-            help_item in suggestions_text for help_item in file_help
-        ), f"Should suggest file troubleshooting steps: {suggestions}"
+        assert any(help_item in suggestions_text for help_item in file_help), (
+            f"Should suggest file troubleshooting steps: {suggestions}"
+        )
 
-        print(f"✅ Business analyst file error experience validated")
-        print(f"   Error clarity: File issue clearly identified")
+        print("✅ Business analyst file error experience validated")
+        print("   Error clarity: File issue clearly identified")
         print(f"   Guidance: {len(suggestions)} file troubleshooting suggestions")
 
     @pytest.mark.asyncio
@@ -421,9 +417,9 @@ class TestClaudeErrorExperienceScenarios:
                 "target",
                 "feature",
             ]
-            assert any(
-                concept in error_lower for concept in ml_concepts
-            ), f"Error should use ML terminology appropriately: {error_msg}"
+            assert any(concept in error_lower for concept in ml_concepts), (
+                f"Error should use ML terminology appropriately: {error_msg}"
+            )
 
         # Step 2: Validate data for ML suitability
         validation_result = await simulate_claude_analysis(
@@ -450,11 +446,11 @@ class TestClaudeErrorExperienceScenarios:
                 "target",
                 "feature",
             ]
-            assert any(
-                issue in issues_text for issue in ml_issues
-            ), f"Should identify ML-specific data issues: {warnings + errors}"
+            assert any(issue in issues_text for issue in ml_issues), (
+                f"Should identify ML-specific data issues: {warnings + errors}"
+            )
 
-        print(f"✅ Data scientist ML error experience validated")
+        print("✅ Data scientist ML error experience validated")
 
     @pytest.mark.asyncio
     async def test_progressive_error_recovery_workflow(self, claude_server, context):
@@ -531,18 +527,18 @@ class TestClaudeErrorExperienceScenarios:
                         "missing" in suggestions_text or "na" in suggestions_text
                     )
 
-                    print(f"   Recovery guidance addresses specific issues:")
+                    print("   Recovery guidance addresses specific issues:")
                     print(f"   - Length mismatch: {addresses_length}")
                     print(f"   - Missing values: {addresses_missing}")
                     print(f"   - Logical flow: {logical_flow}")
 
         # Verify recovery workflow quality
         successful_steps = sum(1 for _, success, _ in recovery_steps if success)
-        assert (
-            successful_steps >= 2
-        ), f"At least 2 recovery steps should succeed: {recovery_steps}"
+        assert successful_steps >= 2, (
+            f"At least 2 recovery steps should succeed: {recovery_steps}"
+        )
 
-        print(f"✅ Progressive error recovery workflow validated")
+        print("✅ Progressive error recovery workflow validated")
         print(f"   Recovery steps: {[step[0] for step in recovery_steps]}")
         print(f"   Success rate: {successful_steps}/{len(recovery_steps)}")
 
@@ -582,9 +578,9 @@ class TestErrorMessageQualityForClaude:
                 error_msg = result["error"]
 
                 # Error messages should be conversational
-                assert not error_msg.startswith(
-                    "Error:"
-                ), "Should not start with 'Error:'"
+                assert not error_msg.startswith("Error:"), (
+                    "Should not start with 'Error:'"
+                )
                 assert len(error_msg.split()) > 3, "Should be more than just error code"
 
                 # Should provide context
@@ -639,11 +635,11 @@ class TestErrorMessageQualityForClaude:
             specific_needs = ["data", "observations", "samples", "values", "more"]
             mentions_needs = any(need in error_lower for need in specific_needs)
 
-            assert (
-                has_actionable or mentions_needs
-            ), f"Error should be actionable or mention needs: {error_msg}"
+            assert has_actionable or mentions_needs, (
+                f"Error should be actionable or mention needs: {error_msg}"
+            )
 
-            print(f"✅ Error message actionability verified")
+            print("✅ Error message actionability verified")
 
     @pytest.mark.asyncio
     async def test_error_context_preservation_for_claude(self, claude_server, context):
@@ -668,16 +664,16 @@ class TestErrorMessageQualityForClaude:
             error_msg = result["error"]
 
             # Should preserve variable names for Claude to reference
-            assert (
-                "sales_q1" in error_msg or "marketing_budget" in error_msg
-            ), "Should preserve variable names"
+            assert "sales_q1" in error_msg or "marketing_budget" in error_msg, (
+                "Should preserve variable names"
+            )
 
             # Should preserve analysis type context
             analysis_context = ["correlation", "pearson", "variables"]
             has_context = any(ctx in error_msg.lower() for ctx in analysis_context)
             assert has_context, f"Should preserve analysis context: {error_msg}"
 
-            print(f"✅ Error context preservation for Claude verified")
+            print("✅ Error context preservation for Claude verified")
 
 
 if __name__ == "__main__":

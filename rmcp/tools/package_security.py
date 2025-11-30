@@ -5,9 +5,7 @@ This module provides security assessment and filtering capabilities for R packag
 including risk categorization and filtering based on security criteria.
 """
 
-import re
 from enum import Enum
-from typing import Dict, List, Set, Tuple
 
 
 class SecurityLevel(Enum):
@@ -135,7 +133,7 @@ EXTERNAL_DEPENDENCY_PACKAGES = {
 
 def assess_package_security_risk(
     package_name: str,
-) -> Tuple[SecurityLevel, List[PackageRiskCategory]]:
+) -> tuple[SecurityLevel, list[PackageRiskCategory]]:
     """
     Assess the security risk level and categories for an R package.
 
@@ -179,8 +177,8 @@ def assess_package_security_risk(
 
 
 def filter_packages_by_security(
-    packages: Set[str], max_security_level: SecurityLevel
-) -> Set[str]:
+    packages: set[str], max_security_level: SecurityLevel
+) -> set[str]:
     """
     Filter packages based on maximum allowed security level.
 
@@ -208,7 +206,7 @@ def filter_packages_by_security(
     return filtered
 
 
-def get_security_report(packages: Set[str]) -> Dict:
+def get_security_report(packages: set[str]) -> dict:
     """
     Generate a security assessment report for a set of packages.
 
@@ -218,8 +216,8 @@ def get_security_report(packages: Set[str]) -> Dict:
     Returns:
         Dictionary with security statistics and categorization
     """
-    security_stats = {level: 0 for level in SecurityLevel}
-    risk_stats = {risk: 0 for risk in PackageRiskCategory}
+    security_stats = dict.fromkeys(SecurityLevel, 0)
+    risk_stats = dict.fromkeys(PackageRiskCategory, 0)
     flagged_packages = {level: [] for level in SecurityLevel}
 
     for package in packages:
@@ -244,8 +242,8 @@ def get_security_report(packages: Set[str]) -> Dict:
 
 
 def _get_security_recommendations(
-    security_stats: Dict[SecurityLevel, int],
-) -> List[str]:
+    security_stats: dict[SecurityLevel, int],
+) -> list[str]:
     """Generate security recommendations based on package statistics."""
     recommendations = []
 
@@ -326,7 +324,7 @@ TOP_DOWNLOADED_PACKAGES = {
 }
 
 
-def prioritize_packages_by_popularity(packages: Set[str]) -> List[str]:
+def prioritize_packages_by_popularity(packages: set[str]) -> list[str]:
     """
     Sort packages by popularity (download statistics).
 

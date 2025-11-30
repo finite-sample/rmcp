@@ -13,7 +13,7 @@ FROM ghcr.io/finite-sample/rmcp/rmcp-base:latest AS base
 # Base image already contains:
 # - rocker/r2u:noble with optimized R package installation
 # - All required system dependencies (Python, build tools, SSL, etc.)
-# - 50+ R packages for statistical analysis, ML, and visualization  
+# - 50+ R packages for statistical analysis, ML, and visualization
 # - mkcert for HTTPS development
 # - Optimized configurations and cleanup
 
@@ -30,37 +30,15 @@ FROM base AS development
 
 # Note: R packages and mkcert are already installed in base image
 
-# Create Python virtual environment with development dependencies
-# Use cache mount for pip to dramatically speed up builds
+# Install uv for dependency management
 ARG TARGETPLATFORM
-ENV VENV=/opt/venv
-RUN --mount=type=cache,target=/root/.cache/pip,id=pip-dev-${TARGETPLATFORM} \
-    --mount=type=cache,target=/tmp/pip-cache,id=pip-dev-temp-${TARGETPLATFORM} \
+RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-${TARGETPLATFORM} \
     set -eux; \
-    python3 -m venv "$VENV"; \
-    . "$VENV/bin/activate"; \
-    pip install --upgrade pip \
-        --cache-dir=/tmp/pip-cache; \
-    pip install --cache-dir=/tmp/pip-cache \
-        # Development tools (pinned for cache stability)
-        "black==23.12.1" \
-        "isort==5.13.2" \
-        "flake8==6.1.0" \
-        "pytest==8.2.0" \
-        "pytest-cov==4.0.0" \
-        "pytest-asyncio==0.24.0" \
-        # Core dependencies
-        "click==8.1.7" \
-        "jsonschema==4.21.1" \
-        "build==1.0.3" \
-        # HTTP transport dependencies
-        "fastapi==0.109.0" \
-        "uvicorn==0.26.0" \
-        "sse-starlette==1.8.2" \
-        "httpx==0.26.0" \
-        # Workflow dependencies
-        "pandas==2.2.0" \
-        "openpyxl==3.1.2"
+    # Install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Add uv to PATH
+ENV PATH="/root/.local/bin:$PATH"
 
 # Ensure venv tools are first on PATH for subsequent steps/CI
 ENV PATH="$VENV/bin:$PATH"
@@ -75,8 +53,16 @@ COPY pyproject.toml ./
 RUN echo "# RMCP Development Environment" > README.md
 COPY rmcp/ ./rmcp/
 
-# Install RMCP in development mode
-RUN . "$VENV/bin/activate" && pip install -e .
+# Install RMCP and dependencies using uv sync
+ENV VIRTUAL_ENV=/workspace/.venv
+ENV PATH="/workspace/.venv/bin:$PATH"
+RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-sync-${TARGETPLATFORM} \
+    set -eux; \
+    export PATH="/root/.local/bin:$PATH"; \
+    # Install all development dependencies and HTTP extras
+    uv sync --group dev --extra all; \
+    # Verify installation
+    python -c "import rmcp; print('RMCP installed successfully')"
 
 # Default to bash for development work
 CMD ["bash"]
@@ -86,29 +72,15 @@ CMD ["bash"]
 # ============================================================================
 FROM base AS builder
 
-# Create Python virtual environment with minimal production dependencies
-# Use cache mount for pip to dramatically speed up builds
-ENV VENV=/opt/venv
-RUN --mount=type=cache,target=/root/.cache/pip,id=pip-prod-${TARGETPLATFORM} \
-    --mount=type=cache,target=/tmp/pip-cache,id=pip-prod-temp-${TARGETPLATFORM} \
+# Install uv for dependency management
+ARG TARGETPLATFORM
+RUN --mount=type=cache,target=/root/.cache/uv,id=uv-prod-${TARGETPLATFORM} \
     set -eux; \
-    python3 -m venv "$VENV"; \
-    . "$VENV/bin/activate"; \
-    pip install --upgrade pip \
-        --cache-dir=/tmp/pip-cache; \
-    pip install --cache-dir=/tmp/pip-cache \
-        # Core dependencies (pinned for cache stability)
-        "click==8.1.7" \
-        "jsonschema==4.21.1" \
-        "build==1.0.3" \
-        # HTTP transport dependencies
-        "fastapi==0.109.0" \
-        "uvicorn==0.26.0" \
-        "sse-starlette==1.8.2" \
-        "httpx==0.26.0" \
-        # Workflow dependencies
-        "pandas==2.2.0" \
-        "openpyxl==3.1.2"
+    # Install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Add uv to PATH
+ENV PATH="/root/.local/bin:$PATH"
 
 # Copy and build RMCP package
 WORKDIR /build
@@ -117,11 +89,14 @@ COPY pyproject.toml ./
 # Create minimal README.md for build (excluded by .dockerignore)
 RUN echo "# RMCP Production Build" > README.md
 COPY rmcp/ ./rmcp/
-# Build wheel for production installation with cache mount
-RUN --mount=type=cache,target=/root/.cache/pip,id=pip-build-${TARGETPLATFORM} \
-    --mount=type=cache,target=/tmp/build-cache,id=build-cache-${TARGETPLATFORM} \
-    . "$VENV/bin/activate" && \
-    pip wheel --no-deps . -w /build/wheels/ --cache-dir=/tmp/build-cache
+# Install production dependencies and build wheel
+ENV VIRTUAL_ENV=/build/.venv
+ENV PATH="/build/.venv/bin:$PATH"
+RUN --mount=type=cache,target=/root/.cache/uv,id=uv-build-${TARGETPLATFORM} \
+    set -eux; \
+    export PATH="/root/.local/bin:$PATH"; \
+    # Build wheel for production installation
+    uv build --wheel --out-dir /build/wheels/
 
 # ============================================================================
 # STAGE: Production Runtime (Optimized from base image)
@@ -145,48 +120,28 @@ RUN set -eux; \
 # ============================================================================
 # STAGE: Production Runtime (Final minimal environment)
 # ============================================================================
-FROM ubuntu:noble AS production
+FROM production-base AS production
 
+ARG TARGETPLATFORM
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Install only runtime dependencies (no build tools)
-# Use cache mount for apt downloads only (avoid lock conflicts)
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-prod-${TARGETPLATFORM} \
-    set -eux; \
-    # Clean any existing locks and ensure clean state
-    rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        # Python runtime (no dev packages)
-        python3 python3-venv \
-        # Runtime libraries for compiled packages
-        libcurl4 libssl3 libxml2 \
-        # Essential utilities
-        ca-certificates \
-        # Runtime math libraries
-        libblas3 liblapack3 \
-        # R runtime dependencies
-        r-base-core \
-        littler; \
-    # Clean package lists and temporary files
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
+# Note: Runtime dependencies already installed in production-base
+# (python3, python3-venv, libcurl4, libssl3, libxml2, ca-certificates,
+#  libblas3, liblapack3, r-base-core, littler)
 
-# Copy R packages and configuration from production-base, then configure
-COPY --from=production-base /usr/local/lib/R /usr/local/lib/R
-COPY --from=production-base /usr/lib/R /usr/lib/R  
-COPY --from=production-base /etc/R /etc/R
-RUN echo "options(bspm.sudo = TRUE)" >> /etc/R/Rprofile.site
-
-# Copy Python virtual environment and install RMCP (merged operations)
+# Copy wheel from builder
 ENV VENV=/opt/venv
-COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /build/wheels/ /tmp/wheels/
 ENV PATH="$VENV/bin:$PATH"
 
-# Install RMCP, create user, and setup directory in single layer
-RUN pip install --no-deps /tmp/wheels/*.whl && \
+# Create fresh virtual environment and install RMCP with HTTP extras
+RUN python3 -m venv /opt/venv && \
+    cd /tmp/wheels && \
+    WHEEL_FILE=$(ls *.whl) && \
+    /opt/venv/bin/pip install --no-cache-dir "${WHEEL_FILE}[all]" && \
+    cd / && \
     rm -rf /tmp/wheels/ && \
     groupadd -r rmcp && \
     useradd -r -g rmcp -d /app -s /bin/bash rmcp
@@ -198,11 +153,14 @@ RUN chown rmcp:rmcp /app
 # Switch to non-root user
 USER rmcp
 
+# Expose port for HTTP mode
+EXPOSE 8080
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import rmcp; print('RMCP OK')" || exit 1
 
-# Default to stdio mode for MCP protocol
+# Default command - for Cloud Run, override with serve-http
 CMD ["rmcp", "start"]
 
 # Metadata

@@ -3,6 +3,7 @@
 Comprehensive test runner for RMCP.
 Tests all 42 statistical analysis tools to ensure they work properly.
 """
+
 import asyncio
 import subprocess
 import sys
@@ -105,7 +106,7 @@ def check_r_packages():
         "openxlsx",
     ]
     r_script = f"""
-    packages <- c({', '.join([f'"{pkg}"' for pkg in required_packages])})
+    packages <- c({", ".join([f'"{pkg}"' for pkg in required_packages])})
     missing <- packages[!packages %in% installed.packages()[,"Package"]]
     if (length(missing) > 0) {{
         cat("Missing packages:", paste(missing, collapse=", "))
@@ -295,7 +296,6 @@ async def run_all_tests():
             "2023-09",
         ],
     }
-    test_results = []
     # Test categories
     categories = [
         (
@@ -558,13 +558,15 @@ async def run_http_transport_tests():
     """Run HTTP transport tests (requires FastAPI)."""
     print("\n🌐 Running HTTP Transport Tests")
     print("-" * 30)
-    try:
-        # Check if FastAPI is available
-        import fastapi
-        import httpx
+    import importlib.util
 
+    # Check if FastAPI is available
+    fastapi_available = importlib.util.find_spec("fastapi") is not None
+    httpx_available = importlib.util.find_spec("httpx") is not None
+
+    if fastapi_available and httpx_available:
         print("✅ FastAPI dependencies available")
-    except ImportError:
+    else:
         print("⚠️ FastAPI not available, skipping HTTP transport tests")
         print("💡 Install with: pip install rmcp[http]")
         return True  # Don't fail the entire test suite

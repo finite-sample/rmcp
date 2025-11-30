@@ -6,10 +6,10 @@ through environment variables or configuration files.
 """
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 # Default configuration as a dictionary for easy serialization
-DEFAULT_CONFIG: Dict[str, Any] = {
+DEFAULT_CONFIG: dict[str, Any] = {
     "http": {
         "host": "localhost",
         "port": 8000,

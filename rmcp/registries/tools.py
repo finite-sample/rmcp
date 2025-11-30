@@ -12,8 +12,9 @@ import inspect
 import json
 import logging
 import uuid
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Protocol, Sequence
+from typing import Any, Protocol
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, validate_schema
@@ -166,7 +167,7 @@ class ToolsRegistry:
             # Handle None or empty results
             if result is None:
                 result = {}
-            elif not isinstance(result, (dict, list, str, int, float, bool)):
+            elif not isinstance(result, dict | list | str | int | float | bool):
                 result = {"error": "Tool returned invalid result type"}
 
             # Extract formatting information before validation (schema-safe approach)
@@ -225,7 +226,7 @@ class ToolsRegistry:
             }
         if isinstance(base_payload, str) and base_payload.strip() == "":
             base_payload = {"status": "completed"}
-        elif not base_payload and not isinstance(base_payload, (list, dict)):
+        elif not base_payload and not isinstance(base_payload, list | dict):
             base_payload = {"status": "completed"}
         summary = self._build_summary(tool_def, base_payload, formatting_info)
         content: list[dict[str, Any]] = []
@@ -257,7 +258,7 @@ class ToolsRegistry:
                 }
             )
         # Build structured content (machine-readable data)
-        if isinstance(base_payload, (dict, list)) and base_payload:
+        if isinstance(base_payload, dict | list) and base_payload:
             # Check if this is a large dataset that should be stored as a resource
             resource_uri = self._check_for_large_data_and_create_resource(base_payload)
             if resource_uri:
@@ -352,7 +353,7 @@ class ToolsRegistry:
         if isinstance(payload, dict):
             bullets = []
             for key, value in list(payload.items())[:8]:
-                if isinstance(value, (str, int, float)):
+                if isinstance(value, str | int | float):
                     bullets.append(f"- **{key}**: {value}")
                 elif isinstance(value, bool):
                     bullets.append(f"- **{key}**: {'yes' if value else 'no'}")
@@ -508,6 +509,7 @@ def tool(
 ):
     """
     Decorator to register a function as an MCP tool.
+
     Usage:
         @tool(
             name="analyze_data",
@@ -533,12 +535,12 @@ def tool(
         if not inspect.iscoroutinefunction(func):
             raise ValueError(f"Tool handler '{name}' must be an async function")
         # Store tool metadata on function for registration
-        setattr(func, "_mcp_tool_name", name)
-        setattr(func, "_mcp_tool_input_schema", input_schema)
-        setattr(func, "_mcp_tool_output_schema", output_schema)
-        setattr(func, "_mcp_tool_title", title)
-        setattr(func, "_mcp_tool_description", description)
-        setattr(func, "_mcp_tool_annotations", annotations)
+        func._mcp_tool_name = name
+        func._mcp_tool_input_schema = input_schema
+        func._mcp_tool_output_schema = output_schema
+        func._mcp_tool_title = title
+        func._mcp_tool_description = description
+        func._mcp_tool_annotations = annotations
         return func  # type: ignore
 
     return decorator

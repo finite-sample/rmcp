@@ -12,26 +12,17 @@ These tests deliberately trigger R errors/warnings to validate the complete
 error handling pipeline: R → RMCP → MCP → Claude.
 """
 
-import asyncio
-import os
-import sys
-from pathlib import Path
 from shutil import which
-from typing import Any, Dict
 
 import pytest
-
 from rmcp.core.context import Context, LifespanState
 from rmcp.tools.helpers import suggest_fix, validate_data
-from rmcp.tools.machine_learning import decision_tree, random_forest
 from rmcp.tools.regression import (
-    correlation_analysis,
     linear_model,
     logistic_regression,
 )
-from rmcp.tools.statistical_tests import chi_square_test, t_test
+from rmcp.tools.statistical_tests import chi_square_test
 from rmcp.tools.timeseries import arima_model
-from tests.utils import extract_json_content, extract_text_summary
 
 # Add rmcp to path
 # rmcp package installed via pip install -e .
@@ -116,7 +107,7 @@ class TestRealRErrors:
 
             # Check if warning information is captured
             # (R warnings should be included in output or handled gracefully)
-            print(f"✅ Logistic regression handled separation scenario")
+            print("✅ Logistic regression handled separation scenario")
             print(f"   Model converged: {result.get('converged', 'unknown')}")
 
         except Exception as e:
@@ -141,7 +132,7 @@ class TestRealRErrors:
             assert "r_squared" in result
             assert "coefficients" in result
 
-            print(f"✅ Linear regression handled collinearity scenario")
+            print("✅ Linear regression handled collinearity scenario")
             print(f"   R-squared: {result.get('r_squared', 'unknown')}")
             print(f"   DF residual: {result.get('df_residual', 'unknown')}")
 
@@ -164,7 +155,7 @@ class TestRealRErrors:
             # Should complete but may have warnings about low expected counts
             assert "test_statistic" in result
 
-            print(f"✅ Chi-square test handled small sample scenario")
+            print("✅ Chi-square test handled small sample scenario")
             print(f"   Test statistic: {result.get('test_statistic', 'unknown')}")
             print(f"   P-value: {result.get('p_value', 'unknown')}")
 
@@ -180,9 +171,9 @@ class TestRealRErrors:
                 "required",
                 "both",
             ]
-            assert any(
-                keyword in error_lower for keyword in expected_errors
-            ), f"Error should mention statistical or variable issues: {error_msg}"
+            assert any(keyword in error_lower for keyword in expected_errors), (
+                f"Error should mention statistical or variable issues: {error_msg}"
+            )
             print(
                 f"✅ Small sample chi-square error properly identified: {error_msg[:100]}..."
             )
@@ -199,7 +190,7 @@ class TestRealRErrors:
 
             # If it succeeds, the package is installed
             assert "aic" in result or "coefficients" in result
-            print(f"✅ ARIMA model succeeded (forecast package available)")
+            print("✅ ARIMA model succeeded (forecast package available)")
 
         except Exception as e:
             error_msg = str(e)
@@ -222,13 +213,13 @@ class TestRealRErrors:
         }
 
         try:
-            result = await linear_model(
+            await linear_model(
                 context, {"data": invalid_data, "formula": "outcome ~ numeric_var"}
             )
 
             # Should not succeed with string in numeric variable
             # If it does, R coerced the data somehow
-            print(f"⚠️  Linear model handled mixed data types (R coercion occurred)")
+            print("⚠️  Linear model handled mixed data types (R coercion occurred)")
 
         except Exception as e:
             error_msg = str(e)
@@ -246,12 +237,10 @@ class TestRealRErrors:
         minimal_data = {"x": [1], "y": [2]}
 
         try:
-            result = await linear_model(
-                context, {"data": minimal_data, "formula": "y ~ x"}
-            )
+            await linear_model(context, {"data": minimal_data, "formula": "y ~ x"})
 
             # Should not succeed with just one data point
-            print(f"⚠️  Linear model handled minimal data (unexpected)")
+            print("⚠️  Linear model handled minimal data (unexpected)")
 
         except Exception as e:
             error_msg = str(e)
@@ -276,12 +265,10 @@ class TestRealRErrors:
         from rmcp.tools.fileops import read_csv
 
         try:
-            result = await read_csv(
-                context, {"file_path": "/nonexistent/path/missing_file.csv"}
-            )
+            await read_csv(context, {"file_path": "/nonexistent/path/missing_file.csv"})
 
             # Should not succeed
-            print(f"⚠️  File read succeeded for nonexistent file (unexpected)")
+            print("⚠️  File read succeeded for nonexistent file (unexpected)")
 
         except Exception as e:
             error_msg = str(e)
@@ -410,9 +397,9 @@ class TestErrorMessageQuality:
 
                 # Error message quality checks
                 assert len(error_msg) > 20, "Error message should be descriptive"
-                assert not error_msg.startswith(
-                    "Traceback"
-                ), "Should not expose raw stack traces"
+                assert not error_msg.startswith("Traceback"), (
+                    "Should not expose raw stack traces"
+                )
 
                 # Should contain helpful information
                 error_lower = error_msg.lower()
@@ -430,9 +417,9 @@ class TestErrorMessageQuality:
                     ]
                 )
 
-                assert (
-                    has_helpful_info
-                ), f"Error message should be helpful: {error_msg[:100]}"
+                assert has_helpful_info, (
+                    f"Error message should be helpful: {error_msg[:100]}"
+                )
 
                 print(f"✅ {scenario['description']} error message quality verified")
                 print(f"   Message: {error_msg[:80]}...")
@@ -469,11 +456,11 @@ class TestErrorMessageQuality:
                 ]
             )
 
-            assert (
-                has_helpful_info
-            ), f"Error should provide helpful context: {error_msg}"
+            assert has_helpful_info, (
+                f"Error should provide helpful context: {error_msg}"
+            )
 
-            print(f"✅ Error context preserved: provides helpful guidance")
+            print("✅ Error context preserved: provides helpful guidance")
             print(f"   Error: {error_msg[:100]}...")
 
 

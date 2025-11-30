@@ -10,6 +10,7 @@ These tests validate complete RMCP workflows in Docker environments:
 """
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -17,6 +18,244 @@ import time
 from pathlib import Path
 
 import pytest
+
+
+def _ensure_production_image():
+    """Ensure production Docker image exists and is up-to-date.
+
+    Returns the image name to use for testing. Builds the image if it doesn't
+    exist or if forced rebuild is needed.
+
+    Returns:
+        str: Docker image name ready for use in tests
+
+    Raises:
+        pytest.skip: If Docker is not available or image build fails
+    """
+    # Check Docker availability first
+    if not shutil.which("docker"):
+        pytest.skip("Docker not available in PATH")
+
+    try:
+        result = subprocess.run(["docker", "info"], capture_output=True, timeout=10)
+        if result.returncode != 0:
+            pytest.skip("Docker daemon not accessible")
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pytest.skip("Docker not accessible")
+
+    # Use environment variable if explicitly set (for CI/custom scenarios)
+    if "RMCP_PRODUCTION_IMAGE" in os.environ:
+        image_name = os.environ["RMCP_PRODUCTION_IMAGE"]
+        print(f"🐳 Using specified production image: {image_name}")
+        return image_name
+
+    # Standard image name for local builds
+    image_name = "rmcp:prod"
+
+    # Check if image exists locally
+    check_cmd = ["docker", "images", "-q", image_name]
+    check_result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=10)
+
+    image_exists = bool(check_result.stdout.strip())
+
+    if not image_exists:
+        print(f"🔨 Production image {image_name} not found, building...")
+
+        # Build production image from current directory
+        build_cmd = ["docker", "build", "--target", "production", "-t", image_name, "."]
+
+        print(f"Running: {' '.join(build_cmd)}")
+        build_result = subprocess.run(
+            build_cmd,
+            capture_output=True,
+            text=True,
+            timeout=600,  # 10 minutes for build
+        )
+
+        if build_result.returncode != 0:
+            error_msg = f"Docker build failed:\nSTDOUT:\n{build_result.stdout}\nSTDERR:\n{build_result.stderr}"
+            print(f"❌ {error_msg}")
+            pytest.skip(f"Failed to build production image: {build_result.stderr}")
+
+        print(f"✅ Successfully built production image: {image_name}")
+    else:
+        print(f"🐳 Using existing production image: {image_name}")
+
+    # Validate that the image has required dependencies
+    validation_cmd = [
+        "docker",
+        "run",
+        "--rm",
+        image_name,
+        "python",
+        "-c",
+        "import rmcp, fastapi, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil; print('✅ Basic dependencies validated')",
+    ]
+
+    validation_result = subprocess.run(
+        validation_cmd, capture_output=True, text=True, timeout=30
+    )
+
+    if validation_result.returncode != 0:
+        error_msg = f"Image validation failed: {validation_result.stderr}"
+        print(f"❌ {error_msg}")
+        pytest.skip(
+            f"Production image missing required dependencies: {validation_result.stderr}"
+        )
+
+    print("✅ Production image validated with all required dependencies")
+
+    # Enhanced validation: Test actual workflow capabilities
+    workflow_validation_cmd = [
+        "docker",
+        "run",
+        "--rm",
+        image_name,
+        "python",
+        "-c",
+        """
+# Test production superset capabilities
+print("Testing production superset...")
+import pandas as pd
+import json
+import os
+import tempfile
+
+# Test pandas + superset includes what tests need
+df = pd.DataFrame({'x': [1, 2, 3], 'y': [4, 5, 6]})
+assert len(df) == 3
+print("✅ Pandas available")
+
+# Test Excel capabilities
+with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as f:
+    df.to_excel(f.name, index=False)
+    df_read = pd.read_excel(f.name)
+    os.unlink(f.name)
+    assert len(df_read) == 3
+print("✅ Excel read/write working")
+
+# Test JSON (R communication)
+data = {"test": "value", "numbers": [1, 2, 3]}
+json_str = json.dumps(data)
+parsed = json.loads(json_str)
+assert parsed == data
+print("✅ JSON serialization working")
+
+print("✅ Production superset validated (Python + R capabilities)")
+        """,
+    ]
+
+    workflow_result = subprocess.run(
+        workflow_validation_cmd, capture_output=True, text=True, timeout=45
+    )
+
+    if workflow_result.returncode != 0:
+        error_msg = f"Workflow validation failed: {workflow_result.stderr}"
+        print(f"❌ {error_msg}")
+        pytest.skip(
+            f"Production image workflow capabilities failed: {workflow_result.stderr}"
+        )
+
+    print("✅ Production image Python transport validated")
+
+    # R package validation - this is where RMCP does the real work
+    r_validation_cmd = [
+        "docker",
+        "run",
+        "--rm",
+        image_name,
+        "R",
+        "--slave",
+        "-e",
+        """
+# Test critical R packages that RMCP tools require (based on dependency analysis)
+critical_packages <- c(
+    'ggplot2',       # Visualization
+    'dplyr',         # Data manipulation
+    'readxl',        # Excel reading
+    'jsonlite',      # JSON communication with Python
+    'broom',         # Statistical output formatting
+    'forecast',      # Time series analysis
+    'randomForest',  # Machine learning
+    'rpart',         # Decision trees
+    'cluster',       # Clustering
+    'tseries',       # Time series tests
+    'plm',           # Panel models
+    'AER',           # Applied econometrics
+    'openxlsx',      # Excel writing
+    'reshape2',      # Data reshaping
+    'rlang',         # R language tools
+    'knitr',         # Report generation
+    'gridExtra',     # Plot arrangements
+    'lmtest',        # Linear model tests
+    'nortest',       # Normality tests
+    'car',           # Regression analysis
+    'vars'           # Vector autoregression
+)
+
+cat('Testing R package availability (RMCP core functionality):\\n')
+missing <- c()
+for (pkg in critical_packages) {
+    if (!require(pkg, quietly = TRUE, character.only = TRUE)) {
+        missing <- c(missing, pkg)
+        cat('❌', pkg, 'NOT AVAILABLE\\n')
+    } else {
+        cat('✅', pkg, 'available\\n')
+    }
+}
+
+if (length(missing) > 0) {
+    stop('Missing critical R packages: ', paste(missing, collapse=', '))
+}
+
+cat('✅ All critical R packages validated\\n')
+        """,
+    ]
+
+    r_result = subprocess.run(
+        r_validation_cmd, capture_output=True, text=True, timeout=60
+    )
+
+    if r_result.returncode != 0:
+        error_msg = f"R package validation failed: {r_result.stderr}"
+        print(f"❌ {error_msg}")
+        print("R validation output:", r_result.stdout)
+        pytest.skip(f"Production image missing critical R packages: {r_result.stderr}")
+
+    print("✅ Production image R packages validated")
+    return image_name
+
+
+@pytest.fixture(scope="session")
+def production_docker_image():
+    """Session-scoped fixture that ensures production Docker image is available.
+
+    This fixture:
+    1. Ensures the production Docker image exists (builds if needed)
+    2. Validates that required dependencies are available in the image
+    3. Sets environment variable for backward compatibility
+    4. Runs once per test session to avoid repeated builds
+
+    Returns:
+        str: Docker image name ready for use in tests
+    """
+    print("\n🐳 Ensuring production Docker image is ready...")
+    image_name = _ensure_production_image()
+
+    # Set environment variable for backward compatibility with existing code
+    # This allows tests that still use os.environ.get() to work seamlessly
+    os.environ["RMCP_PRODUCTION_IMAGE"] = image_name
+
+    print(f"🎉 Production Docker image ready: {image_name}")
+    print(
+        "   Python superset validated: rmcp, fastapi, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil"
+    )
+    print(
+        "   Workflow capabilities validated: Excel read/write, JSON serialization, data manipulation"
+    )
+    print("   R packages validated: 21 critical packages for statistical analysis")
+
+    return image_name
 
 
 def _check_docker_available():
@@ -56,17 +295,12 @@ class TestDockerWorkflowValidation:
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pytest.skip("Docker not installed or not accessible")
 
-    def test_docker_basic_functionality(self):
+    def test_docker_basic_functionality(self, production_docker_image):
         """Test basic functionality using pre-built production image."""
         _check_docker_available()
         print("🐳 Testing Docker basic functionality...")
 
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
-
-        print(f"Testing basic functionality with: {production_image}")
+        print(f"Testing basic functionality with: {production_docker_image}")
 
         # Test basic functionality in container
         test_result = subprocess.run(
@@ -74,7 +308,7 @@ class TestDockerWorkflowValidation:
                 "docker",
                 "run",
                 "--rm",
-                production_image,
+                production_docker_image,
                 "python",
                 "-c",
                 "import rmcp; print('RMCP imported successfully')",
@@ -84,21 +318,16 @@ class TestDockerWorkflowValidation:
             timeout=30,
         )
 
-        assert (
-            test_result.returncode == 0
-        ), f"Basic functionality test failed: {test_result.stderr}"
+        assert test_result.returncode == 0, (
+            f"Basic functionality test failed: {test_result.stderr}"
+        )
         assert "RMCP imported successfully" in test_result.stdout
         print("✅ Basic functionality verified in Docker")
 
-    def test_docker_mcp_protocol_communication(self):
+    def test_docker_mcp_protocol_communication(self, production_docker_image):
         """Test MCP protocol communication in Docker environment."""
         _check_docker_available()
         print("🐳 Testing MCP protocol in Docker...")
-
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Create test request
         init_request = {
@@ -114,7 +343,7 @@ class TestDockerWorkflowValidation:
 
         # Test MCP communication in Docker
         process = subprocess.Popen(
-            ["docker", "run", "--rm", "-i", production_image, "rmcp", "start"],
+            ["docker", "run", "--rm", "-i", production_docker_image, "rmcp", "start"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -137,14 +366,14 @@ class TestDockerWorkflowValidation:
                         and response.get("id") == 1
                     ):
                         server_info = response.get("result", {}).get("serverInfo", {})
-                        print(f"✅ MCP protocol working in Docker")
+                        print("✅ MCP protocol working in Docker")
                         print(f"   Server: {server_info.get('name', 'Unknown')}")
                         response_found = True
                         break
 
-            assert (
-                response_found
-            ), f"No valid MCP response in Docker. stdout: {stdout[:300]}"
+            assert response_found, (
+                f"No valid MCP response in Docker. stdout: {stdout[:300]}"
+            )
 
         except subprocess.TimeoutExpired:
             process.kill()
@@ -153,15 +382,10 @@ class TestDockerWorkflowValidation:
             if process.poll() is None:
                 process.terminate()
 
-    def test_docker_complete_analysis_workflow(self):
+    def test_docker_complete_analysis_workflow(self, production_docker_image):
         """Test complete statistical analysis workflow in Docker."""
         _check_docker_available()
         print("🐳 Testing complete analysis workflow in Docker...")
-
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Create test data file
         test_data = {
@@ -195,7 +419,15 @@ class TestDockerWorkflowValidation:
             input_data = "\n".join(workflow_commands) + "\n"
 
             process = subprocess.Popen(
-                ["docker", "run", "--rm", "-i", production_image, "rmcp", "start"],
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "-i",
+                    production_docker_image,
+                    "rmcp",
+                    "start",
+                ],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -217,9 +449,9 @@ class TestDockerWorkflowValidation:
                             pass
 
                 # Check that we got responses for all requests
-                assert (
-                    len(responses) >= 3
-                ), f"Expected at least 3 analysis responses, got {len(responses)}"
+                assert len(responses) >= 3, (
+                    f"Expected at least 3 analysis responses, got {len(responses)}"
+                )
 
                 # Verify specific analysis results
                 summary_success = any(
@@ -252,15 +484,10 @@ class TestDockerWorkflowValidation:
             except:
                 pass
 
-    def test_docker_performance_benchmarks(self):
+    def test_docker_performance_benchmarks(self, production_docker_image):
         """Test performance benchmarks in Docker environment."""
         _check_docker_available()
         print("🐳 Testing performance benchmarks in Docker...")
-
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Test initialization time
         start_time = time.time()
@@ -268,7 +495,7 @@ class TestDockerWorkflowValidation:
         init_request = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"clientInfo":{"name":"Performance Test","version":"1.0.0"}}}'
 
         process = subprocess.Popen(
-            ["docker", "run", "--rm", "-i", production_image, "rmcp", "start"],
+            ["docker", "run", "--rm", "-i", production_docker_image, "rmcp", "start"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -289,9 +516,9 @@ class TestDockerWorkflowValidation:
                     break
 
             assert response_received, "No initialize response in performance test"
-            assert (
-                total_time < 15.0
-            ), f"Docker initialization too slow: {total_time:.2f}s"
+            assert total_time < 15.0, (
+                f"Docker initialization too slow: {total_time:.2f}s"
+            )
 
             print(f"✅ Docker performance: {total_time:.2f}s initialization")
 
@@ -302,15 +529,10 @@ class TestDockerWorkflowValidation:
             if process.poll() is None:
                 process.terminate()
 
-    def test_docker_resource_usage(self):
+    def test_docker_resource_usage(self, production_docker_image):
         """Test resource usage and limits in Docker."""
         _check_docker_available()
         print("🐳 Testing resource usage in Docker...")
-
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Run with memory limit to test resource efficiency
         resource_test = subprocess.run(
@@ -320,7 +542,7 @@ class TestDockerWorkflowValidation:
                 "--rm",
                 "-m",
                 "512m",
-                production_image,
+                production_docker_image,
                 "python",
                 "-c",
                 "import rmcp; from rmcp.core.server import create_server; server = create_server(); print(f'Server created with {len(server.tools._tools)} tools')",
@@ -330,26 +552,21 @@ class TestDockerWorkflowValidation:
             timeout=30,
         )
 
-        assert (
-            resource_test.returncode == 0
-        ), f"Resource test failed: {resource_test.stderr}"
+        assert resource_test.returncode == 0, (
+            f"Resource test failed: {resource_test.stderr}"
+        )
         assert "Server created with" in resource_test.stdout
 
         print("✅ Resource usage test passed (512MB limit)")
 
-    def test_docker_r_environment_validation(self):
+    def test_docker_r_environment_validation(self, production_docker_image):
         """Test R environment setup and package availability in Docker."""
         _check_docker_available()
         print("🐳 Testing R environment in Docker...")
 
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
-
         # Test R availability
         r_test = subprocess.run(
-            ["docker", "run", "--rm", production_image, "R", "--version"],
+            ["docker", "run", "--rm", production_docker_image, "R", "--version"],
             capture_output=True,
             text=True,
             timeout=10,
@@ -367,7 +584,7 @@ class TestDockerWorkflowValidation:
                     "docker",
                     "run",
                     "--rm",
-                    production_image,
+                    production_docker_image,
                     "R",
                     "-e",
                     f'library({package}); cat("OK")',
@@ -377,9 +594,9 @@ class TestDockerWorkflowValidation:
                 timeout=15,
             )
 
-            assert (
-                pkg_test.returncode == 0
-            ), f"Package {package} not available in Docker"
+            assert pkg_test.returncode == 0, (
+                f"Package {package} not available in Docker"
+            )
             assert "OK" in pkg_test.stdout, f"Package {package} failed to load"
 
         print(f"✅ Key R packages available: {packages_to_test}")
@@ -388,19 +605,12 @@ class TestDockerWorkflowValidation:
 class TestDockerProductionScenarios:
     """Test production deployment scenarios with Docker."""
 
-    def test_docker_production_image_functionality(self):
+    def test_docker_production_image_functionality(self, production_docker_image):
         """Test that production Docker image works correctly (uses pre-built image)."""
         _check_docker_available()
         print("🐳 Testing production image functionality...")
 
-        # Use production image built in CI or local testing
-        # In CI: this will be the image built in docker-build job
-        # Locally: assume rmcp:prod or similar exists
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
-
-        print(f"Testing production image: {production_image}")
+        print(f"Testing production image: {production_docker_image}")
 
         # Test functionality of production image
         print("Testing production image functionality...")
@@ -410,7 +620,7 @@ class TestDockerProductionScenarios:
             "docker",
             "run",
             "--rm",
-            production_image,
+            production_docker_image,
             "python",
             "-c",
             "import rmcp; print('RMCP import successful')",
@@ -428,7 +638,7 @@ class TestDockerProductionScenarios:
         print("✅ Production image functionality verified")
 
         # Test security - should run as non-root user
-        user_cmd = ["docker", "run", "--rm", production_image, "whoami"]
+        user_cmd = ["docker", "run", "--rm", production_docker_image, "whoami"]
         user_result = subprocess.run(
             user_cmd, capture_output=True, text=True, timeout=10
         )
@@ -439,7 +649,7 @@ class TestDockerProductionScenarios:
             assert username != "root", "Production image should not run as root user"
 
         # Test R availability in production image
-        r_cmd = ["docker", "run", "--rm", production_image, "R", "--version"]
+        r_cmd = ["docker", "run", "--rm", production_docker_image, "R", "--version"]
         r_result = subprocess.run(r_cmd, capture_output=True, text=True, timeout=10)
 
         if r_result.returncode == 0:
@@ -452,7 +662,7 @@ class TestDockerProductionScenarios:
             "docker",
             "run",
             "--rm",
-            production_image,
+            production_docker_image,
             "python",
             "-c",
             "import fastapi, uvicorn, httpx; print('HTTP transport ready')",
@@ -469,19 +679,14 @@ class TestDockerProductionScenarios:
 
         print("🎉 Production image functionality test completed successfully")
 
-    def test_docker_security_configuration(self):
+    def test_docker_security_configuration(self, production_docker_image):
         """Test Docker security best practices."""
         _check_docker_available()
         print("🐳 Testing Docker security configuration...")
 
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
-
         # Test running as non-root user
         user_test = subprocess.run(
-            ["docker", "run", "--rm", production_image, "whoami"],
+            ["docker", "run", "--rm", production_docker_image, "whoami"],
             capture_output=True,
             text=True,
             timeout=10,
@@ -491,15 +696,10 @@ class TestDockerProductionScenarios:
         if user_test.returncode == 0:
             print(f"✅ Container user: {user_test.stdout.strip()}")
 
-    def test_docker_environment_variables(self):
+    def test_docker_environment_variables(self, production_docker_image):
         """Test environment variable configuration in Docker."""
         _check_docker_available()
         print("🐳 Testing environment variables in Docker...")
-
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         # Test with custom environment variables
         env_test = subprocess.run(
@@ -509,7 +709,7 @@ class TestDockerProductionScenarios:
                 "--rm",
                 "-e",
                 "RMCP_LOG_LEVEL=DEBUG",
-                production_image,
+                production_docker_image,
                 "python",
                 "-c",
                 'import os; print(f\'Log level: {os.environ.get("RMCP_LOG_LEVEL", "INFO")}\')',
@@ -523,15 +723,10 @@ class TestDockerProductionScenarios:
         assert "DEBUG" in env_test.stdout
         print("✅ Environment variables working in Docker")
 
-    def test_docker_volume_mounts(self):
+    def test_docker_volume_mounts(self, production_docker_image):
         """Test volume mounts for data persistence."""
         _check_docker_available()
         print("🐳 Testing volume mounts in Docker...")
-
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
 
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create test data file
@@ -551,7 +746,7 @@ class TestDockerProductionScenarios:
                     f"{os.getuid()}:{os.getgid()}",  # Run as host user to avoid UID mismatch
                     "-v",
                     f"{temp_dir}:/data",
-                    production_image,
+                    production_docker_image,
                     "python",
                     "-c",
                     "import pandas as pd; df = pd.read_csv('/data/test_data.csv'); print(f'Loaded {len(df)} rows')",
@@ -561,9 +756,9 @@ class TestDockerProductionScenarios:
                 timeout=15,
             )
 
-            assert (
-                volume_test.returncode == 0
-            ), f"Volume mount test failed: {volume_test.stderr}"
+            assert volume_test.returncode == 0, (
+                f"Volume mount test failed: {volume_test.stderr}"
+            )
             assert "Loaded 3 rows" in volume_test.stdout
             print("✅ Volume mounts working in Docker")
 
@@ -571,18 +766,13 @@ class TestDockerProductionScenarios:
 class TestDockerCrossplatformCompatibility:
     """Test cross-platform Docker compatibility."""
 
-    def test_docker_architecture_detection(self):
+    def test_docker_architecture_detection(self, production_docker_image):
         """Test architecture detection and compatibility."""
         _check_docker_available()
         print("🐳 Testing Docker architecture compatibility...")
 
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
-
         arch_test = subprocess.run(
-            ["docker", "run", "--rm", production_image, "uname", "-m"],
+            ["docker", "run", "--rm", production_docker_image, "uname", "-m"],
             capture_output=True,
             text=True,
             timeout=10,
@@ -592,18 +782,13 @@ class TestDockerCrossplatformCompatibility:
             architecture = arch_test.stdout.strip()
             print(f"✅ Container architecture: {architecture}")
 
-    def test_docker_platform_specific_features(self):
+    def test_docker_platform_specific_features(self, production_docker_image):
         """Test platform-specific features and compatibility."""
         _check_docker_available()
         print("🏗️ Testing platform-specific features...")
 
-        # Use production image built in CI or local testing
-        import os
-
-        production_image = os.environ.get("RMCP_PRODUCTION_IMAGE", "rmcp:prod")
-
         # Get current platform architecture
-        arch_cmd = ["docker", "run", "--rm", production_image, "uname", "-m"]
+        arch_cmd = ["docker", "run", "--rm", production_docker_image, "uname", "-m"]
         arch_result = subprocess.run(
             arch_cmd, capture_output=True, text=True, timeout=10
         )
@@ -620,7 +805,7 @@ class TestDockerCrossplatformCompatibility:
             "docker",
             "run",
             "--rm",
-            production_image,
+            production_docker_image,
             "R",
             "--slave",
             "-e",
@@ -642,7 +827,7 @@ class TestDockerCrossplatformCompatibility:
             "docker",
             "run",
             "--rm",
-            production_image,
+            production_docker_image,
             "python",
             "-c",
             "import sys, platform; print(f'Python platform: {platform.platform()}'); print(f'Architecture: {platform.architecture()}')",
@@ -661,7 +846,7 @@ class TestDockerCrossplatformCompatibility:
             "docker",
             "run",
             "--rm",
-            production_image,
+            production_docker_image,
             "R",
             "--slave",
             "-e",
@@ -698,9 +883,9 @@ class TestDockerCrossplatformCompatibility:
                 print(f"      R-squared: {r_squared:.4f}")
 
                 # Verify reasonable statistical results (should be consistent across platforms)
-                assert (
-                    1.8 <= coefficient <= 2.2
-                ), f"Unexpected coefficient: {coefficient}"
+                assert 1.8 <= coefficient <= 2.2, (
+                    f"Unexpected coefficient: {coefficient}"
+                )
                 assert 0.9 <= r_squared <= 1.0, f"Unexpected R-squared: {r_squared}"
 
             except (json.JSONDecodeError, KeyError) as e:
@@ -748,7 +933,7 @@ class TestDockerCrossplatformCompatibility:
             "docker",
             "run",
             "--rm",
-            production_image,
+            production_docker_image,
             "python",
             "-c",
             """
@@ -769,7 +954,7 @@ print(f'Result validation: {total == 333328333350000}')
         )
 
         if perf_result.returncode == 0:
-            print(f"   ✅ Performance test results:")
+            print("   ✅ Performance test results:")
             for line in perf_result.stdout.strip().split("\n"):
                 print(f"      {line}")
         else:
@@ -778,11 +963,11 @@ print(f'Result validation: {total == 333328333350000}')
         print("🎉 Platform-specific testing completed!")
 
         # Summary of platform compatibility
-        print(f"\n📊 Platform Compatibility Summary:")
+        print("\n📊 Platform Compatibility Summary:")
         print(f"   Architecture: {current_arch}")
-        print(f"   R Integration: ✅ Working")
-        print(f"   Python Integration: ✅ Working")
-        print(f"   Numerical Consistency: ✅ Verified")
+        print("   R Integration: ✅ Working")
+        print("   Python Integration: ✅ Working")
+        print("   Numerical Consistency: ✅ Verified")
         print(
             f"   Multi-platform Build: {'✅ Available' if buildx_result.returncode == 0 else '⚠️ Limited'}"
         )

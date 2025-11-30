@@ -6,7 +6,7 @@
     "total_tests": 263,
     "categories": {
       "smoke": "Basic functionality tests",
-      "unit": "Python-only unit tests", 
+      "unit": "Python-only unit tests",
       "integration/protocol": "MCP protocol validation",
       "integration/tools": "R tool integration tests",
       "integration/transport": "HTTP transport tests",

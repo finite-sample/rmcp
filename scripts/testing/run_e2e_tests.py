@@ -16,7 +16,6 @@ import argparse
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 
 def run_command(command, description="", timeout=60):
@@ -168,7 +167,7 @@ _register_builtin_tools(server)
 # Test initialize message
 init_request = {
     "jsonrpc": "2.0",
-    "id": 1, 
+    "id": 1,
     "method": "initialize",
     "params": {
         "protocolVersion": "2025-06-18",
@@ -222,7 +221,7 @@ else:
 if config_path.exists():
     with open(config_path) as f:
         config = json.load(f)
-    
+
     if "mcpServers" in config:
         rmcp_found = any("rmcp" in name.lower() for name in config["mcpServers"].keys())
         if rmcp_found:
@@ -230,7 +229,7 @@ if config_path.exists():
         else:
             print("⚠️ RMCP not found in Claude Desktop config")
     else:
-        print("⚠️ No mcpServers in Claude Desktop config") 
+        print("⚠️ No mcpServers in Claude Desktop config")
 else:
     print("⚠️ Claude Desktop config not found")
 """,

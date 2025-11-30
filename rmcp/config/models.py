@@ -32,7 +32,6 @@ Examples:
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
 
 
 @dataclass(slots=True)
@@ -79,16 +78,16 @@ class HTTPConfig:
     port: int = 8000
     """Server port number. Must be between 1-65535."""
 
-    ssl_keyfile: Optional[str] = None
+    ssl_keyfile: str | None = None
     """SSL private key file path. Required if ssl_certfile is specified."""
 
-    ssl_certfile: Optional[str] = None
+    ssl_certfile: str | None = None
     """SSL certificate file path. Required if ssl_keyfile is specified."""
 
-    ssl_keyfile_password: Optional[str] = None
+    ssl_keyfile_password: str | None = None
     """SSL private key password if the key file is encrypted."""
 
-    cors_origins: List[str] = field(
+    cors_origins: list[str] = field(
         default_factory=lambda: [
             "http://localhost:*",
             "http://127.0.0.1:*",
@@ -143,7 +142,7 @@ class RConfig:
     max_sessions: int = 10
     """Maximum concurrent R sessions. Limit based on available memory."""
 
-    binary_path: Optional[str] = None
+    binary_path: str | None = None
     """Custom R binary path. Auto-detected if None."""
 
     version_check_timeout: int = 30
@@ -187,13 +186,13 @@ class SecurityConfig:
     vfs_max_file_size: int = 50 * 1024 * 1024
     """Maximum file size for VFS operations in bytes. Default: 50MB."""
 
-    vfs_allowed_paths: List[str] = field(default_factory=list)
+    vfs_allowed_paths: list[str] = field(default_factory=list)
     """Additional filesystem paths accessible via VFS. Empty = temp directory only."""
 
     vfs_read_only: bool = True
     """Enable VFS read-only mode. Prevents file modification in production."""
 
-    vfs_allowed_mime_types: List[str] = field(
+    vfs_allowed_mime_types: list[str] = field(
         default_factory=lambda: [
             "text/plain",
             "text/csv",
@@ -341,7 +340,7 @@ class RMCPConfig:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     """Logging configuration."""
 
-    config_file: Optional[Path] = None
+    config_file: Path | None = None
     """Path to configuration file that was loaded."""
 
     debug: bool = False

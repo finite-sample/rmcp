@@ -73,7 +73,7 @@ RUN --mount=type=cache,target=/tmp/downloaded_packages,id=r-cache-${TARGETPLATFO
       'nlme', 'mgcv', 'lme4', 'glmnet' \
     ), Ncpus = parallel::detectCores())"
 
-# Groups 3-4: Time series and machine learning packages  
+# Groups 3-4: Time series and machine learning packages
 RUN --mount=type=cache,target=/tmp/downloaded_packages,id=r-cache-${TARGETPLATFORM} \
     R -q -e "install.packages(c( \
       'forecast', 'vars', 'urca', 'tseries', 'zoo', 'xts', 'TTR', 'quantmod', \
@@ -116,7 +116,7 @@ RUN set -eux; \
 # Skip system pip upgrade to avoid Debian package conflicts
 # Individual stages will handle pip upgrades in virtual environments
 
-# Final cleanup 
+# Final cleanup
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETPLATFORM} \
     set -eux; \
     # Clean any locks before cleanup

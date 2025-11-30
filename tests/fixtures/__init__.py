@@ -24,5 +24,5 @@ def load_r_fixture(fixture_name: str) -> dict:
     if not fixture_path.exists():
         raise FileNotFoundError(f"Fixture not found: {fixture_path}")
 
-    with open(fixture_path, "r") as f:
+    with open(fixture_path) as f:
         return json.load(f)

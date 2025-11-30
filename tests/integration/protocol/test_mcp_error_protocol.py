@@ -16,13 +16,10 @@ Key MCP Protocol Requirements for Errors:
 
 import asyncio
 import json
-import sys
-from pathlib import Path
 from shutil import which
-from typing import Any, Dict
+from typing import Any
 
 import pytest
-
 from rmcp.core.server import create_server
 from rmcp.registries.tools import register_tool_functions
 from rmcp.tools.fileops import read_csv
@@ -50,7 +47,7 @@ class TestMCPErrorProtocolCompliance:
         return server
 
     def validate_jsonrpc_error_structure(
-        self, response: Dict[str, Any], request_id: Any = None
+        self, response: dict[str, Any], request_id: Any = None
     ):
         """Validate that response follows JSON-RPC 2.0 error format."""
         # Required JSON-RPC fields
@@ -69,7 +66,7 @@ class TestMCPErrorProtocolCompliance:
         assert isinstance(error["message"], str), "Error message must be string"
         assert len(error["message"]) > 0, "Error message must not be empty"
 
-    def validate_mcp_tool_error_structure(self, response: Dict[str, Any]):
+    def validate_mcp_tool_error_structure(self, response: dict[str, Any]):
         """Validate MCP tool error response structure."""
         assert "result" in response, "Tool error should be in result, not error field"
 
@@ -112,11 +109,11 @@ class TestMCPErrorProtocolCompliance:
 
         error = response["error"]
         assert error["code"] == -32603, "Unknown tool should be internal error (-32603)"
-        assert (
-            "unknown tool" in error["message"].lower()
-        ), "Message should mention unknown tool"
+        assert "unknown tool" in error["message"].lower(), (
+            "Message should mention unknown tool"
+        )
 
-        print(f"✅ Unknown tool error protocol compliance verified")
+        print("✅ Unknown tool error protocol compliance verified")
         print(f"   Error code: {error['code']}")
         print(f"   Message: {error['message']}")
 
@@ -141,7 +138,7 @@ class TestMCPErrorProtocolCompliance:
         error = response["error"]
         assert error["code"] == -32600, "Invalid request should be code -32600"
 
-        print(f"✅ Invalid request error protocol compliance verified")
+        print("✅ Invalid request error protocol compliance verified")
         print(f"   Error code: {error['code']}")
 
     @pytest.mark.asyncio
@@ -171,7 +168,7 @@ class TestMCPErrorProtocolCompliance:
         content_text = response["result"]["content"][0]["text"]
         assert "'data' is a required property" in content_text
 
-        print(f"✅ Schema validation error protocol compliance verified")
+        print("✅ Schema validation error protocol compliance verified")
         print(f"   Error text: {content_text[:80]}...")
 
     @pytest.mark.asyncio
@@ -203,7 +200,7 @@ class TestMCPErrorProtocolCompliance:
             or "error" in content_text.lower()
         )
 
-        print(f"✅ R execution error protocol compliance verified")
+        print("✅ R execution error protocol compliance verified")
         print(f"   Error text: {content_text[:80]}...")
 
     @pytest.mark.asyncio
@@ -232,7 +229,7 @@ class TestMCPErrorProtocolCompliance:
             for keyword in ["file", "not found", "does not exist"]
         )
 
-        print(f"✅ File error protocol compliance verified")
+        print("✅ File error protocol compliance verified")
         print(f"   Error text: {content_text[:80]}...")
 
     @pytest.mark.asyncio
@@ -274,9 +271,9 @@ class TestMCPErrorProtocolCompliance:
 
             # Messages should be complete sentences
             assert len(message) > 10, "Error messages should be descriptive"
-            assert message[
-                0
-            ].isupper(), "Error messages should start with capital letter"
+            assert message[0].isupper(), (
+                "Error messages should start with capital letter"
+            )
 
             # Should not contain raw technical details
             assert "traceback" not in message.lower(), "Should not expose stack traces"
@@ -305,9 +302,9 @@ class TestMCPErrorProtocolCompliance:
         response_time = end_time - start_time
 
         # Error responses should be fast (< 1 second)
-        assert (
-            response_time < 1.0
-        ), f"Error response took {response_time:.2f}s (should be < 1s)"
+        assert response_time < 1.0, (
+            f"Error response took {response_time:.2f}s (should be < 1s)"
+        )
 
         # Should still be properly formatted
         self.validate_jsonrpc_error_structure(response, request_id=555)
@@ -374,7 +371,7 @@ class TestMCPErrorProtocolCompliance:
         parsed_back = json.loads(response_json)
         assert parsed_back == response, "Response should round-trip through JSON"
 
-        print(f"✅ Error content encoding verified")
+        print("✅ Error content encoding verified")
 
 
 class TestMCPErrorMetadata:
@@ -422,7 +419,7 @@ class TestMCPErrorMetadata:
             ]
             assert any(keyword in text.lower() for keyword in helpful_keywords)
 
-        print(f"✅ Error metadata structure verified")
+        print("✅ Error metadata structure verified")
 
     @pytest.mark.asyncio
     async def test_error_categorization(self):

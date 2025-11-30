@@ -6,14 +6,8 @@ This is a cloud-compatible version that demonstrates RMCP capabilities
 without requiring the local R/RMCP installation.
 """
 
-import json
-import os
-import tempfile
-from datetime import datetime, timedelta
-
 import numpy as np
 import pandas as pd
-
 import streamlit as st
 
 # Anthropic Claude API
@@ -37,13 +31,13 @@ st.markdown("*Advanced econometric analysis with R, powered by Claude AI assista
 # Information about this demo
 st.info(
     """
-🌟 **Welcome to the RMCP Demo!** 
+🌟 **Welcome to the RMCP Demo!**
 
-This is a demonstration version running on Streamlit Community Cloud. 
+This is a demonstration version running on Streamlit Community Cloud.
 For the full experience with R-powered econometric analysis, you can:
 
 - 📦 Install RMCP locally: `pip install rmcp`
-- 🔧 Run locally: `rmcp start` 
+- 🔧 Run locally: `rmcp start`
 - 🖥️ Use Claude Desktop with MCP integration
 
 **Current demo features:**
@@ -81,7 +75,7 @@ st.sidebar.markdown(
 **📈 Descriptive Statistics**
 - Summary statistics, correlations, outliers
 
-**📊 Regression Analysis** 
+**📊 Regression Analysis**
 - Linear, logistic, panel models
 
 **🧪 Statistical Tests**
@@ -359,14 +353,14 @@ if client:
                     data_context = f"""
                     User's Dataset Context:
                     - Shape: {data.shape[0]} rows, {data.shape[1]} columns
-                    - Numeric columns: {', '.join(numeric_cols)} 
-                    - Categorical columns: {', '.join(categorical_cols)}
+                    - Numeric columns: {", ".join(numeric_cols)}
+                    - Categorical columns: {", ".join(categorical_cols)}
                     - Sample data preview: {data.head(3).to_dict()}
                     """
 
                 econometric_context = """
                 You are an expert econometrician helping with RMCP (R Model Context Protocol) - a tool that provides advanced econometric analysis capabilities including:
-                
+
                 Key RMCP capabilities:
                 - Linear and nonlinear regression models
                 - Panel data analysis (fixed effects, random effects, dynamic panels)
@@ -375,7 +369,7 @@ if client:
                 - Advanced diagnostics (heteroskedasticity, autocorrelation, specification tests)
                 - Machine learning approaches for econometrics
                 - Comprehensive visualization tools
-                
+
                 Please provide practical, actionable advice for econometric analysis.
                 """
 
@@ -450,7 +444,7 @@ st.markdown("---")
 st.markdown(
     """
 **About RMCP:**
-RMCP (R Model Context Protocol) bridges the gap between AI assistants and professional econometric analysis. 
+RMCP (R Model Context Protocol) bridges the gap between AI assistants and professional econometric analysis.
 Built for researchers, analysts, and students who need robust statistical computing with modern AI assistance.
 
 *This demo showcases RMCP's potential. Install locally for the complete R-powered experience.*

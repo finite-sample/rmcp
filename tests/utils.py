@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 
-def _get_content_items(result: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _get_content_items(result: dict[str, Any]) -> list[dict[str, Any]]:
     # Return both content and structuredContent items
     items = list(result.get("content", []))
 
@@ -28,10 +28,10 @@ def _get_content_items(result: Dict[str, Any]) -> List[Dict[str, Any]]:
     return items
 
 
-def extract_text_summary(response: Dict[str, Any]) -> str:
+def extract_text_summary(response: dict[str, Any]) -> str:
     """Return concatenated human-readable text blocks from a tool response."""
     result = response.get("result", response)
-    texts: List[str] = []
+    texts: list[str] = []
     for item in _get_content_items(result):
         if item.get("type") != "text":
             continue
@@ -44,7 +44,7 @@ def extract_text_summary(response: Dict[str, Any]) -> str:
     return "\n".join(texts)
 
 
-def extract_json_content(response: Dict[str, Any]) -> Any:
+def extract_json_content(response: dict[str, Any]) -> Any:
     """Return the first JSON payload embedded in a tool response."""
     result = response.get("result", response)
 

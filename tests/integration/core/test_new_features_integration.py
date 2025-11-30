@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from shutil import which
-from typing import Any, Dict
+from typing import Any
 
 import pytest
-
 from rmcp.tools.fileops import read_excel, read_json
 from rmcp.tools.formula_builder import build_formula, validate_formula
 from rmcp.tools.helpers import load_example, suggest_fix, validate_data
 from rmcp.tools.regression import correlation_analysis, linear_model
+
 from tests.utils import extract_json_content
 
 pytestmark = pytest.mark.skipif(
@@ -35,8 +35,8 @@ def integration_server(server_factory):
 
 
 def _tool_call_request(
-    tool_name: str, arguments: Dict[str, Any], *, request_id: int
-) -> Dict[str, Any]:
+    tool_name: str, arguments: dict[str, Any], *, request_id: int
+) -> dict[str, Any]:
     return {
         "jsonrpc": "2.0",
         "id": request_id,
@@ -45,7 +45,7 @@ def _tool_call_request(
     }
 
 
-def _parse_result(response: Dict[str, Any]) -> Dict[str, Any]:
+def _parse_result(response: dict[str, Any]) -> dict[str, Any]:
     assert "result" in response, f"Response missing result payload: {response!r}"
     result = response["result"]
     assert not result.get("isError", False), f"Tool reported error: {result!r}"
@@ -53,8 +53,8 @@ def _parse_result(response: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def _call_tool(
-    server: Any, name: str, arguments: Dict[str, Any], *, request_id: int
-) -> Dict[str, Any]:
+    server: Any, name: str, arguments: dict[str, Any], *, request_id: int
+) -> dict[str, Any]:
     response = await server.handle_request(
         _tool_call_request(name, arguments, request_id=request_id)
     )
@@ -118,7 +118,7 @@ async def test_formula_to_analysis_workflow(integration_server):
         },
     ],
 )
-async def test_error_recovery_workflow(integration_server, scenario: Dict[str, Any]):
+async def test_error_recovery_workflow(integration_server, scenario: dict[str, Any]):
     """Ensure error diagnosis suggestions are returned for common failure modes."""
     result = await _call_tool(
         integration_server,

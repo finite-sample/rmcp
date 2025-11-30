@@ -111,13 +111,13 @@ GBR,2021,2.0,17.8,5.1
 ### CSV Files
 > "Can you analyze the relationship between variables in my 'sales_data.csv' file?"
 
-### Excel Files  
+### Excel Files
 > "I have quarterly financial data in 'Q4_results.xlsx'. Can you run some correlation analysis?"
 
 ### Data Arrays
 > "I have these two datasets: sales = [100, 120, 115, 140] and advertising = [5, 8, 6, 10]. What's the relationship?"
 
-### Natural Language Formulas  
+### Natural Language Formulas
 > "I want to predict customer satisfaction from service quality and response time. Can you build the formula?"
 
 ### Excel Files with Error Recovery
@@ -126,7 +126,7 @@ GBR,2021,2.0,17.8,5.1
 ## What Makes RMCP Special
 
 ✅ **Natural Language Interface**: Ask questions in plain English
-✅ **Professional Statistics**: Real R-powered analysis, not simplified approximations  
+✅ **Professional Statistics**: Real R-powered analysis, not simplified approximations
 ✅ **AI-Assisted Interpretation**: Get business insights, not just numbers
 ✅ **Enhanced File Support**: CSV, Excel, JSON, plus URL loading
 ✅ **Formula Building**: Convert natural language to statistical formulas
@@ -137,13 +137,13 @@ GBR,2021,2.0,17.8,5.1
 
 ### Core Analysis
 - **Linear Regression**: Relationships between variables, predictions, R²
-- **Correlation Analysis**: Strength and direction of relationships  
+- **Correlation Analysis**: Strength and direction of relationships
 - **Logistic Regression**: Binary prediction (churn, success/failure, yes/no)
 - **Time Series Analysis**: ARIMA modeling, forecasting, decomposition
 - **Statistical Testing**: t-tests, ANOVA, chi-square, normality tests
 - **Machine Learning**: K-means clustering, decision trees, random forests
 
-### Enhanced File Support  
+### Enhanced File Support
 - **Excel Files**: Read .xlsx/.xls with sheet selection
 - **JSON Data**: Convert JSON to tabular format
 - **URL Support**: Load CSV/JSON directly from web URLs
@@ -162,14 +162,14 @@ Run comprehensive tests to verify everything works:
 # Test MCP conversational interface (what Claude Desktop uses)
 python tests/test_mcp_interface.py
 
-# Test realistic user scenarios  
+# Test realistic user scenarios
 python tests/realistic_scenarios.py
 
 # Or run the complete test suite
 bash src/rmcp/scripts/test.sh
 ```
 
-Should show: 
+Should show:
 - **🗣️ MCP Success Rate: 5/5 (100.0%)** - Conversational interface works
 - **📊 Overall Success Rate: 4/4 (100.0%)** - User scenarios work
 

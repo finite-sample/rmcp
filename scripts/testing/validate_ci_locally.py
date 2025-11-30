@@ -20,7 +20,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import List, Tuple
 
 
 class LocalCIValidator:
@@ -29,7 +28,7 @@ class LocalCIValidator:
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
         self.root_dir = Path(__file__).parent.parent.parent
-        self.results: List[Tuple[str, bool, str]] = []
+        self.results: list[tuple[str, bool, str]] = []
 
     def log(self, message: str, level: str = "INFO"):
         """Log message with appropriate formatting."""
@@ -46,8 +45,8 @@ class LocalCIValidator:
             print("-" * 50)
 
     def run_command(
-        self, command: List[str], timeout: int = 300, cwd: Path = None
-    ) -> Tuple[bool, str, str]:
+        self, command: list[str], timeout: int = 300, cwd: Path = None
+    ) -> tuple[bool, str, str]:
         """Run command and return (success, stdout, stderr)."""
         try:
             if self.verbose:
@@ -259,26 +258,26 @@ class LocalCIValidator:
             """
             export PATH="/opt/venv/bin:$PATH"
             pip install -e .
-            
+
             # Count total tests
             TEST_COUNT=$(pytest --collect-only -q tests/ | grep "collected" | grep -o '[0-9]\\+' | head -1)
             echo "Tests collected: $TEST_COUNT"
-            
+
             # Load baseline and validate dynamically
             BASELINE_FILE="/workspace/tests/.test_baseline.json"
             if [ -f "$BASELINE_FILE" ]; then
                 BASELINE_COUNT=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE'))['baseline_counts']['total_tests'])")
                 MIN_TESTS=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE'))['validation_rules']['min_tests'])")
                 MAX_DEVIATION=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE'))['validation_rules']['max_deviation_percent'])")
-                
+
                 MIN_ALLOWED=$((BASELINE_COUNT * (100 - MAX_DEVIATION) / 100))
                 MAX_ALLOWED=$((BASELINE_COUNT * (100 + MAX_DEVIATION) / 100))
-                
+
                 echo "📊 Test count validation:"
                 echo "  Current: $TEST_COUNT"
-                echo "  Baseline: $BASELINE_COUNT" 
+                echo "  Baseline: $BASELINE_COUNT"
                 echo "  Allowed range: $MIN_ALLOWED - $MAX_ALLOWED"
-                
+
                 if [ "$TEST_COUNT" -lt "$MIN_TESTS" ]; then
                     echo "❌ Test count ($TEST_COUNT) below minimum threshold ($MIN_TESTS)"
                     exit 1
@@ -296,26 +295,26 @@ class LocalCIValidator:
                     exit 1
                 fi
             fi
-            
+
             # Run all test categories as in CI
             echo "=== Running smoke tests ==="
             pytest tests/smoke/ -v --tb=short
-            
+
             echo "=== Running protocol tests ==="
             pytest tests/integration/protocol/ -v --tb=short
-            
+
             echo "=== Running integration tests - tools ==="
             pytest tests/integration/tools/ -v --tb=short
-            
+
             echo "=== Running integration tests - transport ==="
             pytest tests/integration/transport/ -v --tb=short
-            
+
             echo "=== Running integration tests - core ==="
             pytest tests/integration/core/ -v --tb=short
-            
+
             echo "=== Running scenario tests ==="
             pytest tests/scenarios/ -v --tb=short
-            
+
             echo "✅ All $TEST_COUNT tests completed successfully"
             """,
         ]
@@ -427,19 +426,17 @@ class LocalCIValidator:
             self.log("Skipping test suite (requires Docker)", "WARNING")
 
         # Execute all validations
-        all_passed = True
         for name, validator in validations:
             try:
                 success = validator()
                 if not success:
-                    all_passed = False
+                    pass
             except KeyboardInterrupt:
                 self.log("Validation interrupted by user", "ERROR")
                 return False
             except Exception as e:
                 self.log(f"{name} validation failed with exception: {e}", "ERROR")
                 self.results.append((name, False, str(e)))
-                all_passed = False
 
         # Print summary
         elapsed = time.time() - start_time

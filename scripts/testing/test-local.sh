@@ -15,7 +15,7 @@ echo '=== Black Code Formatting ==='
 black --check rmcp tests streamlit
 
 echo '=== Import Sorting ==='
-isort --check-only rmcp tests streamlit  
+isort --check-only rmcp tests streamlit
 
 echo '=== Flake8 Linting ==='
 flake8 rmcp tests streamlit
@@ -35,7 +35,7 @@ echo '=== R Script Syntax Validation ==='
 R -e \"
 key_scripts <- c(
   'scripts/descriptive/summary_stats.R',
-  'scripts/regression/linear_model.R', 
+  'scripts/regression/linear_model.R',
   'scripts/timeseries/arima_model.R',
   'scripts/fileops/read_csv.R',
   'scripts/machine_learning/random_forest.R',
@@ -95,16 +95,16 @@ async def test_mcp_r_integration():
     print('=== Testing R Integration through MCP Server ===')
     server = create_server()
     _register_builtin_tools(server)
-    
+
     tool_count = len(server.tools._tools)
     print(f'✅ Registered {tool_count} tools in MCP server')
-    
+
     # Test summary_stats
     print('Testing summary_stats through MCP...')
     req = {
-        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 
+        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
         'params': {
-            'name': 'summary_stats', 
+            'name': 'summary_stats',
             'arguments': {
                 'data': {'x': [1, 2, 3, 4, 5], 'y': [2, 4, 6, 8, 10]},
                 'variables': ['x', 'y']
@@ -112,15 +112,15 @@ async def test_mcp_r_integration():
         }
     }
     resp = await server.handle_request(req)
-    
+
     if 'error' in resp:
         print(f'❌ summary_stats failed: {resp[\\\"error\\\"]}')
         raise AssertionError('summary_stats MCP call failed')
-    
+
     result = extract_json_content(resp)
     assert 'statistics' in result, 'Missing statistics in response'
     print(f'✅ summary_stats: Found {len(result[\\\"statistics\\\"])} variable statistics')
-    
+
     # Test linear_model
     print('Testing linear_model through MCP...')
     req = {
@@ -134,7 +134,7 @@ async def test_mcp_r_integration():
         }
     }
     resp = await server.handle_request(req)
-    
+
     if 'error' in resp:
         print(f'⚠️ linear_model failed: {resp[\\\"error\\\"]}')
         print('Skipping linear_model test - may have R environment issues')
@@ -142,7 +142,7 @@ async def test_mcp_r_integration():
         result = extract_json_content(resp)
         assert 'coefficients' in result, 'Missing coefficients in response'
         print(f'✅ linear_model: R² = {result.get(\\\"r_squared\\\", \\\"N/A\\\")}')
-    
+
     print('🎉 MCP R integration tests passed!')
 
 asyncio.run(test_mcp_r_integration())
@@ -193,17 +193,17 @@ init_msg = {
 print(f'Testing MCP protocol with message: {json.dumps(init_msg)}')
 
 process = subprocess.Popen(['rmcp', 'start'],
-                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, text=True)
 
 try:
     stdout, stderr = process.communicate(
         input=json.dumps(init_msg) + '\n', timeout=10)
-    
+
     print(f'Return code: {process.returncode}')
     if stderr:
         print(f'STDERR: {stderr[:200]}...')
-    
+
     # Look for JSON response
     found_json = False
     for line in stdout.strip().split('\n'):
@@ -217,11 +217,11 @@ try:
                 break
             except Exception as e:
                 print(f'❌ Invalid JSON: {e}')
-    
+
     if not found_json:
         print('❌ No valid MCP response found')
         print(f'STDOUT: {stdout[:300]}...')
-        
+
 except subprocess.TimeoutExpired:
     process.kill()
     print('❌ MCP server timeout')
@@ -238,7 +238,7 @@ echo "🎊 ALL TESTS COMPLETED! 🚀"
 echo ""
 echo "📋 SUMMARY:"
 echo "  ✅ Python linting"
-echo "  ✅ R script syntax"  
+echo "  ✅ R script syntax"
 echo "  ✅ MCP server creation"
 echo "  ✅ R integration"
 echo "  ✅ Unit tests"

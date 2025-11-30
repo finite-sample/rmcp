@@ -8,11 +8,8 @@ endpoint validation, and performance comparison between HTTP and HTTPS.
 
 import argparse
 import asyncio
-import json
-import os
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -197,7 +194,6 @@ class HTTPSLocalTester:
         base_url = f"https://127.0.0.1:{port}"
 
         async with httpx.AsyncClient(verify=False, timeout=10.0) as client:
-
             # Test health endpoint
             print_info("Testing /health endpoint...")
             response = await client.get(f"{base_url}/health")
