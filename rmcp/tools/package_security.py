@@ -7,6 +7,10 @@ including risk categorization and filtering based on security criteria.
 
 from enum import Enum
 
+from ..logging_config import configure_structured_logging, get_logger
+
+logger = get_logger(__name__)
+
 
 class SecurityLevel(Enum):
     """Security risk levels for R packages."""
@@ -353,12 +357,17 @@ if __name__ == "__main__":
     packages = get_comprehensive_package_whitelist()
     report = get_security_report(packages)
 
-    print("Security Assessment Report")
-    print("=" * 50)
-    print(f"Total packages assessed: {report['total_packages']}")
-    print(f"Security level breakdown: {report['security_levels']}")
-    print(f"Risk category breakdown: {report['risk_categories']}")
-    print()
-    print("Recommendations:")
-    for rec in report["recommendations"]:
-        print(f"  • {rec}")
+    # Configure structured logging for utility
+    configure_structured_logging(level="INFO", development_mode=True)
+
+    logger.info(
+        "Security Assessment Report",
+        report_type="security_assessment",
+        total_packages=report["total_packages"],
+        security_levels=report["security_levels"],
+        risk_categories=report["risk_categories"],
+    )
+
+    logger.info(
+        "Security assessment completed", recommendations=report["recommendations"]
+    )

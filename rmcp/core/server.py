@@ -1060,16 +1060,17 @@ All tools provide professionally formatted output with markdown tables, statisti
             - notifications/initialized: Client initialization complete
         """
         logger.info(f"Received notification: {method}")
-        if method == "notifications/cancelled":
-            # Handle cancellation notification
-            request_id = params.get("requestId")
-            if request_id:
-                await self.cancel_request(request_id)
-        elif method == "notifications/initialized":
-            # MCP initialization complete
-            logger.info("MCP client initialization complete")
-        else:
-            logger.warning(f"Unknown notification method: {method}")
+        match method:
+            case "notifications/cancelled":
+                # Handle cancellation notification
+                request_id = params.get("requestId")
+                if request_id:
+                    await self.cancel_request(request_id)
+            case "notifications/initialized":
+                # MCP initialization complete
+                logger.info("MCP client initialization complete")
+            case _:
+                logger.warning(f"Unknown notification method: {method}")
 
 
 def create_server(

@@ -221,25 +221,24 @@ class ConfigLoader:
 
     def _convert_env_value(self, env_var: str, value: str) -> Any:
         """Convert environment variable string to appropriate type."""
-        # Boolean conversion
-        if env_var.endswith(("_READ_ONLY", "_DEBUG", "_STDERR_OUTPUT")):
-            return value.lower() in ("true", "1", "yes", "on")
-
-        # Integer conversion
-        if env_var.endswith(
-            ("_PORT", "_TIMEOUT", "_MAX_SESSIONS", "_MAX_WORKERS", "_MAX_FILE_SIZE")
-        ):
-            try:
-                return int(value)
-            except ValueError:
-                raise ConfigError(f"Invalid integer value for {env_var}: {value}")
-
-        # List conversion (comma-separated)
-        if env_var.endswith(("_ORIGINS", "_PATHS", "_MIME_TYPES")):
-            return [item.strip() for item in value.split(",") if item.strip()]
-
-        # String value
-        return value
+        match env_var:
+            case var if var.endswith(("_READ_ONLY", "_DEBUG", "_STDERR_OUTPUT")):
+                # Boolean conversion
+                return value.lower() in ("true", "1", "yes", "on")
+            case var if var.endswith(
+                ("_PORT", "_TIMEOUT", "_MAX_SESSIONS", "_MAX_WORKERS", "_MAX_FILE_SIZE")
+            ):
+                # Integer conversion
+                try:
+                    return int(value)
+                except ValueError:
+                    raise ConfigError(f"Invalid integer value for {env_var}: {value}")
+            case var if var.endswith(("_ORIGINS", "_PATHS", "_MIME_TYPES")):
+                # List conversion (comma-separated)
+                return [item.strip() for item in value.split(",") if item.strip()]
+            case _:
+                # String value
+                return value
 
     def _set_nested_value(self, config_dict: dict[str, Any], path: str, value: Any):
         """Set a nested dictionary value using dot notation."""

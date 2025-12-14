@@ -16,6 +16,7 @@ import click
 from . import __version__
 from .config import get_config, load_config
 from .core.server import create_server
+from .logging_config import configure_structured_logging, get_logger
 from .registries.prompts import (
     model_diagnostic_prompt,
     panel_regression_prompt,
@@ -28,13 +29,8 @@ from .registries.tools import register_tool_functions
 from .transport.stdio import StdioTransport
 
 # Modern Python 3.10+ syntax for type hints
-# Configure logging to stderr only
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    stream=sys.stderr,
-)
-logger = logging.getLogger(__name__)
+# Structured logging will be configured in CLI commands based on config
+logger = get_logger(__name__)
 
 
 async def _run_server_with_transport(server, transport) -> None:
@@ -57,8 +53,14 @@ async def _run_server_with_transport(server, transport) -> None:
     help="Path to configuration file",
 )
 @click.option("--debug", is_flag=True, help="Enable debug mode")
+@click.option(
+    "--log-format",
+    type=click.Choice(["structured", "pretty"]),
+    default="structured",
+    help="Log output format (structured=JSON, pretty=colored console)",
+)
 @click.pass_context
-def cli(ctx, config: Path, debug: bool):
+def cli(ctx, config: Path, debug: bool, log_format: str):
     """RMCP MCP Server - Comprehensive statistical analysis with 44 tools across 11 categories."""
     # Ensure context object exists
     ctx.ensure_object(dict)
@@ -71,6 +73,7 @@ def cli(ctx, config: Path, debug: bool):
 
     # Store config in context for subcommands
     ctx.obj["config"] = load_config(config_file=config, overrides=overrides)
+    ctx.obj["log_format"] = log_format
 
 
 @cli.command()
@@ -84,10 +87,15 @@ def start(ctx, log_level: str):
     """Start RMCP MCP server (default stdio transport)."""
     # Get configuration
     config = ctx.obj.get("config") or get_config()
+    log_format = ctx.obj.get("log_format", "structured")
 
-    # Set logging level (CLI option overrides config)
+    # Configure structured logging
     effective_log_level = log_level or config.logging.level
-    logging.getLogger().setLevel(getattr(logging, effective_log_level.upper()))
+    configure_structured_logging(
+        level=effective_log_level,
+        development_mode=(log_format == "pretty" or config.debug),
+        enable_console=True,
+    )
 
     logger.info(f"Starting RMCP MCP Server v{__version__}")
     if config.debug:
@@ -291,6 +299,14 @@ def serve_http(
 
     # Get configuration
     config = ctx.obj.get("config") or get_config()
+    log_format = ctx.obj.get("log_format", "structured")
+
+    # Configure structured logging for HTTP transport
+    configure_structured_logging(
+        level=config.logging.level,
+        development_mode=(log_format == "pretty" or config.debug),
+        enable_console=True,
+    )
 
     # Use CLI options or fall back to config
     effective_host = host or config.http.host

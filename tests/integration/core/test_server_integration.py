@@ -46,7 +46,7 @@ def test_cli_basic():
     # Try direct command first (works in Docker/CI), then fallback to poetry (local dev)
     commands_to_try = [
         (["rmcp", "--version"], "direct command"),
-        (["poetry", "run", "rmcp", "--version"], "poetry run command"),
+        (["uv", "run", "rmcp", "--version"], "uv run command"),
     ]
 
     for command, description in commands_to_try:
@@ -76,7 +76,7 @@ def test_cli_basic():
 
     # If we get here, none of the commands worked
     raise AssertionError(
-        "All CLI test commands failed - neither 'rmcp --version' nor 'poetry run rmcp --version' worked"
+        "All CLI test commands failed - neither 'rmcp --version' nor 'uv run rmcp --version' worked"
     )
 
 

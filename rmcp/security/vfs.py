@@ -133,6 +133,25 @@ class VFS:
         except OSError as e:
             raise VFSError(f"Failed to read file {resolved_path}: {e}")
 
+    async def read_file_async(self, path: str | Path) -> bytes:
+        """Read file asynchronously with security checks."""
+        import asyncio
+
+        resolved_path = self._resolve_and_validate_path(path)
+        self._check_file_constraints(resolved_path)
+
+        def _read_file():
+            try:
+                with open(resolved_path, "rb") as f:
+                    return f.read()
+            except OSError as e:
+                raise VFSError(f"Failed to read file {resolved_path}: {e}")
+
+        # Run file I/O in thread pool to avoid blocking event loop
+        content = await asyncio.get_event_loop().run_in_executor(None, _read_file)
+        logger.debug(f"Read file async: {resolved_path} ({len(content)} bytes)")
+        return content
+
     def read_text(self, path: str | Path, encoding: str = "utf-8") -> str:
         """Read text file with security checks."""
         content = self.read_file(path)
@@ -188,6 +207,32 @@ class VFS:
             logger.debug(f"Wrote file: {resolved_path} ({len(content)} bytes)")
         except OSError as e:
             raise VFSError(f"Failed to write file {resolved_path}: {e}")
+
+    async def write_file_async(self, path: str | Path, content: bytes) -> None:
+        """Write file asynchronously with security checks."""
+        import asyncio
+
+        if self.read_only:
+            raise VFSError("VFS is configured as read-only")
+        resolved_path = self._resolve_and_validate_path(path)
+        # Check content size
+        if len(content) > self.max_file_size:
+            raise VFSError(
+                f"Content too large: {len(content)} bytes, max {self.max_file_size}"
+            )
+
+        def _write_file():
+            try:
+                # Ensure parent directory exists
+                resolved_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(resolved_path, "wb") as f:
+                    f.write(content)
+            except OSError as e:
+                raise VFSError(f"Failed to write file {resolved_path}: {e}")
+
+        # Run file I/O in thread pool to avoid blocking event loop
+        await asyncio.get_event_loop().run_in_executor(None, _write_file)
+        logger.debug(f"Wrote file async: {resolved_path} ({len(content)} bytes)")
 
     def write_text(
         self, path: str | Path, content: str, encoding: str = "utf-8"

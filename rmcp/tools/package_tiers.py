@@ -7,6 +7,10 @@ security with usability by categorizing packages into permission tiers.
 
 from enum import Enum
 
+from ..logging_config import configure_structured_logging, get_logger
+
+logger = get_logger(__name__)
+
 from .package_security import (
     TOP_DOWNLOADED_PACKAGES,
     SecurityLevel,
@@ -397,22 +401,36 @@ def _get_tier_description(tier: PackageTier) -> str:
 
 
 if __name__ == "__main__":
-    # Print tier statistics
+    # Configure structured logging for utility
+    configure_structured_logging(level="INFO", development_mode=True)
+
+    # Print tier statistics using structured logging
     stats = get_tier_statistics()
-    print("Package Tier Statistics")
-    print("=" * 40)
-    print(f"Total packages: {stats['total']}")
-    print()
+
+    logger.info(
+        "Package Tier Statistics",
+        report_type="tier_statistics",
+        total_packages=stats["total"],
+    )
 
     for tier_name, tier_stats in stats.items():
         if tier_name != "total":
-            print(f"{tier_name.upper()}: {tier_stats['count']} packages")
-            print(f"  Examples: {tier_stats['examples']}")
-            print()
+            logger.info(
+                "Tier details",
+                tier=tier_name.upper(),
+                count=tier_stats["count"],
+                examples=tier_stats["examples"],
+            )
 
     # Test specific packages
     test_packages = ["ggplot2", "xgboost", "devtools", "rJava"]
-    print("Package Permission Examples:")
+    logger.info("Package Permission Examples")
+
     for pkg in test_packages:
         info = check_package_permission(pkg)
-        print(f"  {pkg}: {info['tier']} ({info['description']})")
+        logger.info(
+            "Package permission check",
+            package=pkg,
+            tier=info["tier"],
+            description=info["description"],
+        )

@@ -22,17 +22,18 @@ Example:
 
 import asyncio
 import json
-import logging
 import os
 import re
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
 from .config import get_config
+from .logging_config import get_logger, log_r_execution
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 # Global semaphore for R process concurrency (max 4 concurrent R processes)
 R_SEMAPHORE = asyncio.Semaphore(4)
 
@@ -405,6 +406,7 @@ async def execute_r_script_async(
         asyncio.CancelledError: If the operation is cancelled
     """
     async with R_SEMAPHORE:  # Limit concurrent R processes
+        start_time = time.time()
         # Create temporary files for script, arguments, and results
         with (
             tempfile.NamedTemporaryFile(
@@ -717,11 +719,32 @@ Original error:
                             if isinstance(result, dict)
                             else type(result)
                         )
+                        # Log structured R execution completion
+                        execution_time_ms = int((time.time() - start_time) * 1000)
+                        log_r_execution(
+                            logger,
+                            r_command=script[:100] + "..."
+                            if len(script) > 100
+                            else script,
+                            execution_time_ms=execution_time_ms,
+                            success=True,
+                        )
+
                         logger.debug(
                             f"R script completed successfully, result keys: {result_info}"
                         )
                         return result
                 except (FileNotFoundError, json.JSONDecodeError) as e:
+                    # Log structured R execution failure
+                    execution_time_ms = int((time.time() - start_time) * 1000)
+                    log_r_execution(
+                        logger,
+                        r_command=script[:100] + "..." if len(script) > 100 else script,
+                        execution_time_ms=execution_time_ms,
+                        success=False,
+                        error_message=str(e),
+                    )
+
                     error_msg = (
                         f"Failed to read or parse R script results: {e}\\n\\n"
                         f"R stdout: {stdout}\\n\\nR stderr: {stderr}"

@@ -27,6 +27,7 @@ dependencies = [
     "click>=8.1.0",        # CLI interface
     "jsonschema>=4.0.0",   # Schema validation
     "psutil>=5.0.0",       # R process management
+    "structlog>=23.1.0",   # Structured logging for MCP observability
     # subprocess module is built-in for Python 3.8+
 ]
 
@@ -188,3 +189,21 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
+
+[tool.deptry]
+pep621_dev_dependency_groups = ["dev"]
+extend_exclude = [
+    "scripts/",      # Development scripts have their own dependency scope
+    "streamlit/",    # Streamlit app is optional component
+    "tests/scenarios/test_deployment_scenarios.py",  # Tests all optional deps
+]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["httpx", "pandas", "openpyxl"]  # Test-only dependencies via pandas backend
+DEP003 = ["mcp", "requests", "anthropic"] # Transitive dependencies we import directly
+DEP001 = ["package_whitelist_comprehensive"]  # Internal module
+DEP004 = ["pytest", "numpy"]           # Dev dependencies in scripts/streamlit
+
+[tool.deptry.package_module_name_map]
+structlog = "structlog"
+linkify-it-py = "linkify_it_py"

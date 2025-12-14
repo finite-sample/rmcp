@@ -228,7 +228,7 @@ After running these examples with approvals, you should find:
 **Debug Commands:**
 ```bash
 # Check RMCP status
-poetry run rmcp --debug start
+uv run rmcp --debug start
 
 # Verify file permissions
 ls -la /tmp/
