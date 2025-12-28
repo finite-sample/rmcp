@@ -310,7 +310,6 @@ def log_tool_execution(
 ) -> None:
     """Log structured tool execution event."""
     log_data = {
-        "event": "tool_execution",
         "tool_name": tool_name,
         "success": success,
     }
@@ -344,7 +343,6 @@ def log_security_event(
 ) -> None:
     """Log security-related events (approvals, VFS access, etc.)."""
     log_data = {
-        "event": "security_event",
         "event_type": event_type,
         "operation": operation,
         "approved": approved,
@@ -373,7 +371,6 @@ def log_r_execution(
 ) -> None:
     """Log R script execution details."""
     log_data = {
-        "event": "r_execution",
         "command_length": len(r_command),
         "execution_time_ms": execution_time_ms,
         "success": success,
@@ -405,7 +402,6 @@ def log_http_request(
 ) -> None:
     """Log HTTP transport requests."""
     log_data = {
-        "event": "http_request",
         "method": method,
         "path": path,
         "status_code": status_code,

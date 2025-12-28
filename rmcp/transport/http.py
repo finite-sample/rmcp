@@ -313,7 +313,7 @@ for the latest spec (preferred); `2025-06-18` remains supported for compatibilit
         )
         async def handle_jsonrpc(request: Request) -> Response:
             """Handle JSON-RPC requests via POST."""
-            message: dict[str, Any] | None = None
+            message: dict[str, Any]
             session_id: str | None = None
             start_time = time.time()
 
@@ -323,7 +323,8 @@ for the latest spec (preferred); `2025-06-18` remains supported for compatibilit
 
             try:
                 # Parse request first to get method for protocol validation
-                message = await request.json() or {}
+                json_data = await request.json()
+                message = json_data if json_data is not None else {}
                 method = message.get("method", "")
 
                 with LogContext(correlation_id=correlation_id, request_id=request_id):

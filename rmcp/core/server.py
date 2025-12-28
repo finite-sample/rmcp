@@ -420,7 +420,16 @@ All tools provide professionally formatted output with markdown tables, statisti
                         request_id,
                         exc,
                     )
-            logger.log(log_level, f"{request_id}: {message} {payload}")
+            # Use proper logging methods with formatted messages to avoid parameter conflicts
+            log_message = f"{request_id}: {message}"
+            if payload:
+                log_message += f" {payload}"
+            if log_level >= logging.ERROR:
+                logger.error(log_message)
+            elif log_level >= logging.WARNING:
+                logger.warning(log_message)
+            else:
+                logger.info(log_message)
 
         context = Context.create(
             request_id=request_id,
