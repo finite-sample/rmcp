@@ -396,7 +396,7 @@ class TestHTTPTransportHealthCheck:
                 assert response.status_code == 200
                 data = response.json()
                 assert data["status"] == "healthy"
-                assert data["transport"] == "HTTP"
+                assert data["transport"]["type"] == "HTTP"
         finally:
             server_task.cancel()
             try:

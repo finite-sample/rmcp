@@ -213,7 +213,9 @@ class TestHTTPTransportFastAPIIntegration:
         client = TestClient(transport.app)
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy", "transport": "HTTP"}
+        response_data = response.json()
+        assert response_data["status"] == "healthy"
+        assert response_data["transport"]["type"] == "HTTP"
 
 
 class TestHTTPTransportImportError:

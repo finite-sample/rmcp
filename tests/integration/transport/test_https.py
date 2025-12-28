@@ -215,7 +215,7 @@ class TestHTTPSTransportIntegration:
                 assert health_response.status_code == 200
                 health_data = health_response.json()
                 assert health_data["status"] == "healthy"
-                assert health_data["transport"] == "HTTP"
+                assert health_data["transport"]["type"] == "HTTP"
 
                 # First initialize the session
                 init_response = await client.post(
@@ -300,20 +300,25 @@ class TestHTTPSTransportIntegration:
 
         assert has_cors, f"CORS middleware not found. Found: {middleware_info}"
 
-    def test_security_warning_for_remote_http(self, caplog):
+    def test_security_warning_for_remote_http(self, caplog, capsys):
         """Test that security warning is issued for remote HTTP binding."""
         import logging
 
+        # Capture both standard and structured logging
         caplog.set_level(logging.WARNING)
 
         # Create HTTP transport bound to all interfaces (insecure)
         HTTPTransport(host="0.0.0.0", port=8000)
 
-        # Check that warning was logged
-        assert any("SECURITY WARNING" in record.message for record in caplog.records)
-        assert any("without SSL/TLS" in record.message for record in caplog.records)
+        # Check that warning was logged (in either caplog or stdout due to structured logging)
+        captured = capsys.readouterr()
+        log_messages = [str(record.message) for record in caplog.records] + [str(record.getMessage()) for record in caplog.records]
+        all_output = " ".join(log_messages) + captured.out + captured.err
+        
+        assert "SECURITY WARNING" in all_output
+        assert "without SSL/TLS" in all_output
 
-    def test_no_security_warning_for_remote_https(self, https_certificates, caplog):
+    def test_no_security_warning_for_remote_https(self, https_certificates, caplog, capsys):
         """Test that no security warning is issued for remote HTTPS binding."""
         import logging
 
@@ -328,10 +333,12 @@ class TestHTTPSTransportIntegration:
         )
 
         # Check that HTTPS info message was logged but no warning
-        assert any("HTTPS enabled" in record.message for record in caplog.records)
-        assert not any(
-            "SECURITY WARNING" in record.message for record in caplog.records
-        )
+        captured = capsys.readouterr()
+        log_messages = [str(record.message) for record in caplog.records] + [str(record.getMessage()) for record in caplog.records]
+        all_output = " ".join(log_messages) + captured.out + captured.err
+        
+        assert "HTTPS enabled" in all_output
+        assert "SECURITY WARNING" not in all_output
 
 
 class TestHTTPSConfigurationIntegration:
