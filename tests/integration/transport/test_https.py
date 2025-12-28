@@ -312,13 +312,17 @@ class TestHTTPSTransportIntegration:
 
         # Check that warning was logged (in either caplog or stdout due to structured logging)
         captured = capsys.readouterr()
-        log_messages = [str(record.message) for record in caplog.records] + [str(record.getMessage()) for record in caplog.records]
+        log_messages = [str(record.message) for record in caplog.records] + [
+            str(record.getMessage()) for record in caplog.records
+        ]
         all_output = " ".join(log_messages) + captured.out + captured.err
 
         assert "SECURITY WARNING" in all_output
         assert "without SSL/TLS" in all_output
 
-    def test_no_security_warning_for_remote_https(self, https_certificates, caplog, capsys):
+    def test_no_security_warning_for_remote_https(
+        self, https_certificates, caplog, capsys
+    ):
         """Test that no security warning is issued for remote HTTPS binding."""
         import logging
 
@@ -334,7 +338,9 @@ class TestHTTPSTransportIntegration:
 
         # Check that HTTPS info message was logged but no warning
         captured = capsys.readouterr()
-        log_messages = [str(record.message) for record in caplog.records] + [str(record.getMessage()) for record in caplog.records]
+        log_messages = [str(record.message) for record in caplog.records] + [
+            str(record.getMessage()) for record in caplog.records
+        ]
         all_output = " ".join(log_messages) + captured.out + captured.err
 
         assert "HTTPS enabled" in all_output
