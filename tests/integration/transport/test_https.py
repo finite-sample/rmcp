@@ -314,7 +314,7 @@ class TestHTTPSTransportIntegration:
         captured = capsys.readouterr()
         log_messages = [str(record.message) for record in caplog.records] + [str(record.getMessage()) for record in caplog.records]
         all_output = " ".join(log_messages) + captured.out + captured.err
-        
+
         assert "SECURITY WARNING" in all_output
         assert "without SSL/TLS" in all_output
 
@@ -336,7 +336,7 @@ class TestHTTPSTransportIntegration:
         captured = capsys.readouterr()
         log_messages = [str(record.message) for record in caplog.records] + [str(record.getMessage()) for record in caplog.records]
         all_output = " ".join(log_messages) + captured.out + captured.err
-        
+
         assert "HTTPS enabled" in all_output
         assert "SECURITY WARNING" not in all_output
 
