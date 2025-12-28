@@ -335,7 +335,7 @@ def serve_http(
     server.configure(
         allowed_paths=all_allowed_paths,
         read_only=config.security.vfs_read_only,
-        cache_root=Path(cache_root) if cache_root else None,
+        cache_root=str(Path(cache_root)) if cache_root else None,
     )
 
     _register_builtin_tools(server)

@@ -1,5 +1,6 @@
 """Exception classes for R execution and MCP protocol errors."""
 
+from collections.abc import Sequence
 from typing import Any
 
 
@@ -99,7 +100,7 @@ class SecurityError(RMCPError):
 class RExecutionErrorGroup(ExceptionGroup):
     """Group of R execution errors using Python 3.11+ ExceptionGroup."""
 
-    def __init__(self, message: str, exceptions: list[Exception]):
+    def __init__(self, message: str, exceptions: Sequence[Exception]):
         super().__init__(message, exceptions)
 
     @classmethod

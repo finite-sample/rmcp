@@ -15,11 +15,11 @@ from typing import Any
 from urllib.parse import urlparse
 
 try:
-    import uvicorn
-    from fastapi import FastAPI, HTTPException, Request
-    from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import Response
-    from sse_starlette import EventSourceResponse
+    import uvicorn  # type: ignore
+    from fastapi import FastAPI, HTTPException, Request  # type: ignore
+    from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+    from fastapi.responses import Response  # type: ignore
+    from sse_starlette import EventSourceResponse  # type: ignore
 except ImportError as e:
     raise ImportError(
         "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp[http]"
@@ -49,11 +49,11 @@ class HTTPTransport(Transport):
 
     def __init__(
         self,
-        host: str = None,
-        port: int = None,
-        ssl_keyfile: str = None,
-        ssl_certfile: str = None,
-        ssl_keyfile_password: str = None,
+        host: str | None = None,
+        port: int | None = None,
+        ssl_keyfile: str | None = None,
+        ssl_certfile: str | None = None,
+        ssl_keyfile_password: str | None = None,
     ):
         super().__init__("HTTP")
 
@@ -323,7 +323,7 @@ for the latest spec (preferred); `2025-06-18` remains supported for compatibilit
 
             try:
                 # Parse request first to get method for protocol validation
-                message = await request.json()
+                message = await request.json() or {}
                 method = message.get("method", "")
 
                 with LogContext(correlation_id=correlation_id, request_id=request_id):

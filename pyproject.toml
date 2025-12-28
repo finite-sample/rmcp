@@ -62,6 +62,8 @@ dev = [
     "pytest-cov>=4.0.0",
     "ruff>=0.4.0",
     "pre-commit>=3.8.0",
+    "pydoclint>=0.3.0",
+    "pyright>=1.1.0",
     # Test scaffolding dependencies (what tests actually import)
     "httpx>=0.25.0",           # For HTTP transport tests
     "pandas>=1.5.0",           # For Excel test scenario creation
@@ -145,29 +147,36 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = false
-warn_unused_configs = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-check_untyped_defs = false
-disallow_untyped_decorators = false
-no_implicit_optional = false
-warn_redundant_casts = false
-warn_unused_ignores = false
-warn_no_return = false
-warn_unreachable = false
-strict_equality = false
-packages = ["rmcp"]
-ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = [
-    "tests.*",
-    "streamlit.*",
+[tool.pydoclint]
+style = "google"
+exclude = [
+    "tests/",
+    "scripts/",
+    "streamlit/",
 ]
-ignore_errors = true
+require-return-section-when-returning-nothing = false
+check-return-types = false
+check-yield-types = false
+arg-type-hints-in-docstring = false
+
+[tool.pyright]
+include = ["rmcp"]
+exclude = [
+    "tests/",
+    "scripts/",
+    "streamlit/",
+    "**/__pycache__",
+]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+useLibraryCodeForTypes = true
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUntypedFunctionDecorator = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
 
 [tool.coverage.run]
 source = ["rmcp"]

@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from mcp.types import (
+    from mcp.types import (  # type: ignore
         LATEST_PROTOCOL_VERSION,
         Implementation,
         InitializeResult,
@@ -85,7 +85,7 @@ class MCPServer:
     def __init__(
         self,
         name: str = "RMCP MCP Server",
-        version: str = None,
+        version: str | None = None,
         description: str = """RMCP provides 44 comprehensive statistical analysis tools through R:
 
 **Regression & Econometrics (8 tools):**
@@ -1075,7 +1075,7 @@ All tools provide professionally formatted output with markdown tables, statisti
 
 def create_server(
     name: str = "RMCP MCP Server",
-    version: str = None,
+    version: str | None = None,
     description: str = """RMCP provides 44 comprehensive statistical analysis tools through R:
 
 **Regression & Econometrics (8 tools):**

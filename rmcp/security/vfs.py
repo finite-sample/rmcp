@@ -38,8 +38,8 @@ class VFS:
     def __init__(
         self,
         allowed_roots: list[Path],
-        read_only: bool = None,
-        max_file_size: int = None,
+        read_only: bool | None = None,
+        max_file_size: int | None = None,
         allowed_mime_types: list[str] | None = None,
     ):
         self.allowed_roots = [root.resolve() for root in allowed_roots]
