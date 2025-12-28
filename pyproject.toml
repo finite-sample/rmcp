@@ -1,6 +1,6 @@
 [project]
 name = "rmcp"
-version = "0.8.0"
+version = "0.8.1"
 description = "Comprehensive Model Context Protocol server with 52 statistical analysis tools for Claude Desktop and Claude web, featuring HTTP transport, interactive documentation, and production deployment"
 authors = [{name = "Gaurav Sood", email = "gsood07@gmail.com"}]
 license = {text = "MIT"}
