@@ -22,17 +22,18 @@ Example:
 
 import asyncio
 import json
-import logging
 import os
 import re
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
 from .config import get_config
+from .logging_config import get_logger, log_r_execution
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 # Global semaphore for R process concurrency (max 4 concurrent R processes)
 R_SEMAPHORE = asyncio.Semaphore(4)
 
@@ -106,7 +107,11 @@ class RExecutionError(Exception):
     """
 
     def __init__(
-        self, message: str, stdout: str = "", stderr: str = "", returncode: int = None
+        self,
+        message: str,
+        stdout: str = "",
+        stderr: str = "",
+        returncode: int | None = None,
     ):
         """
         Initialize R execution error.
@@ -285,7 +290,7 @@ write_json(result, "{result_path_safe}", auto_unbox = TRUE)
                     "PATH": os.environ.get("PATH", ""),
                     "R_HOME": os.environ.get("R_HOME", ""),
                     "R_LIBS": os.environ.get("R_LIBS", ""),
-                    "working_dir": os.getcwd(),
+                    "working_dir": str(Path.cwd()),
                 }
 
                 error_msg = f"""R script failed with return code {process.returncode}
@@ -405,6 +410,7 @@ async def execute_r_script_async(
         asyncio.CancelledError: If the operation is cancelled
     """
     async with R_SEMAPHORE:  # Limit concurrent R processes
+        start_time = time.time()
         # Create temporary files for script, arguments, and results
         with (
             tempfile.NamedTemporaryFile(
@@ -478,6 +484,7 @@ if (exists("result")) {{
 
                     async def read_stdout():
                         """Read stdout to completion."""
+                        assert proc.stdout is not None
                         while True:
                             chunk = await proc.stdout.read(1024)
                             if not chunk:
@@ -486,6 +493,7 @@ if (exists("result")) {{
 
                     async def monitor_stderr():
                         """Monitor stderr for progress messages and errors."""
+                        assert proc.stderr is not None
                         while True:
                             line = await proc.stderr.readline()
                             if not line:
@@ -564,7 +572,7 @@ if (exists("result")) {{
                         "PATH": os.environ.get("PATH", ""),
                         "R_HOME": os.environ.get("R_HOME", ""),
                         "R_LIBS": os.environ.get("R_LIBS", ""),
-                        "working_dir": os.getcwd(),
+                        "working_dir": str(Path.cwd()),
                     }
 
                     error_msg = f"""R script failed with return code {proc.returncode}
@@ -619,7 +627,7 @@ ENVIRONMENT:
                             error_msg,
                             stdout=stdout,
                             stderr=stderr,
-                            returncode=proc.returncode,
+                            returncode=proc.returncode or 0,
                         )
 
                     # Enhanced error detection for statistical issues
@@ -668,7 +676,7 @@ Original error:
                             helpful_msg,
                             stdout=stdout,
                             stderr=stderr,
-                            returncode=proc.returncode,
+                            returncode=proc.returncode or 0,
                         )
 
                     if any(
@@ -697,7 +705,7 @@ Original error:
                             helpful_msg,
                             stdout=stdout,
                             stderr=stderr,
-                            returncode=proc.returncode,
+                            returncode=proc.returncode or 0,
                         )
 
                     # Fall back to general error
@@ -705,7 +713,7 @@ Original error:
                         error_msg,
                         stdout=stdout,
                         stderr=stderr,
-                        returncode=proc.returncode,
+                        returncode=proc.returncode or 0,
                     )
                 # Read and parse results
                 try:
@@ -717,11 +725,32 @@ Original error:
                             if isinstance(result, dict)
                             else type(result)
                         )
+                        # Log structured R execution completion
+                        execution_time_ms = int((time.time() - start_time) * 1000)
+                        log_r_execution(
+                            logger,
+                            r_command=script[:100] + "..."
+                            if len(script) > 100
+                            else script,
+                            execution_time_ms=execution_time_ms,
+                            success=True,
+                        )
+
                         logger.debug(
                             f"R script completed successfully, result keys: {result_info}"
                         )
                         return result
                 except (FileNotFoundError, json.JSONDecodeError) as e:
+                    # Log structured R execution failure
+                    execution_time_ms = int((time.time() - start_time) * 1000)
+                    log_r_execution(
+                        logger,
+                        r_command=script[:100] + "..." if len(script) > 100 else script,
+                        execution_time_ms=execution_time_ms,
+                        success=False,
+                        error_message=str(e),
+                    )
+
                     error_msg = (
                         f"Failed to read or parse R script results: {e}\\n\\n"
                         f"R stdout: {stdout}\\n\\nR stderr: {stderr}"
@@ -730,7 +759,7 @@ Original error:
                         error_msg,
                         stdout=stdout,
                         stderr=stderr,
-                        returncode=proc.returncode,
+                        returncode=proc.returncode or 0,
                     )
             finally:
                 # Cleanup temporary files
@@ -920,7 +949,7 @@ def diagnose_r_installation() -> dict[str, Any]:
             "PATH": os.environ.get("PATH", ""),
             "R_HOME": os.environ.get("R_HOME", ""),
             "R_LIBS": os.environ.get("R_LIBS", ""),
-            "working_dir": os.getcwd(),
+            "working_dir": str(Path.cwd()),
         },
         "error": None,
     }
@@ -1014,7 +1043,7 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
             "PATH": os.environ.get("PATH", ""),
             "R_HOME": os.environ.get("R_HOME", ""),
             "R_LIBS": os.environ.get("R_LIBS", ""),
-            "working_dir": os.getcwd(),
+            "working_dir": str(Path.cwd()),
         },
         "error": None,
     }

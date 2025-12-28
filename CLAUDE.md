@@ -319,7 +319,7 @@ export RMCP_R_TIMEOUT=300
 echo '{"debug": true, "logging": {"level": "DEBUG"}}' > ~/.rmcp/config.json
 
 # CLI options override everything
-poetry run rmcp --debug --config custom.json start
+uv run rmcp --debug --config custom.json start
 ```
 
 ### **Docker Configuration**
@@ -336,7 +336,7 @@ docker run -v $(pwd)/config.json:/etc/rmcp/config.json rmcp:latest
 - **Integration tests**: Configuration integration with HTTP/R/VFS components
 - **Environment tests**: Validation of all environment variable mappings
 
-**📖 Complete documentation**: Auto-generated from code in `docs/configuration/` (build with `poetry run sphinx-build docs docs/_build`)
+**📖 Complete documentation**: Auto-generated from code in `docs/configuration/` (build with `uv run sphinx-build docs docs/_build`)
 
 ## Universal Operation Approval System
 
@@ -545,13 +545,13 @@ Documentation is automatically generated from:
 
 ```bash
 # Build HTML documentation
-poetry run sphinx-build -b html docs docs/_build/html
+uv run sphinx-build -b html docs docs/_build/html
 
 # Build with clean rebuild
-poetry run sphinx-build -E -a -b html docs docs/_build/html
+uv run sphinx-build -E -a -b html docs docs/_build/html
 
 # Generate autosummary stubs
-poetry run sphinx-autogen docs/**/*.rst
+uv run sphinx-autogen docs/**/*.rst
 
 # Serve documentation locally
 cd docs/_build/html && python -m http.server 8080

@@ -459,7 +459,7 @@ def _get_formula_examples(analysis_type: str) -> list[dict[str, str]]:
         "required": ["is_valid", "formula_parsed", "suggestions", "analysis_type"],
         "additionalProperties": False,
     },
-    description="Validates R formula syntax and checks compatibility with provided datasets including variable existence, data type appropriateness, and formula structure correctness. Identifies missing variables, type mismatches, and syntax errors with specific suggestions for fixes. Essential quality control before running statistical analyses. Use to catch formula errors early, ensure model specifications are valid, or verify that formulas match intended analytical objectives.",
+    description="Validates R formula syntax and checks compatibility with provided datasets including variable existence, data type appropriateness, and formula structure correctness. Identifies missing variables, type mismatches, and syntax errors with specific suggestions for fixes. Essential quality control before running statistical analyzes. Use to catch formula errors early, ensure model specifications are valid, or verify that formulas match intended analytical objectives.",
 )
 async def validate_formula(context, params) -> dict[str, Any]:
     """Validate R formula against data."""

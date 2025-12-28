@@ -34,12 +34,13 @@ Usage Examples:
     >>> print(report["summary"])
 """
 
-import logging
 from typing import Any
 
 from jsonschema import ValidationError, validate
 
-logger = logging.getLogger(__name__)
+from ..logging_config import configure_structured_logging, get_logger
+
+logger = get_logger(__name__)
 
 
 class SchemaDriftDetector:
@@ -795,10 +796,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print("RMCP Schema Validation Utility")
-    print(
+    # Configure structured logging for utility
+    configure_structured_logging(
+        level="INFO", development_mode=True, enable_console=True
+    )
+
+    logger.info("RMCP Schema Validation Utility")
+    logger.info(
         "This utility requires manual implementation of tool execution for validation"
     )
-    print(
+    logger.info(
         "Use pytest tests/integration/test_schema_validation.py for automated testing"
     )

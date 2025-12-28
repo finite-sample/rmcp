@@ -309,7 +309,7 @@ class RToolDiscovery:
                 return {"error": str(e), "tool_name": metadata.name, "success": False}
 
         # Attach metadata to function
-        dynamic_r_tool._rmcp_metadata = metadata
+        dynamic_r_tool._rmcp_metadata = metadata  # type: ignore[attr-defined]
         return dynamic_r_tool
 
     async def _check_dependencies(

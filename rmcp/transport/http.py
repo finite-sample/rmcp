@@ -7,28 +7,35 @@ Provides HTTP transport following MCP specification:
 
 import asyncio
 import json
-import logging
 import queue
+import time
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 from urllib.parse import urlparse
 
 try:
-    import uvicorn
-    from fastapi import FastAPI, HTTPException, Request
-    from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import Response
-    from sse_starlette import EventSourceResponse
+    import uvicorn  # type: ignore
+    from fastapi import FastAPI, HTTPException, Request  # type: ignore
+    from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+    from fastapi.responses import Response  # type: ignore
+    from sse_starlette import EventSourceResponse  # type: ignore
 except ImportError as e:
     raise ImportError(
         "HTTP transport requires 'fastapi' extras. Install with: pip install rmcp[http]"
     ) from e
 from ..config import get_config
 from ..core.server import _SUPPORTED_PROTOCOL_VERSIONS
+from ..logging_config import (
+    LogContext,
+    get_logger,
+    log_http_request,
+    set_correlation_id,
+    set_request_id,
+)
 from .base import Transport
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class HTTPTransport(Transport):
@@ -42,11 +49,11 @@ class HTTPTransport(Transport):
 
     def __init__(
         self,
-        host: str = None,
-        port: int = None,
-        ssl_keyfile: str = None,
-        ssl_certfile: str = None,
-        ssl_keyfile_password: str = None,
+        host: str | None = None,
+        port: int | None = None,
+        ssl_keyfile: str | None = None,
+        ssl_certfile: str | None = None,
+        ssl_keyfile_password: str | None = None,
     ):
         super().__init__("HTTP")
 
@@ -306,13 +313,26 @@ for the latest spec (preferred); `2025-06-18` remains supported for compatibilit
         )
         async def handle_jsonrpc(request: Request) -> Response:
             """Handle JSON-RPC requests via POST."""
-            message: dict[str, Any] | None = None
+            message: dict[str, Any]
             session_id: str | None = None
+            start_time = time.time()
+
+            # Set up request correlation for observability
+            correlation_id = set_correlation_id()
+            request_id = set_request_id()
+
             try:
                 # Parse request first to get method for protocol validation
-                message = await request.json()
+                json_data = await request.json()
+                message = json_data if json_data is not None else {}
                 method = message.get("method", "")
-                logger.debug(f"Received JSON-RPC request: {message}")
+
+                with LogContext(correlation_id=correlation_id, request_id=request_id):
+                    logger.info(
+                        "Processing JSON-RPC request",
+                        method=method,
+                        message_id=message.get("id"),
+                    )
 
                 # Security validations
                 self._validate_origin(request)
@@ -322,6 +342,12 @@ for the latest spec (preferred); `2025-06-18` remains supported for compatibilit
                     raise HTTPException(500, "Message handler not configured")
                 # Session management
                 session_id = self._get_or_create_session(request)
+
+                # Set session context for structured logging
+                from ..logging_config import set_session_id
+
+                set_session_id(session_id)
+
                 # Check initialization state
                 self._check_session_initialized(session_id, method)
                 # Track initialize completion
@@ -333,9 +359,30 @@ for the latest spec (preferred); `2025-06-18` remains supported for compatibilit
                         params["protocolVersion"] = request.state.protocol_version
                     self._initialized_sessions.add(session_id)
                     self._sessions[session_id]["initialized"] = True
+
+                    # Log session initialization
+                    logger.info(
+                        "MCP session initialized",
+                        session_id=session_id,
+                        protocol_version=params.get("protocolVersion"),
+                        client_info=params.get("clientInfo"),
+                    )
                 # Process through message handler
                 response = await self._message_handler(message)
-                logger.debug(f"Sending JSON-RPC response: {response}")
+
+                # Log successful request with timing
+                response_time_ms = int((time.time() - start_time) * 1000)
+                with LogContext(correlation_id=correlation_id, request_id=request_id):
+                    log_http_request(
+                        logger,
+                        "POST",
+                        "/mcp",
+                        200,
+                        response_time_ms,
+                        user_agent=request.headers.get("user-agent"),
+                        content_length=len(json.dumps(response or {})),
+                    )
+
                 # Add session ID to response headers
                 headers = {"Mcp-Session-Id": session_id}
                 return Response(
@@ -344,9 +391,22 @@ for the latest spec (preferred); `2025-06-18` remains supported for compatibilit
                     headers=headers,
                 )
             except json.JSONDecodeError:
+                # Log JSON decode error with request correlation
+                response_time_ms = int((time.time() - start_time) * 1000)
+                with LogContext(correlation_id=correlation_id, request_id=request_id):
+                    log_http_request(logger, "POST", "/mcp", 400, response_time_ms)
                 raise HTTPException(400, "Invalid JSON")
             except Exception as e:
-                logger.error(f"Error processing request: {e}")
+                # Log error with full context
+                response_time_ms = int((time.time() - start_time) * 1000)
+                with LogContext(correlation_id=correlation_id, request_id=request_id):
+                    log_http_request(logger, "POST", "/mcp", 500, response_time_ms)
+                    logger.error(
+                        "Request processing failed",
+                        error=str(e),
+                        method=message.get("method") if message else "unknown",
+                    )
+
                 base_message = message or {}
                 error_response = self._create_error_response(base_message, e)
                 if not error_response:
@@ -539,16 +599,52 @@ curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \\
             tags=["Server Management"],
             summary="Health Check",
             description="""
-            Health check endpoint for monitoring server status.
+            Comprehensive health check endpoint for monitoring server status.
 
-            Returns server health information and transport details.
-            Useful for load balancers and monitoring systems.
+            Returns detailed server health information including:
+            - Server status and uptime
+            - R environment availability
+            - Transport configuration
+            - Active connections count
+            - System health indicators
+
+            Useful for load balancers, monitoring systems, and deployment validation.
             """,
-            response_description="Server health status",
+            response_description="Detailed server health status",
         )
-        async def health_check() -> dict[str, str]:
-            """Simple health check endpoint."""
-            return {"status": "healthy", "transport": "HTTP"}
+        async def health_check() -> dict[str, Any]:
+            """Comprehensive health check endpoint."""
+            import time
+
+            from ..r_integration import get_r_binary_path
+
+            health_data = {
+                "status": "healthy",
+                "timestamp": time.time(),
+                "transport": {"type": "HTTP", "host": self.host, "port": self.port},
+                "connections": {
+                    "active_sessions": len(self._initialized_sessions),
+                    "notification_queue_size": self._notification_queue.qsize(),
+                },
+            }
+
+            # Check R availability
+            try:
+                r_path = get_r_binary_path()
+                health_data["r_environment"] = {
+                    "available": True,
+                    "binary_path": r_path,
+                    "status": "ready",
+                }
+            except Exception as e:
+                health_data["r_environment"] = {
+                    "available": False,
+                    "error": str(e),
+                    "status": "unavailable",
+                }
+                health_data["status"] = "degraded"
+
+            return health_data
 
     async def startup(self) -> None:
         """Initialize the HTTP transport."""

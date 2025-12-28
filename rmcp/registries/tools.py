@@ -173,7 +173,9 @@ class ToolsRegistry:
             # Extract formatting information before validation (schema-safe approach)
             formatting_info = None
             if isinstance(result, dict) and "_formatting" in result:
-                formatting_info = result.pop("_formatting")  # Remove from result
+                extracted = result.pop("_formatting")  # Remove from result
+                if isinstance(extracted, dict):
+                    formatting_info = extracted
 
             # Validate output schema if provided (re-enabled for safety)
             if tool_def.output_schema:

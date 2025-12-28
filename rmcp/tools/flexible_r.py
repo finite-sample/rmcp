@@ -11,15 +11,16 @@ Security Features:
 - Memory limits via R options
 """
 
-import logging
 import re
+import time
 from typing import Any
 
 from ..core.schemas import table_schema
+from ..logging_config import get_logger, log_security_event, log_tool_execution
 from ..r_integration import execute_r_script_async, execute_r_script_with_image_async
 from ..registries.tools import tool
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Import comprehensive package whitelist from systematic categorization
 from .package_whitelist_comprehensive import (
@@ -287,6 +288,8 @@ async def execute_r_analysis(context, params) -> dict[str, Any]:
     packages = params.get("packages", [])
     return_image = params.get("return_image", False)
 
+    start_time = time.time()
+
     await context.info(f"Executing R analysis: {description}")
 
     # Package validation is now handled in validate_r_code function below
@@ -375,6 +378,21 @@ Please respond with your choice. If you approve, the analysis will continue with
 
         await context.info("R analysis completed successfully")
 
+        # Log successful tool execution with structured data
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        log_tool_execution(
+            logger,
+            tool_name="execute_r_analysis",
+            parameters={
+                "description": description,
+                "packages": packages,
+                "return_image": return_image,
+            },
+            execution_time_ms=execution_time_ms,
+            r_packages_used=packages,
+            success=True,
+        )
+
         return {
             "success": True,
             "result": result,
@@ -385,6 +403,22 @@ Please respond with your choice. If you approve, the analysis will continue with
 
     except Exception as e:
         await context.error(f"R execution failed: {str(e)}")
+
+        # Log failed tool execution
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        log_tool_execution(
+            logger,
+            tool_name="execute_r_analysis",
+            parameters={
+                "description": description,
+                "packages": packages,
+                "return_image": return_image,
+            },
+            execution_time_ms=execution_time_ms,
+            success=False,
+            error_message=str(e),
+        )
+
         return {
             "success": False,
             "error": str(e),
@@ -781,6 +815,16 @@ async def approve_r_package(context, params) -> dict[str, Any]:
     if action == "approve":
         context._approved_packages.add(package_name)
 
+        # Log security approval event
+        log_security_event(
+            logger,
+            event_type="package_approval",
+            operation=f"approve_{package_name}",
+            approved=True,
+            security_level="medium",
+            details={"package_name": package_name, "session_only": session_only},
+        )
+
         if session_only:
             await context.info(f"✅ Package '{package_name}' approved for this session")
             message = f"Package '{package_name}' has been approved for use in this analysis session."
@@ -801,6 +845,16 @@ async def approve_r_package(context, params) -> dict[str, Any]:
         }
 
     else:  # deny
+        # Log security denial event
+        log_security_event(
+            logger,
+            event_type="package_approval",
+            operation=f"deny_{package_name}",
+            approved=False,
+            security_level="medium",
+            details={"package_name": package_name, "reason": "user_denied"},
+        )
+
         await context.info(f"❌ Package '{package_name}' denied")
         return {
             "success": True,

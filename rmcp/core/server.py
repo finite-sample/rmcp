@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from mcp.types import (
+    from mcp.types import (  # type: ignore
         LATEST_PROTOCOL_VERSION,
         Implementation,
         InitializeResult,
@@ -85,7 +85,7 @@ class MCPServer:
     def __init__(
         self,
         name: str = "RMCP MCP Server",
-        version: str = None,
+        version: str | None = None,
         description: str = """RMCP provides 44 comprehensive statistical analysis tools through R:
 
 **Regression & Econometrics (8 tools):**
@@ -420,7 +420,16 @@ All tools provide professionally formatted output with markdown tables, statisti
                         request_id,
                         exc,
                     )
-            logger.log(log_level, f"{request_id}: {message} {payload}")
+            # Use proper logging methods with formatted messages to avoid parameter conflicts
+            log_message = f"{request_id}: {message}"
+            if payload:
+                log_message += f" {payload}"
+            if log_level >= logging.ERROR:
+                logger.error(log_message)
+            elif log_level >= logging.WARNING:
+                logger.warning(log_message)
+            else:
+                logger.info(log_message)
 
         context = Context.create(
             request_id=request_id,
@@ -1060,21 +1069,22 @@ All tools provide professionally formatted output with markdown tables, statisti
             - notifications/initialized: Client initialization complete
         """
         logger.info(f"Received notification: {method}")
-        if method == "notifications/cancelled":
-            # Handle cancellation notification
-            request_id = params.get("requestId")
-            if request_id:
-                await self.cancel_request(request_id)
-        elif method == "notifications/initialized":
-            # MCP initialization complete
-            logger.info("MCP client initialization complete")
-        else:
-            logger.warning(f"Unknown notification method: {method}")
+        match method:
+            case "notifications/cancelled":
+                # Handle cancellation notification
+                request_id = params.get("requestId")
+                if request_id:
+                    await self.cancel_request(request_id)
+            case "notifications/initialized":
+                # MCP initialization complete
+                logger.info("MCP client initialization complete")
+            case _:
+                logger.warning(f"Unknown notification method: {method}")
 
 
 def create_server(
     name: str = "RMCP MCP Server",
-    version: str = None,
+    version: str | None = None,
     description: str = """RMCP provides 44 comprehensive statistical analysis tools through R:
 
 **Regression & Econometrics (8 tools):**

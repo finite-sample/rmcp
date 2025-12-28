@@ -33,6 +33,8 @@ Examples:
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..types import CORSOrigin, LogLevel
+
 
 @dataclass(slots=True)
 class HTTPConfig:
@@ -87,7 +89,7 @@ class HTTPConfig:
     ssl_keyfile_password: str | None = None
     """SSL private key password if the key file is encrypted."""
 
-    cors_origins: list[str] = field(
+    cors_origins: list[CORSOrigin] = field(
         default_factory=lambda: [
             "http://localhost:*",
             "http://127.0.0.1:*",
@@ -283,7 +285,7 @@ class LoggingConfig:
             )
     """
 
-    level: str = "INFO"
+    level: LogLevel = "INFO"
     """Logging level. Must be DEBUG, INFO, WARNING, ERROR, or CRITICAL."""
 
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

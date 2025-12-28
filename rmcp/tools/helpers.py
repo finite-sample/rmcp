@@ -88,7 +88,7 @@ from ..registries.tools import tool
         ],
         "additionalProperties": False,
     },
-    description="Analyzes error messages from statistical operations and provides intelligent, actionable suggestions for fixes including parameter adjustments, data transformations, or alternative approaches. Uses pattern matching and statistical knowledge to diagnose common issues. Use when statistical analyses fail, to help users understand error causes, debug complex workflows, or learn proper statistical software usage through guided error resolution.",
+    description="Analyzes error messages from statistical operations and provides intelligent, actionable suggestions for fixes including parameter adjustments, data transformations, or alternative approaches. Uses pattern matching and statistical knowledge to diagnose common issues. Use when statistical analyzes fail, to help users understand error causes, debug complex workflows, or learn proper statistical software usage through guided error resolution.",
 )
 async def suggest_fix(context, params) -> dict[str, Any]:
     """Analyze error and provide actionable solutions."""
@@ -428,7 +428,7 @@ async def _analyze_data_for_errors(context, data: dict) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Performs comprehensive data quality validation checking for missing values, outliers, data type consistency, range validity, and structural issues that could cause analysis failures. Provides detailed quality reports with severity ratings and remediation suggestions. Use before statistical analyses to prevent errors, ensure data reliability, meet analysis assumptions, or generate data quality documentation for research compliance.",
+    description="Performs comprehensive data quality validation checking for missing values, outliers, data type consistency, range validity, and structural issues that could cause analysis failures. Provides detailed quality reports with severity ratings and remediation suggestions. Use before statistical analyzes to prevent errors, ensure data reliability, meet analysis assumptions, or generate data quality documentation for research compliance.",
 )
 async def validate_data(context, params) -> dict[str, Any]:
     """Validate data for analysis and identify potential issues."""

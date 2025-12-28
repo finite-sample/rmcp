@@ -137,7 +137,7 @@ async def lag_lead(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Winsorizes variables by replacing extreme values with specified percentiles to reduce outlier impact while preserving data structure. Sets values below lower percentile to that percentile value and values above upper percentile to that percentile value. More robust than trimming since it retains all observations. Use for outlier treatment in regression analysis, robust statistical modeling, or preparing data for parametric analyses sensitive to extreme values.",
+    description="Winsorizes variables by replacing extreme values with specified percentiles to reduce outlier impact while preserving data structure. Sets values below lower percentile to that percentile value and values above upper percentile to that percentile value. More robust than trimming since it retains all observations. Use for outlier treatment in regression analysis, robust statistical modeling, or preparing data for parametric analyzes sensitive to extreme values.",
 )
 async def winsorize(context, params) -> dict[str, Any]:
     """Winsorize variables to handle outliers."""
@@ -206,7 +206,7 @@ async def winsorize(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Computes first differences, seasonal differences, or higher-order differences to transform non-stationary time series into stationary ones. Essential preprocessing step for ARIMA modeling and many econometric analyses. Returns differenced series and handles missing values created by differencing. Use to remove trends, achieve stationarity for time series models, or analyze period-to-period changes in economic and financial data.",
+    description="Computes first differences, seasonal differences, or higher-order differences to transform non-stationary time series into stationary ones. Essential preprocessing step for ARIMA modeling and many econometric analyzes. Returns differenced series and handles missing values created by differencing. Use to remove trends, achieve stationarity for time series models, or analyze period-to-period changes in economic and financial data.",
 )
 async def difference(context, params) -> dict[str, Any]:
     """Compute differences of variables."""

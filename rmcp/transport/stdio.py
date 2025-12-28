@@ -39,7 +39,7 @@ class StdioTransport(Transport):
 
     def __init__(self, max_workers: int = 2):
         super().__init__("stdio")
-        self._stdin_reader: asyncio.StreamReader = None
+        self._stdin_reader: asyncio.StreamReader | None = None
         self._stdout_writer: asyncio.StreamWriter | Any = None
         self._shutdown_event = asyncio.Event()
         self._max_workers = max_workers
