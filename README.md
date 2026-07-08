@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/finite-sample-rmcp-badge.png)](https://mseep.ai/app/finite-sample-rmcp)
+
 # RMCP: Statistical Analysis through Natural Conversation
 
 [![Python application](https://github.com/finite-sample/rmcp/actions/workflows/ci.yml/badge.svg)](https://github.com/finite-sample/rmcp/actions/workflows/ci.yml)
