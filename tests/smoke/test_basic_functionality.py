@@ -75,10 +75,10 @@ class TestImportSmoke:
 
     def test_transport_modules_import(self):
         """Test that transport modules can be imported."""
-        from rmcp.transport import base, stdio
+        from rmcp.transport import base, sdk
 
         assert base is not None
-        assert stdio is not None
+        assert sdk is not None
 
     def test_tools_modules_import(self):
         """Test that tool modules can be imported."""

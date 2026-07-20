@@ -51,6 +51,7 @@ jobs:
           --allow-unauthenticated \
           --command rmcp \
           --args serve-http,--host,0.0.0.0,--port,8080 \
+          --set-env-vars "RMCP_API_KEY=${{ secrets.RMCP_API_KEY }}" \
           --port 8080 \
           --memory 2Gi \
           --timeout 300

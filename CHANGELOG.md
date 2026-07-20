@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-07-19
+
+### Breaking Changes
+- **🚨 Protocol layer migrated to the official MCP Python SDK** (`mcp>=1.28`).
+  The hand-rolled JSON-RPC transports were removed:
+  - stdio now runs on the SDK's stdio transport (`rmcp/transport/sdk.py`)
+  - HTTP now serves spec-compliant **Streamable HTTP** at `POST/GET/DELETE /mcp`
+    (SDK session manager). The custom `GET /mcp/sse` notification channel and
+    the FastAPI landing page/`/docs` endpoints were removed.
+  - Clients must send `Accept: application/json, text/event-stream` and complete
+    the `initialize` → `notifications/initialized` handshake per spec.
+- **🚨 `structuredContent` now conforms to each tool's declared `outputSchema`**:
+  it is the raw tool result object rather than the previous
+  `{"type": "json", "json": ...}` wrapper. Strict SDK clients that validate
+  structured output now work; consumers of the old wrapper must read the
+  payload directly.
+- **🚨 Remote HTTP binds require authentication by default**: `serve-http`
+  refuses non-localhost binds without `--api-key`/`RMCP_API_KEY` unless
+  `--allow-unauthenticated` is passed.
+
+### Added
+- Bearer-token auth for the `/mcp` endpoint (`--api-key`, repeatable, or
+  `RMCP_API_KEY` comma-separated); `/health` remains open; Cloud Run deploy
+  injects the key from the `RMCP_API_KEY` GitHub secret
+- `resources/templates/list` support (templates no longer leak into
+  `resources/list` with brace-URIs)
+- SDK adapter (`rmcp/core/sdk_adapter.py`) bridging the existing
+  tool/resource/prompt registries to the SDK server, including progress and
+  logging notifications via the SDK session
+
+### Fixed
+- Static documentation resources (`rmcp://docs/readme`, `rmcp://examples/*`)
+  were advertised but unreadable — `rmcp://` reads now fall back to registered
+  static resources
+- `prompts/get` no longer fails when optional template arguments are omitted
+  (missing optional arguments render as "(not specified)")
+
+### Changed
+- `fastapi` and `sse-starlette` dropped; Streamable HTTP works with the base
+  install (`uvicorn` promoted to a core dependency via the SDK)
+- CLAUDE.md/docs/examples updated for Streamable HTTP, auth, and protocol
+  `2025-11-25`
+
+## [0.8.1] - 2025-12-27
+
+### Changed
+- Moved development workflow fully to uv (dependency groups, committed `uv.lock`)
+- Adopted structured logging via structlog
+- Replaced mypy with pyright; added pydoclint for docstring checks
+- Standardized on US English across code and docs
+
+### Fixed
+- HTTPS transport test fixes and general modernization cleanup
+
+## [0.8.0] - 2025-11-29
+
+### Changed
+- MCP protocol version negotiation: server now honors the client-requested
+  protocol version when supported (#19) and updated protocol validation and
+  defaults to `2025-11-25` with `2025-06-18` back-compat (#17)
+- Migrated build backend to `uv_build`; docs theme to furo
+- Reorganized documentation; ruff linting across package and tests
+
+### Added
+- `httpx` dependency for HTTP client testing
+
+### Fixed
+- Docker wheel installation with extras; production image includes HTTP
+  dependencies; assorted CI/CD workflow fixes
+
 ## [0.7.0] - 2025-10-22
 
 ### Breaking Changes

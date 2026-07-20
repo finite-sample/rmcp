@@ -1,440 +1,176 @@
 """
-Integration tests for HTTP transport.
-Tests the complete HTTP transport functionality in a real server environment:
-- Actual HTTP server startup and requests
-- JSON-RPC protocol compliance
-- Server-Sent Events streaming
-- Error handling in real scenarios
-- Performance and concurrency
-"""
+Integration tests for the Streamable HTTP transport (SDK-based).
 
-import asyncio
-import json
-import time
+Exercises the full server (all built-in tools registered) through the
+spec-compliant Streamable HTTP endpoint:
+- initialize handshake and protocol version negotiation
+- tools/list and tools/call (R execution where available)
+- JSON-RPC error handling for invalid payloads
+- SSE response framing, health check, and CORS
+"""
 
 import pytest
 
-# Skip tests if FastAPI not available
-fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 httpx = pytest.importorskip("httpx", reason="httpx not available")
+
+from rmcp.cli import _register_builtin_tools  # noqa: E402
 from rmcp.core.server import create_server  # noqa: E402
-from rmcp.transport.http import HTTPTransport  # noqa: E402
+from rmcp.registries.prompts import (  # noqa: E402
+    register_prompt_functions,
+    statistical_workflow_prompt,
+)
+from rmcp.transport.sdk import create_streamable_http_app  # noqa: E402
+
+from tests.utils import (  # noqa: E402
+    extract_json_content,
+    initialize_streamable_session,
+    parse_streamable_response,
+    streamable_http_client,
+)
 
 
 @pytest.fixture
-async def http_server_with_tools():
-    """Create an HTTP server with all RMCP tools registered."""
-    from rmcp.cli import _register_builtin_tools
-
-    # Create server and register tools
+def full_app(tmp_path):
+    """Streamable HTTP app with all built-in RMCP tools registered."""
     server = create_server()
+    server.configure(allowed_paths=[str(tmp_path)], read_only=True)
     _register_builtin_tools(server)
-    # Create HTTP transport
-    transport = HTTPTransport(
-        host="127.0.0.1", port=0
-    )  # Use port 0 for auto-assignment
-    transport.set_message_handler(server.create_message_handler(transport))
-    # Start server in background
-    server_task = None
-    try:
-        # Start the server
-        await transport.startup()
-        # Get the actual port assigned
-        import socket
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(("127.0.0.1", 0))
-        port = sock.getsockname()[1]
-        sock.close()
-        # Update transport with actual port
-        transport.port = port
-        # Run server in background
-        server_task = asyncio.create_task(transport.run())
-        # Wait a bit for server to start
-        await asyncio.sleep(0.1)
-        yield transport
-    finally:
-        if server_task:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
-        await transport.shutdown()
+    register_prompt_functions(server.prompts, statistical_workflow_prompt)
+    return create_streamable_http_app(server, manage_server_lifecycle=False)
 
 
-class TestHTTPTransportMCPCompliance:
-    """Test MCP protocol compliance over HTTP."""
+class TestStreamableHTTPMCPCompliance:
+    async def test_initialize_request(self, full_app):
+        async with streamable_http_client(full_app) as client:
+            result, headers = await initialize_streamable_session(client)
+            assert result["protocolVersion"] == "2025-11-25"
+            assert result["serverInfo"]["name"] == "RMCP MCP Server"
+            assert "tools" in result["capabilities"]
+            assert "Mcp-Session-Id" in headers
 
-    @pytest.mark.asyncio
-    async def test_initialize_request(self):
-        """Test MCP initialize request over HTTP."""
-        transport = HTTPTransport(host="127.0.0.1", port=8001)
-        server = create_server()
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Start server in background for short test
-        server_task = asyncio.create_task(transport.run())
-        await asyncio.sleep(0.1)  # Let server start
-        try:
-            async with httpx.AsyncClient() as client:
-                # Send initialize request
-                initialize_request = {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "initialize",
-                    "params": {
-                        "protocolVersion": "2025-06-18",
-                        "capabilities": {},
-                        "clientInfo": {"name": "test-client", "version": "1.0.0"},
-                    },
-                }
-                response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/mcp",
-                    json=initialize_request,
-                    timeout=5.0,
-                )
-                assert response.status_code == 200
-                data = response.json()
-                # Verify MCP initialize response structure
-                assert data["jsonrpc"] == "2.0"
-                assert data["id"] == 1
-                assert "result" in data
-                assert "protocolVersion" in data["result"]
-                assert "capabilities" in data["result"]
-                assert "serverInfo" in data["result"]
-        finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
+    async def test_protocol_version_negotiation(self, full_app):
+        async with streamable_http_client(full_app) as client:
+            result, _ = await initialize_streamable_session(
+                client, protocol_version="2025-06-18"
+            )
+            assert result["protocolVersion"] == "2025-06-18"
 
-    @pytest.mark.asyncio
-    async def test_tools_list_request(self):
-        """Test tools/list request over HTTP."""
-        transport = HTTPTransport(host="127.0.0.1", port=8002)
-        server = create_server()
-        from rmcp.cli import _register_builtin_tools
+    async def test_tools_list_request(self, full_app):
+        async with streamable_http_client(full_app) as client:
+            _, headers = await initialize_streamable_session(client)
+            response = await client.post(
+                "/mcp",
+                json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+                headers=headers,
+            )
+            message = parse_streamable_response(response)
+            tools = message["result"]["tools"]
+            names = {tool["name"] for tool in tools}
+            assert {"linear_model", "load_example", "summary_stats"} <= names
+            linear_model = next(t for t in tools if t["name"] == "linear_model")
+            assert "inputSchema" in linear_model
+            assert "outputSchema" in linear_model
 
-        _register_builtin_tools(server)
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Start server in background
-        server_task = asyncio.create_task(transport.run())
-        await asyncio.sleep(0.1)
-        try:
-            async with httpx.AsyncClient() as client:
-                # First initialize and capture session ID
-                initialize_request = {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "initialize",
-                    "params": {
-                        "protocolVersion": "2025-06-18",
-                        "capabilities": {},
-                        "clientInfo": {"name": "test-client", "version": "1.0.0"},
-                    },
-                }
-                init_response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/mcp", json=initialize_request
-                )
-                session_id = init_response.headers.get("Mcp-Session-Id")
-                # Then list tools with session ID
-                tools_request = {
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "tools/list",
-                    "params": {},
-                }
-                headers = {}
-                if session_id:
-                    headers["Mcp-Session-Id"] = session_id
-                headers["MCP-Protocol-Version"] = "2025-06-18"
-                response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/mcp",
-                    json=tools_request,
-                    headers=headers,
-                    timeout=5.0,
-                )
-                assert response.status_code == 200
-                data = response.json()
-                # Verify tools list response
-                assert data["jsonrpc"] == "2.0"
-                assert data["id"] == 2
-                assert "result" in data
-                assert "tools" in data["result"]
-                assert len(data["result"]["tools"]) > 0  # Should have tools
-        finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
-
-    @pytest.mark.asyncio
-    async def test_tool_call_request(self):
-        """Test actual tool call over HTTP."""
-        transport = HTTPTransport(host="127.0.0.1", port=8003)
-        server = create_server()
-        from rmcp.cli import _register_builtin_tools
-
-        _register_builtin_tools(server)
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Start server in background
-        server_task = asyncio.create_task(transport.run())
-        await asyncio.sleep(0.1)
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                # Initialize and capture session ID
-                initialize_request = {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "initialize",
-                    "params": {
-                        "protocolVersion": "2025-06-18",
-                        "capabilities": {},
-                        "clientInfo": {"name": "test-client", "version": "1.0.0"},
-                    },
-                }
-                init_response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/mcp", json=initialize_request
-                )
-                session_id = init_response.headers.get("Mcp-Session-Id")
-                # Call a simple tool with session ID
-                tool_call_request = {
+    @pytest.mark.local
+    async def test_tool_call_request(self, full_app):
+        """Real R execution through the Streamable HTTP endpoint."""
+        async with streamable_http_client(full_app) as client:
+            _, headers = await initialize_streamable_session(client)
+            response = await client.post(
+                "/mcp",
+                json={
                     "jsonrpc": "2.0",
                     "id": 3,
                     "method": "tools/call",
                     "params": {
                         "name": "load_example",
-                        "arguments": {"dataset_name": "sales"},  # Fixed parameter name
+                        "arguments": {"dataset_name": "sales"},
                     },
-                }
-                headers = {}
-                if session_id:
-                    headers["Mcp-Session-Id"] = session_id
-                headers["MCP-Protocol-Version"] = "2025-06-18"
-                response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/mcp",
-                    json=tool_call_request,
-                    headers=headers,
-                )
-                assert response.status_code == 200
-                data = response.json()
-                # Verify tool call response
-                assert data["jsonrpc"] == "2.0"
-                assert data["id"] == 3
-                assert "result" in data
-                assert "content" in data["result"]
-        finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
+                },
+                headers=headers,
+                timeout=60.0,
+            )
+            message = parse_streamable_response(response)
+            assert "result" in message, message
+            payload = extract_json_content(message)
+            assert payload
 
 
-class TestHTTPTransportErrorHandling:
-    """Test error handling in HTTP transport."""
+class TestStreamableHTTPErrorHandling:
+    async def test_invalid_json_request(self, full_app):
+        async with streamable_http_client(full_app) as client:
+            _, headers = await initialize_streamable_session(client)
+            response = await client.post("/mcp", content=b"{not json", headers=headers)
+            assert response.status_code == 400
 
-    @pytest.mark.asyncio
-    async def test_invalid_json_request(self):
-        """Test handling of invalid JSON requests."""
-        transport = HTTPTransport(host="127.0.0.1", port=8004)
-        server = create_server()
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Start server in background
-        server_task = asyncio.create_task(transport.run())
-        await asyncio.sleep(0.1)
-        try:
-            async with httpx.AsyncClient() as client:
-                # Send invalid JSON
-                response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/mcp",
-                    content="invalid json content",
-                    headers={"Content-Type": "application/json"},
-                    timeout=5.0,
-                )
-                assert response.status_code == 400
-                assert "Invalid JSON" in response.text
-        finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
+    async def test_unknown_method(self, full_app):
+        async with streamable_http_client(full_app) as client:
+            _, headers = await initialize_streamable_session(client)
+            response = await client.post(
+                "/mcp",
+                json={"jsonrpc": "2.0", "id": 4, "method": "definitely/not_a_method"},
+                headers=headers,
+            )
+            message = parse_streamable_response(response)
+            assert "error" in message
+            # SDK reports unrecognized methods as a request validation error
+            assert message["error"]["code"] in (-32600, -32601, -32602)
 
-    @pytest.mark.asyncio
-    async def test_malformed_jsonrpc_request(self):
-        """Test handling of malformed JSON-RPC requests."""
-        transport = HTTPTransport(host="127.0.0.1", port=8005)
-        server = create_server()
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Start server in background
-        server_task = asyncio.create_task(transport.run())
-        await asyncio.sleep(0.1)
-        try:
-            async with httpx.AsyncClient() as client:
-                # Send malformed JSON-RPC (missing required fields)
-                malformed_request = {"not_jsonrpc": "2.0", "invalid": "request"}
-                response = await client.post(
-                    f"http://127.0.0.1:{transport.port}/mcp",
-                    json=malformed_request,
-                    timeout=5.0,
-                )
-                assert response.status_code == 200  # Should return JSON-RPC error
-                data = response.json()
-                assert "error" in data
-        finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
+    async def test_unknown_tool_returns_tool_error(self, full_app):
+        async with streamable_http_client(full_app) as client:
+            _, headers = await initialize_streamable_session(client)
+            response = await client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 5,
+                    "method": "tools/call",
+                    "params": {"name": "no_such_tool", "arguments": {}},
+                },
+                headers=headers,
+            )
+            message = parse_streamable_response(response)
+            # Unknown tool surfaces as a JSON-RPC error or isError result
+            assert "error" in message or message["result"].get("isError")
 
 
-class TestHTTPTransportSSE:
-    """Test Server-Sent Events functionality."""
-
-    @pytest.mark.asyncio
-    async def test_sse_connection(self):
-        """Test SSE endpoint connection."""
-        transport = HTTPTransport(host="127.0.0.1", port=8006)
-        server = create_server()
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Start server in background
-        server_task = asyncio.create_task(transport.run())
-        await asyncio.sleep(0.1)
-        try:
-            async with httpx.AsyncClient() as client:
-                # Connect to SSE endpoint
-                async with client.stream(
-                    "GET", f"http://127.0.0.1:{transport.port}/mcp/sse"
-                ) as response:
-                    assert response.status_code == 200
-                    assert response.headers["content-type"].startswith(
-                        "text/event-stream"
-                    )
-                    # Read a few events (should be empty initially)
-                    events_received = 0
-                    async for _line in response.aiter_lines():
-                        events_received += 1
-                        if events_received > 2:  # Just check connection works
-                            break
-        finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
-
-    @pytest.mark.asyncio
-    async def test_sse_notification_delivery(self):
-        """Test that notifications are delivered via SSE."""
-        transport = HTTPTransport(host="127.0.0.1", port=8007)
-        server = create_server()
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Start server in background
-        server_task = asyncio.create_task(transport.run())
-        await asyncio.sleep(0.1)
-        try:
-            # Queue a notification
-            test_notification = {
-                "jsonrpc": "2.0",
-                "method": "notification/test",
-                "params": {"message": "test notification"},
-            }
-            await transport.send_message(test_notification)
-            # Connect to SSE and check for the notification
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "GET", f"http://127.0.0.1:{transport.port}/mcp/sse"
-                ) as response:
-                    assert response.status_code == 200
-                    # Read events for a short time
-                    timeout_time = time.time() + 2  # 2 second timeout
-                    async for line in response.aiter_lines():
-                        if time.time() > timeout_time:
-                            break
-                        if line.startswith("data: "):
-                            event_data = line[6:]  # Remove "data: " prefix
-                            try:
-                                parsed_data = json.loads(event_data)
-                                if parsed_data.get("method") == "notification/test":
-                                    # Found our notification!
-                                    assert (
-                                        parsed_data["params"]["message"]
-                                        == "test notification"
-                                    )
-                                    break
-                            except json.JSONDecodeError:
-                                continue  # Skip malformed data
-        finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
+class TestStreamableHTTPFraming:
+    async def test_post_returns_sse_stream(self, full_app):
+        """Responses are SSE-framed per the Streamable HTTP spec."""
+        async with streamable_http_client(full_app) as client:
+            _, headers = await initialize_streamable_session(client)
+            response = await client.post(
+                "/mcp",
+                json={"jsonrpc": "2.0", "id": 6, "method": "prompts/list"},
+                headers=headers,
+            )
+            assert response.status_code == 200
+            assert response.headers["content-type"].startswith("text/event-stream")
+            message = parse_streamable_response(response)
+            prompt_names = [p["name"] for p in message["result"]["prompts"]]
+            assert "statistical_workflow" in prompt_names
 
 
-class TestHTTPTransportHealthCheck:
-    """Test health check functionality."""
-
-    @pytest.mark.asyncio
-    async def test_health_check_endpoint(self):
-        """Test the health check endpoint."""
-        transport = HTTPTransport(host="127.0.0.1", port=8008)
-        server = create_server()
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Start server in background
-        server_task = asyncio.create_task(transport.run())
-        await asyncio.sleep(0.1)
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"http://127.0.0.1:{transport.port}/health", timeout=5.0
-                )
-                assert response.status_code == 200
-                data = response.json()
-                assert data["status"] == "healthy"
-                assert data["transport"]["type"] == "HTTP"
-        finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
+class TestStreamableHTTPHealthCheck:
+    async def test_health_check_endpoint(self, full_app):
+        async with streamable_http_client(full_app) as client:
+            response = await client.get("/health")
+            assert response.status_code == 200
+            body = response.json()
+            assert body["status"] == "healthy"
+            assert body["tools"] > 40
 
 
-class TestHTTPTransportCORS:
-    """Test CORS functionality."""
-
-    @pytest.mark.asyncio
-    async def test_cors_headers(self):
-        """Test that CORS headers are properly set."""
-        transport = HTTPTransport(host="127.0.0.1", port=8009)
-        server = create_server()
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Start server in background
-        server_task = asyncio.create_task(transport.run())
-        await asyncio.sleep(0.1)
-        try:
-            async with httpx.AsyncClient() as client:
-                # Send OPTIONS request to check CORS
-                response = await client.options(
-                    f"http://127.0.0.1:{transport.port}/mcp",
-                    headers={"Origin": "http://localhost:3000"},
-                    timeout=5.0,
-                )
-                assert response.status_code == 200
-                assert "access-control-allow-origin" in response.headers
-                assert "access-control-allow-methods" in response.headers
-        finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s"])
+class TestStreamableHTTPCORS:
+    async def test_cors_headers(self, full_app):
+        async with streamable_http_client(full_app) as client:
+            response = await client.options(
+                "/mcp",
+                headers={
+                    "Origin": "https://claude.ai",
+                    "Access-Control-Request-Method": "POST",
+                    "Access-Control-Request-Headers": "content-type,mcp-session-id",
+                },
+            )
+            assert response.status_code == 200
+            assert "access-control-allow-origin" in response.headers

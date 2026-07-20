@@ -205,7 +205,6 @@ def configure_structured_logging(
 
     # Set specific logger levels for better control
     logging.getLogger("uvicorn").setLevel(logging.WARNING)
-    logging.getLogger("fastapi").setLevel(logging.INFO)
 
 
 def get_logger(name: str) -> structlog.BoundLogger:

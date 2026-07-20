@@ -561,7 +561,7 @@ async def run_http_transport_tests():
     import importlib.util
 
     # Check if FastAPI is available
-    fastapi_available = importlib.util.find_spec("fastapi") is not None
+    fastapi_available = importlib.util.find_spec("mcp") is not None
     httpx_available = importlib.util.find_spec("httpx") is not None
 
     if fastapi_available and httpx_available:

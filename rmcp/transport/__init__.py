@@ -1,14 +1,12 @@
 """
 Transport layer for MCP server.
-Implements transport-agnostic message handling:
-- stdio transport (JSON-RPC over stdin/stdout)
-- Optional HTTP transport with streaming support
-- Clean separation from business logic
-Following the principle: "Business logic never cares whether messages arrive over stdio or HTTP."
+
+Wire-level transports are provided by the official MCP SDK (see
+:mod:`rmcp.transport.sdk` for stdio and Streamable HTTP runners).
+:class:`Transport` remains as the abstraction used by the in-process
+message-handler path (`MCPServer.create_message_handler`).
 """
 
 from .base import Transport
-from .jsonrpc import JSONRPCEnvelope, JSONRPCError
-from .stdio import StdioTransport
 
-__all__ = ["StdioTransport", "JSONRPCEnvelope", "JSONRPCError", "Transport"]
+__all__ = ["Transport"]

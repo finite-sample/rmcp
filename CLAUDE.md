@@ -13,7 +13,7 @@ RMCP (R Model Context Protocol) is a statistical analysis server that bridges AI
 ```bash
 uv sync --group dev              # Install minimal Python dependencies
 uv run rmcp start                # Start server in stdio mode (no R tools)
-uv run rmcp serve-http           # Start HTTP server with SSE
+uv run rmcp serve-http           # Start Streamable HTTP server
 
 # Use configuration options
 uv run rmcp --debug start        # Enable debug mode
@@ -23,7 +23,7 @@ RMCP_LOG_LEVEL=DEBUG uv run rmcp start  # Use environment variables
 
 **For R integration development (Docker-based):**
 ```bash
-docker build -f docker/Dockerfile --target development -t rmcp-dev .  # Build R + Python dev environment
+docker build --target development -t rmcp-dev .  # Build R + Python dev environment
 docker run -v $(pwd):/workspace -it rmcp-dev bash
 # Inside container:
 cd /workspace && pip install -e .
@@ -32,7 +32,7 @@ rmcp start                        # Full R integration available
 
 **For production deployment (optimized):**
 ```bash
-docker build -f docker/Dockerfile --target production -t rmcp-production .  # Multi-stage optimized build
+docker build --target production -t rmcp-production .  # Multi-stage optimized build
 docker run -p 8000:8000 rmcp-production rmcp http                          # Production HTTP server
 ```
 
@@ -47,7 +47,7 @@ uv run ruff format --check .     # Code formatting check
 
 **Complete integration tests (Docker-based):**
 ```bash
-# Docker includes R + FastAPI for complete test coverage (all 240+ tests)
+# Docker includes R for complete test coverage (all 240+ tests)
 docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/integration/"
 docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/scenarios/"
 # Full test suite: smoke + unit + integration + scenarios + protocol + config
@@ -59,7 +59,7 @@ docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -
 # Python formatting (cross-platform)
 uv run ruff check --fix .         # Auto-fix linting issues and sort imports
 uv run ruff format .              # Format code
-uv run mypy rmcp
+uv run pyright
 
 # R formatting (Docker-based)
 docker run -v $(pwd):/workspace rmcp-dev R -e "library(styler); style_file(list.files('rmcp/r_assets', pattern='[.]R$', recursive=TRUE, full.names=TRUE))"
@@ -73,10 +73,10 @@ uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
 ## Architecture
 
 ### Core Components
-- **Transport Layer** (`rmcp/transport/`): Handles stdio and HTTP+SSE communication
+- **Transport Layer** (`rmcp/transport/`): Official MCP SDK transports (stdio + Streamable HTTP) via `rmcp/transport/sdk.py`; protocol bridge in `rmcp/core/sdk_adapter.py`
 - **Core Server** (`rmcp/core/`): MCPServer, Context management, JSON-RPC protocol
 - **Registries** (`rmcp/registries/`): Dynamic registration for tools, resources, prompts
-- **Tools** (`rmcp/tools/`): 53 statistical analysis tools across 11 categories
+- **Tools** (`rmcp/tools/`): 52 statistical analysis tools across 11 categories
 - **Comprehensive Package Whitelist**: 429 R packages from CRAN task views with tiered security
 - **R Integration** (`rmcp/r_integration.py`): Python-R bridge via subprocess + JSON
 
@@ -104,10 +104,10 @@ uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
   - `tests/unit/tools/`: Tool schema validation
   - `tests/unit/transport/`: HTTP transport logic
 
-**Tier 2: Integration Testing (R + FastAPI required, Docker-based)**
+**Tier 2: Integration Testing (R required, Docker-based)**
 - **Protocol tests** (`tests/integration/protocol/`): MCP protocol validation with mocked R responses
 - **Tool integration** (`tests/integration/tools/`): Real R execution for statistical tool functionality
-- **Transport integration** (`tests/integration/transport/`): HTTP transport with real FastAPI server
+- **Transport integration** (`tests/integration/transport/`): Streamable HTTP transport and HTTPS/auth behavior
 - **Core integration** (`tests/integration/core/`): Server registries, capabilities, error handling
 
 **Tier 3: Complete User Scenarios (End-to-end)**
@@ -118,11 +118,11 @@ uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
   - `test_deployment_scenarios.py`: Docker environment validation, production builds, multi-platform testing
 
 **Development Utilities**
-- **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (tests all 53 tools with real R)
+- **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (tests all 52 tools with real R)
 
 **Complete Test Coverage**: Docker environment includes **all 240+ tests** with comprehensive coverage across all components:
-- ✅ **R Integration**: 53 statistical tools with real R execution
-- ✅ **HTTP Transport**: FastAPI, uvicorn, SSE streaming, session management
+- ✅ **R Integration**: 52 statistical tools with real R execution
+- ✅ **HTTP Transport**: MCP SDK Streamable HTTP, uvicorn, bearer auth, session management
 - ✅ **Core MCP Protocol**: JSON-RPC 2.0, tool calls, capabilities, error handling
 - ✅ **Configuration System**: Environment variables, config files, hierarchical loading
 - ✅ **Production Deployment**: Multi-stage Docker builds, security validation, size optimization
@@ -289,7 +289,7 @@ This protocol ensures CI failures are caught locally, maintaining the 99%+ build
 **Why Hybrid?**
 - **Docker**: Ensures consistent R environment for integration testing (complex R package dependencies)
 - **uv**: Enables fast cross-platform Python testing on Mac/Windows/Linux (important for CLI tools)
-- **Optimized**: No lock file in repository (uv handles dependency resolution efficiently)
+- **Reproducible**: `uv.lock` is committed for deterministic dependency resolution
 - **Flexible**: Developers can choose lightweight uv setup or full Docker environment
 
 **When to use what:**
@@ -578,7 +578,7 @@ cd docs/_build/html && python -m http.server 8080
 - Python 3.11+ required
 - R environment provided via Docker (no local R installation needed for development)
 - All R communication uses JSON via subprocess
-- HTTP transport includes session management and SSE for streaming
+- HTTP transport is MCP Streamable HTTP (SDK-managed sessions); bearer auth via RMCP_API_KEY
 - VFS security restricts file access to configured paths only
 - Configuration system supports all deployment scenarios (local, Docker, production)
-- `poetry.lock` is gitignored (optimizes repository size, regenerated locally)
+- `uv.lock` is committed; run `uv sync` to reproduce the environment

@@ -603,7 +603,7 @@ jobs:
         # Test HTTP transport dependencies
         echo "🔍 Testing HTTP transport dependencies..."
         docker run --rm "$PROD_IMAGE" \
-          python -c "import fastapi, uvicorn; print('✅ Production image HTTP transport ready')"
+          python -c "import mcp, uvicorn; print('✅ Production image HTTP transport ready')"
 
         # Test R availability
         echo "🔍 Testing R availability..."

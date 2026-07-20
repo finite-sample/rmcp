@@ -232,7 +232,6 @@ class ToolsRegistry:
             base_payload = {"status": "completed"}
         summary = self._build_summary(tool_def, base_payload, formatting_info)
         content: list[dict[str, Any]] = []
-        structured_content: list[dict[str, Any]] = []
         # Build human-readable content (text summaries)
         if summary:
             content.append(
@@ -259,21 +258,22 @@ class ToolsRegistry:
                     "annotations": {"mimeType": "application/json"},
                 }
             )
-        # Build structured content (machine-readable data)
+        # Build structured content (machine-readable data). Per the MCP spec,
+        # structuredContent must be an object conforming to the tool's declared
+        # outputSchema, so the raw payload is passed through unwrapped.
+        structured_content: dict[str, Any] | None = None
         if isinstance(base_payload, dict | list) and base_payload:
             # Check if this is a large dataset that should be stored as a resource
             resource_uri = self._check_for_large_data_and_create_resource(base_payload)
             if resource_uri:
                 # Large dataset - provide resource link instead of inline data
-                structured_content.append(
+                content.append(
                     {
                         "type": "resource_link",
-                        "resource": {
-                            "uri": resource_uri,
-                            "mimeType": "application/json",
-                            "name": "Large Dataset",
-                            "description": f"Dataset with {self._estimate_data_size(base_payload)} items",
-                        },
+                        "uri": resource_uri,
+                        "mimeType": "application/json",
+                        "name": "Large Dataset",
+                        "description": f"Dataset with {self._estimate_data_size(base_payload)} items",
                         "annotations": {"large_data": True},
                     }
                 )
@@ -287,38 +287,27 @@ class ToolsRegistry:
                             "annotations": {"mimeType": "text/markdown"},
                         }
                     )
+            elif isinstance(base_payload, dict):
+                structured_content = base_payload
             else:
-                # Normal sized data - include inline
-                structured_content.append(
-                    {
-                        "type": "json",
-                        "json": base_payload,
-                        "annotations": {"mimeType": "application/json"},
-                    }
-                )
-        # Add images to both content streams
+                # Lists are wrapped: structuredContent must be a JSON object
+                structured_content = {
+                    "items": base_payload,
+                    "count": len(base_payload),
+                }
+        # Images are human-facing display content only
         if image_data:
-            image_block = {
-                "type": "image",
-                "data": image_data,
-                "mimeType": image_mime_type,
-            }
-            content.append(image_block)
-            structured_content.append(image_block)
+            content.append(
+                {
+                    "type": "image",
+                    "data": image_data,
+                    "mimeType": image_mime_type,
+                }
+            )
         # Prepare response
         response: dict[str, Any] = {"content": content}
-        if structured_content:
-            # MCP specification requires structuredContent to be an object, not an array
-            if len(structured_content) == 1:
-                # Single item - use it directly as the object
-                response["structuredContent"] = structured_content[0]
-            else:
-                # Multiple items - wrap in proper object structure
-                response["structuredContent"] = {
-                    "items": structured_content,
-                    "count": len(structured_content),
-                    "type": "multi_content",
-                }
+        if structured_content is not None:
+            response["structuredContent"] = structured_content
         return response
 
     def _build_summary(

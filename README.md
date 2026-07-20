@@ -12,8 +12,7 @@
 
 ### 🌐 **Try the Live Server** (No Installation Required)
 
-**HTTP Server**: `https://rmcp-server-394229601724.us-central1.run.app/mcp`
-**Interactive Docs**: `https://rmcp-server-394229601724.us-central1.run.app/docs`
+**MCP Endpoint**: `https://rmcp-server-394229601724.us-central1.run.app/mcp` (bearer token required)
 **Health Check**: `https://rmcp-server-394229601724.us-central1.run.app/health`
 
 ### 🖥️ **Or Install Locally**
@@ -133,10 +132,13 @@ Add to your Claude Desktop MCP configuration:
 
 ### HTTP Server Integration (Claude Web)
 
-**Production Server** (ready to use):
+RMCP serves the MCP **Streamable HTTP** transport at `/mcp` (spec 2025-11-25),
+compatible with Claude custom connectors and OpenAI's Responses API / ChatGPT
+remote MCP support. Remote deployments require a bearer token.
+
+**Production Server**:
 ```
 Server URL: https://rmcp-server-394229601724.us-central1.run.app/mcp
-Interactive Docs: https://rmcp-server-394229601724.us-central1.run.app/docs
 ```
 
 **Test the connection**:
@@ -144,19 +146,21 @@ Interactive Docs: https://rmcp-server-394229601724.us-central1.run.app/docs
 # Health check
 curl https://rmcp-server-394229601724.us-central1.run.app/health
 
-# Initialize MCP session
+# Initialize MCP session (Streamable HTTP)
 curl -X POST https://rmcp-server-394229601724.us-central1.run.app/mcp \
   -H "Content-Type: application/json" \
-  -H "MCP-Protocol-Version: 2025-06-18" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'
+  -H "Accept: application/json, text/event-stream" \
+  -H "Authorization: Bearer $RMCP_API_KEY" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'
 ```
 
 **Local HTTP server**:
 ```bash
-# Start local HTTP server
-rmcp serve-http --host 0.0.0.0 --port 8080
+# Localhost (no auth required)
+rmcp serve-http
 
-# Access at: http://localhost:8080/docs
+# Remote bind requires a bearer token (or --allow-unauthenticated)
+RMCP_API_KEY=your-secret rmcp serve-http --host 0.0.0.0 --port 8080
 ```
 
 ### Command Line Usage
@@ -213,7 +217,7 @@ docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
 - **🎯 Natural Conversation**: Ask questions in plain English, get statistical analysis
 - **📚 Comprehensive Package Ecosystem**: 429 R packages from systematic CRAN task views with 4-tier security system
 - **📊 Professional Output**: Formatted results with markdown tables and inline visualizations
-- **🔒 Production Ready**: Full MCP protocol compliance with HTTP transport and SSE
+- **🔒 Production Ready**: Official MCP SDK with stdio and Streamable HTTP transports, plus bearer-token auth for remote deployments
 - **⚙️ Flexible Configuration**: Environment variables, config files, and CLI options
 - **⚡ Fast & Reliable**: 100% test success rate across all scenarios
 - **🌐 Multiple Transports**: stdio (Claude Desktop) and HTTP (web applications)

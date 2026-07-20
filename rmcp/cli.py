@@ -26,23 +26,11 @@ from .registries.prompts import (
     time_series_forecast_prompt,
 )
 from .registries.tools import register_tool_functions
-from .transport.stdio import StdioTransport
+from .transport.sdk import run_stdio, run_streamable_http
 
 # Modern Python 3.10+ syntax for type hints
 # Structured logging will be configured in CLI commands based on config
 logger = get_logger(__name__)
-
-
-async def _run_server_with_transport(server, transport) -> None:
-    """Run a transport while honoring server lifecycle hooks."""
-    started = False
-    try:
-        await server.startup()
-        started = True
-        await transport.run()
-    finally:
-        if started:
-            await server.shutdown()
 
 
 @click.group()
@@ -137,13 +125,6 @@ def start(ctx, log_level: str):
             allowed_paths=allowed_paths, read_only=config.security.vfs_read_only
         )
 
-        # Set up stdio transport BEFORE registering tools to avoid notification timing issues
-        logger.info("Setting up stdio transport...")
-        transport = StdioTransport(
-            max_workers=config.performance.threadpool_max_workers
-        )
-        transport.set_message_handler(server.create_message_handler(transport))
-
         logger.info("Registering built-in tools...")
         # Register built-in statistical tools
         _register_builtin_tools(server)
@@ -162,7 +143,7 @@ def start(ctx, log_level: str):
         logger.info("Starting MCP server with stdio transport...")
         # Run the server with lifecycle management
         try:
-            asyncio.run(_run_server_with_transport(server, transport))
+            asyncio.run(run_stdio(server))
         except Exception as e:
             logger.error(f"Failed to start server: {e}")
             import traceback
@@ -254,11 +235,8 @@ def serve(
             time_series_forecast_prompt,
             panel_regression_prompt,
         )
-        # Set up stdio transport
-        transport = StdioTransport()
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Run the server with lifecycle management
-        asyncio.run(_run_server_with_transport(server, transport))
+        # Run the server over stdio with lifecycle management
+        asyncio.run(run_stdio(server))
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
     except Exception as e:
@@ -276,6 +254,18 @@ def serve(
     "--allowed-paths", multiple=True, help="Additional allowed file system paths"
 )
 @click.option("--cache-root", help="Cache root directory")
+@click.option(
+    "--api-key",
+    "api_keys",
+    multiple=True,
+    help="Bearer token required on /mcp (repeatable; also RMCP_API_KEY env, "
+    "comma-separated)",
+)
+@click.option(
+    "--allow-unauthenticated",
+    is_flag=True,
+    help="Serve /mcp without auth on a non-localhost bind (not recommended)",
+)
 @click.pass_context
 def serve_http(
     ctx,
@@ -286,17 +276,10 @@ def serve_http(
     ssl_keyfile_password: str,
     allowed_paths: tuple[str, ...],
     cache_root: str | None,
+    api_keys: tuple[str, ...],
+    allow_unauthenticated: bool,
 ):
-    """Run MCP server over HTTP transport (requires fastapi extras)."""
-    try:
-        from .transport.http import HTTPTransport
-    except ImportError:
-        click.echo(
-            "HTTP transport requires 'fastapi' extras. "
-            "Install with: pip install rmcp[http]"
-        )
-        sys.exit(1)
-
+    """Run MCP server over Streamable HTTP (MCP spec transport)."""
     # Get configuration
     config = ctx.obj.get("config") or get_config()
     log_format = ctx.obj.get("log_format", "structured")
@@ -340,15 +323,20 @@ def serve_http(
 
     _register_builtin_tools(server)
 
-    # Create HTTP transport with configuration
-    transport = HTTPTransport(
-        host=effective_host,
-        port=effective_port,
-        ssl_keyfile=effective_ssl_keyfile,
-        ssl_certfile=effective_ssl_certfile,
-        ssl_keyfile_password=effective_ssl_keyfile_password,
-    )
-    transport.set_message_handler(server.create_message_handler(transport))
+    # Resolve API keys: CLI flags take precedence, then RMCP_API_KEY env
+    resolved_keys = {key.strip() for key in api_keys if key.strip()}
+    env_keys = os.environ.get("RMCP_API_KEY", "")
+    resolved_keys.update(key.strip() for key in env_keys.split(",") if key.strip())
+
+    is_local_bind = effective_host in ("127.0.0.1", "localhost", "::1")
+    if not resolved_keys and not is_local_bind and not allow_unauthenticated:
+        click.echo(
+            "Refusing to serve /mcp without authentication on a non-localhost "
+            f"bind ({effective_host}). Pass --api-key / set RMCP_API_KEY, or "
+            "use --allow-unauthenticated to accept the risk.",
+            err=True,
+        )
+        sys.exit(1)
 
     # Show appropriate protocol and security info
     if is_https:
@@ -360,20 +348,30 @@ def serve_http(
         click.echo(
             f"🚀 RMCP HTTP server starting on http://{effective_host}:{effective_port}"
         )
+    if resolved_keys:
+        click.echo(f"🔑 Bearer auth enabled ({len(resolved_keys)} key(s))")
+    elif not is_local_bind:
+        click.echo("⚠️  /mcp is served WITHOUT authentication")
 
     click.echo(f"📊 Available tools: {len(server.tools._tools)}")
     click.echo("🔗 Endpoints:")
     click.echo(
-        f"   • POST {protocol}://{effective_host}:{effective_port}/mcp (JSON-RPC requests)"
-    )
-    click.echo(
-        f"   • GET  {protocol}://{effective_host}:{effective_port}/mcp/sse (Server-Sent Events)"
+        f"   • {protocol}://{effective_host}:{effective_port}/mcp (MCP Streamable HTTP)"
     )
     click.echo(
         f"   • GET  {protocol}://{effective_host}:{effective_port}/health (Health check)"
     )
     try:
-        asyncio.run(_run_server_with_transport(server, transport))
+        run_streamable_http(
+            server,
+            host=effective_host,
+            port=effective_port,
+            api_keys=resolved_keys,
+            ssl_keyfile=effective_ssl_keyfile,
+            ssl_certfile=effective_ssl_certfile,
+            ssl_keyfile_password=effective_ssl_keyfile_password,
+            log_level=config.logging.level,
+        )
     except KeyboardInterrupt:
         click.echo("\n👋 Shutting down HTTP server")
     except Exception as e:

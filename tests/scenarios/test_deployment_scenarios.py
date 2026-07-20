@@ -89,7 +89,7 @@ def _ensure_production_image():
         image_name,
         "python",
         "-c",
-        "import rmcp, fastapi, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil; print('✅ Basic dependencies validated')",
+        "import rmcp, mcp, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil; print('✅ Basic dependencies validated')",
     ]
 
     validation_result = subprocess.run(
@@ -248,7 +248,7 @@ def production_docker_image():
 
     print(f"🎉 Production Docker image ready: {image_name}")
     print(
-        "   Python superset validated: rmcp, fastapi, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil"
+        "   Python superset validated: rmcp, mcp, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil"
     )
     print(
         "   Workflow capabilities validated: Excel read/write, JSON serialization, data manipulation"
@@ -665,7 +665,7 @@ class TestDockerProductionScenarios:
             production_docker_image,
             "python",
             "-c",
-            "import fastapi, uvicorn, httpx; print('HTTP transport ready')",
+            "import mcp, uvicorn, httpx; print('HTTP transport ready')",
         ]
 
         fastapi_result = subprocess.run(
