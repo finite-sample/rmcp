@@ -413,10 +413,14 @@ jobs:
         which R && echo "✅ R available for scenario tests" || echo "❌ R required but not available"
         pytest tests/scenarios/ -v --tb=short --cov=rmcp --cov-append
 
+    - name: Install gpg for Codecov uploader verification
+      run: |
+        apt-get update -qq && apt-get install -y -qq gpg
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v7
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         flags: comprehensive
         name: comprehensive-coverage
         fail_ci_if_error: false
