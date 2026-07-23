@@ -21,6 +21,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Verify RMCP_API_KEY secret is configured
+      env:
+        RMCP_API_KEY: ${{ secrets.RMCP_API_KEY }}
+      run: |
+        if [ -z "$RMCP_API_KEY" ]; then
+          echo "::error::RMCP_API_KEY secret is not set. The server refuses to serve /mcp unauthenticated on a remote bind, so the Cloud Run revision would fail its health check. Set the secret with: gh secret set RMCP_API_KEY"
+          exit 1
+        fi
+
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v1
       with:
@@ -43,6 +52,8 @@ jobs:
         docker push $AR_IMAGE
 
     - name: Deploy to Cloud Run
+      env:
+        RMCP_API_KEY: ${{ secrets.RMCP_API_KEY }}
       run: |
         gcloud run deploy $SERVICE_NAME \
           --image $AR_IMAGE \
@@ -51,7 +62,7 @@ jobs:
           --allow-unauthenticated \
           --command rmcp \
           --args serve-http,--host,0.0.0.0,--port,8080 \
-          --set-env-vars "RMCP_API_KEY=${{ secrets.RMCP_API_KEY }}" \
+          --set-env-vars "RMCP_API_KEY=$RMCP_API_KEY" \
           --port 8080 \
           --memory 2Gi \
           --timeout 300

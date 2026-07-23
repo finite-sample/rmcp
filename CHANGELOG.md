@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-07-22
+
+### Fixed
+- **CI**: inline mkcert workflow step still imported the deleted
+  `rmcp.transport.http`; replaced with an end-to-end `rmcp serve-http` TLS
+  boot + health check. The "Test CLI and MCP protocol" step now drives stdio
+  with the official MCP client (the old `rmcp start --quiet` pipe was a no-op
+  that masked failures).
+- **Stdio test flows**: raw fire-and-close JSON-RPC pipes race the SDK
+  server's EOF shutdown and violate the initialization handshake. Scenario
+  tests and setup scripts now use the official MCP client
+  (`tests/utils.py::run_mcp_stdio_workflow`); removed
+  `scripts/testing/test_https_local.py` (superseded by
+  `tests/integration/transport/test_https.py`).
+- **`read_csv`/`read_excel`/`filter_data` were broken**: their R scripts
+  returned row-record data that failed the declared column-wise output
+  schemas, and length-1 vectors serialized as JSON scalars instead of arrays.
+  All fileops scripts now emit column-wise data with `I()`-preserved arrays.
+- **`filter_data` structured conditions never worked**: `fromJSON()`
+  simplifies the conditions array to a data.frame and the script iterated
+  columns instead of rows; conditions are now normalized to row lists.
+- **Deploy**: fail fast with a clear error when the `RMCP_API_KEY` secret is
+  missing instead of timing out on the Cloud Run health check.
+
 ## [0.9.0] - 2026-07-19
 
 ### Breaking Changes

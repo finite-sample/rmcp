@@ -133,10 +133,7 @@ class TestClaudeDesktopIntegration:
             assert response["jsonrpc"] == "2.0"
             assert "result" in response
             assert "serverInfo" in response["result"]
-            assert (
-                response["result"]["serverInfo"]["name"]
-                == "RMCP Statistical Analysis Server"
-            )
+            assert response["result"]["serverInfo"]["name"] == "RMCP MCP Server"
 
         except subprocess.TimeoutExpired:
             process.kill()
@@ -331,57 +328,32 @@ class TestRMCPServerSetup:
         if not rmcp_path:
             pytest.skip("rmcp command not found")
 
-        # Create a simple test to verify RMCP works
-        test_request = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "correlation_analysis",
-                "arguments": {
-                    "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
-                    "variables": ["x", "y"],
-                    "method": "pearson",
-                },
-            },
-        }
+        import asyncio
 
-        process = subprocess.Popen(
-            [rmcp_path, "start"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
+        from mcp import ClientSession, StdioServerParameters
+        from mcp.client.stdio import stdio_client
+
+        async def run_analysis():
+            params = StdioServerParameters(command=rmcp_path, args=["start"])
+            async with stdio_client(params) as (read_stream, write_stream):
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    return await session.call_tool(
+                        "correlation_analysis",
+                        {
+                            "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
+                            "variables": ["x", "y"],
+                            "method": "pearson",
+                        },
+                    )
 
         try:
-            stdout, stderr = process.communicate(
-                input=json.dumps(test_request) + "\n", timeout=15
-            )
-
-            # Look for successful response
-            response_found = False
-            for line in stdout.strip().split("\n"):
-                if line.startswith('{"jsonrpc"') and '"result"' in line:
-                    response = json.loads(line)
-                    if "result" in response and "content" in response["result"]:
-                        response_found = True
-                        print("Sample analysis successful")
-                        break
-
-            assert response_found, (
-                f"No successful response found. stdout: {stdout}, stderr: {stderr}"
-            )
-
-        except subprocess.TimeoutExpired:
-            process.kill()
-            pytest.fail("Sample analysis timeout")
+            result = asyncio.run(asyncio.wait_for(run_analysis(), timeout=30))
         except Exception as e:
-            process.kill()
             pytest.fail(f"Sample analysis failed: {e}")
-        finally:
-            if process.poll() is None:
-                process.terminate()
+
+        assert not result.isError, f"Sample analysis returned error: {result.content}"
+        print("Sample analysis successful")
 
 
 def create_sample_ide_configs():

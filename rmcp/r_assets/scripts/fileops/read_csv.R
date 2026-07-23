@@ -59,24 +59,26 @@ if (!is_url) {
   file_size <- NA
   modified_date <- NA
 }
+# Column-wise data and I() on vectors keep JSON arrays even at length 1,
+# matching the declared output schema under toJSON(auto_unbox = TRUE).
 result <- list(
-  data = data,
+  data = lapply(data, I),
   file_info = list(
     file_path = file_path,
     is_url = is_url,
     n_rows = nrow(data),
     n_cols = ncol(data),
-    column_names = names(data),
-    numeric_variables = numeric_vars,
-    character_variables = character_vars,
-    factor_variables = factor_vars,
+    column_names = I(names(data)),
+    numeric_variables = I(numeric_vars),
+    character_variables = I(character_vars),
+    factor_variables = I(factor_vars),
     file_size_bytes = file_size,
     modified_date = modified_date
   ),
   parsing_info = list(
     header = header,
     separator = sep,
-    na_strings = na_strings,
+    na_strings = I(na_strings),
     rows_skipped = skip_rows
   ),
   summary = list(

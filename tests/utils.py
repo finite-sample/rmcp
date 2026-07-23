@@ -6,6 +6,47 @@ import contextlib
 import json
 from typing import Any
 
+
+def run_mcp_stdio_workflow(
+    command: str,
+    args: list[str] | None = None,
+    tool_calls: list[tuple[str, dict[str, Any]]] | None = None,
+    env: dict[str, str] | None = None,
+    timeout: float = 120.0,
+) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
+    """Drive a stdio MCP server with the official client (sync wrapper).
+
+    Spawns ``command args...``, performs the initialize handshake, lists tools,
+    executes ``tool_calls`` in order, and shuts down cleanly. Returns
+    ``(initialize_result, tool_names, call_results)`` as plain dicts/lists.
+
+    This replaces raw fire-and-close JSON-RPC pipes: the SDK stdio server
+    cancels in-flight requests on stdin EOF, so piped requests race shutdown.
+    """
+    import asyncio
+
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    async def _run():
+        params = StdioServerParameters(command=command, args=args or [], env=env)
+        async with stdio_client(params) as (read_stream, write_stream):
+            async with ClientSession(read_stream, write_stream) as session:
+                init = await session.initialize()
+                tools = await session.list_tools()
+                call_results = []
+                for name, arguments in tool_calls or []:
+                    result = await session.call_tool(name, arguments)
+                    call_results.append(result.model_dump(mode="json"))
+                return (
+                    init.model_dump(mode="json"),
+                    [tool.name for tool in tools.tools],
+                    call_results,
+                )
+
+    return asyncio.run(asyncio.wait_for(_run(), timeout=timeout))
+
+
 STREAMABLE_HTTP_HEADERS = {
     "Accept": "application/json, text/event-stream",
     "Content-Type": "application/json",

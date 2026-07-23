@@ -19,6 +19,14 @@ filter_expressions <- c()
 if (!is.null(condition) && is.character(condition)) {
   filter_expressions <- c(condition)
 } else if (!is.null(conditions)) {
+  # fromJSON() simplifies an array of condition objects to a data.frame;
+  # normalize to a list of row-lists so iteration sees one condition at a time
+  if (is.data.frame(conditions)) {
+    conditions <- lapply(
+      seq_len(nrow(conditions)),
+      function(i) as.list(conditions[i, , drop = FALSE])
+    )
+  }
   # Handle structured conditions array
   for (cond in conditions) {
     var <- cond$variable
@@ -55,7 +63,7 @@ filtered_data <- tryCatch(
   }
 )
 result <- list(
-  data = filtered_data,
+  data = lapply(filtered_data, I), # Column-wise; I() keeps length-1 vectors as JSON arrays
   filter_expression = full_expression,
   original_rows = nrow(data),
   filtered_rows = nrow(filtered_data),

@@ -403,80 +403,62 @@ class TestDockerWorkflowValidation:
             temp_file = f.name
 
         try:
-            # Copy file to container and run analysis
-            workflow_commands = [
-                # Initialize MCP
-                '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"clientInfo":{"name":"Docker Workflow","version":"1.0.0"}}}',
-                # Load data (simplified - in real scenario would use file operations)
-                '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"summary_stats","arguments":{"data":{"month":[1,2,3,4,5],"sales":[1000,1200,1100,1300,1250],"marketing":[200,250,220,280,260]},"variables":["sales","marketing"]}}}',
-                # Run correlation analysis
-                '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"correlation_analysis","arguments":{"data":{"sales":[1000,1200,1100,1300,1250],"marketing":[200,250,220,280,260]},"variables":["sales","marketing"],"method":"pearson"}}}',
-                # Run linear regression
-                '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"linear_model","arguments":{"data":{"sales":[1000,1200,1100,1300,1250],"marketing":[200,250,220,280,260]},"formula":"sales ~ marketing"}}}',
+            # Drive the containerized server with the official MCP stdio client
+            # (raw fire-and-close pipes race the SDK server's EOF shutdown).
+            from tests.utils import run_mcp_stdio_workflow
+
+            data = {
+                "month": [1, 2, 3, 4, 5],
+                "sales": [1000, 1200, 1100, 1300, 1250],
+                "marketing": [200, 250, 220, 280, 260],
+            }
+            tool_calls = [
+                (
+                    "summary_stats",
+                    {"data": data, "variables": ["sales", "marketing"]},
+                ),
+                (
+                    "correlation_analysis",
+                    {
+                        "data": {k: v for k, v in data.items() if k != "month"},
+                        "variables": ["sales", "marketing"],
+                        "method": "pearson",
+                    },
+                ),
+                (
+                    "linear_model",
+                    {
+                        "data": {k: v for k, v in data.items() if k != "month"},
+                        "formula": "sales ~ marketing",
+                    },
+                ),
             ]
 
-            # Run workflow in Docker
-            input_data = "\n".join(workflow_commands) + "\n"
-
-            process = subprocess.Popen(
-                [
-                    "docker",
-                    "run",
-                    "--rm",
-                    "-i",
-                    production_docker_image,
-                    "rmcp",
-                    "start",
-                ],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
+            init_result, tool_names, results = run_mcp_stdio_workflow(
+                command="docker",
+                args=["run", "--rm", "-i", production_docker_image, "rmcp", "start"],
+                tool_calls=tool_calls,
+                timeout=120.0,
             )
 
-            try:
-                stdout, stderr = process.communicate(input=input_data, timeout=60)
+            assert init_result["serverInfo"]["name"] == "RMCP MCP Server"
+            assert len(results) == 3, (
+                f"Expected 3 analysis responses, got {len(results)}"
+            )
 
-                # Validate workflow results
-                responses = []
-                for line in stdout.strip().split("\n"):
-                    if line.startswith('{"jsonrpc"'):
-                        try:
-                            response = json.loads(line)
-                            if response.get("id") is not None:
-                                responses.append(response)
-                        except:
-                            pass
+            summary_result, correlation_result, regression_result = results
+            assert not summary_result.get("isError"), (
+                f"Summary statistics failed in Docker: {summary_result}"
+            )
+            assert not correlation_result.get("isError"), (
+                f"Correlation analysis failed in Docker: {correlation_result}"
+            )
+            assert not regression_result.get("isError"), (
+                f"Linear regression failed in Docker: {regression_result}"
+            )
 
-                # Check that we got responses for all requests
-                assert len(responses) >= 3, (
-                    f"Expected at least 3 analysis responses, got {len(responses)}"
-                )
-
-                # Verify specific analysis results
-                summary_success = any(
-                    r.get("id") == 2 and "result" in r for r in responses
-                )
-                correlation_success = any(
-                    r.get("id") == 3 and "result" in r for r in responses
-                )
-                regression_success = any(
-                    r.get("id") == 4 and "result" in r for r in responses
-                )
-
-                assert summary_success, "Summary statistics failed in Docker"
-                assert correlation_success, "Correlation analysis failed in Docker"
-                assert regression_success, "Linear regression failed in Docker"
-
-                print("✅ Complete analysis workflow successful in Docker")
-                print(f"   Completed {len(responses)} analysis steps")
-
-            except subprocess.TimeoutExpired:
-                process.kill()
-                pytest.fail("Complete workflow test timeout in Docker")
-            finally:
-                if process.poll() is None:
-                    process.terminate()
+            print("✅ Complete analysis workflow successful in Docker")
+            print(f"   Completed {len(results)} analysis steps")
 
         finally:
             try:

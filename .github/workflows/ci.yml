@@ -379,47 +379,28 @@ jobs:
 
         # Generate test certificates
         mkdir -p /tmp/test-certs
-        cd /tmp/test-certs
-        mkcert -cert-file test.pem -key-file test-key.pem localhost 127.0.0.1
+        mkcert -cert-file /tmp/test-certs/test.pem -key-file /tmp/test-certs/test-key.pem localhost 127.0.0.1
 
-        # Test HTTPS configuration validation
-        python -c "
-        from rmcp.transport.http import HTTPTransport
-        transport = HTTPTransport(
-            host='localhost',
-            port=8443,
-            ssl_keyfile='/tmp/test-certs/test-key.pem',
-            ssl_certfile='/tmp/test-certs/test.pem'
-        )
-        assert transport.is_https == True
-        print('✅ HTTPS transport configuration validated')
-        "
+        # End-to-end: serve-http over TLS, then hit /health with the mkcert CA
+        rmcp serve-http --host 127.0.0.1 --port 8443 \
+          --ssl-keyfile /tmp/test-certs/test-key.pem \
+          --ssl-certfile /tmp/test-certs/test.pem &
+        SERVER_PID=$!
 
-        # Test HTTPS server startup (quick test)
-        timeout 10 python -c "
-        import asyncio
-        from rmcp.transport.http import HTTPTransport
-
-        async def test_https():
-            transport = HTTPTransport(
-                host='127.0.0.1',
-                port=8443,
-                ssl_keyfile='/tmp/test-certs/test-key.pem',
-                ssl_certfile='/tmp/test-certs/test.pem'
-            )
-
-            async def mock_handler(msg):
-                return {'jsonrpc': '2.0', 'id': msg.get('id'), 'result': 'ok'}
-
-            transport.set_message_handler(mock_handler)
-            await transport.startup()
-            print('✅ HTTPS server startup successful')
-            await transport.shutdown()
-            print('✅ HTTPS server shutdown successful')
-
-        asyncio.run(test_https())
-        " || echo "⚠️ HTTPS server test timed out (expected in CI)"
-
+        HEALTHY=0
+        for i in $(seq 1 30); do
+          if curl -s --cacert "$(mkcert -CAROOT)/rootCA.pem" https://localhost:8443/health | grep -q healthy; then
+            HEALTHY=1
+            break
+          fi
+          sleep 1
+        done
+        kill $SERVER_PID || true
+        if [ "$HEALTHY" != "1" ]; then
+          echo "❌ HTTPS health check failed"
+          exit 1
+        fi
+        echo "✅ HTTPS health check passed"
         echo "✅ HTTPS functionality tests completed"
 
     - name: Run integration tests - core (server & registries)
@@ -447,8 +428,33 @@ jobs:
         rmcp --version
         rmcp list-capabilities
 
-        # Test basic MCP protocol with R tools
-        echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start --quiet | head -20
+        # Test MCP protocol over stdio with the official client (handshake + tools/list + real R tool call)
+        python - <<'PYEOF'
+        import asyncio
+
+        from mcp import ClientSession, StdioServerParameters
+        from mcp.client.stdio import stdio_client
+
+
+        async def main():
+            params = StdioServerParameters(command="rmcp", args=["start"])
+            async with stdio_client(params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    tools = await session.list_tools()
+                    names = [tool.name for tool in tools.tools]
+                    assert "linear_model" in names, names[:5]
+                    result = await session.call_tool(
+                        "summary_stats",
+                        {"data": {"x": [1, 2, 3, 4, 5]}, "variables": ["x"]},
+                    )
+                    assert not result.isError, result.content
+                    print(f"MCP stdio OK: {len(names)} tools, summary_stats ran")
+
+
+        asyncio.run(main())
+        PYEOF
+        echo "✅ MCP protocol verified over stdio"
 
   # Docker scenario tests run outside production container (need Docker access)
   docker-scenarios:

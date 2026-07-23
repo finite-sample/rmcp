@@ -237,80 +237,24 @@ class TestClaudeDesktopRealIntegration:
         test_env = os.environ.copy()
         test_env.update(env)
 
-        # Test tools/list request
-        tools_request = {
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/list",
-            "params": {},
-        }
-
-        process = subprocess.Popen(
-            [command] + args,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=test_env,
-        )
+        # Drive the server with the official MCP client (handles the full
+        # handshake and waits for responses instead of racing stdin EOF).
+        from tests.utils import run_mcp_stdio_workflow
 
         try:
-            # Send initialize first
-            init_request = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": "2025-06-18",
-                    "capabilities": {"tools": {}},
-                    "clientInfo": {"name": "Claude Desktop", "version": "1.0.0"},
-                },
-            }
-
-            input_data = (
-                json.dumps(init_request) + "\n" + json.dumps(tools_request) + "\n"
+            _, tool_names, _ = run_mcp_stdio_workflow(
+                command=command, args=args, env=test_env, timeout=30.0
             )
-            stdout, stderr = process.communicate(input=input_data, timeout=20)
+        except Exception as exc:
+            pytest.fail(f"Tools list request failed: {exc}")
 
-            # Look for tools list response
-            tools_found = False
-            for line in stdout.strip().split("\n"):
-                if line.startswith('{"jsonrpc"') and '"tools"' in line:
-                    response = json.loads(line)
-                    if (
-                        response.get("jsonrpc") == "2.0"
-                        and "result" in response
-                        and response.get("id") == 2
-                    ):
-                        tools = response.get("result", {}).get("tools", [])
-                        print(f"✅ Tools available to Claude Desktop: {len(tools)}")
-
-                        # Verify key tools are available
-                        tool_names = [tool.get("name", "") for tool in tools]
-                        expected_tools = [
-                            "linear_model",
-                            "summary_stats",
-                            "read_csv",
-                            "scatter_plot",
-                        ]
-
-                        for expected_tool in expected_tools:
-                            assert expected_tool in tool_names, (
-                                f"Expected tool {expected_tool} not found"
-                            )
-
-                        print(f"   Key tools verified: {expected_tools}")
-                        tools_found = True
-                        break
-
-            assert tools_found, f"No tools list response found. stdout: {stdout[:500]}"
-
-        except subprocess.TimeoutExpired:
-            process.kill()
-            pytest.fail("Tools list request timeout")
-        finally:
-            if process.poll() is None:
-                process.terminate()
+        print(f"✅ Tools available to Claude Desktop: {len(tool_names)}")
+        expected_tools = ["linear_model", "summary_stats", "read_csv", "scatter_plot"]
+        for expected_tool in expected_tools:
+            assert expected_tool in tool_names, (
+                f"Expected tool {expected_tool} not found"
+            )
+        print(f"   Key tools verified: {expected_tools}")
 
 
 class TestClaudeDesktopWorkflows:
@@ -345,116 +289,59 @@ class TestClaudeDesktopWorkflows:
         else:
             return Path.home() / ".config/claude/claude_desktop_config.json"
 
-    def create_mcp_session(self):
-        """Create an MCP session like Claude Desktop would."""
+    def get_rmcp_launch(self):
+        """Return (command, args, env) for launching RMCP as Claude Desktop would."""
         rmcp_config = self.get_rmcp_config()
-
         command = rmcp_config["command"]
         args = rmcp_config["args"]
         env = rmcp_config.get("env", {})
-
         test_env = os.environ.copy()
         test_env.update(env)
-
-        process = subprocess.Popen(
-            [command] + args,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=test_env,
-        )
-
-        # Initialize session
-        init_request = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2025-06-18",
-                "capabilities": {"tools": {}},
-                "clientInfo": {"name": "Claude Desktop E2E Test", "version": "1.0.0"},
-            },
-        }
-
-        return process, init_request
+        return command, args, test_env
 
     def test_data_analysis_workflow(self):
         """Test complete data analysis workflow as Claude Desktop user would do."""
-        process, init_request = self.create_mcp_session()
+        from tests.utils import run_mcp_stdio_workflow
+
+        command, args, test_env = self.get_rmcp_launch()
+
+        tool_calls = [
+            (
+                "load_example",
+                {"dataset_name": "survey", "size": "small"},
+            ),
+            (
+                "summary_stats",
+                {
+                    "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
+                    "variables": ["x", "y"],
+                },
+            ),
+        ]
 
         try:
-            # Step 1: Initialize
-            requests = [init_request]
-
-            # Step 2: Load example data
-            requests.append(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "load_example",
-                        "arguments": {"dataset_name": "survey", "size": "small"},
-                    },
-                }
+            _, _, results = run_mcp_stdio_workflow(
+                command=command,
+                args=args,
+                env=test_env,
+                tool_calls=tool_calls,
+                timeout=30.0,
             )
+        except Exception as exc:
+            pytest.fail(f"Data analysis workflow failed: {exc}")
 
-            # Step 3: Run summary statistics
-            requests.append(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 3,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "summary_stats",
-                        "arguments": {
-                            "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
-                            "variables": ["x", "y"],
-                        },
-                    },
-                }
-            )
-
-            # Send all requests
-            input_data = "\n".join(json.dumps(req) for req in requests) + "\n"
-            stdout, stderr = process.communicate(input=input_data, timeout=30)
-
-            # Validate responses
-            responses = []
-            for line in stdout.strip().split("\n"):
-                if line.startswith('{"jsonrpc"'):
-                    try:
-                        response = json.loads(line)
-                        if response.get("id") is not None:
-                            responses.append(response)
-                    except:
-                        pass
-
-            assert len(responses) >= 2, (
-                f"Expected at least 2 responses, got {len(responses)}"
-            )
-
-            # Check successful analysis
-            analysis_success = False
-            for response in responses:
-                if response.get("id") == 3 and "result" in response:
-                    analysis_success = True
-                    print("✅ Data analysis workflow completed successfully")
-                    break
-
-            assert analysis_success, "Data analysis workflow failed"
-
-        except subprocess.TimeoutExpired:
-            process.kill()
-            pytest.fail("Data analysis workflow timeout")
-        finally:
-            if process.poll() is None:
-                process.terminate()
+        assert len(results) == 2, f"Expected 2 responses, got {len(results)}"
+        summary_result = results[1]
+        assert not summary_result.get("isError"), (
+            f"Data analysis workflow failed: {summary_result}"
+        )
+        print("✅ Data analysis workflow completed successfully")
 
     def test_file_workflow_with_temp_data(self):
         """Test file-based workflow with temporary data file."""
-        process, init_request = self.create_mcp_session()
+        from tests.utils import run_mcp_stdio_workflow
+
+        command, args, test_env = self.get_rmcp_launch()
 
         # Create temporary CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
@@ -467,63 +354,41 @@ class TestClaudeDesktopWorkflows:
             temp_file = f.name
 
         try:
-            requests = [
-                init_request,
-                {
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "read_csv",
-                        "arguments": {"file_path": temp_file},
+            tool_calls = [
+                ("read_csv", {"file_path": temp_file}),
+                (
+                    "correlation_analysis",
+                    {
+                        "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
+                        "variables": ["x", "y"],
+                        "method": "pearson",
                     },
-                },
-                {
-                    "jsonrpc": "2.0",
-                    "id": 3,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "correlation_analysis",
-                        "arguments": {
-                            "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
-                            "variables": ["x", "y"],
-                            "method": "pearson",
-                        },
-                    },
-                },
+                ),
             ]
 
-            input_data = "\n".join(json.dumps(req) for req in requests) + "\n"
-            stdout, stderr = process.communicate(input=input_data, timeout=30)
+            try:
+                _, _, results = run_mcp_stdio_workflow(
+                    command=command,
+                    args=args,
+                    env=test_env,
+                    tool_calls=tool_calls,
+                    timeout=30.0,
+                )
+            except Exception as exc:
+                pytest.fail(f"File workflow failed: {exc}")
 
-            # Validate file workflow
-            file_read_success = False
-            correlation_success = False
-
-            for line in stdout.strip().split("\n"):
-                if line.startswith('{"jsonrpc"'):
-                    try:
-                        response = json.loads(line)
-                        if response.get("id") == 2 and "result" in response:
-                            file_read_success = True
-                        elif response.get("id") == 3 and "result" in response:
-                            correlation_success = True
-                    except:
-                        pass
-
-            assert file_read_success, "File read operation failed"
-            assert correlation_success, "Correlation analysis failed"
+            file_result, correlation_result = results
+            assert not file_result.get("isError"), (
+                f"File read operation failed: {file_result}"
+            )
+            assert not correlation_result.get("isError"), (
+                f"Correlation analysis failed: {correlation_result}"
+            )
             print("✅ File-based workflow completed successfully")
-
-        except subprocess.TimeoutExpired:
-            process.kill()
-            pytest.fail("File workflow timeout")
         finally:
-            if process.poll() is None:
-                process.terminate()
             try:
                 os.unlink(temp_file)
-            except:
+            except OSError:
                 pass
 
 
