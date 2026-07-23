@@ -1,15 +1,18 @@
 # HTTP Server API
 
-RMCP provides a comprehensive HTTP API for web applications and remote access.
+RMCP serves the MCP **Streamable HTTP** transport (protocol `2025-11-25`,
+with `2025-06-18` back-compat) via the official MCP SDK. It works with any
+spec-compliant MCP client: Claude custom connectors, the Claude API MCP
+connector, OpenAI's Responses API / ChatGPT remote MCP support, and the
+official `mcp` client SDKs.
 
 ## Getting Started
 
 ### Quick Start
 ```bash
-# Install with HTTP dependencies
-pip install rmcp[http]
+pip install rmcp
 
-# Start HTTP server
+# Start HTTP server (localhost, no auth required)
 rmcp serve-http
 
 # Test the server
@@ -17,147 +20,131 @@ curl http://localhost:8000/health
 ```
 
 ### Using the Live Server
-Try the deployed server without any installation:
 
-- **HTTP Server**: `https://rmcp-server-394229601724.us-central1.run.app/mcp`
-- **Interactive Docs**: `https://rmcp-server-394229601724.us-central1.run.app/docs`
+- **MCP Endpoint**: `https://rmcp-server-394229601724.us-central1.run.app/mcp`
 - **Health Check**: `https://rmcp-server-394229601724.us-central1.run.app/health`
+
+## Authentication
+
+Remote binds require a bearer token. Configure accepted keys with the
+`RMCP_API_KEY` environment variable (comma-separated for multiple keys) or
+repeatable `--api-key` flags:
+
+```bash
+RMCP_API_KEY=your-secret rmcp serve-http --host 0.0.0.0 --port 8080
+```
+
+Clients send the token in the `Authorization` header:
+
+```
+Authorization: Bearer your-secret
+```
+
+`/health` stays open. Binding to a non-localhost address without a key is
+refused unless you pass `--allow-unauthenticated`.
 
 ## API Endpoints
 
-### Main MCP Endpoint
+### MCP Endpoint (Streamable HTTP)
 
-**POST /mcp**
-
-Main Model Context Protocol communication endpoint.
+**POST /mcp** — JSON-RPC 2.0 requests. Responses arrive as JSON or an SSE
+stream, depending on request type and negotiation.
 
 **Request Headers:**
 - `Content-Type: application/json`
-- `MCP-Protocol-Version: 2025-06-18` (required after initialization)
-- `MCP-Session-Id: <session-id>` (included automatically after initialization)
+- `Accept: application/json, text/event-stream` (required)
+- `Authorization: Bearer <token>` (when auth is enabled)
+- `Mcp-Session-Id: <session-id>` (returned by `initialize`; required on
+  subsequent requests)
+- `MCP-Protocol-Version: 2025-11-25` (recommended after initialization)
 
-**JSON-RPC 2.0 Request Body:**
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "<method_name>",
-  "params": {}
-}
-```
+**GET /mcp** — optional server-to-client SSE stream for notifications.
 
-**Available Methods:**
-- `initialize` - Initialize MCP session
-- `tools/list` - List available statistical analysis tools
-- `tools/call` - Execute statistical analysis tool
-- `resources/list` - List available data resources
-- `prompts/list` - List available prompt templates
+**DELETE /mcp** — terminate the session.
 
-### Server-Sent Events
+**Handshake:** `initialize` → read the `Mcp-Session-Id` response header →
+send a `notifications/initialized` notification → issue requests.
 
-**GET /mcp/sse**
-
-Real-time event stream for progress updates and notifications.
-
-**Response:** `text/event-stream` with JSON-encoded events:
-
-```javascript
-// Progress notification
-event: notification
-data: {"method": "notifications/progress", "params": {"progressToken": "abc", "progress": 50, "total": 100}}
-
-// Keep-alive signal
-event: keepalive
-data: {"status": "ok"}
-```
+**Available methods:** `initialize`, `tools/list`, `tools/call`,
+`resources/list`, `resources/templates/list`, `resources/read`,
+`resources/subscribe`, `prompts/list`, `prompts/get`, `logging/setLevel`.
 
 ### Health Check
 
 **GET /health**
 
-Server health and status information.
-
-**Response:**
 ```json
 {
   "status": "healthy",
-  "transport": "HTTP"
+  "server": "RMCP MCP Server",
+  "version": "0.9.0",
+  "transport": "streamable-http",
+  "tools": 52
 }
 ```
 
 ## Example Usage
 
-### JavaScript Client
-```javascript
-// Initialize session
-const initResponse = await fetch('/mcp', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    jsonrpc: '2.0',
-    id: 1,
-    method: 'initialize',
-    params: {
-      protocolVersion: '2025-06-18',
-      capabilities: {},
-      clientInfo: { name: 'rmcp-client', version: '1.0.0' }
-    }
-  })
-});
+### Official MCP Python client
 
-// List available tools
-const toolsResponse = await fetch('/mcp', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'MCP-Protocol-Version': '2025-06-18',
-    'MCP-Session-Id': sessionId
-  },
-  body: JSON.stringify({
-    jsonrpc: '2.0',
-    id: 2,
-    method: 'tools/list',
-    params: {}
-  })
-});
+```python
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+async def main():
+    headers = {"Authorization": "Bearer your-secret"}  # if auth is enabled
+    async with streamablehttp_client(
+        "http://localhost:8000/mcp", headers=headers
+    ) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            tools = await session.list_tools()
+            result = await session.call_tool(
+                "linear_model",
+                {
+                    "formula": "y ~ x",
+                    "data": {"y": [2.0, 4.1, 6.2], "x": [1, 2, 3]},
+                },
+            )
+            print(result.structuredContent)
 ```
 
-### Python Client
+### Claude API (MCP connector)
+
 ```python
-import httpx
+import anthropic
 
-# Initialize session
-response = httpx.post('http://localhost:8000/mcp', json={
-    'jsonrpc': '2.0',
-    'id': 1,
-    'method': 'initialize',
-    'params': {
-        'protocolVersion': '2025-06-18',
-        'capabilities': {},
-        'clientInfo': {'name': 'rmcp-client', 'version': '1.0.0'}
-    }
-})
+client = anthropic.Anthropic()
+response = client.beta.messages.create(
+    model="claude-opus-4-8",
+    max_tokens=1024,
+    betas=["mcp-client-2025-11-20"],
+    mcp_servers=[{
+        "type": "url",
+        "url": "https://your-server.example.com/mcp",
+        "name": "rmcp-statistics",
+        "authorization_token": "your-secret",
+    }],
+    tools=[{"type": "mcp_toolset", "mcp_server_name": "rmcp-statistics"}],
+    messages=[{"role": "user", "content": "Run a linear regression of sales on marketing."}],
+)
+```
 
-session_id = response.json()['result']['sessionId']
+### OpenAI Responses API
 
-# Call statistical tool
-response = httpx.post('http://localhost:8000/mcp',
-    headers={
-        'MCP-Protocol-Version': '2025-06-18',
-        'MCP-Session-Id': session_id
-    },
-    json={
-        'jsonrpc': '2.0',
-        'id': 2,
-        'method': 'tools/call',
-        'params': {
-            'name': 'linear_model',
-            'arguments': {
-                'data': [[1, 2], [3, 4], [5, 6]],
-                'formula': 'y ~ x'
-            }
-        }
-    }
+```python
+from openai import OpenAI
+
+client = OpenAI()
+response = client.responses.create(
+    model="gpt-5",
+    tools=[{
+        "type": "mcp",
+        "server_label": "rmcp-statistics",
+        "server_url": "https://your-server.example.com/mcp",
+        "headers": {"Authorization": "Bearer your-secret"},
+    }],
+    input="Run a linear regression of sales on marketing.",
 )
 ```
 
@@ -165,25 +152,30 @@ response = httpx.post('http://localhost:8000/mcp',
 
 ### Docker Deployment
 ```bash
-# Production deployment
-docker build -f docker/Dockerfile --target production -t rmcp-production .
-docker run -p 8000:8000 rmcp-production rmcp serve-http
+docker build --target production -t rmcp-production .
+docker run -p 8000:8000 -e RMCP_API_KEY=your-secret \
+  rmcp-production rmcp serve-http --host 0.0.0.0
 ```
 
 ### Environment Configuration
 ```bash
-# Configure via environment variables
 export RMCP_HTTP_HOST=0.0.0.0
 export RMCP_HTTP_PORT=8000
+export RMCP_API_KEY=your-secret
 export RMCP_LOG_LEVEL=INFO
 
-# Start server
 rmcp serve-http
+```
+
+### HTTPS
+```bash
+rmcp serve-http --ssl-keyfile key.pem --ssl-certfile cert.pem
 ```
 
 ### Cloud Deployment
 The HTTP API is designed for cloud deployment with:
-- Session management for concurrent users
+- Spec-compliant Streamable HTTP session management
+- Bearer-token authentication for remote access
 - CORS support for web applications
 - Health checks for load balancers
 - Structured logging for monitoring

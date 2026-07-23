@@ -54,6 +54,10 @@ def extract_json_content_from_mcp_response(response: dict) -> dict | None:
     ):
         return structured_content.get("json")
 
+    # Raw payload format: structuredContent IS the tool result object
+    if isinstance(structured_content, dict) and "type" not in structured_content:
+        return structured_content
+
     # Fallback to legacy content format with annotations
     content = result.get("content", [])
     for item in content:

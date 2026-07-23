@@ -1,246 +1,163 @@
-"""
-Unit tests for HTTP transport implementation.
-Tests the HTTPTransport class functionality including:
-- Initialization and configuration
-- FastAPI app setup
-- Route registration
-- Message handling
-- SSE notification queueing
-- Error handling
-"""
-
-import asyncio
-import queue
-from unittest.mock import AsyncMock, patch
+"""Unit tests for the Streamable HTTP transport (SDK-based)."""
 
 import pytest
 
-# Skip tests if FastAPI not available
-fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
-uvicorn = pytest.importorskip("uvicorn", reason="uvicorn not available")
+httpx = pytest.importorskip("httpx", reason="httpx not available")
+
 from rmcp.core.server import create_server  # noqa: E402
-from rmcp.transport.http import HTTPTransport  # noqa: E402
+from rmcp.transport.sdk import (  # noqa: E402
+    BearerAuthMiddleware,
+    create_streamable_http_app,
+)
+
+from tests.utils import (  # noqa: E402
+    initialize_streamable_session,
+    parse_streamable_response,
+    streamable_http_client,
+)
 
 
-class TestHTTPTransportInitialization:
-    """Test HTTP transport initialization and configuration."""
+def _make_server(tmp_path):
+    server = create_server()
+    server.configure(allowed_paths=[str(tmp_path)], read_only=True)
 
-    def test_default_initialization(self):
-        """Test HTTPTransport with default parameters."""
-        transport = HTTPTransport()
-        assert transport.name == "HTTP"
-        assert transport.host == "localhost"
-        assert transport.port == 8000
-        assert transport.app is not None
-        assert transport.app.title == "RMCP Statistical Analysis Server"
-        assert not transport.is_running
+    async def ping_handler(context, params):
+        return {"pong": True}
 
-    def test_custom_initialization(self):
-        """Test HTTPTransport with custom host and port."""
-        transport = HTTPTransport(host="0.0.0.0", port=9000)
-        assert transport.host == "0.0.0.0"
-        assert transport.port == 9000
-        assert transport.name == "HTTP"
-
-    def test_fastapi_app_configuration(self):
-        """Test that FastAPI app is properly configured."""
-        transport = HTTPTransport()
-        # Check that the app has expected routes
-        route_paths = [route.path for route in transport.app.routes]
-        assert "/" in route_paths
-        assert "/mcp/sse" in route_paths
-        assert "/health" in route_paths
-
-    def test_message_handler_setting(self):
-        """Test setting the message handler."""
-        transport = HTTPTransport()
-        mock_handler = AsyncMock()
-        transport.set_message_handler(mock_handler)
-        assert transport._message_handler == mock_handler
-
-    def test_notification_queue_initialization(self):
-        """Test that notification queue is properly initialized."""
-        transport = HTTPTransport()
-        assert isinstance(transport._notification_queue, queue.Queue)
-        assert transport._notification_queue.empty()
+    server.tools.register(
+        name="ping",
+        handler=ping_handler,
+        input_schema={"type": "object", "properties": {}},
+        description="Ping",
+    )
+    return server
 
 
-class TestHTTPTransportLifecycle:
-    """Test HTTP transport lifecycle management."""
+def _make_app(tmp_path, **kwargs):
+    kwargs.setdefault("manage_server_lifecycle", False)
+    return create_streamable_http_app(_make_server(tmp_path), **kwargs)
 
-    @pytest.mark.asyncio
-    async def test_startup(self):
-        """Test transport startup."""
-        transport = HTTPTransport()
-        await transport.startup()
-        assert transport.is_running
 
-    @pytest.mark.asyncio
-    async def test_shutdown(self):
-        """Test transport shutdown."""
-        transport = HTTPTransport()
-        await transport.startup()
-        await transport.shutdown()
-        assert not transport.is_running
+class TestHealthEndpoint:
+    async def test_health_open_without_auth(self, tmp_path):
+        app = _make_app(tmp_path, api_keys={"secret"})
+        async with streamable_http_client(app) as client:
+            response = await client.get("/health")
+            assert response.status_code == 200
+            body = response.json()
+            assert body["status"] == "healthy"
+            assert body["transport"] == "streamable-http"
+            assert body["tools"] == 1
 
-    @pytest.mark.asyncio
-    async def test_lifecycle_logging(self):
-        """Test that lifecycle events are logged."""
-        transport = HTTPTransport()
-        with patch("rmcp.transport.http.logger") as mock_logger:
-            await transport.startup()
-            mock_logger.info.assert_called_with(
-                "HTTP transport ready on http://localhost:8000"
+
+class TestBearerAuth:
+    async def test_mcp_requires_token_when_keys_configured(self, tmp_path):
+        app = _make_app(tmp_path, api_keys={"secret"})
+        async with streamable_http_client(app) as client:
+            response = await client.post("/mcp", json={})
+            assert response.status_code == 401
+            assert response.headers["WWW-Authenticate"] == "Bearer"
+
+    async def test_wrong_token_rejected(self, tmp_path):
+        app = _make_app(tmp_path, api_keys={"secret"})
+        async with streamable_http_client(
+            app, headers={"Authorization": "Bearer wrong"}
+        ) as client:
+            response = await client.post("/mcp", json={})
+            assert response.status_code == 401
+
+    async def test_valid_token_accepted(self, tmp_path):
+        app = _make_app(tmp_path, api_keys={"secret"})
+        async with streamable_http_client(
+            app, headers={"Authorization": "Bearer secret"}
+        ) as client:
+            result, _ = await initialize_streamable_session(client)
+            assert result["protocolVersion"]
+
+    async def test_no_keys_means_open(self, tmp_path):
+        app = _make_app(tmp_path)
+        async with streamable_http_client(app) as client:
+            result, _ = await initialize_streamable_session(client)
+            assert result["serverInfo"]["name"] == "RMCP MCP Server"
+
+    async def test_middleware_ignores_non_mcp_paths(self):
+        async def inner_app(scope, receive, send):
+            from starlette.responses import PlainTextResponse
+
+            await PlainTextResponse("ok")(scope, receive, send)
+
+        middleware = BearerAuthMiddleware(inner_app, api_keys={"secret"})
+        app_client = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=middleware),
+            base_url="http://testserver",
+        )
+        async with app_client:
+            assert (await app_client.get("/health")).status_code == 200
+            assert (await app_client.get("/mcp")).status_code == 401
+
+
+class TestStreamableHTTPProtocol:
+    async def test_initialize_negotiates_protocol(self, tmp_path):
+        app = _make_app(tmp_path)
+        async with streamable_http_client(app) as client:
+            result, headers = await initialize_streamable_session(client)
+            assert result["protocolVersion"] in ("2025-11-25", "2025-06-18")
+            assert "Mcp-Session-Id" in headers
+
+    async def test_tools_list_and_call(self, tmp_path):
+        app = _make_app(tmp_path)
+        async with streamable_http_client(app) as client:
+            _, headers = await initialize_streamable_session(client)
+            response = await client.post(
+                "/mcp",
+                json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+                headers=headers,
             )
-            await transport.shutdown()
-            mock_logger.info.assert_called_with("HTTP transport shutdown complete")
+            message = parse_streamable_response(response)
+            tool_names = [tool["name"] for tool in message["result"]["tools"]]
+            assert "ping" in tool_names
 
+            response = await client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {"name": "ping", "arguments": {}},
+                },
+                headers=headers,
+            )
+            message = parse_streamable_response(response)
+            assert message["result"]["structuredContent"] == {"pong": True}
 
-class TestHTTPTransportMessageHandling:
-    """Test HTTP transport message handling."""
+    async def test_request_without_session_rejected(self, tmp_path):
+        app = _make_app(tmp_path)
+        async with streamable_http_client(app) as client:
+            await initialize_streamable_session(client)
+            response = await client.post(
+                "/mcp",
+                json={"jsonrpc": "2.0", "id": 9, "method": "tools/list"},
+            )
+            assert response.status_code == 400
 
-    def test_send_notification(self):
-        """Test sending notifications via SSE queue."""
-        transport = HTTPTransport()
-        notification = {
-            "jsonrpc": "2.0",
-            "method": "notification/test",
-            "params": {"data": "test"},
-        }
-        asyncio.run(transport.send_message(notification))
-        # Check that notification was queued
-        assert not transport._notification_queue.empty()
-        queued_notification = transport._notification_queue.get()
-        assert queued_notification == notification
+    async def test_session_delete_terminates(self, tmp_path):
+        app = _make_app(tmp_path)
+        async with streamable_http_client(app) as client:
+            _, headers = await initialize_streamable_session(client)
+            if not headers:
+                pytest.skip("stateless server: no session to terminate")
+            response = await client.delete("/mcp", headers=headers)
+            assert response.status_code in (200, 204)
 
-    def test_send_non_notification(self):
-        """Test sending non-notification messages (should not queue)."""
-        transport = HTTPTransport()
-        response = {"jsonrpc": "2.0", "id": 1, "result": {"data": "test"}}
-        asyncio.run(transport.send_message(response))
-        # Should not be queued (responses handled by FastAPI)
-        assert transport._notification_queue.empty()
-
-    @pytest.mark.asyncio
-    async def test_receive_messages_not_used(self):
-        """Test that receive_messages is not used in HTTP transport."""
-        transport = HTTPTransport()
-        # This should be a no-op iterator
-        async for _message in transport.receive_messages():
-            # Should never execute
-            raise AssertionError("receive_messages should not yield anything")
-
-
-class TestHTTPTransportErrorHandling:
-    """Test HTTP transport error handling."""
-
-    def test_create_error_response_with_id(self):
-        """Test error response creation for requests with ID."""
-        transport = HTTPTransport()
-        request = {"jsonrpc": "2.0", "id": 1, "method": "test"}
-        error = ValueError("Test error")
-        error_response = transport._create_error_response(request, error)
-        assert error_response is not None
-        assert error_response["jsonrpc"] == "2.0"
-        assert error_response["id"] == 1
-        assert error_response["error"]["code"] == -32603
-        assert error_response["error"]["message"] == "Test error"
-        assert error_response["error"]["data"]["type"] == "ValueError"
-
-    def test_create_error_response_without_id(self):
-        """Test error response creation for notifications (no ID)."""
-        transport = HTTPTransport()
-        notification = {"jsonrpc": "2.0", "method": "test"}
-        error = ValueError("Test error")
-        error_response = transport._create_error_response(notification, error)
-        assert error_response is None  # No response for notifications
-
-
-class TestHTTPTransportIntegrationWithServer:
-    """Test HTTP transport integration with MCP server."""
-
-    @pytest.mark.asyncio
-    async def test_integration_with_server(self):
-        """Test that HTTP transport can be integrated with MCP server."""
-        # Create server and transport
-        server = create_server()
-        transport = HTTPTransport()
-        # Set up integration
-        transport.set_message_handler(server.create_message_handler(transport))
-        # Verify setup
-        assert callable(transport._message_handler)
-
-    def test_run_method_requires_handler(self):
-        """Test that run method requires message handler to be set."""
-        transport = HTTPTransport()
-        with pytest.raises(RuntimeError, match="Message handler not set"):
-            asyncio.run(transport.run())
-
-
-@pytest.mark.skipif(not fastapi, reason="FastAPI not available")
-class TestHTTPTransportFastAPIIntegration:
-    """Test FastAPI-specific functionality."""
-
-    def test_fastapi_routes_registration(self):
-        """Test that all expected routes are registered with FastAPI."""
-        transport = HTTPTransport()
-        app = transport.app
-        # Get route methods and paths
-        routes_info = []
-        for route in app.routes:
-            if hasattr(route, "methods") and hasattr(route, "path"):
-                for method in route.methods:
-                    routes_info.append((method, route.path))
-        # Check expected endpoints
-        assert ("POST", "/mcp") in routes_info
-        assert ("GET", "/mcp/sse") in routes_info
-        assert ("GET", "/health") in routes_info
-
-    def test_cors_middleware(self):
-        """Test that CORS middleware is configured."""
-        transport = HTTPTransport()
-        app = transport.app
-        # Check that CORS middleware is added
-        middleware_types = [mw.cls.__name__ for mw in app.user_middleware]
-        assert "CORSMiddleware" in middleware_types
-
-    @pytest.mark.asyncio
-    async def test_health_endpoint(self):
-        """Test the health check endpoint."""
-        from fastapi.testclient import TestClient
-
-        transport = HTTPTransport()
-        client = TestClient(transport.app)
-        response = client.get("/health")
-        assert response.status_code == 200
-        response_data = response.json()
-        assert response_data["status"] == "healthy"
-        assert response_data["transport"]["type"] == "HTTP"
-
-
-class TestHTTPTransportImportError:
-    """Test behavior when FastAPI dependencies are missing."""
-
-    def test_import_error_handling(self):
-        """Test that ImportError is properly handled and re-raised."""
-        import importlib
-        import sys
-
-        sys.modules.pop("rmcp.transport.http", None)
-        with patch.dict(
-            sys.modules,
-            {
-                "fastapi": None,
-                "uvicorn": None,
-                "sse_starlette": None,
-            },
-            clear=False,
-        ):
-            with pytest.raises(
-                ImportError, match="HTTP transport requires 'fastapi' extras"
-            ):
-                importlib.import_module("rmcp.transport.http")
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    async def test_cors_preflight(self, tmp_path):
+        app = _make_app(tmp_path)
+        async with streamable_http_client(app) as client:
+            response = await client.options(
+                "/mcp",
+                headers={
+                    "Origin": "https://claude.ai",
+                    "Access-Control-Request-Method": "POST",
+                },
+            )
+            assert response.status_code == 200
+            assert "access-control-allow-origin" in response.headers

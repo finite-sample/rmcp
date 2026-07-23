@@ -237,80 +237,24 @@ class TestClaudeDesktopRealIntegration:
         test_env = os.environ.copy()
         test_env.update(env)
 
-        # Test tools/list request
-        tools_request = {
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/list",
-            "params": {},
-        }
-
-        process = subprocess.Popen(
-            [command] + args,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=test_env,
-        )
+        # Drive the server with the official MCP client (handles the full
+        # handshake and waits for responses instead of racing stdin EOF).
+        from tests.utils import run_mcp_stdio_workflow
 
         try:
-            # Send initialize first
-            init_request = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": "2025-06-18",
-                    "capabilities": {"tools": {}},
-                    "clientInfo": {"name": "Claude Desktop", "version": "1.0.0"},
-                },
-            }
-
-            input_data = (
-                json.dumps(init_request) + "\n" + json.dumps(tools_request) + "\n"
+            _, tool_names, _ = run_mcp_stdio_workflow(
+                command=command, args=args, env=test_env, timeout=30.0
             )
-            stdout, stderr = process.communicate(input=input_data, timeout=20)
+        except Exception as exc:
+            pytest.fail(f"Tools list request failed: {exc}")
 
-            # Look for tools list response
-            tools_found = False
-            for line in stdout.strip().split("\n"):
-                if line.startswith('{"jsonrpc"') and '"tools"' in line:
-                    response = json.loads(line)
-                    if (
-                        response.get("jsonrpc") == "2.0"
-                        and "result" in response
-                        and response.get("id") == 2
-                    ):
-                        tools = response.get("result", {}).get("tools", [])
-                        print(f"✅ Tools available to Claude Desktop: {len(tools)}")
-
-                        # Verify key tools are available
-                        tool_names = [tool.get("name", "") for tool in tools]
-                        expected_tools = [
-                            "linear_model",
-                            "summary_stats",
-                            "read_csv",
-                            "scatter_plot",
-                        ]
-
-                        for expected_tool in expected_tools:
-                            assert expected_tool in tool_names, (
-                                f"Expected tool {expected_tool} not found"
-                            )
-
-                        print(f"   Key tools verified: {expected_tools}")
-                        tools_found = True
-                        break
-
-            assert tools_found, f"No tools list response found. stdout: {stdout[:500]}"
-
-        except subprocess.TimeoutExpired:
-            process.kill()
-            pytest.fail("Tools list request timeout")
-        finally:
-            if process.poll() is None:
-                process.terminate()
+        print(f"✅ Tools available to Claude Desktop: {len(tool_names)}")
+        expected_tools = ["linear_model", "summary_stats", "read_csv", "scatter_plot"]
+        for expected_tool in expected_tools:
+            assert expected_tool in tool_names, (
+                f"Expected tool {expected_tool} not found"
+            )
+        print(f"   Key tools verified: {expected_tools}")
 
 
 class TestClaudeDesktopWorkflows:
@@ -345,116 +289,59 @@ class TestClaudeDesktopWorkflows:
         else:
             return Path.home() / ".config/claude/claude_desktop_config.json"
 
-    def create_mcp_session(self):
-        """Create an MCP session like Claude Desktop would."""
+    def get_rmcp_launch(self):
+        """Return (command, args, env) for launching RMCP as Claude Desktop would."""
         rmcp_config = self.get_rmcp_config()
-
         command = rmcp_config["command"]
         args = rmcp_config["args"]
         env = rmcp_config.get("env", {})
-
         test_env = os.environ.copy()
         test_env.update(env)
-
-        process = subprocess.Popen(
-            [command] + args,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=test_env,
-        )
-
-        # Initialize session
-        init_request = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2025-06-18",
-                "capabilities": {"tools": {}},
-                "clientInfo": {"name": "Claude Desktop E2E Test", "version": "1.0.0"},
-            },
-        }
-
-        return process, init_request
+        return command, args, test_env
 
     def test_data_analysis_workflow(self):
         """Test complete data analysis workflow as Claude Desktop user would do."""
-        process, init_request = self.create_mcp_session()
+        from tests.utils import run_mcp_stdio_workflow
+
+        command, args, test_env = self.get_rmcp_launch()
+
+        tool_calls = [
+            (
+                "load_example",
+                {"dataset_name": "survey", "size": "small"},
+            ),
+            (
+                "summary_stats",
+                {
+                    "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
+                    "variables": ["x", "y"],
+                },
+            ),
+        ]
 
         try:
-            # Step 1: Initialize
-            requests = [init_request]
-
-            # Step 2: Load example data
-            requests.append(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "load_example",
-                        "arguments": {"dataset_name": "survey", "size": "small"},
-                    },
-                }
+            _, _, results = run_mcp_stdio_workflow(
+                command=command,
+                args=args,
+                env=test_env,
+                tool_calls=tool_calls,
+                timeout=30.0,
             )
+        except Exception as exc:
+            pytest.fail(f"Data analysis workflow failed: {exc}")
 
-            # Step 3: Run summary statistics
-            requests.append(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 3,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "summary_stats",
-                        "arguments": {
-                            "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
-                            "variables": ["x", "y"],
-                        },
-                    },
-                }
-            )
-
-            # Send all requests
-            input_data = "\n".join(json.dumps(req) for req in requests) + "\n"
-            stdout, stderr = process.communicate(input=input_data, timeout=30)
-
-            # Validate responses
-            responses = []
-            for line in stdout.strip().split("\n"):
-                if line.startswith('{"jsonrpc"'):
-                    try:
-                        response = json.loads(line)
-                        if response.get("id") is not None:
-                            responses.append(response)
-                    except:
-                        pass
-
-            assert len(responses) >= 2, (
-                f"Expected at least 2 responses, got {len(responses)}"
-            )
-
-            # Check successful analysis
-            analysis_success = False
-            for response in responses:
-                if response.get("id") == 3 and "result" in response:
-                    analysis_success = True
-                    print("✅ Data analysis workflow completed successfully")
-                    break
-
-            assert analysis_success, "Data analysis workflow failed"
-
-        except subprocess.TimeoutExpired:
-            process.kill()
-            pytest.fail("Data analysis workflow timeout")
-        finally:
-            if process.poll() is None:
-                process.terminate()
+        assert len(results) == 2, f"Expected 2 responses, got {len(results)}"
+        summary_result = results[1]
+        assert not summary_result.get("isError"), (
+            f"Data analysis workflow failed: {summary_result}"
+        )
+        print("✅ Data analysis workflow completed successfully")
 
     def test_file_workflow_with_temp_data(self):
         """Test file-based workflow with temporary data file."""
-        process, init_request = self.create_mcp_session()
+        from tests.utils import run_mcp_stdio_workflow
+
+        command, args, test_env = self.get_rmcp_launch()
 
         # Create temporary CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
@@ -467,63 +354,41 @@ class TestClaudeDesktopWorkflows:
             temp_file = f.name
 
         try:
-            requests = [
-                init_request,
-                {
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "read_csv",
-                        "arguments": {"file_path": temp_file},
+            tool_calls = [
+                ("read_csv", {"file_path": temp_file}),
+                (
+                    "correlation_analysis",
+                    {
+                        "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
+                        "variables": ["x", "y"],
+                        "method": "pearson",
                     },
-                },
-                {
-                    "jsonrpc": "2.0",
-                    "id": 3,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "correlation_analysis",
-                        "arguments": {
-                            "data": {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]},
-                            "variables": ["x", "y"],
-                            "method": "pearson",
-                        },
-                    },
-                },
+                ),
             ]
 
-            input_data = "\n".join(json.dumps(req) for req in requests) + "\n"
-            stdout, stderr = process.communicate(input=input_data, timeout=30)
+            try:
+                _, _, results = run_mcp_stdio_workflow(
+                    command=command,
+                    args=args,
+                    env=test_env,
+                    tool_calls=tool_calls,
+                    timeout=30.0,
+                )
+            except Exception as exc:
+                pytest.fail(f"File workflow failed: {exc}")
 
-            # Validate file workflow
-            file_read_success = False
-            correlation_success = False
-
-            for line in stdout.strip().split("\n"):
-                if line.startswith('{"jsonrpc"'):
-                    try:
-                        response = json.loads(line)
-                        if response.get("id") == 2 and "result" in response:
-                            file_read_success = True
-                        elif response.get("id") == 3 and "result" in response:
-                            correlation_success = True
-                    except:
-                        pass
-
-            assert file_read_success, "File read operation failed"
-            assert correlation_success, "Correlation analysis failed"
+            file_result, correlation_result = results
+            assert not file_result.get("isError"), (
+                f"File read operation failed: {file_result}"
+            )
+            assert not correlation_result.get("isError"), (
+                f"Correlation analysis failed: {correlation_result}"
+            )
             print("✅ File-based workflow completed successfully")
-
-        except subprocess.TimeoutExpired:
-            process.kill()
-            pytest.fail("File workflow timeout")
         finally:
-            if process.poll() is None:
-                process.terminate()
             try:
                 os.unlink(temp_file)
-            except:
+            except OSError:
                 pass
 
 
@@ -613,213 +478,133 @@ class TestClaudeDesktopPerformance:
         """Test handling multiple concurrent requests like Claude Desktop might send."""
         print("🤖 Testing concurrent request handling...")
 
-        import httpx
         from rmcp.cli import _register_builtin_tools
         from rmcp.core.server import create_server
-        from rmcp.transport.http import HTTPTransport
+        from rmcp.transport.sdk import create_streamable_http_app
+
+        from tests.utils import (
+            initialize_streamable_session,
+            parse_streamable_response,
+            streamable_http_client,
+        )
 
         async def run_concurrent_test():
-            # Create server and transport
             server = create_server()
             _register_builtin_tools(server)
-            transport = HTTPTransport(host="127.0.0.1", port=0)
-            transport.set_message_handler(server.create_message_handler(transport))
+            app = create_streamable_http_app(server, manage_server_lifecycle=False)
 
-            # Start server
-            await transport.startup()
+            async with streamable_http_client(app) as client:
+                _, headers = await initialize_streamable_session(client)
 
-            # Get actual port
-            import socket
-
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(("127.0.0.1", 0))
-            port = sock.getsockname()[1]
-            sock.close()
-            transport.port = port
-
-            # Run server in background
-            server_task = asyncio.create_task(transport.run())
-            await asyncio.sleep(0.1)  # Let server start
-
-            try:
-                base_url = f"http://127.0.0.1:{port}"
-
-                # Initialize session
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    init_request = {
-                        "jsonrpc": "2.0",
-                        "id": 1,
-                        "method": "initialize",
-                        "params": {
-                            "protocolVersion": "2025-06-18",
-                            "capabilities": {},
-                            "clientInfo": {
-                                "name": "concurrent-test",
-                                "version": "1.0.0",
+                async def run_tool_call(tool_name, arguments, request_id):
+                    start_time = time.time()
+                    try:
+                        response = await client.post(
+                            "/mcp",
+                            json={
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "method": "tools/call",
+                                "params": {"name": tool_name, "arguments": arguments},
                             },
-                        },
-                    }
-
-                    init_response = await client.post(
-                        f"{base_url}/mcp", json=init_request
-                    )
-                    assert init_response.status_code == 200
-                    session_id = init_response.headers.get("Mcp-Session-Id")
-
-                    headers = {}
-                    if session_id:
-                        headers["Mcp-Session-Id"] = session_id
-
-                    # Define concurrent test scenarios
-                    async def run_tool_call(client, tool_name, arguments, request_id):
-                        start_time = time.time()
-                        request = {
-                            "jsonrpc": "2.0",
+                            headers=headers,
+                            timeout=60.0,
+                        )
+                        message = parse_streamable_response(response)
+                        succeeded = (
+                            response.status_code == 200
+                            and message is not None
+                            and "result" in message
+                            and not message["result"].get("isError")
+                        )
+                        return {
                             "id": request_id,
-                            "method": "tools/call",
-                            "params": {"name": tool_name, "arguments": arguments},
+                            "tool": tool_name,
+                            "success": succeeded,
+                            "duration": time.time() - start_time,
+                        }
+                    except Exception as e:
+                        return {
+                            "id": request_id,
+                            "tool": tool_name,
+                            "success": False,
+                            "duration": time.time() - start_time,
+                            "error": str(e),
                         }
 
-                        try:
-                            response = await client.post(
-                                f"{base_url}/mcp", json=request, headers=headers
-                            )
-                            end_time = time.time()
-
-                            return {
-                                "id": request_id,
-                                "tool": tool_name,
-                                "status_code": response.status_code,
-                                "success": response.status_code == 200,
-                                "duration": end_time - start_time,
-                                "response_size": (
-                                    len(response.content) if response.content else 0
-                                ),
-                            }
-                        except Exception as e:
-                            end_time = time.time()
-                            return {
-                                "id": request_id,
-                                "tool": tool_name,
-                                "status_code": 0,
-                                "success": False,
-                                "duration": end_time - start_time,
-                                "error": str(e),
-                            }
-
-                    # Test 1: Rapid sequential requests (simulate Claude Desktop burst)
-                    print("   📡 Test 1: Rapid sequential requests...")
-                    sequential_tasks = []
-                    for i in range(5):
-                        task = run_tool_call(
-                            client, "load_example", {"dataset_name": "sales"}, 100 + i
+                # Test 1: Rapid burst of identical requests
+                print("   📡 Test 1: Rapid sequential requests...")
+                sequential_results = await asyncio.gather(
+                    *[
+                        run_tool_call(
+                            "load_example", {"dataset_name": "sales"}, 100 + i
                         )
-                        sequential_tasks.append(task)
-
-                    sequential_results = await asyncio.gather(*sequential_tasks)
-                    successful_sequential = sum(
-                        1 for r in sequential_results if r["success"]
-                    )
-                    avg_sequential_time = sum(
-                        r["duration"] for r in sequential_results
-                    ) / len(sequential_results)
-
-                    print(
-                        f"   ✅ Sequential: {successful_sequential}/{len(sequential_results)} successful"
-                    )
-                    print(f"   ⏱️  Average response time: {avg_sequential_time:.2f}s")
-
-                    # Test 2: True concurrent requests (multiple tools simultaneously)
-                    print("   📡 Test 2: Concurrent different tools...")
-                    concurrent_tasks = [
-                        run_tool_call(
-                            client, "load_example", {"dataset_name": "sales"}, 200
-                        ),
-                        run_tool_call(
-                            client, "load_example", {"dataset_name": "timeseries"}, 201
-                        ),
-                        run_tool_call(
-                            client, "validate_data", {"data": {"x": [1, 2, 3]}}, 202
-                        ),
+                        for i in range(5)
                     ]
+                )
+                successful_sequential = sum(
+                    1 for r in sequential_results if r["success"]
+                )
+                avg_sequential_time = sum(
+                    r["duration"] for r in sequential_results
+                ) / len(sequential_results)
+                print(
+                    f"   ✅ Sequential: {successful_sequential}/{len(sequential_results)} successful"
+                )
 
-                    concurrent_start = time.time()
-                    concurrent_results = await asyncio.gather(
-                        *concurrent_tasks, return_exceptions=True
-                    )
-                    concurrent_end = time.time()
+                # Test 2: Concurrent different tools
+                print("   📡 Test 2: Concurrent different tools...")
+                concurrent_start = time.time()
+                concurrent_results = await asyncio.gather(
+                    run_tool_call("load_example", {"dataset_name": "sales"}, 200),
+                    run_tool_call("load_example", {"dataset_name": "timeseries"}, 201),
+                    run_tool_call("validate_data", {"data": {"x": [1, 2, 3]}}, 202),
+                    return_exceptions=True,
+                )
+                valid_concurrent = [
+                    r for r in concurrent_results if isinstance(r, dict)
+                ]
+                successful_concurrent = sum(
+                    1 for r in valid_concurrent if r.get("success", False)
+                )
+                total_concurrent_time = time.time() - concurrent_start
+                print(f"   ✅ Concurrent: {successful_concurrent}/3 successful")
 
-                    # Filter out exceptions and get valid results
-                    valid_concurrent = [
-                        r for r in concurrent_results if isinstance(r, dict)
-                    ]
-                    successful_concurrent = sum(
-                        1 for r in valid_concurrent if r.get("success", False)
-                    )
-                    total_concurrent_time = concurrent_end - concurrent_start
-
-                    print(
-                        f"   ✅ Concurrent: {successful_concurrent}/{len(concurrent_tasks)} successful"
-                    )
-                    print(f"   ⏱️  Total concurrent time: {total_concurrent_time:.2f}s")
-
-                    # Test 3: Stress test with many rapid requests
-                    print("   📡 Test 3: Stress test (10 rapid requests)...")
-                    stress_tasks = []
-                    for i in range(10):
-                        task = run_tool_call(
-                            client, "load_example", {"dataset_name": "sales"}, 300 + i
+                # Test 3: Stress test with many rapid requests
+                print("   📡 Test 3: Stress test (10 rapid requests)...")
+                stress_results = await asyncio.gather(
+                    *[
+                        run_tool_call(
+                            "load_example", {"dataset_name": "sales"}, 300 + i
                         )
-                        stress_tasks.append(task)
+                        for i in range(10)
+                    ],
+                    return_exceptions=True,
+                )
+                valid_stress = [r for r in stress_results if isinstance(r, dict)]
+                successful_stress = sum(
+                    1 for r in valid_stress if r.get("success", False)
+                )
+                print(f"   ✅ Stress test: {successful_stress}/10 successful")
 
-                    stress_start = time.time()
-                    stress_results = await asyncio.gather(
-                        *stress_tasks, return_exceptions=True
-                    )
-                    stress_end = time.time()
+                assert successful_sequential >= 4, (
+                    f"Sequential requests: {successful_sequential}/5 successful (expected ≥4)"
+                )
+                assert successful_concurrent >= 2, (
+                    f"Concurrent requests: {successful_concurrent}/3 successful (expected ≥2)"
+                )
+                assert successful_stress >= 7, (
+                    f"Stress test: {successful_stress}/10 successful (expected ≥7)"
+                )
+                assert avg_sequential_time < 5.0, (
+                    f"Sequential avg time {avg_sequential_time:.2f}s too slow (expected <5s)"
+                )
+                assert total_concurrent_time < 10.0, (
+                    f"Concurrent time {total_concurrent_time:.2f}s too slow (expected <10s)"
+                )
 
-                    # Analyze stress test results
-                    valid_stress = [r for r in stress_results if isinstance(r, dict)]
-                    successful_stress = sum(
-                        1 for r in valid_stress if r.get("success", False)
-                    )
-                    total_stress_time = stress_end - stress_start
+                print("🎉 All concurrent request tests passed!")
 
-                    print(
-                        f"   ✅ Stress test: {successful_stress}/{len(stress_tasks)} successful"
-                    )
-                    print(f"   ⏱️  Total stress time: {total_stress_time:.2f}s")
-
-                    # Assertions for test success
-                    assert successful_sequential >= 4, (
-                        f"Sequential requests: {successful_sequential}/5 successful (expected ≥4)"
-                    )
-                    assert successful_concurrent >= 2, (
-                        f"Concurrent requests: {successful_concurrent}/3 successful (expected ≥2)"
-                    )
-                    assert successful_stress >= 7, (
-                        f"Stress test: {successful_stress}/10 successful (expected ≥7)"
-                    )
-
-                    # Performance assertions
-                    assert avg_sequential_time < 5.0, (
-                        f"Sequential avg time {avg_sequential_time:.2f}s too slow (expected <5s)"
-                    )
-                    assert total_concurrent_time < 10.0, (
-                        f"Concurrent time {total_concurrent_time:.2f}s too slow (expected <10s)"
-                    )
-
-                    print("🎉 All concurrent request tests passed!")
-
-            finally:
-                server_task.cancel()
-                try:
-                    await server_task
-                except asyncio.CancelledError:
-                    pass
-                await transport.shutdown()
-
-        # Run the async test
         asyncio.run(run_concurrent_test())
 
 

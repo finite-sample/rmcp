@@ -170,13 +170,18 @@ class PromptsRegistry:
             raise
 
     def _render_template(self, template: str, arguments: dict[str, Any]) -> str:
-        """Render template with arguments using simple string formatting."""
+        """Render template with arguments using simple string formatting.
+
+        Optional (non-required) arguments missing from the call render as
+        "(not specified)" instead of failing the whole prompt.
+        """
+
+        class _Defaulting(dict):
+            def __missing__(self, key: str) -> str:
+                return "(not specified)"
+
         try:
-            # Use simple string formatting for now
-            # Could be enhanced with Jinja2 or similar
-            return template.format(**arguments)
-        except KeyError as e:
-            raise ValueError(f"Missing template argument: {e}")
+            return template.format_map(_Defaulting(arguments))
         except Exception as e:
             raise ValueError(f"Template rendering error: {e}")
 

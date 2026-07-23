@@ -178,8 +178,16 @@ All tools provide professionally formatted output with markdown tables, statisti
         self._shutdown_callbacks: list[Callable[[], Awaitable[None]]] = []
         # Request tracking for cancellation
         self._active_requests: dict[str, RequestState] = {}
+        # External listeners for registry list_changed events (e.g. SDK adapter)
+        self._list_changed_listeners: list[Callable[[str, list[str] | None], None]] = []
         # Register built-in static resources for quick discovery
         self._register_builtin_resources()
+
+    def add_list_changed_listener(
+        self, listener: Callable[[str, list[str] | None], None]
+    ) -> None:
+        """Register a callback invoked on registry list_changed events."""
+        self._list_changed_listeners.append(listener)
 
     def configure(
         self,
@@ -949,6 +957,11 @@ All tools provide professionally formatted output with markdown tables, statisti
         self, kind: str, item_ids: list[str] | None = None
     ) -> None:
         """Queue a list_changed notification for connected clients."""
+        for listener in self._list_changed_listeners:
+            try:
+                listener(kind, item_ids)
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.warning("List changed listener failed: %s", exc)
         params: dict[str, Any] = {"kind": kind}
         if item_ids:
             params["itemIds"] = item_ids

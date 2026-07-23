@@ -149,6 +149,10 @@ class ResourcesRegistry:
         logger.debug(f"Registered resource template: {uri_template}")
         self._emit_list_changed([uri_template])
 
+    def iter_templates(self) -> list[tuple[str, dict[str, Any]]]:
+        """Return registered resource templates as (uri_template, metadata) pairs."""
+        return list(self._resource_templates.items())
+
     async def list_resources(
         self,
         context: Context,
@@ -347,7 +351,11 @@ class ResourcesRegistry:
             return await self._generate_dataset_resource(context, server, parsed_uri)
         if target == "data":
             return await self._read_stored_rmcp_data(context, server, parsed_uri)
-        raise ValueError(f"Unsupported RMCP resource URI: {parsed_uri.geturl()}")
+        # Fall back to registered static resources (rmcp://docs/*, rmcp://examples/*)
+        uri = parsed_uri.geturl()
+        if uri in self._static_resources:
+            return await self._read_static_resource(context, uri)
+        raise ValueError(f"Unsupported RMCP resource URI: {uri}")
 
     async def _read_stored_rmcp_data(
         self, context: Context, server: Any, parsed_uri

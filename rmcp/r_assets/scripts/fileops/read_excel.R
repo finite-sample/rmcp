@@ -67,14 +67,14 @@ data <- as.data.frame(data)
 # Get file info
 file_info <- file.info(file_path)
 result <- list(
-  data = data,
+  data = lapply(data, I), # Column-wise; I() keeps length-1 vectors as JSON arrays
   file_info = list(
     file_path = file_path,
     sheet_name = actual_sheet_name,
-    available_sheets = sheet_names,
+    available_sheets = I(sheet_names),
     rows = nrow(data),
     columns = ncol(data),
-    column_names = colnames(data),
+    column_names = I(colnames(data)),
     file_size_bytes = file_info$size,
     modified_date = as.character(file_info$mtime)
   ),

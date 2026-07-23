@@ -53,12 +53,12 @@ if (!grepl("^https?://", file_path)) {
   modified_date <- NA
 }
 result <- list(
-  data = as.list(data), # Convert to column-wise format for schema compatibility
+  data = lapply(data, I), # Column-wise; I() keeps length-1 vectors as JSON arrays
   file_info = list(
     file_path = file_path,
     rows = nrow(data),
     columns = ncol(data),
-    column_names = colnames(data),
+    column_names = I(colnames(data)),
     file_size_bytes = file_size,
     modified_date = modified_date,
     is_url = grepl("^https?://", file_path)
