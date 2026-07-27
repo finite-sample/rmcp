@@ -134,7 +134,7 @@ jobs:
 
     - name: Set up Docker Buildx
       if: steps.check-changes.outputs.should_build == 'true'
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Log in to Container Registry
       if: steps.check-changes.outputs.should_build == 'true'
