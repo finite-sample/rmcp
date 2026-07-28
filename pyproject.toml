@@ -96,6 +96,12 @@ source = "uv-dynamic-versioning"
 [tool.uv-dynamic-versioning]
 vcs = "git"
 style = "pep440"
+# The Docker build copies only pyproject.toml and rmcp/ (.dockerignore
+# excludes .git), so there is no repository to read a tag from. Without a
+# fallback the backend raises "This does not appear to be a Git project" and
+# the image build fails. Release builds run in a full checkout and derive the
+# real version from the tag; the publish workflow asserts that it matches.
+fallback-version = "0.0.0"
 
 # Flat layout: the package lives at the repo root, not under src/.
 [tool.hatch.build.targets.wheel]
