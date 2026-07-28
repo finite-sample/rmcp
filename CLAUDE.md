@@ -551,6 +551,32 @@ cd docs/_build/html && python -m http.server 8080
 
 **📖 Documentation URL**: `docs/_build/html/index.html` (after building)
 
+## Releasing
+
+**The git tag is the version.** `uv-dynamic-versioning` derives it from the
+latest `v*` tag, so there is nothing to bump — `pyproject.toml` carries no
+version number and editing one in is a mistake.
+
+```bash
+# after the change is merged to main and CI is green
+git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z
+```
+
+The tag push runs `.github/workflows/python-publish.yml`: build →
+`twine check` → tag/version match guard → PyPI (trusted publishing, PEP 740
+attestations) → GitHub Release with generated notes.
+
+There is **no manual trigger, deliberately**. A `workflow_dispatch` publishes
+whatever is on the runner with nothing gating it, which is how every release
+before 0.10.0 shipped. Tags come from `main`, and `main` is CI-gated — that is
+the gate. Note the corollary: a tag placed on a commit that never passed CI
+would still publish, so tag from `main`, and use the `pypi` environment's
+protection rules if you want a hard stop.
+
+The filename `python-publish.yml` is load-bearing — the PyPI trusted publisher
+is keyed to it. Renaming it breaks publishing until the publisher config is
+updated on pypi.org. See py-canon `STANDARD.md` "Legacy publishers".
+
 ## Important Notes
 - Python 3.11+ required
 - R environment provided via Docker (no local R installation needed for development)
