@@ -175,7 +175,7 @@ jobs:
     - name: Build and push development Docker image
       id: build
       if: steps.check-changes.outputs.should_build == 'true'
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: ./Dockerfile
@@ -195,7 +195,7 @@ jobs:
     - name: Build and push production Docker image
       id: prod-build
       if: steps.check-changes.outputs.should_build == 'true'
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: ./Dockerfile
