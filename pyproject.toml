@@ -1,7 +1,7 @@
 [project]
 name = "rmcp"
-version = "0.9.1"
-description = "Comprehensive Model Context Protocol server with 52 statistical analysis tools for Claude Desktop and Claude web, featuring HTTP transport, interactive documentation, and production deployment"
+version = "0.10.0"
+description = "Model Context Protocol server bringing R statistical analysis to Claude Desktop and Claude web, over stdio and Streamable HTTP"
 authors = [{name = "Gaurav Sood", email = "gsood07@gmail.com"}]
 license = {text = "MIT"}
 readme = "README.md"
@@ -102,6 +102,11 @@ addopts = [
     "-v",
     "--strict-markers",
     "--strict-config",
+]
+filterwarnings = [
+    # A test that returns instead of asserting silently passes no matter what
+    # it computed. Make that a hard failure rather than a warning.
+    "error::pytest.PytestReturnNotNoneWarning",
 ]
 asyncio_mode = "auto"
 # asyncio_default_fixture_loop_scope removed for backwards compatibility with older pytest-asyncio versions

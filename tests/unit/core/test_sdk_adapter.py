@@ -82,11 +82,13 @@ async def test_list_and_call_tool(rmcp_server):
         names = [tool.name for tool in tools.tools]
         assert "echo" in names
         echo = next(tool for tool in tools.tools if tool.name == "echo")
-        assert echo.outputSchema is not None
+        # outputSchema is not advertised: it dominated the tools/list payload
+        # without telling the model anything the first result doesn't.
+        assert echo.outputSchema is None
 
         result = await session.call_tool("echo", {"message": "hello"})
         assert result.isError is not True
-        # structuredContent is the raw payload and conforms to outputSchema
+        # ...but results are still validated against it server-side
         assert result.structuredContent == {"echoed": "hello", "length": 5}
 
 

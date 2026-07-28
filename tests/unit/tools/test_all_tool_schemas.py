@@ -223,21 +223,20 @@ class TestToolSchemaEdgeCases:
         tool = statistical_tests.t_test
         schema = tool._mcp_tool_input_schema
 
-        # Valid input with extra property
+        # Otherwise-valid input, plus one property the schema does not declare
         input_with_extra = {
             "data": {"x": [1, 2, 3]},
-            "variables": ["x"],
+            "variable": "x",
             "extra_property": "should_be_ignored_or_rejected",
         }
 
-        # Schema validation behavior depends on additionalProperties setting
-        try:
-            validate(instance=input_with_extra, schema=schema)
-            # If validation passes, additionalProperties is allowed
-            assert True
-        except ValidationError:
-            # If validation fails, additionalProperties is not allowed
-            assert True
+        # Input schemas are deliberately permissive about unknown properties
+        # (output schemas are the strict ones). Assert that, rather than
+        # accepting either outcome.
+        assert schema.get("additionalProperties") is not False, (
+            "input schemas should tolerate unknown properties"
+        )
+        validate(instance=input_with_extra, schema=schema)
 
 
 if __name__ == "__main__":

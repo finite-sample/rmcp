@@ -6,7 +6,12 @@ Tests input schema validation and security constraints.
 
 import pytest
 from jsonschema import ValidationError, validate
-from rmcp.tools.flexible_r import execute_r_analysis, list_allowed_r_packages
+from rmcp.core.context import Context, LifespanState
+from rmcp.tools.flexible_r import (
+    execute_r_analysis,
+    list_allowed_r_packages,
+    validate_r_code,
+)
 
 
 class TestFlexibleRSchemaValidation:
@@ -94,6 +99,70 @@ class TestFlexibleRSchemaValidation:
         except ValidationError:
             # If category is not supported, that's fine
             pass
+
+
+class TestDeclaredPackagesAreValidated:
+    """The `packages` argument is concatenated into library(...) lines.
+
+    Unlike names parsed out of r_code, these are never seen by the pattern
+    scans, so they must be validated on the way in or they bypass the
+    allowlist, the dangerous-pattern block, and every approval category.
+    """
+
+    def _context(self):
+        return Context.create("test", "test", LifespanState())
+
+    def test_injection_through_packages_is_refused(self):
+        is_safe, error = validate_r_code(
+            "result <- 1",
+            self._context(),
+            packages=["stats); RMCP_INJECTION_MARKER <- TRUE; library(utils"],
+        )
+        assert not is_safe
+        assert "Invalid package name" in error
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "stats)",
+            "utils; system('id')",
+            "pkg name",
+            "",
+            "2pkg",
+            "../../etc/passwd",
+        ],
+    )
+    def test_non_identifier_package_names_are_refused(self, name):
+        is_safe, error = validate_r_code(
+            "result <- 1", self._context(), packages=[name]
+        )
+        assert not is_safe
+        assert "Invalid package name" in error
+
+    def test_package_outside_allowlist_requests_approval(self):
+        is_safe, error = validate_r_code(
+            "result <- 1", self._context(), packages=["definitelyNotOnTheAllowlist"]
+        )
+        assert not is_safe
+        assert error == "APPROVAL_NEEDED:definitelyNotOnTheAllowlist"
+
+    def test_session_approved_package_is_accepted(self):
+        context = self._context()
+        context.lifespan.approved_packages.add("notarealpkg")
+        is_safe, error = validate_r_code(
+            "result <- 1", context, packages=["notarealpkg"]
+        )
+        assert is_safe, error
+
+    def test_allowlisted_package_is_accepted(self):
+        is_safe, error = validate_r_code(
+            "result <- 1", self._context(), packages=["dplyr", "ggplot2"]
+        )
+        assert is_safe, error
+
+    def test_omitting_packages_is_unaffected(self):
+        is_safe, error = validate_r_code("result <- 1", self._context())
+        assert is_safe, error
 
 
 if __name__ == "__main__":

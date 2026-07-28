@@ -69,7 +69,8 @@ class TestStreamableHTTPMCPCompliance:
             assert {"linear_model", "load_example", "summary_stats"} <= names
             linear_model = next(t for t in tools if t["name"] == "linear_model")
             assert "inputSchema" in linear_model
-            assert "outputSchema" in linear_model
+            # outputSchema is intentionally kept off the wire; see ToolsRegistry.list_tools
+            assert "outputSchema" not in linear_model
 
     @pytest.mark.local
     async def test_tool_call_request(self, full_app):

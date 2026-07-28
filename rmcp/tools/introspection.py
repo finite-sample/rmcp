@@ -171,7 +171,7 @@ async def list_r_objects(context: Context, params: dict[str, Any]) -> dict[str, 
 
     try:
         # Execute with session support if available
-        result = await context.execute_r_with_session(r_script, args, use_session=True)
+        result = await context.execute_r(r_script, args)
 
         return {
             "objects": result.get("objects", {}),
@@ -363,7 +363,7 @@ async def inspect_r_object(context: Context, params: dict[str, Any]) -> dict[str
     args = {"object_name": object_name}
 
     try:
-        result = await context.execute_r_with_session(r_script, args, use_session=True)
+        result = await context.execute_r(r_script, args)
 
         return {**result, "session_id": session_id, "success": True}
 
@@ -471,7 +471,7 @@ async def list_r_packages(context: Context, params: dict[str, Any]) -> dict[str,
     args: dict[str, Any] = {}
 
     try:
-        result = await context.execute_r_with_session(r_script, args, use_session=True)
+        result = await context.execute_r(r_script, args)
 
         return {**result, "session_id": session_id, "success": True}
 
@@ -550,20 +550,7 @@ async def get_r_session_info(
     args: dict[str, Any] = {}
 
     try:
-        result = await context.execute_r_with_session(r_script, args, use_session=True)
-
-        # Add RMCP-specific session info if available
-        if context.is_r_session_enabled():
-            from ..r_session import get_session_manager
-
-            session_manager = get_session_manager()
-
-            rmcp_session_info = await session_manager.get_session_info(
-                session_id or context.get_r_session_id() or "default"
-            )
-
-            if rmcp_session_info:
-                result["rmcp_session"] = rmcp_session_info
+        result = await context.execute_r(r_script, args)
 
         return {**result, "session_id": session_id, "success": True}
 

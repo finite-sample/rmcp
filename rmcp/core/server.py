@@ -64,6 +64,22 @@ _transport_context: ContextVar[dict[str, Any] | None] = ContextVar(
 )
 
 
+#: Sent to the client once, at initialize. Deliberately not a catalog -- the tool
+#: list already is one. This carries only what tools/list cannot express.
+SERVER_INSTRUCTIONS = """RMCP runs statistical analyses in R, returning both raw values and formatted summaries.
+
+Two ways in:
+- Named tools (linear_model, arima_model, t_test, ...) cover common analyses with validated inputs and schemas. Prefer these.
+- execute_r_analysis runs arbitrary R when no named tool fits. The code must assign its output to a variable named `result`.
+
+Behaviour worth knowing before you call:
+- R packages are restricted to an allowlist. Loading anything outside it fails; call list_allowed_r_packages to check, or approve_r_package to permit one.
+- File writes, package installs, and system calls from execute_r_analysis are blocked until approved. When a result reports approval_required, call approve_operation and retry.
+- Results over 1000 rows or 50KB are returned as a resource_link (rmcp://data/...) instead of inline; read that URI for the payload.
+- Plotting tools return base64-encoded PNGs as image content.
+"""
+
+
 class MCPServer:
     """
     Main MCP server shell that manages lifecycle and registries.
@@ -86,59 +102,7 @@ class MCPServer:
         self,
         name: str = "RMCP MCP Server",
         version: str | None = None,
-        description: str = """RMCP provides 44 comprehensive statistical analysis tools through R:
-
-**Regression & Econometrics (8 tools):**
-- Linear/logistic regression with diagnostics and residual analysis
-- Panel data regression (fixed/random effects) with robust standard errors
-- Instrumental variables (2SLS) regression for causal inference
-- Vector autoregression (VAR) models for multivariate time series
-- Correlation analysis with significance testing and confidence intervals
-
-**Time Series Analysis (6 tools):**
-- ARIMA modeling with automatic order selection and forecasting
-- Time series decomposition (trend, seasonal, remainder components)
-- Stationarity testing (ADF, KPSS, Phillips-Perron tests)
-- Lag/lead variable creation and differencing transformations
-
-**Statistical Testing (5 tools):**
-- T-tests (one-sample, two-sample, paired) with effect sizes
-- ANOVA (one-way, two-way) with post-hoc comparisons
-- Chi-square tests for independence and goodness-of-fit
-- Normality tests (Shapiro-Wilk, Kolmogorov-Smirnov, Anderson-Darling)
-
-**Data Analysis & Transformation (9 tools):**
-- Comprehensive descriptive statistics with distribution analysis
-- Outlier detection using multiple methods (IQR, Z-score, Mahalanobis)
-- Data standardization (z-score, min-max, robust scaling)
-- Winsorization for outlier treatment and data cleaning
-- Professional frequency tables with percentages and cumulative statistics
-
-**Machine Learning (4 tools):**
-- K-means clustering with optimal cluster selection and visualization
-- Decision trees for classification and regression with pruning
-- Random forest models with variable importance and out-of-bag error
-
-**Professional Visualizations (6 tools):**
-- Scatter plots with trend lines, confidence bands, and grouping
-- Time series plots for single/multiple variables with forecasting
-- Histograms with density overlays and distribution fitting
-- Correlation heatmaps with hierarchical clustering
-- Box plots for distribution comparison and outlier identification
-- Comprehensive residual diagnostic plots (4-panel analysis)
-
-**File Operations (3 tools):**
-- CSV/Excel/JSON import with automatic type detection
-- Data filtering, export, and comprehensive dataset information
-- Missing value analysis and data quality reporting
-
-**Advanced Features:**
-- Formula builder: Convert natural language to R statistical formulas
-- Error recovery: Intelligent error diagnosis with suggested fixes
-- Flexible R execution: Custom R code with 80+ whitelisted packages
-- Example datasets: Built-in datasets for testing and learning
-
-All tools provide professionally formatted output with markdown tables, statistical interpretations, and inline visualizations (base64 images). Results include both raw data and formatted summaries using broom/knitr for publication-ready output.""",
+        description: str = SERVER_INSTRUCTIONS,
     ):
         """
         Initialize the MCP server instance.
@@ -1098,59 +1062,7 @@ All tools provide professionally formatted output with markdown tables, statisti
 def create_server(
     name: str = "RMCP MCP Server",
     version: str | None = None,
-    description: str = """RMCP provides 44 comprehensive statistical analysis tools through R:
-
-**Regression & Econometrics (8 tools):**
-- Linear/logistic regression with diagnostics and residual analysis
-- Panel data regression (fixed/random effects) with robust standard errors
-- Instrumental variables (2SLS) regression for causal inference
-- Vector autoregression (VAR) models for multivariate time series
-- Correlation analysis with significance testing and confidence intervals
-
-**Time Series Analysis (6 tools):**
-- ARIMA modeling with automatic order selection and forecasting
-- Time series decomposition (trend, seasonal, remainder components)
-- Stationarity testing (ADF, KPSS, Phillips-Perron tests)
-- Lag/lead variable creation and differencing transformations
-
-**Statistical Testing (5 tools):**
-- T-tests (one-sample, two-sample, paired) with effect sizes
-- ANOVA (one-way, two-way) with post-hoc comparisons
-- Chi-square tests for independence and goodness-of-fit
-- Normality tests (Shapiro-Wilk, Kolmogorov-Smirnov, Anderson-Darling)
-
-**Data Analysis & Transformation (9 tools):**
-- Comprehensive descriptive statistics with distribution analysis
-- Outlier detection using multiple methods (IQR, Z-score, Mahalanobis)
-- Data standardization (z-score, min-max, robust scaling)
-- Winsorization for outlier treatment and data cleaning
-- Professional frequency tables with percentages and cumulative statistics
-
-**Machine Learning (4 tools):**
-- K-means clustering with optimal cluster selection and visualization
-- Decision trees for classification and regression with pruning
-- Random forest models with variable importance and out-of-bag error
-
-**Professional Visualizations (6 tools):**
-- Scatter plots with trend lines, confidence bands, and grouping
-- Time series plots for single/multiple variables with forecasting
-- Histograms with density overlays and distribution fitting
-- Correlation heatmaps with hierarchical clustering
-- Box plots for distribution comparison and outlier identification
-- Comprehensive residual diagnostic plots (4-panel analysis)
-
-**File Operations (3 tools):**
-- CSV/Excel/JSON import with automatic type detection
-- Data filtering, export, and comprehensive dataset information
-- Missing value analysis and data quality reporting
-
-**Advanced Features:**
-- Formula builder: Convert natural language to R statistical formulas
-- Error recovery: Intelligent error diagnosis with suggested fixes
-- Flexible R execution: Custom R code with 80+ whitelisted packages
-- Example datasets: Built-in datasets for testing and learning
-
-All tools provide professionally formatted output with markdown tables, statistical interpretations, and inline visualizations (base64 images). Results include both raw data and formatted summaries using broom/knitr for publication-ready output.""",
+    description: str = SERVER_INSTRUCTIONS,
 ) -> MCPServer:
     """
     Factory function to create a new MCP server instance.

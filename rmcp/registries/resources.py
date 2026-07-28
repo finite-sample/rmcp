@@ -23,6 +23,7 @@ from ..core.context import Context
 from ..r_integration import execute_r_script_async
 from ..security import VFSError
 from ..tools.helpers import load_example
+from .tools import MAX_STORED_RESULTS
 
 logger = logging.getLogger(__name__)
 
@@ -370,7 +371,14 @@ class ResourcesRegistry:
             raise ValueError(f"RMCP resource not found: {resource_id}")
         data_store = tools_registry._large_data_store
         if resource_id not in data_store:
-            raise ValueError(f"RMCP resource not found: {resource_id}")
+            # The store keeps only the most recent results, so an old link is
+            # expired rather than invalid. Say which, so the caller knows to
+            # re-run the tool instead of hunting for a bad URI.
+            raise ValueError(
+                f"RMCP resource {resource_id} is no longer available. Only the "
+                f"{MAX_STORED_RESULTS} most recent large results are retained; "
+                "re-run the tool to regenerate it."
+            )
         stored_resource = data_store[resource_id]
         data = stored_resource["data"]
         content_type = stored_resource.get("content_type", "application/json")

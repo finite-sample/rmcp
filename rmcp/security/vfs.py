@@ -49,6 +49,9 @@ class VFS:
         self.read_only = (
             read_only if read_only is not None else config.security.vfs_read_only
         )
+        # Directories the user has explicitly approved for writing. These widen
+        # write access within the sandbox without lifting read_only globally.
+        self.writable_roots: set[Path] = set()
         self.max_file_size = (
             max_file_size
             if max_file_size is not None
@@ -78,8 +81,40 @@ class VFS:
         )
         logger.info(
             f"VFS initialized: {len(self.allowed_roots)} roots, "
-            f"read_only={read_only}, max_size={max_file_size}"
+            f"read_only={self.read_only}, max_size={self.max_file_size}"
         )
+
+    def grant_write(self, directory: str | Path) -> Path:
+        """Approve writes under ``directory`` without lifting read-only globally.
+
+        The directory must already resolve inside an allowed root, so a grant
+        can widen write access within the sandbox but never escape it.
+        """
+        resolved = self._resolve_and_validate_path(directory)
+        self.writable_roots.add(resolved)
+        logger.info(f"VFS write access granted: {resolved}")
+        return resolved
+
+    def validate_write_path(self, path: str | Path) -> Path:
+        """Resolve and authorise a write target without requiring it to exist.
+
+        Tools that delegate the actual write to R must call this *before*
+        handing the path over: once the subprocess starts, Python has no say in
+        where it writes.
+        """
+        resolved = self._resolve_and_validate_path(path)
+        if not self._is_writable(resolved):
+            raise VFSError(
+                f"Write access denied: {resolved}. The VFS is read-only; "
+                "approve the directory with approve_operation to enable writing."
+            )
+        return resolved
+
+    def _is_writable(self, path: Path) -> bool:
+        """Whether ``path`` may be written, honouring per-directory grants."""
+        if not self.read_only:
+            return True
+        return any(path == root or root in path.parents for root in self.writable_roots)
 
     def _resolve_and_validate_path(self, path: str | Path) -> Path:
         """Resolve path and validate against allowed roots."""
@@ -191,9 +226,9 @@ class VFS:
 
     def write_file(self, path: str | Path, content: bytes) -> None:
         """Write file with security checks."""
-        if self.read_only:
-            raise VFSError("VFS is configured as read-only")
         resolved_path = self._resolve_and_validate_path(path)
+        if not self._is_writable(resolved_path):
+            raise VFSError("VFS is configured as read-only")
         # Check content size
         if len(content) > self.max_file_size:
             raise VFSError(
@@ -212,9 +247,9 @@ class VFS:
         """Write file asynchronously with security checks."""
         import asyncio
 
-        if self.read_only:
-            raise VFSError("VFS is configured as read-only")
         resolved_path = self._resolve_and_validate_path(path)
+        if not self._is_writable(resolved_path):
+            raise VFSError("VFS is configured as read-only")
         # Check content size
         if len(content) > self.max_file_size:
             raise VFSError(
@@ -261,7 +296,8 @@ class VFS:
                 "mime_type": mime_type,
                 "encoding": encoding,
                 "readable": os.access(resolved_path, os.R_OK),
-                "writable": os.access(resolved_path, os.W_OK) and not self.read_only,
+                "writable": os.access(resolved_path, os.W_OK)
+                and self._is_writable(resolved_path),
             }
         except OSError as e:
             raise VFSError(f"Failed to get file info for {resolved_path}: {e}")

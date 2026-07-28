@@ -6,7 +6,7 @@
 [![Documentation](https://github.com/finite-sample/rmcp/actions/workflows/docs.yml/badge.svg)](https://finite-sample.github.io/rmcp/)
 [![License](https://img.shields.io/github/license/finite-sample/rmcp)](https://github.com/finite-sample/rmcp/blob/main/LICENSE)
 
-**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with **52 statistical analysis tools** across 11 categories and **429 R packages** from systematic CRAN task views. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with **54 tools** across 11 categories and **429 R packages** from systematic CRAN task views. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## 🚀 Quick Start (30 seconds)
 
@@ -83,7 +83,7 @@ Formula building, error recovery, example datasets → *"Help me build a regress
 ## 📦 Installation
 
 ### Prerequisites
-- **Python 3.10+**
+- **Python 3.11+**
 - **R 4.4.0+** with **comprehensive package ecosystem**: RMCP uses a systematic 429-package whitelist from CRAN task views organized into 19+ categories:
 
 ```r
@@ -94,11 +94,11 @@ install.packages(c(
 ))
 
 # Full ecosystem automatically available: Machine Learning (61 packages),
-# Econometrics (55 packages), Time Series (48 packages),
-# Bayesian Analysis (32 packages), and more
+# Econometrics (55 packages), Time Series (57 packages),
+# Bayesian Analysis (40 packages), and more
 ```
 
-**Package Selection**: Evidence-based using CRAN task views, download statistics, and 4-tier security assessment
+**Package Selection**: Evidence-based, using CRAN task views and download statistics
 
 ### Install RMCP
 
@@ -106,7 +106,8 @@ install.packages(c(
 # Standard installation
 pip install rmcp
 
-# With HTTP transport support
+# The Streamable HTTP transport ships in the base install.
+# This extra adds pandas/openpyxl for Excel data handling.
 pip install rmcp[http]
 
 # Development installation
@@ -215,13 +216,13 @@ docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
 ## 🔥 Key Features
 
 - **🎯 Natural Conversation**: Ask questions in plain English, get statistical analysis
-- **📚 Comprehensive Package Ecosystem**: 429 R packages from systematic CRAN task views with 4-tier security system
+- **📚 Comprehensive Package Ecosystem**: 429 R packages from systematic CRAN task views
 - **📊 Professional Output**: Formatted results with markdown tables and inline visualizations
 - **🔒 Production Ready**: Official MCP SDK with stdio and Streamable HTTP transports, plus bearer-token auth for remote deployments
 - **⚙️ Flexible Configuration**: Environment variables, config files, and CLI options
 - **⚡ Fast & Reliable**: 100% test success rate across all scenarios
 - **🌐 Multiple Transports**: stdio (Claude Desktop) and HTTP (web applications)
-- **🛡️ Secure**: Evidence-based package selection with security-conscious permission tiers
+- **🛡️ Guardrails**: Package allowlist, explicit user approval for file writes, package installs and system calls, and filesystem confinement for tool-written files. These guard against mistakes, not adversaries — RMCP executes R as the invoking user, so run it as a trusted local tool rather than an untrusted multi-tenant service.
 
 ## 📚 Documentation
 
@@ -252,14 +253,12 @@ cd rmcp
 pip install -e ".[dev]"
 
 # Run tests
-python tests/unit/test_new_tools.py
-python tests/e2e/test_claude_desktop_scenarios.py
+uv run pytest tests/
 
-# Format code
-black rmcp/
+# Lint and format
+uv run ruff check --fix .
+uv run ruff format .
 ```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## 📄 License
 
@@ -281,7 +280,8 @@ rmcp check-r-packages  # Check what's missing
 
 **MCP connection issues?**
 ```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start
+rmcp list-capabilities   # verify tools register without starting a session
+rmcp --debug start       # run the server with verbose logging on stderr
 ```
 
 **📖 Need more help?** Check the [examples](examples/) directory for working code.
@@ -294,4 +294,3 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | rmcp start
 ---
 
 **Ready to turn conversations into statistical insights?** Install RMCP and start analyzing data through AI assistants today! 🚀
-# Test comment

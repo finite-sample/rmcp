@@ -154,27 +154,21 @@ async def test_other_problematic_tools():
         ("linear_model", {"data": test_data, "formula": "y ~ x"}),
         ("t_test", {"data": test_data, "variable": "y"}),
     ]
-    all_passed = True
+    failures = []
     for tool_name, args in tests:
-        print(f"🧪 Testing {tool_name}...", end=" ")
         request = {
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
             "params": {"name": tool_name, "arguments": args},
         }
-        try:
-            response = await server.handle_request(request)
-            if "result" in response:
-                print("✅")
-            else:
-                error = response.get("error", {})
-                print(f"❌ ({error.get('message', 'Unknown error')})")
-                all_passed = False
-        except Exception as e:
-            print(f"💥 (Exception: {e})")
-            all_passed = False
-    return all_passed
+        response = await server.handle_request(request)
+        if "result" not in response:
+            failures.append((tool_name, response.get("error", "no result key")))
+        elif response["result"].get("isError"):
+            failures.append((tool_name, response["result"]["content"]))
+
+    assert not failures, f"tools failed: {failures}"
 
 
 async def main():

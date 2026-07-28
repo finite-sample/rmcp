@@ -80,6 +80,12 @@ CONFIG_SCHEMA: dict[str, Any] = {
                     "minimum": 1,
                     "default": 10,
                 },
+                "max_concurrent": {
+                    "type": "integer",
+                    "description": "Maximum R subprocesses running at once",
+                    "minimum": 1,
+                    "default": 4,
+                },
                 "binary_path": {
                     "type": ["string", "null"],
                     "description": "Custom R binary path (auto-detect if null)",
