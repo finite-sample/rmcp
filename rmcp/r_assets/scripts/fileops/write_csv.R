@@ -2,16 +2,16 @@
 # ================================
 #
 # This script writes data to CSV files with formatting options including
-# row names, missing value representation, and append mode support.
+# row names and missing value representation.
 
 # Prepare data and parameters
 file_path <- args$file_path
 include_rownames <- args$include_rownames %||% FALSE
 na_string <- args$na_string %||% ""
-append_mode <- args$append %||% FALSE
 
-# Write CSV
-write.csv(data, file_path, row.names = include_rownames, na = na_string, append = append_mode)
+# Write CSV. Note write.csv always truncates: it refuses `append` outright
+# ("attempt to set 'append' ignored"), so appending is not offered here.
+write.csv(data, file_path, row.names = include_rownames, na = na_string)
 
 # Verify file was written
 if (!file.exists(file_path)) {

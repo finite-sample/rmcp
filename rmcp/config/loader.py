@@ -226,7 +226,14 @@ class ConfigLoader:
                 # Boolean conversion
                 return value.lower() in ("true", "1", "yes", "on")
             case var if var.endswith(
-                ("_PORT", "_TIMEOUT", "_MAX_SESSIONS", "_MAX_WORKERS", "_MAX_FILE_SIZE")
+                (
+                    "_PORT",
+                    "_TIMEOUT",
+                    "_MAX_SESSIONS",
+                    "_MAX_CONCURRENT",
+                    "_MAX_WORKERS",
+                    "_MAX_FILE_SIZE",
+                )
             ):
                 # Integer conversion
                 try:

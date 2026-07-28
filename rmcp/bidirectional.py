@@ -443,10 +443,7 @@ async def setup_r_bidirectional(
         )
         """
 
-        # Execute setup in R session
-        setup_result = await context.execute_r_with_session(
-            setup_script, {}, use_session=True
-        )
+        setup_result = await context.execute_r(setup_script, {})
 
         await context.info("R bidirectional communication set up successfully")
 

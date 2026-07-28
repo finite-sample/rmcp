@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import re
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -30,6 +31,37 @@ if TYPE_CHECKING:
     from ..core.server import MCPServer
 
 logger = logging.getLogger(__name__)
+
+
+#: Request headers used by MCP Streamable HTTP clients.
+_CORS_ALLOW_HEADERS = [
+    "Accept",
+    "Authorization",
+    "Content-Type",
+    "Last-Event-ID",
+    "MCP-Protocol-Version",
+    "Mcp-Session-Id",
+]
+
+
+def _split_cors_origins(origins: list[str]) -> tuple[list[str], str | None]:
+    """Split configured origins into exact values and a regex for wildcards.
+
+    Starlette's ``CORSMiddleware`` compares ``allow_origins`` by equality, so
+    patterns like ``http://localhost:*`` never match unless they are compiled
+    into ``allow_origin_regex``. ``*`` expands to ``[^/]*`` so a wildcard port
+    cannot swallow a path or a different host.
+    """
+    exact: list[str] = []
+    patterns: list[str] = []
+    for origin in origins:
+        if origin == "*" or "*" not in origin:
+            exact.append(origin)
+        else:
+            patterns.append(
+                "".join(r"[^/]*" if ch == "*" else re.escape(ch) for ch in origin)
+            )
+    return exact, "|".join(patterns) if patterns else None
 
 
 async def run_stdio(rmcp_server: MCPServer) -> None:
@@ -120,7 +152,8 @@ def create_streamable_http_app(
     Args:
         rmcp_server: Configured RMCP server with registered tools.
         api_keys: Bearer tokens accepted on /mcp. Empty/None disables auth.
-        cors_origins: Allowed CORS origins (defaults to ``["*"]``).
+        cors_origins: Allowed CORS origins, ``*`` wildcards permitted
+            (defaults to ``["*"]``).
         json_response: Return plain JSON instead of SSE streams.
         stateless: Run sessions statelessly (fresh transport per request).
         manage_server_lifecycle: Run rmcp startup/shutdown with the app lifespan.
@@ -158,12 +191,14 @@ def create_streamable_http_app(
                 if manage_server_lifecycle:
                     await rmcp_server.shutdown()
 
+    allow_origins, allow_origin_regex = _split_cors_origins(cors_origins or ["*"])
     middleware = [
         Middleware(
             CORSMiddleware,
-            allow_origins=cors_origins or ["*"],
+            allow_origins=allow_origins,
+            allow_origin_regex=allow_origin_regex,
             allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-            allow_headers=["*"],
+            allow_headers=_CORS_ALLOW_HEADERS,
             expose_headers=["Mcp-Session-Id"],
         ),
         Middleware(BearerAuthMiddleware, api_keys=api_keys or set()),

@@ -117,7 +117,7 @@ from ..registries.tools import tool
         "required": ["coefficients", "r_squared", "n_obs", "method"],
         "additionalProperties": False,
     },
-    description="Performs ordinary least squares (OLS) linear regression to model relationships between a dependent variable and one or more predictors. Returns coefficients with standard errors, confidence intervals, R-squared, F-statistic, and comprehensive diagnostic statistics including residuals and fitted values. Use for prediction, inference, understanding linear relationships, or testing hypotheses about continuous outcomes. Handles missing values and supports weighted observations.",
+    description="Ordinary least squares regression. Returns coefficients with standard errors and confidence intervals, R-squared, F-statistic, residuals, and fitted values.",
 )
 async def linear_model(context, params) -> dict[str, Any]:
     """
@@ -276,7 +276,7 @@ async def linear_model(context, params) -> dict[str, Any]:
         "required": ["correlation_matrix", "method", "variables"],
         "additionalProperties": False,
     },
-    description="Computes pairwise correlation matrix between numeric variables using Pearson, Spearman, or Kendall methods. Provides correlation coefficients, significance tests (p-values), and handles missing data appropriately. Use to explore relationships between variables, identify multicollinearity, or understand data structure before modeling. Pearson for linear relationships, Spearman for monotonic non-linear relationships, Kendall for small samples or ties.",
+    description="Pairwise correlation matrix with significance tests. Pearson for linear, Spearman for monotonic, Kendall for small samples or many ties.",
 )
 async def correlation_analysis(context, params) -> dict[str, Any]:
     """
@@ -455,7 +455,7 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Fits generalized linear models (GLM) including logistic regression for binary outcomes, Poisson regression for count data, and other exponential family distributions. Returns coefficients, odds ratios (for logistic), AIC/BIC for model comparison, and diagnostic statistics. Use for binary classification, count modeling, or when dependent variable doesn't follow normal distribution. Includes prediction probabilities and confusion matrix for classification tasks.",
+    description="Generalized linear models: logistic for binary outcomes, Poisson for counts, and other exponential-family distributions. Returns coefficients, odds ratios, and AIC/BIC.",
 )
 async def logistic_regression(context, params) -> dict[str, Any]:
     """Fit logistic regression model."""

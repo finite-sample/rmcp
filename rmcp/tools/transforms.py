@@ -53,7 +53,7 @@ from ..registries.tools import tool
         "required": ["data", "variables_created", "n_obs", "operation"],
         "additionalProperties": False,
     },
-    description="Creates lagged (past values) and lead (future values) variables for time series analysis and panel data. Supports multiple lags/leads simultaneously and handles missing values appropriately. Essential for autoregressive models, studying temporal dependencies, creating predictor variables from time series, or analyzing causality relationships. Use for ARIMA preprocessing, econometric modeling, or feature engineering in time-dependent data.",
+    description="Creates lagged (past) and lead (future) variables for time series or panel data.",
 )
 async def lag_lead(context, params) -> dict[str, Any]:
     """Create lagged and lead variables."""
@@ -137,7 +137,7 @@ async def lag_lead(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Winsorizes variables by replacing extreme values with specified percentiles to reduce outlier impact while preserving data structure. Sets values below lower percentile to that percentile value and values above upper percentile to that percentile value. More robust than trimming since it retains all observations. Use for outlier treatment in regression analysis, robust statistical modeling, or preparing data for parametric analyzes sensitive to extreme values.",
+    description="Caps extreme values at given percentiles instead of dropping them. Retains all observations, unlike trimming.",
 )
 async def winsorize(context, params) -> dict[str, Any]:
     """Winsorize variables to handle outliers."""
@@ -206,7 +206,7 @@ async def winsorize(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Computes first differences, seasonal differences, or higher-order differences to transform non-stationary time series into stationary ones. Essential preprocessing step for ARIMA modeling and many econometric analyzes. Returns differenced series and handles missing values created by differencing. Use to remove trends, achieve stationarity for time series models, or analyze period-to-period changes in economic and financial data.",
+    description="First, seasonal, or higher-order differencing to make a series stationary. Standard preprocessing before ARIMA.",
 )
 async def difference(context, params) -> dict[str, Any]:
     """Compute differences of variables."""
@@ -281,7 +281,7 @@ async def difference(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Standardizes variables using multiple scaling methods: z-score normalization (mean=0, sd=1), min-max scaling (range 0-1), or robust scaling (median=0, MAD=1). Essential for machine learning algorithms, principal component analysis, or when combining variables with different units. Handles missing values and provides scaling parameters for inverse transformation. Use before clustering, neural networks, or any analysis requiring comparable variable scales.",
+    description="Rescales variables by z-score, min-max, or robust (median/MAD) scaling. Returns the scaling parameters needed to invert the transform.",
 )
 async def standardize(context, params) -> dict[str, Any]:
     """Standardize variables."""
