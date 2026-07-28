@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 from rmcp.core.context import Context, LifespanState
-from rmcp.security.vfs import VFS
+from rmcp.security.vfs import VFS, VFSError
+from rmcp.tools.fileops import write_csv
 from rmcp.tools.flexible_r import approve_operation, execute_r_analysis
 
 
@@ -27,10 +28,6 @@ async def mock_context_with_vfs():
 
     context = Context.create("test", "test", lifespan)
     context.temp_dir = temp_dir
-
-    # Initialize approval state for the context if not already present
-    if not hasattr(context, "_approved_operations"):
-        context._approved_operations = {}
 
     # Copy test iris data to temp directory to eliminate network dependency
     import shutil
@@ -347,50 +344,83 @@ class TestFileOutputScenarios:
         assert txt_path.exists() and txt_path.stat().st_size > 0
 
     @pytest.mark.asyncio
-    async def test_vfs_security_boundaries(self, mock_context_with_vfs):
-        """Test that VFS security boundaries are maintained."""
-        context = mock_context_with_vfs
+    async def test_write_tool_refuses_path_outside_allowed_roots(
+        self, mock_context_with_vfs
+    ):
+        """write_csv must refuse a destination outside the VFS roots.
 
-        # Approve file operations
-        await approve_operation(
+        The check has to happen before R starts: the subprocess writes the
+        bytes, so this is the last point Python controls the destination.
+        """
+        context = mock_context_with_vfs
+        outside = Path(tempfile.mkdtemp()) / "unauthorized.csv"
+
+        with pytest.raises(VFSError):
+            await write_csv(
+                context,
+                {"data": {"x": [1, 2, 3]}, "file_path": str(outside)},
+            )
+
+        assert not outside.exists(), "refused write still created the file"
+
+    @pytest.mark.asyncio
+    async def test_write_tool_allows_path_inside_allowed_roots(
+        self, mock_context_with_vfs
+    ):
+        """The confinement must not block legitimate writes."""
+        context = mock_context_with_vfs
+        inside = Path(context.temp_dir) / "authorized.csv"
+
+        result = await write_csv(
             context,
-            {
-                "operation_type": "file_operations",
-                "specific_operation": "write.csv",
-                "action": "approve",
-                "directory": context.temp_dir,
-            },
+            {"data": {"x": [1, 2, 3]}, "file_path": str(inside)},
         )
 
-        # Try to write outside allowed directory - should fail
-        outside_dir_code = """
-        data <- data.frame(x = 1:5, y = 1:5)
-        write.csv(data, "/tmp/unauthorized.csv", row.names = FALSE)
-        result <- list(written = TRUE)
+        assert result["success"] is True
+        assert inside.exists()
+
+    @pytest.mark.asyncio
+    async def test_write_confinement_is_off_without_a_vfs(self):
+        """No VFS configured means no policy to enforce, so writes proceed.
+
+        This keeps programmatic embedders working. Both CLI entry points call
+        MCPServer.configure(), so real servers always have a VFS.
         """
+        context = Context.create("test", "test", LifespanState())
+        target = Path(tempfile.mkdtemp()) / "no_vfs.csv"
+
+        result = await write_csv(
+            context,
+            {"data": {"x": [1, 2, 3]}, "file_path": str(target)},
+        )
+
+        assert result["success"] is True
+        assert target.exists()
+
+    @pytest.mark.asyncio
+    async def test_unapproved_r_write_is_blocked_by_approval(
+        self, mock_context_with_vfs
+    ):
+        """execute_r_analysis gates writes on approval, not on the VFS.
+
+        Note the limit deliberately asserted here: approval is a regex check on
+        the submitted R source. Once R runs it writes wherever it likes -- the
+        VFS does not confine the subprocess. Do not read this test as proof
+        that unapproved paths are unreachable.
+        """
+        context = mock_context_with_vfs
 
         result = await execute_r_analysis(
             context,
             {
-                "r_code": outside_dir_code,
-                "description": "Test writing outside allowed directory",
+                "r_code": (
+                    "data <- data.frame(x = 1:5)\n"
+                    'write.csv(data, "unauthorized.csv", row.names = FALSE)\n'
+                    "result <- list(written = TRUE)"
+                ),
+                "description": "Write without prior approval",
             },
         )
 
-        # The test should either:
-        # 1. Fail during R execution due to approval system blocking, OR
-        # 2. Succeed in R but VFS should prevent actual file creation
-        unauthorized_file = Path("/tmp/unauthorized.csv")
-
-        # Clean up any existing file first
-        if unauthorized_file.exists():
-            unauthorized_file.unlink()
-
-        # After R execution, the unauthorized file should not exist
-        assert not unauthorized_file.exists(), (
-            "VFS security was bypassed - unauthorized file was created"
-        )
-
-        # The operation should have been blocked by approval system
-        if not result["success"]:
-            assert "OPERATION_APPROVAL_NEEDED" in result.get("error", "")
+        assert result["success"] is False
+        assert "OPERATION_APPROVAL_NEEDED" in str(result.get("error", ""))
