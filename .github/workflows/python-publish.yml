@@ -1,40 +1,99 @@
 name: Publish to PyPI
 
+# Tag-driven only. There is deliberately no workflow_dispatch: a manual
+# trigger publishes whatever is on the runner, with no gate. Every release
+# before 0.10.0 shipped that way. Releases now come from a v* tag, which
+# comes from main, which CI gates.
+#
+# The filename is load-bearing: the PyPI trusted publisher is keyed to
+# python-publish.yml. See py-canon STANDARD.md "Legacy publishers" -- keeping
+# the legacy name means no pypi.org change is needed. py-canon normally splits
+# build/release into a reusable workflow and leaves only publish here, but that
+# needs cross-workflow artifact passing, so all three jobs are inlined instead.
+
 on:
   push:
-    tags:
-      - 'v*'
-  release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      reason:
-        description: 'Likely Test'
-        required: false
-        default: 'Manual build'
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-
-    permissions:
-      id-token: write  # required for trusted publishing
-
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: '3.11'
+          fetch-depth: 0 # uv-dynamic-versioning derives the version from tags
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          enable-cache: true
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
 
-      - name: Build package
+      - name: Build distributions
+        run: uv build
+
+      - name: Check metadata
+        run: uvx twine check dist/*
+
+      # Cheap guard against a shallow clone or missing tags yielding 0.0.0,
+      # which would otherwise publish a bogus version under a good tag.
+      - name: Confirm the built version matches the tag
         run: |
-          uv build
+          set -euo pipefail
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if [ ${#wheels[@]} -ne 1 ]; then
+            echo "::error::expected exactly one wheel, found ${#wheels[@]}"
+            exit 1
+          fi
+          name="${wheels[0]##*/}"
+          built="${name#rmcp-}"
+          built="${built%-py3-none-any.whl}"
+          expected="${GITHUB_REF_NAME#v}"
+          echo "tag=$expected built=$built"
+          if [ "$built" != "$expected" ]; then
+            echo "::error::Built version $built does not match tag $expected"
+            exit 1
+          fi
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pypi
+    permissions:
+      id-token: write # trusted publishing + attestations
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish (trusted publishing, PEP 740 attestations)
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # release/v1
+        with:
+          attestations: true
+
+  github-release:
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create GitHub Release with generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" --generate-notes --verify-tag
