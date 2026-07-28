@@ -7,11 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-27
+
+### Security
+- **`packages` was an injection vector**: `execute_r_analysis` interpolated
+  caller-supplied strings straight into `library(...)` lines, and
+  `validate_r_code` never saw them. A value like
+  `"stats); system('...'); library(utils"` executed arbitrary R, bypassing the
+  package allowlist, the dangerous-pattern block, and every approval category.
+  Entries are now required to be bare R identifiers and are checked against the
+  allowlist (or session approval) before use.
+- **File writes are confined to the VFS roots**: `write_csv`/`write_excel`/
+  `write_json` and the six visualization tools validate their `file_path`
+  before handing it to R, via the new `VFS.validate_write_path()`. Previously
+  `VFS.write_file` had no production callers at all, so the VFS enforced
+  nothing. Fails open when no VFS is configured, so embedders are unaffected.
+- **`approve_operation` no longer disables read-only globally**: it grants
+  write access to the requested directory via `VFS.grant_write()` instead of
+  setting `vfs.read_only = False` for the whole process.
+
 ### Added
+- `approve_operation` and `approve_r_package` are registered and reachable.
+  They were decorated with `@tool` but never passed to `register_tool_functions`,
+  so `execute_r_analysis`'s "call approve_operation" instruction pointed at a
+  tool no client could see.
+- `RConfig.max_concurrent` (env `RMCP_R_MAX_CONCURRENT`) to bound concurrent R
+  subprocesses; previously a hard-coded `4`.
 - Guarded dependabot automation: weekly grouped patch/minor updates for uv
   and GitHub Actions with a 7-day release cooldown; auto-approve + squash
   auto-merge for patch/minor (majors stay open for review); `main` ruleset
   requires CI checks for PR merges (admins bypass for direct pushes)
+
+### Fixed
+- **`rmcp serve` corrupted the stdio JSON-RPC stream**: it never configured
+  structlog, whose default factory writes to stdout.
+- **R timeouts orphaned the subprocess**: `asyncio.wait_for` sat inside an
+  `asyncio.TaskGroup`, so the timeout surfaced as a `BaseExceptionGroup` that
+  the sibling `except TimeoutError` could not catch and `proc.kill()` never
+  ran. The timeout now wraps the whole group, and the message reports the
+  configured value rather than a hard-coded 120 seconds.
+- **Concurrent R calls failed after the first event loop**: the module-level
+  `asyncio.Semaphore` bound itself to whichever loop first made a caller wait,
+  then raised "bound to a different event loop" everywhere else. Now one
+  limiter per running loop.
+- **`load_example` masked every error it hit**: its fallback dict omitted
+  required output properties, so real failures surfaced as
+  `'statistics' is a required property`. It re-raises instead.
+- `execute_r_analysis`'s `timeout_seconds` was declared and ignored.
+- CORS was pinned to `*`: the configured `cors_origins` were never forwarded,
+  and their `http://localhost:*` wildcards are not matchable by Starlette's
+  `allow_origins` anyway. They are now compiled to `allow_origin_regex`.
+- Approvals are stored on `LifespanState` rather than the per-request
+  `Context`, so they survive to the next request as documented.
+- Oversized tool results are capped at 32 retained entries; an expired
+  `rmcp://data/{id}` link now explains it expired instead of raising `KeyError`.
+
+### Changed
+- **`tools/list` shrank ~66%**, from 103,939 to ~35,500 characters (~26k to
+  ~9k tokens), while gaining two tools. `outputSchema` is no longer advertised
+  (it was 54% of the payload; results are still validated against it
+  server-side), and the 46 templated four-sentence descriptions are now
+  one-liners.
+- The `initialize` instructions blob went from 2,789 to 922 characters and
+  stopped duplicating the tool catalogue. It was also defined twice verbatim.
+- Tests that swallowed their own assertions now fail properly; several were
+  passing regardless of outcome. Fixing them surfaced a real wrong assertion
+  in `test_logistic_regression_separation_warning`.
+
+### Removed
+- `write_csv`'s `append` parameter: R's `write.csv` refuses it
+  ("attempt to set 'append' ignored") and truncates, so the schema advertised
+  behaviour that never happened and silently lost data.
+- ~1,700 lines of advertised-but-unwired subsystems: `package_tiers.py`,
+  `package_security.py` (the documented "4-tier security system", which was
+  never wired into any execution path), `discovery.py`, and `r_session.py`.
+- Stale documentation: two environment variables and an approval API that do
+  not exist, a "Zero Skipped Tests" claim, and hard-coded tool counts that
+  disagreed with each other in four places.
 
 ## [0.9.1] - 2026-07-22
 

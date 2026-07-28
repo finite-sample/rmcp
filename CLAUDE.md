@@ -33,7 +33,7 @@ rmcp start                        # Full R integration available
 **For production deployment (optimized):**
 ```bash
 docker build --target production -t rmcp-production .  # Multi-stage optimized build
-docker run -p 8000:8000 rmcp-production rmcp http                          # Production HTTP server
+docker run -p 8000:8000 rmcp-production rmcp serve-http                          # Production HTTP server
 ```
 
 ### Testing (Hybrid Strategy)
@@ -76,8 +76,8 @@ uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
 - **Transport Layer** (`rmcp/transport/`): Official MCP SDK transports (stdio + Streamable HTTP) via `rmcp/transport/sdk.py`; protocol bridge in `rmcp/core/sdk_adapter.py`
 - **Core Server** (`rmcp/core/`): MCPServer, Context management, JSON-RPC protocol
 - **Registries** (`rmcp/registries/`): Dynamic registration for tools, resources, prompts
-- **Tools** (`rmcp/tools/`): 52 statistical analysis tools across 11 categories
-- **Comprehensive Package Whitelist**: 429 R packages from CRAN task views with tiered security
+- **Tools** (`rmcp/tools/`): 54 tools across 11 categories
+- **Package Allowlist**: 429 R packages from CRAN task views
 - **R Integration** (`rmcp/r_integration.py`): Python-R bridge via subprocess + JSON
 
 ### Adding New Statistical Tools
@@ -118,17 +118,17 @@ uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
   - `test_deployment_scenarios.py`: Docker environment validation, production builds, multi-platform testing
 
 **Development Utilities**
-- **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (tests all 52 tools with real R)
+- **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (exercises every tool with real R)
 
 **Complete Test Coverage**: Docker environment includes **all 240+ tests** with comprehensive coverage across all components:
-- ✅ **R Integration**: 52 statistical tools with real R execution
+- ✅ **R Integration**: statistical tools exercised against real R
 - ✅ **HTTP Transport**: MCP SDK Streamable HTTP, uvicorn, bearer auth, session management
 - ✅ **Core MCP Protocol**: JSON-RPC 2.0, tool calls, capabilities, error handling
 - ✅ **Configuration System**: Environment variables, config files, hierarchical loading
 - ✅ **Production Deployment**: Multi-stage Docker builds, security validation, size optimization
 - ✅ **Scalability**: Concurrent request handling, load testing, performance validation
 - ✅ **Cross-platform**: Multi-architecture support, numerical consistency, platform compatibility
-- ✅ **Zero Skipped Tests**: All tests execute successfully with no dependency-related skips
+- ⏭️ **Dependency-gated skips**: Docker and Claude Desktop scenarios skip when those aren't present
 
 **Strategy**: Tests progress from basic functionality → protocol compliance → component integration → complete scenarios. Each tier builds on the previous, ensuring fast feedback for basic issues while providing comprehensive validation for complex workflows.
 
@@ -372,7 +372,7 @@ OPERATION_CATEGORIES = {
 2. **User Notification**: Clear description of operation and security implications shown
 3. **Approval Decision**: User accepts/denies with session-wide persistence
 4. **Execution**: Approved operations proceed, denied operations are blocked
-5. **Session Memory**: Decisions persist for the current session to avoid repetitive prompts
+5. **Session Memory**: Decisions are stored on `LifespanState`, so they persist across requests for the life of the server process
 
 ### **Security Features**
 
@@ -421,31 +421,28 @@ OPERATION_CATEGORIES["database_operations"] = {
 ```python
 # Unit tests in tests/unit/tools/test_operation_approval.py
 def test_approval_required():
-    context = create_test_context()
-    code = 'ggsave("test.png")'
+    context = Context.create("test", "test", LifespanState())
 
-    # Should require approval
-    result = await validate_r_code(context, code)
-    assert result["requires_approval"] is True
-    assert result["operation_info"]["category"] == "file_operations"
+    # validate_r_code is synchronous and returns (is_safe, error)
+    is_safe, error = validate_r_code('ggsave("test.png")', context)
+    assert not is_safe
+    assert error == "OPERATION_APPROVAL_NEEDED:file_operations:ggsave"
 ```
 
-### **Configuration Options**
+### **Approval State**
 
-**Environment Variables:**
-```bash
-# Disable approval system (for automation/testing)
-export RMCP_DISABLE_OPERATION_APPROVAL=true
+Approvals are recorded on `LifespanState` (`rmcp/core/context.py`), not on the
+per-request `Context` — a fresh `Context` is built for every MCP request, so
+anything stored there would be forgotten before the next call:
 
-# Set default approval for specific categories
-export RMCP_AUTO_APPROVE_FILE_OPERATIONS=true
-```
-
-**Session Configuration:**
 ```python
-# Programmatic approval (for API integrations)
-context.approval_state.approve_category("file_operations")
+context.lifespan.approved_operations   # {category: {operation: metadata}}
+context.lifespan.approved_packages     # set[str]
 ```
+
+They persist for the life of the server process. There is no environment
+variable to disable the approval system; the tools `approve_operation` and
+`approve_r_package` are the only way to grant consent.
 
 This system balances security with usability, ensuring sensitive operations require explicit user consent while maintaining smooth workflows for approved operations.
 
@@ -465,36 +462,16 @@ RMCP v0.5.1 introduces a **systematic, evidence-based R package whitelist** with
 
 **Additional Categories**: Spatial analysis, optimization, meta-analysis, clinical trials, robust statistics, missing data, NLP, experimental design, network analysis.
 
-### **Tiered Security System**
+### **Enforcement**
 
-**4-Tier Permission Model** balances functionality with security:
+Package access is a single flat allowlist: a package is either in `ALLOWED_R_PACKAGES`
+or it is refused. A refused package can be permitted for the session with
+`approve_r_package`.
 
-1. **Tier 1 - Auto-Approved (52 packages)**: Core statistical packages
-   - Base R, essential tidyverse, fundamental statistical packages
-   - Examples: `ggplot2`, `dplyr`, `MASS`, `survival`, `Matrix`
-
-2. **Tier 2 - User Approval (56 packages)**: Extended functionality
-   - Popular ML, econometrics, time series packages
-   - Examples: `caret`, `randomForest`, `forecast`, `AER`, `rstan`
-
-3. **Tier 3 - Admin Approval (75 packages)**: Specialized/development
-   - Advanced ML, development tools, web packages
-   - Examples: `xgboost`, `devtools`, `httr`, `tensorflow`
-
-4. **Tier 4 - Blocked (26 packages)**: Security risks
-   - System access, external dependencies, compilation tools
-   - Examples: `rJava`, `RMySQL`, `processx`, `system` calls
-
-### **Security Assessment**
-
-**Risk Categorization** by security impact:
-- **System Access**: 4 packages (R.utils, unix, etc.)
-- **Network Access**: 8 packages (curl, httr, etc.)
-- **File Operations**: 8 packages (readr, openxlsx, etc.)
-- **Code Execution**: 8 packages (Rcpp, devtools, etc.)
-- **External Dependencies**: 7 packages (rJava, database drivers, etc.)
-
-**Results**: 413 low-risk packages (96.3%), 4 medium-risk, 12 high-risk
+Enforcement is regex over the R source text, so it catches honest mistakes but not
+a determined caller — `do.call("library", list(pkg))` and `eval(parse(text=...))`
+both evade it. Treat the allowlist as a guardrail, not a sandbox boundary; the real
+isolation is the process and filesystem the server runs under.
 
 ### **Usage Examples**
 
