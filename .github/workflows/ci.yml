@@ -152,7 +152,11 @@ jobs:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
           type=ref,event=branch
-          type=sha,prefix={{branch}}-
+          type=ref,event=pr
+          # {{branch}} is only populated for branch pushes; on a pull_request
+          # it is empty and the tag becomes "-<sha>", which docker rejects.
+          type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
+          type=sha,prefix=pr-,enable=${{ github.event_name == 'pull_request' }}
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Extract metadata for production image
@@ -163,7 +167,9 @@ jobs:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
           type=ref,event=branch,suffix=-production
-          type=sha,prefix={{branch}}-production-
+          type=ref,event=pr,suffix=-production
+          type=sha,prefix={{branch}}-production-,enable=${{ github.event_name != 'pull_request' }}
+          type=sha,prefix=pr-production-,enable=${{ github.event_name == 'pull_request' }}
           type=raw,value=production-latest,enable={{is_default_branch}}
 
     - name: Build and push development Docker image
