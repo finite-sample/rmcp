@@ -463,7 +463,7 @@ class TestDockerWorkflowValidation:
         finally:
             try:
                 Path(temp_file).unlink()
-            except:
+            except OSError:
                 pass
 
     def test_docker_performance_benchmarks(self, production_docker_image):
