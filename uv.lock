@@ -1384,7 +1384,6 @@ wheels = [
 
 [[package]]
 name = "rmcp"
-version = "0.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1444,7 +1443,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=23.1.0" },
     { name = "uvicorn", specifier = ">=0.31.1" },
 ]
-provides-extras = ["http", "all"]
+provides-extras = ["all", "http"]
 
 [package.metadata.requires-dev]
 dev = [
