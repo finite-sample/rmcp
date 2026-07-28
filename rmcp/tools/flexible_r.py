@@ -30,54 +30,8 @@ from .package_whitelist_comprehensive import (
     get_package_categories,
 )
 
-# Use comprehensive whitelist (700+ packages from CRAN task views)
+# Comprehensive whitelist drawn from CRAN task views
 ALLOWED_R_PACKAGES = COMPREHENSIVE_PACKAGES
-
-# Legacy small whitelist for conservative environments (if needed)
-LEGACY_ALLOWED_PACKAGES = {
-    # Base R packages (always available)
-    "base",
-    "stats",
-    "graphics",
-    "grDevices",
-    "utils",
-    "datasets",
-    "methods",
-    "grid",
-    "splines",
-    "stats4",
-    # Core tidyverse
-    "dplyr",
-    "tidyr",
-    "ggplot2",
-    "readr",
-    "tibble",
-    "stringr",
-    "forcats",
-    "lubridate",
-    "purrr",
-    "tidyverse",
-    # Essential statistical packages
-    "lmtest",
-    "sandwich",
-    "car",
-    "MASS",
-    "boot",
-    "survival",
-    "caret",
-    "randomForest",
-    "rpart",
-    "e1071",
-    "forecast",
-    "zoo",
-    "xts",
-    # Essential utilities
-    "jsonlite",
-    "broom",
-    "knitr",
-    "rlang",
-    "haven",
-}
 
 # Dangerous patterns to block
 # Patterns moved to OPERATION_CATEGORIES for user approval:
@@ -101,24 +55,74 @@ DANGEROUS_PATTERNS = [
 ]
 
 
+def _approved_operations(context) -> dict[str, dict[str, Any]]:
+    """Live approval map for this session.
+
+    Approvals live on the lifespan state, not the Context: a fresh Context is
+    built for every request, so anything stored there is forgotten immediately.
+    Returns an empty mapping when no lifespan is available.
+    """
+    lifespan = getattr(context, "lifespan", None)
+    if lifespan is None:
+        return {}
+    return getattr(lifespan, "approved_operations", {})
+
+
+def _approved_packages(context) -> set[str]:
+    """Live set of session-approved packages. See :func:`_approved_operations`."""
+    lifespan = getattr(context, "lifespan", None)
+    if lifespan is None:
+        return set()
+    return getattr(lifespan, "approved_packages", set())
+
+
 def is_operation_approved(
     context, operation_type: str, specific_operation: str
 ) -> bool:
     """Check if a specific operation has been approved by the user."""
-    if not context or not hasattr(context, "_approved_operations"):
-        return False
-
-    operations = context._approved_operations.get(operation_type, {})
-    return specific_operation in operations
+    return specific_operation in _approved_operations(context).get(operation_type, {})
 
 
-def validate_r_code(r_code: str, context=None) -> tuple[bool, str | None]:
+#: R package names are bare identifiers. A `packages` entry that is anything
+#: else is an attempt to break out of the generated ``library(...)`` call and
+#: run code that never passes the checks below.
+_R_PACKAGE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9._]*$")
+
+
+def _package_error(pkg: str, context) -> str | None:
+    """Return an error for a package that may not be loaded, else None."""
+    if pkg in ALLOWED_R_PACKAGES or pkg in _approved_packages(context):
+        return None
+    if context:
+        return f"APPROVAL_NEEDED:{pkg}"
+    return f"Package '{pkg}' requires user approval"
+
+
+def validate_r_code(
+    r_code: str, context=None, packages: list[str] | None = None
+) -> tuple[bool, str | None]:
     """
     Validate R code for safety with interactive operation and package approval.
+
+    Args:
+        r_code: the R source to be executed
+        context: request context, used to look up session approvals
+        packages: package names the caller asked to load. These are
+            interpolated into ``library(...)`` lines, so they are validated
+            here rather than being trusted.
 
     Returns:
         (is_safe, error_message)
     """
+    # Declared packages first: these bypass every check below if left unvalidated,
+    # because they are concatenated into the script rather than parsed out of it.
+    for pkg in packages or []:
+        if not _R_PACKAGE_NAME.match(pkg):
+            return False, f"Invalid package name: {pkg!r}"
+        error = _package_error(pkg, context)
+        if error:
+            return False, error
+
     # Check for controllable operations that need approval
     for operation_type, config in OPERATION_CATEGORIES.items():
         for pattern in config["patterns"]:
@@ -161,43 +165,15 @@ def validate_r_code(r_code: str, context=None) -> tuple[bool, str | None]:
 
     # Extract library/require calls
     lib_pattern = r"(?:library|require)\s*\(\s*['\"]?(\w+)['\"]?\s*\)"
-    packages = re.findall(lib_pattern, code_without_comments, re.IGNORECASE)
+    code_packages = re.findall(lib_pattern, code_without_comments, re.IGNORECASE)
 
-    # Check all packages are in whitelist or session-approved
-    for pkg in packages:
-        if pkg not in ALLOWED_R_PACKAGES:
-            # Check if package is session-approved
-            session_approved = (
-                context
-                and hasattr(context, "_approved_packages")
-                and pkg in context._approved_packages
-            )
-            if not session_approved:
-                # Request user approval through context
-                if context:
-                    return False, f"APPROVAL_NEEDED:{pkg}"
-                else:
-                    return False, f"Package '{pkg}' requires user approval"
+    # ...and double-colon usage (pkg::function)
+    code_packages += re.findall(r"(\w+)::", code_without_comments)
 
-    # Check for double-colon package usage (pkg::function)
-    colon_pattern = r"(\w+)::"
-    colon_packages = re.findall(colon_pattern, code_without_comments)
-    for pkg in colon_packages:
-        if pkg not in ALLOWED_R_PACKAGES:
-            # Check if package is session-approved
-            session_approved = (
-                context
-                and hasattr(context, "_approved_packages")
-                and pkg in context._approved_packages
-            )
-            if not session_approved:
-                if context:
-                    return False, f"APPROVAL_NEEDED:{pkg}"
-                else:
-                    return (
-                        False,
-                        f"Package '{pkg}' (used with ::) requires user approval",
-                    )
+    for pkg in code_packages:
+        error = _package_error(pkg, context)
+        if error:
+            return False, error
 
     return True, None
 
@@ -278,7 +254,7 @@ def validate_r_code(r_code: str, context=None) -> tuple[bool, str | None]:
         },
         "required": ["success"],
     },
-    description="Executes custom R code for advanced statistical analyses beyond the built-in tools, with comprehensive safety validation including package whitelisting, timeout protection, and audit logging. Supports complex statistical procedures, custom visualizations, and specialized analyses not covered by structured tools. Use for cutting-edge statistical methods, custom modeling approaches, research-specific analyses, or when existing tools don't meet specific analytical requirements. Essential for advanced users needing R's full statistical capabilities.",
+    description="Runs arbitrary R code for analyses the named tools do not cover. Code is checked against the package allowlist; file writes, package installs, and system calls require approval first. Use when no structured tool fits.",
 )
 async def execute_r_analysis(context, params) -> dict[str, Any]:
     """Execute flexible R code with safety checks."""
@@ -292,10 +268,8 @@ async def execute_r_analysis(context, params) -> dict[str, Any]:
 
     await context.info(f"Executing R analysis: {description}")
 
-    # Package validation is now handled in validate_r_code function below
-
-    # Validate R code with interactive approval
-    is_safe, error = validate_r_code(r_code, context)
+    # Validate the code and the declared packages together
+    is_safe, error = validate_r_code(r_code, context, packages=packages)
     if not is_safe:
         if error and error.startswith("APPROVAL_NEEDED:"):
             # Extract package name and request approval
@@ -372,9 +346,12 @@ Please respond with your choice. If you approve, the analysis will continue with
                 full_script,
                 args,
                 include_image=True,
+                timeout=params.get("timeout_seconds"),
             )
         else:
-            result = await execute_r_script_async(full_script, args)
+            result = await execute_r_script_async(
+                full_script, args, timeout=params.get("timeout_seconds")
+            )
 
         await context.info("R analysis completed successfully")
 
@@ -523,7 +500,7 @@ OPERATION_CATEGORIES = {
         },
         "required": ["success", "operation_type", "action", "message"],
     },
-    description="Approve or deny R operations including file writing (ggsave, write.csv), package installation (install.packages), and system operations. Provides explicit user control over potentially sensitive operations. Session approvals apply only to current analysis session, while permanent approvals persist across sessions. Essential for enabling file saving, package installation, and system interactions while maintaining security through explicit consent.",
+    description="Approve or deny a pending R operation (file write, package install, or system call). Call this when execute_r_analysis reports approval_required.",
 )
 async def approve_operation(context, params) -> dict[str, Any]:
     """Universal approval system for R operations."""
@@ -537,9 +514,7 @@ async def approve_operation(context, params) -> dict[str, Any]:
         f"Processing {action} request for {operation_type}: {specific_operation}"
     )
 
-    # Initialize approval tracking
-    if not hasattr(context, "_approved_operations"):
-        context._approved_operations = {}
+    approvals = _approved_operations(context)
 
     # Get operation category info
     category_info = OPERATION_CATEGORIES.get(operation_type, {})
@@ -547,23 +522,34 @@ async def approve_operation(context, params) -> dict[str, Any]:
 
     if action == "approve":
         # Store approval
-        if operation_type not in context._approved_operations:
-            context._approved_operations[operation_type] = {}
+        if operation_type not in approvals:
+            approvals[operation_type] = {}
 
         approval_data = {
             "specific_operation": specific_operation,
             "scope": scope,
-            "approved_at": __import__("time").time(),
+            "approved_at": time.time(),
         }
 
         if directory and operation_type == "file_operations":
             approval_data["directory"] = directory
-            # Enable VFS write mode if available
-            if hasattr(context.lifespan, "vfs") and context.lifespan.vfs:
-                context.lifespan.vfs.read_only = False
-                await context.info(f"✅ Enabled file writing to: {directory}")
+            # Grant write access to this directory only, rather than lifting
+            # read-only for the whole process.
+            vfs = getattr(context.lifespan, "vfs", None)
+            if vfs is not None:
+                try:
+                    granted = vfs.grant_write(directory)
+                    await context.info(f"✅ Enabled file writing to: {granted}")
+                except Exception as e:
+                    await context.error(
+                        f"Cannot grant write access to {directory}: {e}"
+                    )
+                    return {
+                        "success": False,
+                        "error": f"Cannot grant write access to {directory}: {e}",
+                    }
 
-        context._approved_operations[operation_type][specific_operation] = approval_data
+        approvals[operation_type][specific_operation] = approval_data
 
         message = f"✅ Approved {operation_type} operation: {specific_operation}"
         if scope == "session":
@@ -594,9 +580,7 @@ async def approve_operation(context, params) -> dict[str, Any]:
             "action": "approved",
             "scope": scope,
             "message": message,
-            "approved_operations": {
-                k: list(v.keys()) for k, v in context._approved_operations.items()
-            },
+            "approved_operations": {k: list(v.keys()) for k, v in approvals.items()},
             "security_info": security_info,
         }
 
@@ -611,10 +595,7 @@ async def approve_operation(context, params) -> dict[str, Any]:
             "action": "denied",
             "scope": "none",
             "message": message,
-            "approved_operations": {
-                k: list(v.keys())
-                for k, v in getattr(context, "_approved_operations", {}).items()
-            },
+            "approved_operations": {k: list(v.keys()) for k, v in approvals.items()},
         }
 
 
@@ -673,7 +654,7 @@ async def approve_operation(context, params) -> dict[str, Any]:
         },
         "required": ["packages", "total_count", "category"],
     },
-    description="Lists comprehensive R packages whitelisted for statistical analysis based on CRAN task views. Covers 700+ packages across machine learning, econometrics, time series, Bayesian methods, survival analysis, spatial data, and more. Use 'summary' to see category breakdown or specific categories to explore available packages. Helps discover capabilities, plan analyses, and verify package availability.",
+    description="Lists the R packages allowed in execute_r_analysis, by category. Pass 'summary' for the category breakdown.",
 )
 async def list_allowed_r_packages(context, params) -> dict[str, Any]:
     """List allowed R packages by comprehensive CRAN task view categories."""
@@ -800,7 +781,7 @@ async def list_allowed_r_packages(context, params) -> dict[str, Any]:
         },
         "required": ["success", "package", "action", "message"],
     },
-    description="Approve or deny R packages for use in flexible R code execution. Allows users to grant permission for packages not in the default allowlist. Session-only approval means packages are approved for the current analysis session only. Use this tool when RMCP requests package approval for statistical analysis.",
+    description="Approve or deny an R package that is not in the default allowlist. Call this when execute_r_analysis reports approval_required.",
 )
 async def approve_r_package(context, params) -> dict[str, Any]:
     """Handle user approval/denial of R packages."""
@@ -809,11 +790,10 @@ async def approve_r_package(context, params) -> dict[str, Any]:
     session_only = params.get("session_only", True)
 
     # Get or create session package store
-    if not hasattr(context, "_approved_packages"):
-        context._approved_packages = set()
+    approved = _approved_packages(context)
 
     if action == "approve":
-        context._approved_packages.add(package_name)
+        approved.add(package_name)
 
         # Log security approval event
         log_security_event(
@@ -841,7 +821,7 @@ async def approve_r_package(context, params) -> dict[str, Any]:
             "package": package_name,
             "action": "approved",
             "message": message,
-            "session_packages": list(context._approved_packages),
+            "session_packages": sorted(approved),
         }
 
     else:  # deny
@@ -861,5 +841,5 @@ async def approve_r_package(context, params) -> dict[str, Any]:
             "package": package_name,
             "action": "denied",
             "message": f"Package '{package_name}' has been denied. Please modify your analysis to use approved packages.",
-            "session_packages": list(getattr(context, "_approved_packages", [])),
+            "session_packages": sorted(approved),
         }

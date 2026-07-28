@@ -89,11 +89,14 @@ from ..registries.tools import tool
         },
         "required": ["plot_type", "variables"],
     },
-    description="Creates scatter plots to visualize relationships between two continuous variables with optional grouping by categorical variables. Supports trend lines, confidence bands, correlation annotations, and custom styling. Returns base64-encoded images for inline display. Use for exploring correlations, identifying patterns, detecting outliers, comparing groups, or presenting bivariate relationships in reports and presentations.",
+    description="Scatter plot of two continuous variables, with optional grouping, trend line, and confidence band. Returns a base64 PNG.",
 )
 async def scatter_plot(context, params) -> dict[str, Any]:
     """Create scatter plot."""
     await context.info("Creating scatter plot")
+    # file_path is optional here; confine it only when a plot is being saved.
+    if params.get("file_path"):
+        context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "scatter_plot")
     try:
         # Use the new image-enabled function
@@ -194,11 +197,14 @@ async def scatter_plot(context, params) -> dict[str, Any]:
         },
         "required": ["plot_type", "variable", "bins", "statistics", "n_obs"],
     },
-    description="Creates histograms to visualize distributions of continuous variables with optional density overlays, grouping, and statistical annotations. Supports customizable bins, multiple groups with transparency, and normal distribution overlay. Use for understanding data distributions, checking normality assumptions, comparing group distributions, identifying skewness or multimodality, or initial data exploration.",
+    description="Histogram of a continuous variable, with optional density or normal overlay and grouping. Returns a base64 PNG.",
 )
 async def histogram(context, params) -> dict[str, Any]:
     """Create histogram."""
     await context.info("Creating histogram")
+    # file_path is optional here; confine it only when a plot is being saved.
+    if params.get("file_path"):
+        context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "histogram")
     try:
         # Use the new image-enabled function
@@ -293,11 +299,14 @@ async def histogram(context, params) -> dict[str, Any]:
         },
         "required": ["plot_type", "variable", "summary_statistics"],
     },
-    description="Creates box plots (box-and-whisker plots) to display distribution summaries showing median, quartiles, and outliers with optional grouping by categorical variables. Includes notches for median confidence intervals and customizable outlier detection. Use for comparing distributions between groups, identifying outliers, understanding data spread, or presenting distribution summaries in a compact visual format.",
+    description="Box-and-whisker plot of a distribution, optionally grouped by a categorical variable. Returns a base64 PNG.",
 )
 async def boxplot(context, params) -> dict[str, Any]:
     """Create box plot."""
     await context.info("Creating box plot")
+    # file_path is optional here; confine it only when a plot is being saved.
+    if params.get("file_path"):
+        context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "boxplot")
     try:
         # Use the new image-enabled function
@@ -442,11 +451,14 @@ async def boxplot(context, params) -> dict[str, Any]:
         },
         "required": ["plot_type", "statistics", "has_dates", "show_trend"],
     },
-    description="Creates time series plots to visualize temporal patterns in data with optional trend lines, seasonal decomposition overlays, and forecasting extensions. Supports multiple series, custom date formatting, and trend analysis. Use for identifying temporal patterns, detecting seasonality, visualizing forecasts, monitoring trends over time, or presenting time-dependent data in business and research contexts.",
+    description="Line plot of one or more series over time, with optional trend line. Returns a base64 PNG.",
 )
 async def time_series_plot(context, params) -> dict[str, Any]:
     """Create time series plot."""
     await context.info("Creating time series plot")
+    # file_path is optional here; confine it only when a plot is being saved.
+    if params.get("file_path"):
+        context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "time_series_plot")
     try:
         # Use the new image-enabled function
@@ -548,11 +560,14 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             "n_variables",
         ],
     },
-    description="Creates correlation heatmap matrices to visualize pairwise correlations between multiple variables using color-coded cells. Supports hierarchical clustering of variables, customizable color schemes, correlation coefficient annotations, and significance indicators. Use for exploring multicollinearity, understanding variable relationships, feature selection, or presenting correlation structure in multivariate data analysis.",
+    description="Color-coded correlation matrix, optionally hierarchically clustered. Returns a base64 PNG.",
 )
 async def correlation_heatmap(context, params) -> dict[str, Any]:
     """Create correlation heatmap."""
     await context.info("Creating correlation heatmap")
+    # file_path is optional here; confine it only when a plot is being saved.
+    if params.get("file_path"):
+        context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "correlation_heatmap")
     try:
         # Use the new image-enabled function
@@ -680,11 +695,14 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             "n_obs",
         ],
     },
-    description="Creates comprehensive regression diagnostic plots including residuals vs fitted values, Q-Q plots for normality, scale-location plots for homoscedasticity, and Cook's distance for influential observations. Essential for validating regression assumptions and identifying model problems. Use after fitting regression models to check assumptions, identify outliers, detect heteroscedasticity, or validate model appropriateness for the data.",
+    description="Four-panel regression diagnostics: residuals vs fitted, Q-Q, scale-location, and Cook's distance. Returns a base64 PNG.",
 )
 async def regression_plot(context, params) -> dict[str, Any]:
     """Create regression diagnostic plots."""
     await context.info("Creating regression plots")
+    # file_path is optional here; confine it only when a plot is being saved.
+    if params.get("file_path"):
+        context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "regression_plot")
     try:
         # Use the new image-enabled function

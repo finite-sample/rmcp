@@ -12,6 +12,7 @@ import inspect
 import json
 import logging
 import uuid
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -79,6 +80,11 @@ class ToolDefinition:
     annotations: dict[str, Any] | None = None
 
 
+#: How many oversized tool results to keep resolvable via ``rmcp://data/{id}``.
+#: Each is at least 50KB, so this store has to be bounded.
+MAX_STORED_RESULTS = 32
+
+
 class ToolsRegistry:
     """Registry for MCP tools with schema validation."""
 
@@ -88,6 +94,7 @@ class ToolsRegistry:
     ):
         self._tools: dict[str, ToolDefinition] = {}
         self._on_list_changed = on_list_changed
+        self._large_data_store: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
     def register(
         self,
@@ -125,14 +132,16 @@ class ToolsRegistry:
         page, next_cursor = _paginate_items(ordered_tools, cursor, limit)
         tools: list[dict[str, Any]] = []
         for tool_def in page:
+            # outputSchema is deliberately not advertised. It accounted for
+            # over half the tools/list payload while telling the model only what
+            # the first result already shows. call_tool still validates every
+            # result against it, so the shape guarantee is unchanged.
             tool_info = {
                 "name": tool_def.name,
                 "title": tool_def.title,
                 "description": tool_def.description,
                 "inputSchema": tool_def.input_schema,
             }
-            if tool_def.output_schema:
-                tool_info["outputSchema"] = tool_def.output_schema
             if tool_def.annotations:
                 tool_info["annotations"] = tool_def.annotations
             tools.append(tool_info)
@@ -394,16 +403,15 @@ class ToolsRegistry:
             if size_bytes > MAX_SIZE_BYTES or is_large_table:
                 resource_id = str(uuid.uuid4())
                 resource_uri = f"rmcp://data/{resource_id}"
-                # Store data in server's resource registry
-                # This is a simplified implementation - in production you might want
-                # to store in a proper cache/database
-                if not hasattr(self, "_large_data_store"):
-                    self._large_data_store = {}
+                # Bounded, oldest-first. Each entry is by definition large, so an
+                # unbounded store grows without limit in a long-lived server.
                 self._large_data_store[resource_id] = {
                     "data": data,
                     "content_type": "application/json",
                     "size_bytes": size_bytes,
                 }
+                while len(self._large_data_store) > MAX_STORED_RESULTS:
+                    self._large_data_store.popitem(last=False)
                 return resource_uri
         except Exception:
             # If we can't serialize or analyze the data, just return None

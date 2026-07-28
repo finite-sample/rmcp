@@ -144,6 +144,9 @@ class RConfig:
     max_sessions: int = 10
     """Maximum concurrent R sessions. Limit based on available memory."""
 
+    max_concurrent: int = 4
+    """Maximum R subprocesses running at once. Further calls queue."""
+
     binary_path: str | None = None
     """Custom R binary path. Auto-detected if None."""
 
@@ -410,6 +413,11 @@ class RMCPConfig:
         if self.r.max_sessions <= 0:
             raise ValueError(
                 f"R max sessions must be positive, got: {self.r.max_sessions}"
+            )
+
+        if self.r.max_concurrent <= 0:
+            raise ValueError(
+                f"R max concurrent must be positive, got: {self.r.max_concurrent}"
             )
 
         # Security validation

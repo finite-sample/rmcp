@@ -55,10 +55,10 @@ class LifespanState:
     vfs: Any | None = None
     # Logging
     current_log_level: str = "info"
-    # R Session Management
-    r_session_enabled: bool = False
-    r_session_timeout: float = 3600.0  # 1 hour default
-    default_r_session_id: str | None = None
+    # Operation approvals granted by the user. Lives here rather than on Context
+    # because a fresh Context is built per request -- approvals must outlive it.
+    approved_operations: dict[str, dict[str, Any]] = field(default_factory=dict)
+    approved_packages: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -153,88 +153,39 @@ class Context:
                 f"Allowed roots: {[str(p) for p in self.lifespan.allowed_paths]}"
             )
 
+    def require_write_path(self, path: str | Path) -> Path | None:
+        """Require permission to write ``path``, raising if denied.
+
+        Tools that hand a path to R must call this first: the subprocess writes
+        the bytes, so this is the last point Python controls the destination.
+
+        Fails open when no VFS is configured -- absent a policy object there is
+        no policy to enforce, which keeps embedders working. Both CLI entry
+        points call ``MCPServer.configure()``, so servers always have one.
+        """
+        vfs = getattr(self.lifespan, "vfs", None)
+        if vfs is None:
+            return None
+        return vfs.validate_write_path(path)
+
     def get_cache_path(self, key: str) -> Path | None:
         """Get cache path for key if caching is enabled."""
         if self.lifespan.cache_root:
             return self.lifespan.cache_root / key
         return None
 
-    # R Session Management helpers
-    def is_r_session_enabled(self) -> bool:
-        """Check if R session management is enabled."""
-        return self.lifespan.r_session_enabled
-
-    def get_r_session_id(self) -> str | None:
-        """Get the R session ID for this context."""
-        # Check for session ID in request metadata first
-        session_id = self.request.metadata.get("r_session_id")
-        if session_id:
-            return session_id
-
-        # Fall back to lifespan default
-        return self.lifespan.default_r_session_id
-
-    def set_r_session_id(self, session_id: str) -> None:
-        """Set the R session ID for this context."""
-        self.request.metadata["r_session_id"] = session_id
-
-    async def get_or_create_r_session(
-        self, working_directory: Path | None = None
-    ) -> str | None:
-        """Get or create an R session for this context."""
-        if not self.is_r_session_enabled():
-            return None
-
-        try:
-            # Import here to avoid circular imports
-            from ..r_session import get_session_manager
-
-            session_manager = get_session_manager()
-            session_id = await session_manager.get_or_create_session(
-                context=self,
-                session_id=self.get_r_session_id(),
-                working_directory=working_directory,
-            )
-
-            # Update context with session ID
-            self.set_r_session_id(session_id)
-            return session_id
-
-        except Exception as e:
-            await self.warn(f"Failed to get/create R session: {e}")
-            return None
-
-    async def execute_r_with_session(
-        self, script: str, args: dict[str, Any], use_session: bool = True
-    ) -> dict[str, Any]:
+    async def execute_r(self, script: str, args: dict[str, Any]) -> dict[str, Any]:
         """
-        Execute R script with optional session support.
+        Execute an R script.
 
         Args:
             script: R script to execute
             args: Arguments to pass to script
-            use_session: Whether to use session (if available) or run statelessly
 
         Returns:
             Script execution results
         """
-        # Try session execution first if enabled and requested
-        if use_session and self.is_r_session_enabled():
-            try:
-                from ..r_session import get_session_manager
-
-                session_id = await self.get_or_create_r_session()
-                if session_id:
-                    session_manager = get_session_manager()
-                    return await session_manager.execute_in_session(
-                        session_id, script, args, self
-                    )
-            except Exception as e:
-                await self.warn(
-                    f"Session execution failed, falling back to stateless: {e}"
-                )
-
-        # Fall back to stateless execution
+        # Import here to avoid circular imports
         from ..r_integration import execute_r_script_async
 
         return await execute_r_script_async(script, args, self)

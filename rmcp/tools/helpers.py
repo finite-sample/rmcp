@@ -88,7 +88,7 @@ from ..registries.tools import tool
         ],
         "additionalProperties": False,
     },
-    description="Analyzes error messages from statistical operations and provides intelligent, actionable suggestions for fixes including parameter adjustments, data transformations, or alternative approaches. Uses pattern matching and statistical knowledge to diagnose common issues. Use when statistical analyzes fail, to help users understand error causes, debug complex workflows, or learn proper statistical software usage through guided error resolution.",
+    description="Diagnoses an error message from a failed analysis and suggests concrete fixes.",
 )
 async def suggest_fix(context, params) -> dict[str, Any]:
     """Analyze error and provide actionable solutions."""
@@ -428,7 +428,7 @@ async def _analyze_data_for_errors(context, data: dict) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Performs comprehensive data quality validation checking for missing values, outliers, data type consistency, range validity, and structural issues that could cause analysis failures. Provides detailed quality reports with severity ratings and remediation suggestions. Use before statistical analyzes to prevent errors, ensure data reliability, meet analysis assumptions, or generate data quality documentation for research compliance.",
+    description="Checks a dataset for missing values, outliers, type inconsistencies, and range problems before analysis.",
 )
 async def validate_data(context, params) -> dict[str, Any]:
     """Validate data for analysis and identify potential issues."""
@@ -629,7 +629,7 @@ def _get_analysis_recommendations(
         ],
         "additionalProperties": False,
     },
-    description="Loads curated example datasets suitable for demonstrating statistical techniques, testing analysis workflows, or learning RMCP functionality. Includes classic datasets (iris, mtcars, economics) with documentation and suggested analyses. Use for tutorials, testing new analytical approaches, teaching statistical concepts, or exploring RMCP capabilities with known datasets that have well-understood properties and expected results.",
+    description="Loads a built-in example dataset (iris, mtcars, economics, and others) for testing or demonstration.",
 )
 async def load_example(context, params) -> dict[str, Any]:
     """Load example datasets for analysis and testing."""
@@ -647,14 +647,7 @@ async def load_example(context, params) -> dict[str, Any]:
         return result
     except Exception as e:
         await context.error("Failed to load example dataset", error=str(e))
-        return {
-            "error": f"Failed to load example dataset: {str(e)}",
-            "data": {},
-            "metadata": {
-                "name": dataset_name,
-                "rows": 0,
-                "columns": 0,
-                "description": "Failed to load",
-            },
-            "suggested_analyses": [],
-        }
+        # Re-raise rather than returning a partial dict: the fallback omitted
+        # required output properties, so schema validation replaced the real
+        # error with "'statistics' is a required property".
+        raise
