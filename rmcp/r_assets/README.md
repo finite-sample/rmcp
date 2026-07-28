@@ -12,7 +12,7 @@ rmcp/r_assets/
 ├── .lintr                 # Linting configuration
 ├── R/                     # R package source code
 │   └── utils.R           # Shared utility functions
-├── scripts/              # Statistical analysis scripts (44 tools across 11 categories)
+├── scripts/              # Statistical analysis scripts, by category
 │   ├── descriptive/      # Summary statistics, frequency tables, outlier detection
 │   ├── regression/       # Linear models, correlation, logistic regression
 │   ├── timeseries/       # ARIMA, decomposition, stationarity tests

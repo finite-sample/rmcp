@@ -45,7 +45,7 @@ Verify the installation works:
 # Check version
 rmcp --version
 
-# List available tools (should show 53 tools)
+# List available tools
 rmcp list-capabilities
 
 # Start the server

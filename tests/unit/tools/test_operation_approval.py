@@ -8,6 +8,7 @@ from rmcp.core.context import Context, LifespanState
 from rmcp.tools.flexible_r import (
     OPERATION_CATEGORIES,
     approve_operation,
+    approve_r_package,
     is_operation_approved,
     validate_r_code,
 )
@@ -89,10 +90,10 @@ class TestOperationApproval:
             },
         )
 
-        # Check that approval is tracked
-        assert hasattr(mock_context, "_approved_operations")
-        assert "file_operations" in mock_context._approved_operations
-        assert "ggsave" in mock_context._approved_operations["file_operations"]
+        # Approval is tracked on the lifespan, so it outlives this request
+        approvals = mock_context.lifespan.approved_operations
+        assert "file_operations" in approvals
+        assert "ggsave" in approvals["file_operations"]
 
     def test_is_operation_approved_logic(self, mock_context):
         """Test the operation approval checking logic."""
@@ -100,7 +101,7 @@ class TestOperationApproval:
         assert not is_operation_approved(mock_context, "file_operations", "ggsave")
 
         # Add approval manually
-        mock_context._approved_operations = {
+        mock_context.lifespan.approved_operations = {
             "file_operations": {"ggsave": {"approved_at": 123456}}
         }
 
@@ -133,7 +134,7 @@ class TestValidationWithApproval:
     def test_validation_allows_approved_operations(self, mock_context):
         """Test that approved operations pass validation."""
         # Add approval
-        mock_context._approved_operations = {
+        mock_context.lifespan.approved_operations = {
             "file_operations": {"ggsave": {"approved_at": 123456}}
         }
 
@@ -195,3 +196,64 @@ class TestOperationCategories:
         assert any("system" in pattern for pattern in patterns)
         assert any("shell" in pattern for pattern in patterns)
         assert any("Sys\\.setenv" in pattern for pattern in patterns)
+
+
+class TestApprovalPersistsAcrossRequests:
+    """Approvals must outlive the Context they were granted in.
+
+    A fresh Context is built per MCP request, so approval state stored on the
+    Context is forgotten before the next tools/call arrives.
+    """
+
+    @pytest.mark.asyncio
+    async def test_operation_approval_survives_new_context(self):
+        lifespan = LifespanState()
+        approving_context = Context.create("req-1", "approve_operation", lifespan)
+
+        await approve_operation(
+            approving_context,
+            {
+                "operation_type": "file_operations",
+                "specific_operation": "ggsave",
+                "action": "approve",
+            },
+        )
+
+        # A later request gets a brand-new Context over the same lifespan
+        later_context = Context.create("req-2", "execute_r_analysis", lifespan)
+
+        assert is_operation_approved(later_context, "file_operations", "ggsave")
+        is_safe, error = validate_r_code(
+            'ggsave("plot.png", plot = p)', context=later_context
+        )
+        assert is_safe, error
+
+    @pytest.mark.asyncio
+    async def test_package_approval_survives_new_context(self):
+        lifespan = LifespanState()
+        approving_context = Context.create("req-1", "approve_r_package", lifespan)
+
+        await approve_r_package(
+            approving_context,
+            {"package_name": "notarealpkg", "action": "approve"},
+        )
+
+        later_context = Context.create("req-2", "execute_r_analysis", lifespan)
+        is_safe, error = validate_r_code("library(notarealpkg)", context=later_context)
+        assert is_safe, error
+
+    @pytest.mark.asyncio
+    async def test_separate_lifespans_do_not_share_approvals(self):
+        lifespan_a = LifespanState()
+        await approve_operation(
+            Context.create("req-1", "approve_operation", lifespan_a),
+            {
+                "operation_type": "file_operations",
+                "specific_operation": "ggsave",
+                "action": "approve",
+            },
+        )
+
+        lifespan_b = LifespanState()
+        other = Context.create("req-1", "execute_r_analysis", lifespan_b)
+        assert not is_operation_approved(other, "file_operations", "ggsave")

@@ -27,6 +27,7 @@ import re
 import subprocess
 import tempfile
 import time
+import weakref
 from pathlib import Path
 from typing import Any
 
@@ -34,8 +35,24 @@ from .config import get_config
 from .logging_config import get_logger, log_r_execution
 
 logger = get_logger(__name__)
-# Global semaphore for R process concurrency (max 4 concurrent R processes)
-R_SEMAPHORE = asyncio.Semaphore(4)
+
+# One R-process limiter per event loop. A single module-level Semaphore would
+# bind to whichever loop first made a caller wait, then raise "bound to a
+# different event loop" in every other loop. Keyed weakly so closed loops go.
+_R_SEMAPHORES: weakref.WeakKeyDictionary[
+    asyncio.AbstractEventLoop, asyncio.Semaphore
+] = weakref.WeakKeyDictionary()
+
+
+def get_r_semaphore() -> asyncio.Semaphore:
+    """Return the R-process concurrency limiter for the running event loop."""
+    loop = asyncio.get_running_loop()
+    semaphore = _R_SEMAPHORES.get(loop)
+    if semaphore is None:
+        semaphore = asyncio.Semaphore(get_config().r.max_concurrent)
+        _R_SEMAPHORES[loop] = semaphore
+    return semaphore
+
 
 # Cached R binary path for performance
 _R_BINARY_PATH = None
@@ -389,7 +406,7 @@ Original error: {stderr.strip()}"""
 
 
 async def execute_r_script_async(
-    script: str, args: dict[str, Any], context=None
+    script: str, args: dict[str, Any], context=None, timeout: float | None = None
 ) -> dict[str, Any]:
     """
     Execute R script asynchronously with proper cancellation support and concurrency control.
@@ -403,13 +420,15 @@ async def execute_r_script_async(
         script: R script code to execute
         args: Arguments to pass to the R script as JSON
         context: Optional context for progress reporting and logging
+        timeout: Per-call timeout in seconds, overriding the configured default
     Returns:
         dict[str, Any]: Result data from R script execution
     Raises:
         RExecutionError: If R script execution fails
         asyncio.CancelledError: If the operation is cancelled
     """
-    async with R_SEMAPHORE:  # Limit concurrent R processes
+    effective_timeout = timeout if timeout is not None else get_config().r.timeout
+    async with get_r_semaphore():  # Limit concurrent R processes
         start_time = time.time()
         # Create temporary files for script, arguments, and results
         with (
@@ -527,15 +546,15 @@ if (exists("result")) {{
                                         f"Failed to parse progress message: {e}"
                                     )
 
-                    # Run stdout and stderr monitoring concurrently using TaskGroup (Python 3.11+)
-                    async with asyncio.TaskGroup() as tg:
-                        tg.create_task(read_stdout())
-                        tg.create_task(monitor_stderr())
-                        tg.create_task(
-                            asyncio.wait_for(
-                                proc.wait(), timeout=get_config().r.timeout
-                            )
-                        )
+                    # The timeout must wrap the whole TaskGroup. Timing out a
+                    # sibling task instead surfaces as a BaseExceptionGroup, which
+                    # the `except TimeoutError` below cannot catch -- leaving the R
+                    # process orphaned.
+                    async with asyncio.timeout(effective_timeout):
+                        async with asyncio.TaskGroup() as tg:
+                            tg.create_task(read_stdout())
+                            tg.create_task(monitor_stderr())
+                            tg.create_task(proc.wait())
                     # Combine output
                     stdout = (
                         b"".join(stdout_chunks).decode("utf-8") if stdout_chunks else ""
@@ -553,11 +572,13 @@ if (exists("result")) {{
                         await proc.wait()
                     raise
                 except TimeoutError:
-                    logger.error("R script execution timed out")
+                    logger.error(
+                        "R script execution timed out", timeout=effective_timeout
+                    )
                     proc.kill()
                     await proc.wait()
                     raise RExecutionError(
-                        "R script execution timed out after 120 seconds",
+                        f"R script execution timed out after {effective_timeout} seconds",
                         stdout="",
                         stderr="Execution timed out",
                         returncode=-1,
@@ -886,6 +907,7 @@ async def execute_r_script_with_image_async(
     include_image: bool = True,
     image_width: int = 800,
     image_height: int = 600,
+    timeout: float | None = None,
 ) -> dict[str, Any]:
     """
     Execute R script asynchronously and optionally include base64-encoded image data.
@@ -898,6 +920,7 @@ async def execute_r_script_with_image_async(
         include_image: Whether to attempt image capture and encoding
         image_width: Width of captured image in pixels
         image_height: Height of captured image in pixels
+        timeout: Per-call timeout in seconds, overriding the configured default
     Returns:
         Dict containing R script results, optionally with image_data and image_mime_type
     """
@@ -914,14 +937,16 @@ async def execute_r_script_with_image_async(
             }
         )
         # Execute the enhanced script asynchronously
-        result = await execute_r_script_async(enhanced_script, enhanced_args)
+        result = await execute_r_script_async(
+            enhanced_script, enhanced_args, timeout=timeout
+        )
         # Check if the script included image data
         if isinstance(result, dict) and result.get("image_data"):
             result["image_mime_type"] = "image/png"
         return result
     else:
         # Standard execution without image support
-        return await execute_r_script_async(script, args)
+        return await execute_r_script_async(script, args, timeout=timeout)
 
 
 def diagnose_r_installation() -> dict[str, Any]:

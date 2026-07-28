@@ -6,7 +6,6 @@ and configurations, following the principle of "multiple deployment targets."
 
 import asyncio
 import json
-import logging
 import os
 import sys
 from pathlib import Path
@@ -49,7 +48,7 @@ logger = get_logger(__name__)
 )
 @click.pass_context
 def cli(ctx, config: Path, debug: bool, log_format: str):
-    """RMCP MCP Server - Comprehensive statistical analysis with 44 tools across 11 categories."""
+    """RMCP MCP Server - Comprehensive statistical analysis through R."""
     # Ensure context object exists
     ctx.ensure_object(dict)
 
@@ -188,8 +187,9 @@ def serve(
     config_file: str | None,
 ):
     """Run MCP server with advanced configuration options."""
-    # Set logging level
-    logging.getLogger().setLevel(getattr(logging, log_level))
+    # Structlog must be configured before anything logs: its default factory
+    # writes to stdout, which would corrupt the stdio JSON-RPC stream.
+    configure_structured_logging(level=log_level, enable_console=True)
     logger.info(f"Starting RMCP MCP Server v{__version__}")
     try:
         # Check R version compatibility
@@ -367,6 +367,7 @@ def serve_http(
             host=effective_host,
             port=effective_port,
             api_keys=resolved_keys,
+            cors_origins=list(config.http.cors_origins),
             ssl_keyfile=effective_ssl_keyfile,
             ssl_certfile=effective_ssl_certfile,
             ssl_keyfile_password=effective_ssl_keyfile_password,
@@ -658,7 +659,12 @@ def _register_builtin_tools(server):
         write_excel,
         write_json,
     )
-    from .tools.flexible_r import execute_r_analysis, list_allowed_r_packages
+    from .tools.flexible_r import (
+        approve_operation,
+        approve_r_package,
+        execute_r_analysis,
+        list_allowed_r_packages,
+    )
     from .tools.formula_builder import build_formula, validate_formula
     from .tools.helpers import load_example, suggest_fix, validate_data
 
@@ -746,6 +752,9 @@ def _register_builtin_tools(server):
         # Flexible R execution
         execute_r_analysis,
         list_allowed_r_packages,
+        # Operation approval -- execute_r_analysis directs the model to these
+        approve_operation,
+        approve_r_package,
         # Advanced MCP Integration - R Session Management
         list_r_objects,
         inspect_r_object,
@@ -757,9 +766,7 @@ def _register_builtin_tools(server):
         setup_r_bidirectional,
         list_callback_sessions,
     )
-    logger.info(
-        "Registered comprehensive statistical analysis tools (52 total: 44 core + 8 advanced MCP)"
-    )
+    logger.info("Registered statistical analysis tools", count=len(server.tools._tools))
 
 
 if __name__ == "__main__":

@@ -16,15 +16,15 @@ jobs:
     name: Python Linting & Unit Tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v7
       with:
         python-version: "3.11"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v4
+      uses: astral-sh/setup-uv@v8.3.2
       with:
         enable-cache: true
 
@@ -67,7 +67,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         fetch-depth: 2  # Need previous commit to check changes
 
@@ -134,7 +134,7 @@ jobs:
 
     - name: Set up Docker Buildx
       if: steps.check-changes.outputs.should_build == 'true'
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Log in to Container Registry
       if: steps.check-changes.outputs.should_build == 'true'
@@ -266,7 +266,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Report build optimization status
       run: |
@@ -413,10 +413,14 @@ jobs:
         which R && echo "✅ R available for scenario tests" || echo "❌ R required but not available"
         pytest tests/scenarios/ -v --tb=short --cov=rmcp --cov-append
 
+    - name: Install gpg for Codecov uploader verification
+      run: |
+        apt-get update -qq && apt-get install -y -qq gpg
+
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         flags: comprehensive
         name: comprehensive-coverage
         fail_ci_if_error: false
@@ -465,15 +469,15 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v7
       with:
         python-version: "3.11"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v4
+      uses: astral-sh/setup-uv@v8.3.2
       with:
         enable-cache: true
 
@@ -567,7 +571,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -628,15 +632,15 @@ jobs:
         python-version: ['3.11', '3.12']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v4
+      uses: astral-sh/setup-uv@v8.3.2
       with:
         enable-cache: true
 

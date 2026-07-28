@@ -75,7 +75,7 @@ from ..registries.tools import tool
         "required": ["statistics", "variables", "n_obs", "grouped"],
         "additionalProperties": False,
     },
-    description="Computes comprehensive descriptive statistics including mean, median, standard deviation, quantiles, skewness, kurtosis, and distribution shape measures. Supports grouping by categorical variables for comparative analysis. Provides missing value counts and handles different data types appropriately. Use for initial data exploration, understanding variable distributions, identifying data quality issues, or generating summary reports for research and business analytics.",
+    description="Descriptive statistics: mean, median, SD, quantiles, skewness, kurtosis, and missing counts, optionally by group.",
 )
 async def summary_stats(context, params) -> dict[str, Any]:
     """Compute comprehensive descriptive statistics."""
@@ -163,7 +163,7 @@ async def summary_stats(context, params) -> dict[str, Any]:
         ],
         "additionalProperties": False,
     },
-    description="Identifies outliers using multiple detection methods: Interquartile Range (IQR) method, Z-score (standard deviations from mean), Modified Z-score (using median absolute deviation), or Mahalanobis distance for multivariate outliers. Returns outlier flags, detection thresholds, and visualization-ready results. Use for data cleaning, quality assessment, fraud detection, or preparing data for modeling by identifying unusual observations.",
+    description="Flags outliers by IQR, Z-score, modified Z-score, or Mahalanobis distance for multivariate data.",
 )
 async def outlier_detection(context, params) -> dict[str, Any]:
     """Detect outliers in data."""
@@ -253,7 +253,7 @@ async def outlier_detection(context, params) -> dict[str, Any]:
         "required": ["frequency_tables", "variables", "total_observations"],
         "additionalProperties": False,
     },
-    description="Creates frequency tables for categorical variables showing counts, percentages, cumulative frequencies, and missing value summaries. Supports multiple variables simultaneously and optional sorting by frequency or value. Provides chi-square goodness-of-fit tests when expected frequencies are specified. Use for categorical data exploration, survey analysis, market research, or understanding distribution of discrete variables.",
+    description="Counts, percentages, and cumulative frequencies for categorical variables.",
 )
 async def frequency_table(context, params) -> dict[str, Any]:
     """Generate frequency tables."""

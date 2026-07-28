@@ -16,6 +16,7 @@ from shutil import which
 
 import pytest
 from rmcp.core.context import Context, LifespanState
+from rmcp.r_integration import RExecutionError
 from rmcp.tools.helpers import suggest_fix, validate_data
 from rmcp.tools.regression import (
     linear_model,
@@ -102,15 +103,19 @@ class TestRealRErrors:
                 {"data": data, "formula": "outcome ~ predictor", "family": "binomial"},
             )
 
-            # Should not fail, but should contain warning information
-            assert "model_summary" in result
+            # Perfect separation still fits, but the fit is degenerate: R
+            # inflates the standard errors, which drives p-values toward 1.
+            assert "coefficients" in result
+            assert "std_errors" in result
+            assert result["std_errors"], "separation should still report std errors"
+            assert max(abs(v) for v in result["std_errors"].values()) > 100, (
+                "perfect separation should produce inflated standard errors"
+            )
 
-            # Check if warning information is captured
-            # (R warnings should be included in output or handled gracefully)
             print("✅ Logistic regression handled separation scenario")
-            print(f"   Model converged: {result.get('converged', 'unknown')}")
+            print(f"   Max std error: {max(result['std_errors'].values()):.1f}")
 
-        except Exception as e:
+        except RExecutionError as e:
             # If it fails, the error should be informative
             error_msg = str(e)
             assert len(error_msg) > 10, "Error message should be descriptive"
@@ -136,7 +141,7 @@ class TestRealRErrors:
             print(f"   R-squared: {result.get('r_squared', 'unknown')}")
             print(f"   DF residual: {result.get('df_residual', 'unknown')}")
 
-        except Exception as e:
+        except RExecutionError as e:
             error_msg = str(e)
             assert "rank" in error_msg.lower() or "collinearity" in error_msg.lower()
             print(f"✅ Collinearity error properly identified: {error_msg[:100]}...")
@@ -159,7 +164,7 @@ class TestRealRErrors:
             print(f"   Test statistic: {result.get('test_statistic', 'unknown')}")
             print(f"   P-value: {result.get('p_value', 'unknown')}")
 
-        except Exception as e:
+        except RExecutionError as e:
             error_msg = str(e)
             # Error could be about missing variables OR statistical issues
             error_lower = error_msg.lower()
@@ -192,7 +197,7 @@ class TestRealRErrors:
             assert "aic" in result or "coefficients" in result
             print("✅ ARIMA model succeeded (forecast package available)")
 
-        except Exception as e:
+        except RExecutionError as e:
             error_msg = str(e)
             if "package" in error_msg.lower():
                 assert "forecast" in error_msg or "there is no package" in error_msg
@@ -221,7 +226,7 @@ class TestRealRErrors:
             # If it does, R coerced the data somehow
             print("⚠️  Linear model handled mixed data types (R coercion occurred)")
 
-        except Exception as e:
+        except RExecutionError as e:
             error_msg = str(e)
             # Should contain information about data type issues
             assert any(
@@ -242,7 +247,7 @@ class TestRealRErrors:
             # Should not succeed with just one data point
             print("⚠️  Linear model handled minimal data (unexpected)")
 
-        except Exception as e:
+        except RExecutionError as e:
             error_msg = str(e)
             # Should contain information about insufficient data
             assert any(
@@ -270,7 +275,7 @@ class TestRealRErrors:
             # Should not succeed
             print("⚠️  File read succeeded for nonexistent file (unexpected)")
 
-        except Exception as e:
+        except RExecutionError as e:
             error_msg = str(e)
             # Should contain file-related error information
             assert any(
@@ -392,7 +397,7 @@ class TestErrorMessageQuality:
             try:
                 await scenario["tool"](context, scenario["args"])
                 print(f"⚠️  {scenario['description']} didn't trigger expected error")
-            except Exception as e:
+            except RExecutionError as e:
                 error_msg = str(e)
 
                 # Error message quality checks
@@ -438,7 +443,7 @@ class TestErrorMessageQuality:
             await linear_model(
                 context, {"data": problematic_data, "formula": "sales ~ marketing"}
             )
-        except Exception as e:
+        except RExecutionError as e:
             error_msg = str(e)
 
             # Error should preserve context about what went wrong
