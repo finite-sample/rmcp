@@ -191,8 +191,10 @@ validation_results$data_quality <- list(
     duplicate_rows = if (strict_mode) duplicate_rows else NA
   )
 )
-# Ensure arrays are properly formatted for JSON
-validation_results$warnings <- if (length(validation_results$warnings) == 0) character(0) else validation_results$warnings
-validation_results$errors <- if (length(validation_results$errors) == 0) character(0) else validation_results$errors
-validation_results$suggestions <- if (length(validation_results$suggestions) == 0) character(0) else validation_results$suggestions
+# Keep these as JSON arrays. The empty case needs character(0); the length-1
+# case needs I(), because toJSON(auto_unbox = TRUE) collapses a one-element
+# vector to a bare scalar and the output schema requires an array.
+validation_results$warnings <- I(if (length(validation_results$warnings) == 0) character(0) else validation_results$warnings)
+validation_results$errors <- I(if (length(validation_results$errors) == 0) character(0) else validation_results$errors)
+validation_results$suggestions <- I(if (length(validation_results$suggestions) == 0) character(0) else validation_results$suggestions)
 result <- validation_results

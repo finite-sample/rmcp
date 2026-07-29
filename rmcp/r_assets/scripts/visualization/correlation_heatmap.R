@@ -61,7 +61,7 @@ stats <- list(
 # Prepare result
 result <- list(
   plot_type = "correlation_heatmap",
-  variables = variables,
+  variables = I(variables),
   correlation_matrix = cor_matrix,
   statistics = stats,
   title = title,
