@@ -106,7 +106,7 @@ async def main():
                     "data": {"y": [2.0, 4.1, 6.2], "x": [1, 2, 3]},
                 },
             )
-            print(result.structuredContent)
+            print(result.structured_content)
 ```
 
 ### Claude API (MCP connector)
