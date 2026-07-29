@@ -1,6 +1,8 @@
 [project]
 name = "rmcp"
-version = "0.10.0"
+# The git tag is the version -- derived from the latest v* tag by
+# uv-dynamic-versioning. No bump commits, no version edits.
+dynamic = ["version"]
 description = "Model Context Protocol server bringing R statistical analysis to Claude Desktop and Claude web, over stdio and Streamable HTTP"
 authors = [{name = "Gaurav Sood", email = "gsood07@gmail.com"}]
 license = {text = "MIT"}
@@ -26,7 +28,11 @@ requires-python = ">=3.11"
 dependencies = [
     "click>=8.1.0",        # CLI interface
     "jsonschema>=4.0.0",   # Schema validation
-    "mcp>=1.28.1",         # Official MCP SDK (protocol, stdio + Streamable HTTP)
+    # Capped below 2.0: it removes the decorator registration API
+    # (@server.list_tools() and friends) that rmcp/core/sdk_adapter.py is
+    # built on, so the server raises AttributeError on startup and does not
+    # run at all. Supporting 2.x means rewriting the adapter.
+    "mcp>=1.28.1,<2",      # Official MCP SDK (protocol, stdio + Streamable HTTP)
     "psutil>=5.0.0",       # R process management
     "uvicorn>=0.31.1",     # ASGI server for the Streamable HTTP transport
     "structlog>=23.1.0",   # Structured logging for MCP observability
@@ -85,12 +91,33 @@ Documentation = "https://github.com/finite-sample/rmcp#readme"
 Issues = "https://github.com/finite-sample/rmcp/issues"
 
 [build-system]
-requires = ["uv_build"]
-build-backend = "uv_build"
+requires = ["hatchling>=1.27", "uv-dynamic-versioning"]
+build-backend = "hatchling.build"
 
-# uv build backend configuration
-[tool.uv.build-backend]
-module-root = "."
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+# The Docker build copies only pyproject.toml and rmcp/ (.dockerignore
+# excludes .git), so there is no repository to read a tag from. Without a
+# fallback the backend raises "This does not appear to be a Git project" and
+# the image build fails. Release builds run in a full checkout and derive the
+# real version from the tag; the publish workflow asserts that it matches.
+fallback-version = "0.0.0"
+
+# Flat layout: the package lives at the repo root, not under src/.
+[tool.hatch.build.targets.wheel]
+packages = ["rmcp"]
+
+[tool.hatch.build.targets.sdist]
+include = ["rmcp", "README.md", "LICENSE", "CHANGELOG.md"]
+
+# uv_build packaged from the working directory, so local Finder metadata
+# could reach a distribution. Keep it out explicitly.
+[tool.hatch.build]
+exclude = ["**/.DS_Store"]
 
 # Tool configurations
 [tool.pytest.ini_options]

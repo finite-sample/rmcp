@@ -152,7 +152,11 @@ jobs:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
           type=ref,event=branch
-          type=sha,prefix={{branch}}-
+          type=ref,event=pr
+          # {{branch}} is only populated for branch pushes; on a pull_request
+          # it is empty and the tag becomes "-<sha>", which docker rejects.
+          type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
+          type=sha,prefix=pr-,enable=${{ github.event_name == 'pull_request' }}
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Extract metadata for production image
@@ -163,13 +167,15 @@ jobs:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
           type=ref,event=branch,suffix=-production
-          type=sha,prefix={{branch}}-production-
+          type=ref,event=pr,suffix=-production
+          type=sha,prefix={{branch}}-production-,enable=${{ github.event_name != 'pull_request' }}
+          type=sha,prefix=pr-production-,enable=${{ github.event_name == 'pull_request' }}
           type=raw,value=production-latest,enable={{is_default_branch}}
 
     - name: Build and push development Docker image
       id: build
       if: steps.check-changes.outputs.should_build == 'true'
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: ./Dockerfile
@@ -189,7 +195,7 @@ jobs:
     - name: Build and push production Docker image
       id: prod-build
       if: steps.check-changes.outputs.should_build == 'true'
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: ./Dockerfile
@@ -230,19 +236,35 @@ jobs:
         subject-digest: ${{ steps.prod-build.outputs.digest }}
         push-to-registry: true
 
+    # `latest` and `production-latest` are only pushed from the default branch,
+    # so pointing PR jobs at them makes them test main's images instead of the
+    # PR's -- false signal in both directions. Use the pr-<n> tags this run
+    # actually pushed.
     - name: Output image references
       id: image
+      env:
+        PR_NUMBER: ${{ github.event.number }}
       run: |
-        # Always output the latest image reference (build or existing)
-        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
-        echo "📌 Development image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          tag="pr-${PR_NUMBER}"
+        else
+          tag="latest"
+        fi
+        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${tag}" >> "$GITHUB_OUTPUT"
+        echo "📌 Development image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${tag}"
 
     - name: Output production image reference
       id: prod-image
+      env:
+        PR_NUMBER: ${{ github.event.number }}
       run: |
-        # Always output the production image reference (build or existing)
-        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest" >> $GITHUB_OUTPUT
-        echo "📌 Production image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-latest"
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          tag="pr-${PR_NUMBER}-production"
+        else
+          tag="production-latest"
+        fi
+        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${tag}" >> "$GITHUB_OUTPUT"
+        echo "📌 Production image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${tag}"
 
 
     - name: Compare image sizes

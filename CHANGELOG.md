@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-07-28
+
+### Fixed
+
+- **rmcp could not start against mcp 2.0.0.** The dependency was declared
+  `mcp>=1.28.1` with no upper bound, so from 2026-07-28 every fresh
+  `pip install rmcp` resolved mcp 2.0.0, which removes the decorator
+  registration API (`@server.list_tools()` and friends) that
+  `rmcp/core/sdk_adapter.py` is built on. The server raised
+  `AttributeError: '_RMCPSDKServer' object has no attribute 'list_tools'`
+  and produced no output at all. Capped to `<2`; 1.29.0 is verified working.
+  Supporting 2.x requires rewriting the adapter and is separate work.
+- The `initialize` result was serialized with `model_dump()` and no
+  `by_alias=True`, emitting `protocol_version`/`server_info` instead of the
+  camelCase the wire format requires. Latent under 1.28.1, which happened to
+  alias anyway. Only reachable through the in-process handler used by tests;
+  the SDK owns `initialize` on the real transports.
+
+### Changed
+
+- The development image now copies `uv.lock` and installs with
+  `uv sync --frozen`, instead of re-resolving on every build. Note this does
+  not cover the production image, which installs the built wheel with pip and
+  resolves from PyPI — the version constraint is what protects that path, and
+  users installing from PyPI.
+- CI jobs on a pull request now pull the `pr-<n>` images that run actually
+  built. They previously pulled `latest`/`production-latest`, which are only
+  pushed from the default branch, so PR runs silently tested main's images.
+
 ## [0.10.0] - 2026-07-27
 
 ### Security

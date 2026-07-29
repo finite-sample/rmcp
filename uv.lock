@@ -1384,7 +1384,6 @@ wheels = [
 
 [[package]]
 name = "rmcp"
-version = "0.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1435,7 +1434,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'all'", specifier = ">=0.25.0" },
     { name = "httpx", marker = "extra == 'http'", specifier = ">=0.25.0" },
     { name = "jsonschema", specifier = ">=4.0.0" },
-    { name = "mcp", specifier = ">=1.28.1" },
+    { name = "mcp", specifier = ">=1.28.1,<2" },
     { name = "openpyxl", marker = "extra == 'all'", specifier = ">=3.0.0" },
     { name = "openpyxl", marker = "extra == 'http'", specifier = ">=3.0.0" },
     { name = "pandas", marker = "extra == 'all'", specifier = ">=1.5.0" },
@@ -1444,7 +1443,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=23.1.0" },
     { name = "uvicorn", specifier = ">=0.31.1" },
 ]
-provides-extras = ["http", "all"]
+provides-extras = ["all", "http"]
 
 [package.metadata.requires-dev]
 dev = [
