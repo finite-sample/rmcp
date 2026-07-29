@@ -10,18 +10,14 @@ low-level ``Server`` so that protocol lifecycle, capabilities, and transports
 from __future__ import annotations
 
 import asyncio
-import base64
 import contextlib
 import logging
 import uuid
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import mcp.types as types
 from mcp.server.lowlevel import NotificationOptions, Server
-from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.models import InitializationOptions
-from pydantic import AnyUrl
 
 from ..logging_config import set_request_id
 from .context import Context
@@ -77,36 +73,46 @@ class SDKServerAdapter:
 
     def __init__(self, rmcp_server: MCPServer):
         self.rmcp_server = rmcp_server
+        # Sessions that issued resources/subscribe
+        self._subscribed_sessions: set[Any] = set()
+        # mcp 2.x takes handlers as constructor arguments; the decorator
+        # registration API (@server.list_tools() and friends) was removed.
         self.sdk_server: Server = _RMCPSDKServer(
             name=rmcp_server.name,
             version=rmcp_server.version,
             instructions=rmcp_server.description or None,
+            on_list_tools=self._on_list_tools,
+            on_call_tool=self._on_call_tool,
+            on_list_resources=self._on_list_resources,
+            on_list_resource_templates=self._on_list_resource_templates,
+            on_read_resource=self._on_read_resource,
+            on_subscribe_resource=self._on_subscribe_resource,
+            on_unsubscribe_resource=self._on_unsubscribe_resource,
+            on_list_prompts=self._on_list_prompts,
+            on_get_prompt=self._on_get_prompt,
+            on_set_logging_level=self._on_set_logging_level,
         )
-        # Sessions that issued resources/subscribe
-        self._subscribed_sessions: set[Any] = set()
-        self._register_handlers()
         rmcp_server.add_list_changed_listener(self._on_list_changed)
 
     # ------------------------------------------------------------------
     # Context plumbing
     # ------------------------------------------------------------------
-    def _create_context(self, method: str) -> Context:
-        """Create an RMCP context whose feedback flows through the SDK session."""
-        session = None
-        request_id = str(uuid.uuid4())
-        progress_token: str | int | None = None
-        try:
-            rc = self.sdk_server.request_context
-            session = rc.session
-            request_id = str(rc.request_id)
-            if rc.meta is not None:
-                progress_token = rc.meta.progressToken
-        except LookupError:
-            pass
+    def _create_context(self, ctx: Any, method: str) -> Context:
+        """Create an RMCP context whose feedback flows through the SDK session.
 
-        # Publish it so every line logged while serving this request carries it.
-        # asyncio copies the context into child tasks, so the R execution under
-        # a tool call is correlatable with the call itself.
+        mcp 2.x hands the request context to the handler, so there is no
+        contextvar lookup to fail; ``ctx`` is always present.
+        """
+        session = getattr(ctx, "session", None)
+        request_id = str(getattr(ctx, "request_id", None) or uuid.uuid4())
+        progress_token: str | int | None = None
+        meta = getattr(ctx, "meta", None)
+        if meta is not None:
+            progress_token = getattr(meta, "progressToken", None)
+
+        # Publish these so every line logged while serving this request carries
+        # them. asyncio copies the context into child tasks, so the R execution
+        # under a tool call is correlatable with the call itself.
         set_request_id(request_id)
 
         async def progress_callback(message: str, current: int, total: int) -> None:
@@ -159,126 +165,145 @@ class SDKServerAdapter:
 
     # ------------------------------------------------------------------
     # Handlers
+    #
+    # mcp 2.x hands each handler ``(ctx, params)`` and expects a typed result,
+    # where 1.x passed unpacked arguments and accepted bare lists.
     # ------------------------------------------------------------------
-    def _register_handlers(self) -> None:
-        sdk = self.sdk_server
-        rmcp = self.rmcp_server
+    async def _on_list_tools(
+        self, ctx: Any, params: Any = None
+    ) -> types.ListToolsResult:
+        context = self._create_context(ctx, "tools/list")
+        try:
+            cursor = getattr(params, "cursor", None) if params is not None else None
+            result = await self.rmcp_server.tools.list_tools(context, cursor=cursor)
+            return types.ListToolsResult.model_validate(result)
+        finally:
+            self._finish(context)
 
-        @sdk.list_tools()
-        async def list_tools(req: types.ListToolsRequest) -> types.ListToolsResult:
-            context = self._create_context("tools/list")
-            try:
-                cursor = req.params.cursor if req is not None and req.params else None
-                result = await rmcp.tools.list_tools(context, cursor=cursor)
-                return types.ListToolsResult.model_validate(result)
-            finally:
-                self._finish(context)
+    async def _on_call_tool(self, ctx: Any, params: Any) -> types.CallToolResult:
+        # Input validation stays in the registry, for a single error shape.
+        context = self._create_context(ctx, "tools/call")
+        try:
+            result = await self.rmcp_server.tools.call_tool(
+                context, params.name, params.arguments or {}
+            )
+            return types.CallToolResult.model_validate(result)
+        except Exception as exc:
+            # The registry converts handler failures to isError itself, but an
+            # unknown tool raises before that. 1.x's decorator turned it into an
+            # isError result; 2.x would propagate it as a protocol error. Keep
+            # the shape clients already see.
+            return types.CallToolResult(
+                content=[types.TextContent(type="text", text=str(exc))],
+                isError=True,
+            )
+        finally:
+            self._finish(context)
 
-        # Input validation is handled by the registry (single error shape).
-        @sdk.call_tool(validate_input=False)
-        async def call_tool(
-            name: str, arguments: dict[str, Any]
-        ) -> types.CallToolResult:
-            context = self._create_context("tools/call")
-            try:
-                result = await rmcp.tools.call_tool(context, name, arguments)
-                return types.CallToolResult.model_validate(result)
-            finally:
-                self._finish(context)
+    async def _on_list_resources(
+        self, ctx: Any, params: Any = None
+    ) -> types.ListResourcesResult:
+        context = self._create_context(ctx, "resources/list")
+        try:
+            cursor = getattr(params, "cursor", None) if params is not None else None
+            result = await self.rmcp_server.resources.list_resources(
+                context, cursor=cursor
+            )
+            # URI templates are exposed via resources/templates/list instead.
+            entries = [
+                entry
+                for entry in result.get("resources", [])
+                if "{" not in entry.get("uri", "")
+            ]
+            payload: dict[str, Any] = {"resources": entries}
+            if result.get("nextCursor") is not None:
+                payload["nextCursor"] = result["nextCursor"]
+            return types.ListResourcesResult.model_validate(payload)
+        finally:
+            self._finish(context)
 
-        @sdk.list_resources()
-        async def list_resources(
-            req: types.ListResourcesRequest,
-        ) -> types.ListResourcesResult:
-            context = self._create_context("resources/list")
-            try:
-                cursor = req.params.cursor if req is not None and req.params else None
-                result = await rmcp.resources.list_resources(context, cursor=cursor)
-                # URI templates are exposed via resources/templates/list instead.
-                entries = [
-                    entry
-                    for entry in result.get("resources", [])
-                    if "{" not in entry.get("uri", "")
-                ]
-                payload: dict[str, Any] = {"resources": entries}
-                if result.get("nextCursor") is not None:
-                    payload["nextCursor"] = result["nextCursor"]
-                return types.ListResourcesResult.model_validate(payload)
-            finally:
-                self._finish(context)
-
-        @sdk.list_resource_templates()
-        async def list_resource_templates() -> list[types.ResourceTemplate]:
-            return [
+    async def _on_list_resource_templates(
+        self, ctx: Any, params: Any = None
+    ) -> types.ListResourceTemplatesResult:
+        return types.ListResourceTemplatesResult(
+            resourceTemplates=[
                 types.ResourceTemplate(
                     uriTemplate=uri_template,
                     name=meta.get("name", uri_template),
                     description=meta.get("description"),
                 )
-                for uri_template, meta in sorted(rmcp.resources.iter_templates())
+                for uri_template, meta in sorted(
+                    self.rmcp_server.resources.iter_templates()
+                )
             ]
+        )
 
-        @sdk.read_resource()
-        async def read_resource(uri: AnyUrl) -> Iterable[ReadResourceContents]:
-            context = self._create_context("resources/read")
-            try:
-                result = await rmcp.resources.read_resource(context, str(uri))
-                contents: list[ReadResourceContents] = []
-                for item in result.get("contents", []):
-                    mime_type = item.get("mimeType")
-                    if "blob" in item:
-                        data: str | bytes = base64.b64decode(item["blob"])
-                    else:
-                        data = item.get("text", "")
-                    contents.append(
-                        ReadResourceContents(content=data, mime_type=mime_type)
-                    )
-                return contents
-            finally:
-                self._finish(context)
+    async def _on_read_resource(
+        self, ctx: Any, params: Any
+    ) -> types.ReadResourceResult:
+        context = self._create_context(ctx, "resources/read")
+        try:
+            result = await self.rmcp_server.resources.read_resource(
+                context, str(params.uri)
+            )
+            contents: list[Any] = []
+            for item in result.get("contents", []):
+                entry: dict[str, Any] = {"uri": item.get("uri", str(params.uri))}
+                if item.get("mimeType"):
+                    entry["mimeType"] = item["mimeType"]
+                if "blob" in item:
+                    entry["blob"] = item["blob"]
+                else:
+                    entry["text"] = item.get("text", "")
+                contents.append(entry)
+            return types.ReadResourceResult.model_validate({"contents": contents})
+        finally:
+            self._finish(context)
 
-        @sdk.subscribe_resource()
-        async def subscribe_resource(uri: AnyUrl) -> None:
-            with contextlib.suppress(LookupError):
-                self._subscribed_sessions.add(sdk.request_context.session)
+    async def _on_subscribe_resource(self, ctx: Any, params: Any) -> types.EmptyResult:
+        session = getattr(ctx, "session", None)
+        if session is not None:
+            self._subscribed_sessions.add(session)
+        return types.EmptyResult()
 
-        @sdk.unsubscribe_resource()
-        async def unsubscribe_resource(uri: AnyUrl) -> None:
-            with contextlib.suppress(LookupError):
-                self._subscribed_sessions.discard(sdk.request_context.session)
+    async def _on_unsubscribe_resource(
+        self, ctx: Any, params: Any
+    ) -> types.EmptyResult:
+        session = getattr(ctx, "session", None)
+        if session is not None:
+            self._subscribed_sessions.discard(session)
+        return types.EmptyResult()
 
-        @sdk.list_prompts()
-        async def list_prompts(
-            req: types.ListPromptsRequest,
-        ) -> types.ListPromptsResult:
-            context = self._create_context("prompts/list")
-            try:
-                cursor = req.params.cursor if req is not None and req.params else None
-                result = await rmcp.prompts.list_prompts(context, cursor=cursor)
-                prompts = [
-                    _convert_prompt_entry(entry) for entry in result.get("prompts", [])
-                ]
-                payload: dict[str, Any] = {"prompts": prompts}
-                if result.get("nextCursor") is not None:
-                    payload["nextCursor"] = result["nextCursor"]
-                return types.ListPromptsResult.model_validate(payload)
-            finally:
-                self._finish(context)
+    async def _on_list_prompts(
+        self, ctx: Any, params: Any = None
+    ) -> types.ListPromptsResult:
+        context = self._create_context(ctx, "prompts/list")
+        try:
+            cursor = getattr(params, "cursor", None) if params is not None else None
+            result = await self.rmcp_server.prompts.list_prompts(context, cursor=cursor)
+            prompts = [
+                _convert_prompt_entry(entry) for entry in result.get("prompts", [])
+            ]
+            payload: dict[str, Any] = {"prompts": prompts}
+            if result.get("nextCursor") is not None:
+                payload["nextCursor"] = result["nextCursor"]
+            return types.ListPromptsResult.model_validate(payload)
+        finally:
+            self._finish(context)
 
-        @sdk.get_prompt()
-        async def get_prompt(
-            name: str, arguments: dict[str, str] | None
-        ) -> types.GetPromptResult:
-            context = self._create_context("prompts/get")
-            try:
-                result = await rmcp.prompts.get_prompt(context, name, arguments or {})
-                return types.GetPromptResult.model_validate(result)
-            finally:
-                self._finish(context)
+    async def _on_get_prompt(self, ctx: Any, params: Any) -> types.GetPromptResult:
+        context = self._create_context(ctx, "prompts/get")
+        try:
+            result = await self.rmcp_server.prompts.get_prompt(
+                context, params.name, params.arguments or {}
+            )
+            return types.GetPromptResult.model_validate(result)
+        finally:
+            self._finish(context)
 
-        @sdk.set_logging_level()
-        async def set_logging_level(level: types.LoggingLevel) -> None:
-            await rmcp._handle_set_log_level(level)
+    async def _on_set_logging_level(self, ctx: Any, params: Any) -> types.EmptyResult:
+        await self.rmcp_server._handle_set_log_level(params.level)
+        return types.EmptyResult()
 
     # ------------------------------------------------------------------
     # Notifications

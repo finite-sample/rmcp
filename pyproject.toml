@@ -28,11 +28,7 @@ requires-python = ">=3.11"
 dependencies = [
     "click>=8.1.0",        # CLI interface
     "jsonschema>=4.0.0",   # Schema validation
-    # Capped below 2.0: it removes the decorator registration API
-    # (@server.list_tools() and friends) that rmcp/core/sdk_adapter.py is
-    # built on, so the server raises AttributeError on startup and does not
-    # run at all. Supporting 2.x means rewriting the adapter.
-    "mcp>=1.28.1,<2",      # Official MCP SDK (protocol, stdio + Streamable HTTP)
+    "mcp>=2,<3",           # Official MCP SDK (protocol, stdio + Streamable HTTP)
     "psutil>=5.0.0",       # R process management
     "uvicorn>=0.31.1",     # ASGI server for the Streamable HTTP transport
     "structlog>=23.1.0",   # Structured logging for MCP observability
