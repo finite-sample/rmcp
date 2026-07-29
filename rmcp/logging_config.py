@@ -1,69 +1,46 @@
 """
 Structured logging configuration for RMCP MCP Server.
 
-Provides JSON-formatted structured logging optimized for:
-- MCP protocol observability and debugging
-- Request correlation across tool chains and R execution
-- Integration with modern monitoring platforms (ELK, Grafana, Datadog)
-- Performance monitoring of statistical workflows
+Every record -- whether emitted through structlog or through plain ``logging``
+-- is rendered once, by a single ``ProcessorFormatter``, into one envelope:
 
-Key Features:
-- Correlation ID propagation through context vars
-- MCP-specific structured fields (tool_name, session_id, execution_time)
-- Security event logging (operation approval, VFS access)
-- Development vs production logging modes
+    {"event": ..., "level": ..., "component": ..., "timestamp": ...,
+     "service": "rmcp", "protocol": "mcp", "request_id": ...}
+
+Fields stay top-level and therefore queryable. Anything logged while serving a
+request also carries ``request_id``, which is what ties a tool call to the R
+execution underneath it.
+
+Output goes to stderr: stdout carries the JSON-RPC stream in stdio mode and
+must not be written to.
 """
 
 import contextvars
-import json
 import logging
 import logging.config
 import sys
-import time
 import uuid
 from pathlib import Path
 from typing import Any
 
 import structlog
 
-# Context variables for request correlation
-correlation_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "correlation_id", default=None
-)
-session_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "session_id", default=None
-)
+#: Set once per request by ``SDKServerAdapter._create_context``. asyncio copies
+#: the context when a task is created, so every line logged while serving a
+#: request carries the id -- which is what makes a tool call and its R
+#: execution correlatable.
 request_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "request_id", default=None
-)
-
-# Performance tracking
-request_start_time_var: contextvars.ContextVar[float | None] = contextvars.ContextVar(
-    "request_start_time", default=None
 )
 
 
 def add_correlation_context(
     logger: structlog.BoundLogger, method_name: str, event_dict: dict[str, Any]
 ) -> dict[str, Any]:
-    """Add correlation IDs and request context to all log entries."""
-    # Add correlation identifiers
-    correlation_id = correlation_id_var.get()
-    if correlation_id:
-        event_dict["correlation_id"] = correlation_id
-
-    session_id = session_id_var.get()
-    if session_id:
-        event_dict["session_id"] = session_id
-
+    """Attach the current request id, when one is in scope."""
     request_id = request_id_var.get()
     if request_id:
         event_dict["request_id"] = request_id
-
-    # Add execution timing if available
-    start_time = request_start_time_var.get()
-    if start_time:
-        event_dict["execution_time_ms"] = int((time.time() - start_time) * 1000)
 
     return event_dict
 
@@ -72,22 +49,12 @@ def add_mcp_context(
     logger: structlog.BoundLogger, method_name: str, event_dict: dict[str, Any]
 ) -> dict[str, Any]:
     """Add MCP-specific context fields."""
-    # Ensure component field is set
     if "component" not in event_dict:
-        # Try to get logger name from the underlying logger
-        if hasattr(logger, "_logger") and hasattr(logger._logger, "name"):
-            logger_name = logger._logger.name
-        elif hasattr(logger, "name"):
-            logger_name = logger.name
-        else:
-            logger_name = "unknown"
+        # structlog.stdlib.add_logger_name runs first and sets this for both
+        # structlog-native and plain-stdlib records.
+        logger_name = event_dict.get("logger") or "unknown"
+        event_dict["component"] = logger_name.removeprefix("rmcp.")
 
-        if "rmcp." in logger_name:
-            event_dict["component"] = logger_name.replace("rmcp.", "")
-        else:
-            event_dict["component"] = logger_name
-
-    # Add service identification
     event_dict["service"] = "rmcp"
     event_dict["protocol"] = "mcp"
 
@@ -112,74 +79,53 @@ def configure_structured_logging(
     # Clear existing configuration
     structlog.reset_defaults()
 
-    # Shared processors for all loggers
+    # Applied to structlog-native records and, via foreign_pre_chain below, to
+    # records from the modules that still use plain `logging` -- so both end up
+    # with the same envelope instead of two incompatible shapes.
+    #
+    # filter_by_level is deliberately absent: it needs a structlog logger and
+    # would fail on foreign records. It goes in the structlog chain only, and
+    # first, so dropped events skip the work below.
     shared_processors = [
-        # Add correlation and MCP context
+        structlog.stdlib.add_logger_name,
         add_correlation_context,
         add_mcp_context,
-        # Filter for log level
-        structlog.stdlib.filter_by_level,
-        # Add timestamp
         structlog.processors.TimeStamper(fmt="ISO", utc=True),
-        # Add stack info for errors
-        structlog.dev.set_exc_info,
         structlog.processors.add_log_level,
+        structlog.dev.set_exc_info,
     ]
 
-    if development_mode and enable_console:
-        # Pretty console output for development
-        processors = shared_processors + [structlog.dev.ConsoleRenderer(colors=True)]
-        formatter = None
-    else:
-        # JSON output for production
-        processors = shared_processors + [
-            structlog.processors.dict_tracebacks,
-            structlog.processors.JSONRenderer(),
-        ]
-
-        class JSONFormatter(logging.Formatter):
-            """Custom JSON formatter for standard library logging."""
-
-            def format(self, record: logging.LogRecord) -> str:
-                log_entry = {
-                    "timestamp": self.formatTime(record),
-                    "level": record.levelname,
-                    "component": record.name.replace("rmcp.", "")
-                    if "rmcp." in record.name
-                    else record.name,
-                    "message": record.getMessage(),
-                    "service": "rmcp",
-                    "protocol": "mcp",
-                }
-
-                # Add correlation context if available
-                correlation_id = correlation_id_var.get()
-                if correlation_id:
-                    log_entry["correlation_id"] = correlation_id
-
-                session_id = session_id_var.get()
-                if session_id:
-                    log_entry["session_id"] = session_id
-
-                request_id = request_id_var.get()
-                if request_id:
-                    log_entry["request_id"] = request_id
-
-                # Add exception info if present
-                if record.exc_info:
-                    log_entry["exception"] = self.formatException(record.exc_info)
-
-                return json.dumps(log_entry, default=str)
-
-        formatter = JSONFormatter()
-
-    # Configure structlog
+    # structlog hands the event dict to the stdlib handler rather than
+    # rendering it itself. Rendering happens once, in the formatter below.
+    # Previously structlog rendered JSON and a second formatter nested that
+    # string under "message", so no field was ever queryable.
     structlog.configure(
-        processors=processors,
+        processors=[
+            structlog.stdlib.filter_by_level,
+            *shared_processors,
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
         wrapper_class=structlog.stdlib.BoundLogger,
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
+    )
+
+    if development_mode and enable_console:
+        renderer: Any = structlog.dev.ConsoleRenderer(colors=True)
+        render_chain = [renderer]
+    else:
+        renderer = structlog.processors.JSONRenderer()
+        render_chain = [structlog.processors.dict_tracebacks, renderer]
+
+    # foreign_pre_chain is what gives records from the plain-`logging` modules
+    # the same envelope as structlog ones, without touching those modules.
+    formatter = structlog.stdlib.ProcessorFormatter(
+        foreign_pre_chain=shared_processors,
+        processors=[
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            *render_chain,
+        ],
     )
 
     # Configure standard library logging
@@ -187,14 +133,12 @@ def configure_structured_logging(
 
     if enable_console:
         console_handler = logging.StreamHandler(sys.stderr)
-        if formatter:
-            console_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
         handlers.append(console_handler)
 
     if log_file:
         file_handler = logging.FileHandler(log_file)
-        if formatter:
-            file_handler.setFormatter(formatter)
+        file_handler.setFormatter(formatter)
         handlers.append(file_handler)
 
     logging.basicConfig(
@@ -212,90 +156,12 @@ def get_logger(name: str) -> structlog.BoundLogger:
     return structlog.get_logger(name)
 
 
-def set_correlation_id(correlation_id: str | None = None) -> str:
-    """Set correlation ID for request tracking. Returns the set ID."""
-    if correlation_id is None:
-        correlation_id = str(uuid.uuid4())
-    correlation_id_var.set(correlation_id)
-    return correlation_id
-
-
-def set_session_id(session_id: str | None = None) -> str:
-    """Set session ID for multi-request workflows. Returns the set ID."""
-    if session_id is None:
-        session_id = str(uuid.uuid4())
-    session_id_var.set(session_id)
-    return session_id
-
-
 def set_request_id(request_id: str | None = None) -> str:
     """Set request ID for individual operations. Returns the set ID."""
     if request_id is None:
         request_id = str(uuid.uuid4())
     request_id_var.set(request_id)
     return request_id
-
-
-def start_request_timing() -> None:
-    """Start timing for current request."""
-    request_start_time_var.set(time.time())
-
-
-def get_execution_time_ms() -> int | None:
-    """Get execution time in milliseconds if timing was started."""
-    start_time = request_start_time_var.get()
-    if start_time:
-        return int((time.time() - start_time) * 1000)
-    return None
-
-
-class LogContext:
-    """Context manager for scoped logging context."""
-
-    def __init__(
-        self,
-        correlation_id: str | None = None,
-        session_id: str | None = None,
-        request_id: str | None = None,
-        start_timing: bool = True,
-    ):
-        self.correlation_id = correlation_id
-        self.session_id = session_id
-        self.request_id = request_id
-        self.start_timing = start_timing
-        self._tokens = []
-
-    def __enter__(self):
-        """Enter logging context and set context variables."""
-        if self.correlation_id:
-            token = correlation_id_var.set(self.correlation_id)
-            self._tokens.append(("correlation_id", token))
-
-        if self.session_id:
-            token = session_id_var.set(self.session_id)
-            self._tokens.append(("session_id", token))
-
-        if self.request_id:
-            token = request_id_var.set(self.request_id)
-            self._tokens.append(("request_id", token))
-
-        if self.start_timing:
-            token = request_start_time_var.set(time.time())
-            self._tokens.append(("start_time", token))
-
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit logging context and reset context variables."""
-        for var_name, token in reversed(self._tokens):
-            if var_name == "correlation_id":
-                correlation_id_var.set(token.old_value)
-            elif var_name == "session_id":
-                session_id_var.set(token.old_value)
-            elif var_name == "request_id":
-                request_id_var.set(token.old_value)
-            elif var_name == "start_time":
-                request_start_time_var.set(token.old_value)
 
 
 def log_tool_execution(
@@ -388,34 +254,3 @@ def log_r_execution(
         if error_message:
             log_data["error_message"] = error_message
         logger.error("R execution failed", **log_data)
-
-
-def log_http_request(
-    logger: structlog.BoundLogger,
-    method: str,
-    path: str,
-    status_code: int,
-    response_time_ms: int,
-    user_agent: str | None = None,
-    content_length: int | None = None,
-) -> None:
-    """Log HTTP transport requests."""
-    log_data = {
-        "method": method,
-        "path": path,
-        "status_code": status_code,
-        "response_time_ms": response_time_ms,
-    }
-
-    if user_agent:
-        log_data["user_agent"] = user_agent
-
-    if content_length is not None:
-        log_data["content_length"] = content_length
-
-    if 200 <= status_code < 400:
-        logger.info("HTTP request processed", **log_data)
-    elif 400 <= status_code < 500:
-        logger.warning("HTTP client error", **log_data)
-    else:
-        logger.error("HTTP server error", **log_data)

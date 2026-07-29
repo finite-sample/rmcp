@@ -19,6 +19,19 @@ uv run rmcp serve-http           # Start Streamable HTTP server
 uv run rmcp --debug start        # Enable debug mode
 uv run rmcp --config config.json start  # Use custom config file
 RMCP_LOG_LEVEL=DEBUG uv run rmcp start  # Use environment variables
+
+# Shell completion (click provides it; zsh/bash/fish all verified)
+eval "$(_RMCP_COMPLETE=zsh_source rmcp)"   # bash needs 4.4+, macOS ships 3.2
+```
+
+Logs go to **stderr** as one JSON object per line — stdout carries the JSON-RPC
+stream in stdio mode. Every record, whether from structlog or plain `logging`,
+gets the same envelope, and anything logged while serving a request carries
+`request_id`, so a tool call and its R execution can be tied together:
+
+```json
+{"event": "tool completed", "tool": "linear_model", "duration_ms": 412,
+ "ok": true, "request_id": "7", "component": "registries.tools", ...}
 ```
 
 **For R integration development (Docker-based):**

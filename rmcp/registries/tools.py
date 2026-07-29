@@ -10,7 +10,7 @@ Following the principle: "Registries are discoverable and testable."
 
 import inspect
 import json
-import logging
+import time
 import uuid
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Sequence
@@ -19,8 +19,16 @@ from typing import Any, Protocol
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, validate_schema
+from ..logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+# structlog rather than stdlib: this module logs keyword fields (tool,
+# duration_ms) that stdlib logging would drop.
+logger = get_logger(__name__)
+
+
+def _elapsed_ms(started: float) -> int:
+    """Milliseconds since a ``time.perf_counter()`` reading."""
+    return int((time.perf_counter() - started) * 1000)
 
 
 class ToolHandler(Protocol):
@@ -163,6 +171,7 @@ class ToolsRegistry:
         if name not in self._tools:
             raise ValueError(f"Unknown tool: {name}")
         tool_def = self._tools[name]
+        started = time.perf_counter()
         try:
             # Validate input schema
             validate_schema(
@@ -191,14 +200,36 @@ class ToolsRegistry:
                 validate_schema(result, tool_def.output_schema, f"tool '{name}' output")
 
             await context.info(f"Tool completed: {name}")
+            # Deliberately name + timing only. context.info above already ships
+            # the raw arguments to the client; don't copy payloads into logs.
+            logger.info(
+                "tool completed",
+                tool=name,
+                duration_ms=_elapsed_ms(started),
+                ok=True,
+            )
             return self._format_tool_response(tool_def, result, formatting_info)
         except SchemaError as e:
             await context.error(f"Schema validation failed for tool '{name}': {e}")
+            logger.warning(
+                "tool rejected",
+                tool=name,
+                duration_ms=_elapsed_ms(started),
+                ok=False,
+                reason="schema",
+            )
             return {
                 "content": [{"type": "text", "text": f"Error: {e}"}],
                 "isError": True,
             }
         except Exception as e:
+            # exception() keeps the traceback, which the isError result drops.
+            logger.exception(
+                "tool failed",
+                tool=name,
+                duration_ms=_elapsed_ms(started),
+                ok=False,
+            )
             await context.error(f"Tool execution failed for '{name}': {e}")
             return {
                 "content": [{"type": "text", "text": f"Tool execution error: {e}"}],

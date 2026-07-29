@@ -189,6 +189,22 @@ rmcp --debug start
 rmcp --version
 ```
 
+### Shell Completion
+
+```bash
+# zsh — add to ~/.zshrc
+eval "$(_RMCP_COMPLETE=zsh_source rmcp)"
+
+# bash — add to ~/.bashrc (requires bash 4.4+)
+eval "$(_RMCP_COMPLETE=bash_source rmcp)"
+
+# fish — write to the completions directory
+_RMCP_COMPLETE=fish_source rmcp > ~/.config/fish/completions/rmcp.fish
+```
+
+macOS ships bash 3.2, which is too old — click prints a warning and completion
+does nothing. Use zsh (the macOS default) or install a newer bash.
+
 ### ⚙️ Configuration
 
 RMCP supports flexible configuration through environment variables, configuration files, and command-line options:
