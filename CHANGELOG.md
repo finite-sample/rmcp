@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-29
+
+### Changed
+
+- **Requires `mcp>=2,<3`.** 0.10.1 capped the SDK below 2.0 because mcp 2.0
+  removed the decorator registration API (`@server.list_tools()` and friends)
+  that `rmcp/core/sdk_adapter.py` was built on. The adapter is now ported: 2.x
+  takes handlers as constructor arguments, handler signatures are
+  `(ctx, params)`, and handlers return typed results rather than bare lists.
+  Closes #52.
+
+  **The MCP protocol rmcp speaks is unchanged.** Verified against every version
+  the SDK supports — `2024-11-05`, `2025-03-26`, `2025-06-18` and `2025-11-25`
+  each negotiate to themselves, and a client requesting `2026-07-28` still gets
+  `2025-11-25`, because the classic handshake tops out there. Existing clients
+  need no changes.
+
+- `_SUPPORTED_PROTOCOL_VERSIONS` now comes from the SDK rather than being
+  hand-built as `(latest, "2025-06-18")`, which under 2.x would have silently
+  dropped `2025-11-25` — the version current clients negotiate.
+
+### Fixed
+
+- Unknown-tool calls still return an `isError` result. mcp 2.x would propagate
+  them as a protocol error, changing the shape clients see; the adapter
+  preserves the previous behaviour.
+
+### Note for anyone reading MCP results in Python
+
+mcp 2.x renamed its model fields to snake_case, keeping camelCase only as wire
+aliases. Attribute access changes (`result.isError` → `result.is_error`); the
+JSON on the wire does not. Raw JSON-RPC dicts keep camelCase keys.
+
 ## [0.10.2] - 2026-07-29
 
 ### Fixed
