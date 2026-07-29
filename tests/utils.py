@@ -37,9 +37,9 @@ def run_mcp_stdio_workflow(
                 call_results = []
                 for name, arguments in tool_calls or []:
                     result = await session.call_tool(name, arguments)
-                    call_results.append(result.model_dump(mode="json"))
+                    call_results.append(result.model_dump(mode="json", by_alias=True))
                 return (
-                    init.model_dump(mode="json"),
+                    init.model_dump(mode="json", by_alias=True),
                     [tool.name for tool in tools.tools],
                     call_results,
                 )

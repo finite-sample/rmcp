@@ -44,8 +44,20 @@ except Exception:  # pragma: no cover - optional dependency
         "alert",
         "emergency",
     ]
-# Supported MCP protocol versions (latest first)
-_SUPPORTED_PROTOCOL_VERSIONS = tuple(dict.fromkeys((_PROTOCOL_VERSION, "2025-06-18")))
+# Take the SDK's own list rather than hand-maintaining entries. Building it as
+# (latest, "2025-06-18") silently dropped whichever versions the SDK gained in
+# between -- under mcp 2.x that meant losing 2025-11-25, which current clients
+# negotiate.
+try:
+    from mcp.types.version import (  # type: ignore
+        SUPPORTED_PROTOCOL_VERSIONS as _SDK_PROTOCOL_VERSIONS,
+    )
+
+    _SUPPORTED_PROTOCOL_VERSIONS = tuple(_SDK_PROTOCOL_VERSIONS)
+except Exception:  # pragma: no cover - SDK layout differs
+    _SUPPORTED_PROTOCOL_VERSIONS = tuple(
+        dict.fromkeys((_PROTOCOL_VERSION, "2025-11-25", "2025-06-18"))
+    )
 
 # Import version from __init__ at runtime to avoid circular imports
 from ..registries.prompts import PromptsRegistry
