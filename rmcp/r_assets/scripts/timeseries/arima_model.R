@@ -65,17 +65,17 @@ rmcp_progress("Extracting model results", 95, 100)
 # Extract results
 result <- list(
   model_type = "ARIMA",
-  order = arimaorder(model),
+  order = I(arimaorder(model)),
   coefficients = as.list(coef(model)),
   aic = AIC(model),
   bic = BIC(model),
   loglik = logLik(model)[1],
   sigma2 = model$sigma2,
-  fitted_values = as.numeric(fitted(model)),
-  residuals = as.numeric(residuals(model)),
-  forecasts = as.numeric(forecasts$mean),
-  forecast_lower = as.numeric(forecasts$lower[, 2]), # 95% CI
-  forecast_upper = as.numeric(forecasts$upper[, 2]),
+  fitted_values = I(as.numeric(fitted(model))),
+  residuals = I(as.numeric(residuals(model))),
+  forecasts = I(as.numeric(forecasts$mean)),
+  forecast_lower = I(as.numeric(forecasts$lower[, 2])), # 95% CI
+  forecast_upper = I(as.numeric(forecasts$upper[, 2])),
   accuracy = Filter(function(x) !is.na(x) && !is.null(x), as.list(as.data.frame(accuracy(model))[1, ])), # Convert to named list, remove NAs
   n_obs = length(values),
   # Special non-validated field for formatting

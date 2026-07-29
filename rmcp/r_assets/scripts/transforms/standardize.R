@@ -41,7 +41,7 @@ result <- list(
   data = as.list(result_data),
   scaling_method = method,
   scaling_info = scaling_info,
-  variables_scaled = variables,
+  variables_scaled = I(variables),
   n_obs = nrow(result_data),
   # Special non-validated field for formatting
   "_formatting" = list(

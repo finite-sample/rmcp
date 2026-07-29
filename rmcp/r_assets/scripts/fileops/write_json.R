@@ -45,7 +45,7 @@ result <- list(
   file_path = file_path,
   rows_written = if (is.data.frame(data)) nrow(data) else if (is.list(data)) length(data) else 1,
   cols_written = if (is.data.frame(data)) ncol(data) else if (is.list(data)) length(data) else 1,
-  variables_written = names(data_list),
+  variables_written = I(names(data_list)),
   file_size_bytes = file_info$size,
   pretty_formatted = pretty_print,
   success = TRUE,
