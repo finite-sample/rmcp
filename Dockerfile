@@ -48,7 +48,7 @@ WORKDIR /workspace
 ENV PYTHONPATH=/workspace
 
 # Copy source code for development
-COPY pyproject.toml ./
+COPY pyproject.toml uv.lock ./
 # Create a minimal README for build
 RUN echo "# RMCP Development Environment" > README.md
 COPY rmcp/ ./rmcp/
@@ -59,8 +59,10 @@ ENV PATH="/workspace/.venv/bin:$PATH"
 RUN --mount=type=cache,target=/root/.cache/uv,id=uv-dev-sync-${TARGETPLATFORM} \
     set -eux; \
     export PATH="/root/.local/bin:$PATH"; \
-    # Install all development dependencies and HTTP extras
-    uv sync --group dev --extra all; \
+    # --frozen so the image uses the committed lock. Without it uv resolves
+    # afresh and the image silently floats to new majors: mcp 2.0.0 landed
+    # this way and broke the initialize response format.
+    uv sync --frozen --group dev --extra all; \
     # Verify installation
     python -c "import rmcp; print('RMCP installed successfully')"
 

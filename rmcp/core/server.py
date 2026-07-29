@@ -478,7 +478,13 @@ class MCPServer:
                 serverInfo=Implementation(name=self.name, version=self.version),
                 instructions=self.description or None,
             )
-            return initialize_result.model_dump(mode="json", exclude_none=True)
+            # by_alias is required: the wire format is camelCase
+            # (protocolVersion, serverInfo, listChanged) while the pydantic
+            # fields are snake_case. Without it, mcp 2.0 serialises field
+            # names and the response is not spec-conformant.
+            return initialize_result.model_dump(
+                mode="json", exclude_none=True, by_alias=True
+            )
         # Fallback for when MCP types not available
         capabilities_dict = {
             "tools": {"listChanged": False},
