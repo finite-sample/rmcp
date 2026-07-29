@@ -569,9 +569,17 @@ attestations) → GitHub Release with generated notes.
 There is **no manual trigger, deliberately**. A `workflow_dispatch` publishes
 whatever is on the runner with nothing gating it, which is how every release
 before 0.10.0 shipped. Tags come from `main`, and `main` is CI-gated — that is
-the gate. Note the corollary: a tag placed on a commit that never passed CI
-would still publish, so tag from `main`, and use the `pypi` environment's
-protection rules if you want a hard stop.
+the gate.
+
+The `pypi` environment restricts deployments to `v*` **tags** and nothing else,
+so widening the workflow's trigger later would not quietly re-open manual
+publishing. There is no required reviewer and no wait timer: a release is still
+a single `git push origin vX.Y.Z`.
+
+Know what that does not cover. The environment checks the *ref*, not whether CI
+passed, so a `v*` tag on a commit that never went through CI would still
+publish — tag from `main`. And it cannot protect against a dependency breaking
+underneath a good release; that is what happened to 0.10.0.
 
 The filename `python-publish.yml` is load-bearing — the PyPI trusted publisher
 is keyed to it. Renaming it breaks publishing until the publisher config is
