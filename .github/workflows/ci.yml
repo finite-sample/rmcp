@@ -474,7 +474,7 @@ jobs:
                         "summary_stats",
                         {"data": {"x": [1, 2, 3, 4, 5]}, "variables": ["x"]},
                     )
-                    assert not result.isError, result.content
+                    assert not result.is_error, result.content
                     print(f"MCP stdio OK: {len(names)} tools, summary_stats ran")
 
 
