@@ -36,7 +36,7 @@ if (length(created_vars) == 0) {
   created_vars <- character(0)
 }
 result <- list(
-  data = as.list(result_data),
+  data = lapply(result_data, I),
   variables_created = I(as.character(created_vars)),
   n_obs = nrow(result_data),
   operation = "lag_lead",

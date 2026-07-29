@@ -38,10 +38,10 @@ for (var in variables) {
   result_data[[new_var]] <- scaled
 }
 result <- list(
-  data = as.list(result_data),
+  data = lapply(result_data, I),
   scaling_method = method,
   scaling_info = scaling_info,
-  variables_scaled = variables,
+  variables_scaled = I(variables),
   n_obs = nrow(result_data),
   # Special non-validated field for formatting
   "_formatting" = list(

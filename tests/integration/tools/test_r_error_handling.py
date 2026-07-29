@@ -157,11 +157,14 @@ class TestRealRErrors:
                 {"data": data, "test_type": "independence", "x": "var1", "y": "var2"},
             )
 
-            # Should complete but may have warnings about low expected counts
-            assert "test_statistic" in result
+            # Completes with a low-expected-count warning from R. The field is
+            # `statistic`; the previous `test_statistic` never existed and was
+            # never checked, because the tool always raised before reaching here.
+            assert "statistic" in result
+            assert "p_value" in result
 
             print("✅ Chi-square test handled small sample scenario")
-            print(f"   Test statistic: {result.get('test_statistic', 'unknown')}")
+            print(f"   Test statistic: {result.get('statistic', 'unknown')}")
             print(f"   P-value: {result.get('p_value', 'unknown')}")
 
         except RExecutionError as e:

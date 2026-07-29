@@ -23,6 +23,7 @@ from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.models import InitializationOptions
 from pydantic import AnyUrl
 
+from ..logging_config import set_request_id
 from .context import Context
 
 if TYPE_CHECKING:
@@ -102,6 +103,11 @@ class SDKServerAdapter:
                 progress_token = rc.meta.progressToken
         except LookupError:
             pass
+
+        # Publish it so every line logged while serving this request carries it.
+        # asyncio copies the context into child tasks, so the R execution under
+        # a tool call is correlatable with the call itself.
+        set_request_id(request_id)
 
         async def progress_callback(message: str, current: int, total: int) -> None:
             if session is None or progress_token is None:

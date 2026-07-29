@@ -39,8 +39,8 @@ if (method == "iqr") {
 }
 result <- list(
   method = method,
-  outlier_indices = outliers,
-  outlier_values = values[outliers],
+  outlier_indices = I(outliers),
+  outlier_values = I(values[outliers]),
   n_outliers = length(outliers),
   n_obs = length(values[!is.na(values)]),
   outlier_percentage = length(outliers) / length(values_clean) * 100,

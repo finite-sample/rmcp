@@ -52,7 +52,7 @@ result <- list(
   variance_explained = between_ss / total_ss * 100,
   silhouette_score = silhouette_score,
   k = k,
-  variables = variables,
+  variables = I(variables),
   n_obs = nrow(cluster_data),
   converged = kmeans_result$iter < max_iter,
   # Special non-validated field for formatting

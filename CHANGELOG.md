@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-07-29
+
+### Fixed
+
+Eleven tools returned an error instead of a result because R produced a value
+whose JSON serialization did not match the tool's declared output schema. Most
+fire on ordinary input — one variable, one row, one forecast period.
+
+- **`chi_square_test` independence tests were wholly broken**, failing with
+  `No method asJSON S3 class: table`. The script already called `as.matrix()`
+  to avoid this, but `as.matrix()` on a table *preserves* the class;
+  `unclass()` is what strips it.
+- **Single-element arrays collapsed to scalars.** `toJSON(auto_unbox = TRUE)`
+  turns a length-1 vector into a bare value, so tools whose schema requires an
+  array failed validation: `arima_model`, `correlation_heatmap`,
+  `kmeans_clustering`, `outlier_detection`, `standardize`, `validate_data`,
+  `write_json`. The same applied to the nested `data.*` payload on single-row
+  input in `difference`, `lag_lead`, `standardize`, `winsorize` and
+  `load_example`.
+- **`correlation_heatmap`** returned a `plot_type` its own schema enum rejects,
+  and returned the correlation matrix unnamed — serializing to a nested array
+  where the schema declares an object keyed by variable.
+- **`var_model`** returned every coefficient in one flat unnamed list, because
+  `coef()` on a summary is a matrix.
+- **`arima_model`** emitted `[]` rather than `{}` for the coefficients of a
+  model that fits none.
+
+### Changed
+
+- Statistics that are mathematically undefined at small n now permit `null`
+  rather than requiring a number: `sd` (needs n≥2), `skewness` and `kurtosis`
+  (n≥3), and `aic`/`bic`/`loglik`/`accuracy` for a degenerate fit. R returns
+  `NA` for these; the schema was wrong to demand a value.
+
+### Added
+
+- An end-to-end scenario that drives every affected tool over the real MCP
+  protocol — spawning the server and using the official MCP client over stdio,
+  as Claude Desktop does — rather than calling the registry directly and
+  skipping the transport.
+
 ## [0.10.1] - 2026-07-28
 
 ### Fixed

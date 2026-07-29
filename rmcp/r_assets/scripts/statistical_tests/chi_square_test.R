@@ -23,12 +23,12 @@ if (test_type == "independence") {
 
   result <- list(
     test_type = "Chi-square test of independence",
-    contingency_table = as.matrix(cont_table),
+    contingency_table = unclass(cont_table),
     statistic = as.numeric(test_result$statistic),
     df = test_result$parameter,
     p_value = test_result$p.value,
-    expected_frequencies = as.matrix(test_result$expected),
-    residuals = as.matrix(test_result$residuals),
+    expected_frequencies = unclass(test_result$expected),
+    residuals = unclass(test_result$residuals),
     x_variable = x_var,
     y_variable = y_var,
     cramers_v = sqrt(test_result$statistic / (sum(cont_table) * (min(dim(cont_table)) - 1))),

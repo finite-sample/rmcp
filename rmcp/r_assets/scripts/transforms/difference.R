@@ -48,7 +48,7 @@ for (var in variables) {
 # Ensure variables_differenced is always an array
 diff_vars <- if (length(variables) == 0) character(0) else variables
 result <- list(
-  data = as.list(result_data),
+  data = lapply(result_data, I),
   variables_differenced = I(as.character(diff_vars)),
   difference_order = diff_order,
   log_transformed = log_transform,
