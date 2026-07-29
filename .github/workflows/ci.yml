@@ -102,11 +102,14 @@ jobs:
           changed_files=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
           echo "Changed files: $changed_files"
 
-          # Files that require Docker rebuild
+          # Files that require Docker rebuild. uv.lock belongs here because the
+          # image now copies it and installs with `uv sync --frozen`, so a
+          # dependency bump changes what the image contains.
           docker_relevant_files=(
             "Dockerfile"
             "Dockerfile.base"
             "pyproject.toml"
+            "uv.lock"
             "rmcp/"
             ".github/workflows/ci.yml"
           )
@@ -244,8 +247,13 @@ jobs:
       id: image
       env:
         PR_NUMBER: ${{ github.event.number }}
+        SHOULD_BUILD: ${{ steps.check-changes.outputs.should_build }}
       run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
+        # Prefer this PR's own image, but only when the run actually built and
+        # pushed it -- otherwise the pr-<n> tag does not exist and the pull
+        # fails. Falling back to main's `latest` is the only sensible image for
+        # a PR that changed nothing image-relevant.
+        if [ "${{ github.event_name }}" = "pull_request" ] && [ "$SHOULD_BUILD" = "true" ]; then
           tag="pr-${PR_NUMBER}"
         else
           tag="latest"
@@ -257,8 +265,9 @@ jobs:
       id: prod-image
       env:
         PR_NUMBER: ${{ github.event.number }}
+        SHOULD_BUILD: ${{ steps.check-changes.outputs.should_build }}
       run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
+        if [ "${{ github.event_name }}" = "pull_request" ] && [ "$SHOULD_BUILD" = "true" ]; then
           tag="pr-${PR_NUMBER}-production"
         else
           tag="production-latest"
@@ -474,7 +483,7 @@ jobs:
                         "summary_stats",
                         {"data": {"x": [1, 2, 3, 4, 5]}, "variables": ["x"]},
                     )
-                    assert not result.isError, result.content
+                    assert not result.is_error, result.content
                     print(f"MCP stdio OK: {len(names)} tools, summary_stats ran")
 
 

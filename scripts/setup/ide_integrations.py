@@ -352,7 +352,7 @@ class TestRMCPServerSetup:
         except Exception as e:
             pytest.fail(f"Sample analysis failed: {e}")
 
-        assert not result.isError, f"Sample analysis returned error: {result.content}"
+        assert not result.is_error, f"Sample analysis returned error: {result.content}"
         print("Sample analysis successful")
 
 
