@@ -27,7 +27,7 @@ equations <- list()
 for (var in variables) {
   eq_summary <- summary(var_model)$varresult[[var]]
   equations[[var]] <- list(
-    coefficients = as.list(coef(eq_summary)),
+    coefficients = as.list(eq_summary$coefficients[, "Estimate"]),
     std_errors = as.list(eq_summary$coefficients[, "Std. Error"]),
     t_values = as.list(eq_summary$coefficients[, "t value"]),
     p_values = as.list(eq_summary$coefficients[, "Pr(>|t|)"]),

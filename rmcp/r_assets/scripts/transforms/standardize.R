@@ -38,7 +38,7 @@ for (var in variables) {
   result_data[[new_var]] <- scaled
 }
 result <- list(
-  data = as.list(result_data),
+  data = lapply(result_data, I),
   scaling_method = method,
   scaling_info = scaling_info,
   variables_scaled = I(variables),

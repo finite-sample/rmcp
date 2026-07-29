@@ -66,7 +66,9 @@ rmcp_progress("Extracting model results", 95, 100)
 result <- list(
   model_type = "ARIMA",
   order = I(arimaorder(model)),
-  coefficients = as.list(coef(model)),
+  # A random walk fits no coefficients; an empty *named* list renders {}
+  # rather than [], which is what the schema declares.
+  coefficients = if (length(coef(model))) as.list(coef(model)) else setNames(list(), character(0)),
   aic = AIC(model),
   bic = BIC(model),
   loglik = logLik(model)[1],

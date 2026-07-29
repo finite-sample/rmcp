@@ -60,9 +60,12 @@ stats <- list(
 )
 # Prepare result
 result <- list(
-  plot_type = "correlation_heatmap",
+  plot_type = "heatmap",
   variables = I(variables),
-  correlation_matrix = cor_matrix,
+  # Named columns, not a bare matrix: the schema declares an object keyed
+  # by variable, and a raw matrix serialises as a nested array with the
+  # names lost. I() keeps single-variable columns as arrays.
+  correlation_matrix = lapply(as.data.frame(cor_matrix), I),
   statistics = stats,
   title = title,
   plot_saved = plot_saved

@@ -143,7 +143,7 @@ for (var in numeric_vars) {
   }
 }
 result <- list(
-  data = as.list(data), # Convert to column-wise format for schema compatibility
+  data = lapply(data, I), # Column-wise; I() keeps length-1 columns as arrays
   metadata = list(
     name = dataset_name,
     description = description,

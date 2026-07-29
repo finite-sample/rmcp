@@ -258,7 +258,8 @@ async def difference(context, params) -> dict[str, Any]:
                 "description": "Scaling parameters for each variable",
                 "additionalProperties": {
                     "type": "object",
-                    "additionalProperties": {"type": "number"},
+                    # null when undefined: sd needs n>=2
+                    "additionalProperties": {"type": ["number", "null"]},
                 },
             },
             "variables_scaled": {
