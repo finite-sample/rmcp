@@ -1,5 +1,7 @@
 # RMCP: Statistical Analysis through Natural Conversation
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Ffinite-sample%2Frmcp.svg)](https://mcptoplist.com/server/glama%2Ffinite-sample%2Frmcp)
+
 [![Python application](https://github.com/finite-sample/rmcp/actions/workflows/ci.yml/badge.svg)](https://github.com/finite-sample/rmcp/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/rmcp.svg)](https://pypi.org/project/rmcp/)
 [![Downloads](https://pepy.tech/badge/rmcp)](https://pepy.tech/project/rmcp)
