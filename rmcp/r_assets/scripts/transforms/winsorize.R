@@ -48,7 +48,7 @@ for (var in variables) {
   )
 }
 result <- list(
-  data = as.list(result_data),
+  data = lapply(result_data, I),
   outliers_summary = outliers_summary,
   percentiles = c(lower_percentile, upper_percentile),
   variables_winsorized = I(variables),

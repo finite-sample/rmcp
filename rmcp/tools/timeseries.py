@@ -64,9 +64,19 @@ from ..registries.tools import tool
                 "description": "Model coefficients",
                 "additionalProperties": {"type": "number"},
             },
-            "aic": {"type": "number", "description": "Akaike Information Criterion"},
-            "bic": {"type": "number", "description": "Bayesian Information Criterion"},
-            "loglik": {"type": "number", "description": "Log-likelihood value"},
+            # null for a degenerate fit, where the likelihood is undefined
+            "aic": {
+                "type": ["number", "null"],
+                "description": "Akaike Information Criterion",
+            },
+            "bic": {
+                "type": ["number", "null"],
+                "description": "Bayesian Information Criterion",
+            },
+            "loglik": {
+                "type": ["number", "null"],
+                "description": "Log-likelihood value",
+            },
             "sigma2": {
                 "type": "number",
                 "description": "Estimated innovation variance",
@@ -100,7 +110,8 @@ from ..registries.tools import tool
             "accuracy": {
                 "type": "object",
                 "description": "Model accuracy metrics",
-                "additionalProperties": {"type": "number"},
+                # MAPE is undefined when an actual value is zero
+                "additionalProperties": {"type": ["number", "null"]},
             },
             "n_obs": {
                 "type": "integer",
