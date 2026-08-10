@@ -224,22 +224,48 @@ jobs:
                   verdict, act = "ineligible (no policy label)", "none"
               elif pr.get("autoMergeRequest"):
                   verdict, act = "already armed", "none"
-              elif pr["mergeStateStatus"] in {"DIRTY", "BLOCKED", "DRAFT"}:
-                  # Name the missing requirement rather than only its symptom:
-                  # "BLOCKED" sends a reader looking for a failing check that
-                  # does not exist.
-                  absent = never_reported(pr)
-                  reason = (f"required never ran: {','.join(absent)}" if absent
-                            else pr["mergeStateStatus"])
-                  verdict, act = f"not mergeable ({reason})", "none"
+              elif pr["mergeStateStatus"] in {"DIRTY", "DRAFT"}:
+                  # A conflict or a draft is unmergeable for everyone, and no
+                  # amount of asking changes that.
+                  verdict, act = f"not mergeable ({pr['mergeStateStatus']})", "none"
               else:
-                  state = check_state(pr)
-                  verdict, act = {
-                      "green": ("checks terminal and green", "merge"),
-                      "running": ("checks still running", "arm"),
-                      "failing": ("checks failing", "none"),
-                      "no-checks": ("no checks reported", "none"),
-                  }[state]
+                  # Everything else -- CLEAN and BLOCKED alike -- is decided by
+                  # the checks, not by mergeStateStatus.
+                  #
+                  # BLOCKED used to end the decision here. It should not:
+                  # GitHub computes it for the *viewer*, and GITHUB_TOKEN
+                  # cannot bypass a ruleset, so a PR a maintainer sees as CLEAN
+                  # reads BLOCKED to this job. Treating that as final made the
+                  # merge path unreachable in any repo whose ruleset the token
+                  # cannot bypass: the sweep could arm, but never land.
+                  # Measured on finite-sample/rmcp, where #63 and #58 had all
+                  # three required contexts green, this step reported "not
+                  # mergeable (BLOCKED)" on two consecutive runs, and both
+                  # merged instantly when simply asked.
+                  #
+                  # What is worth checking is whether a required context never
+                  # reported at all -- "BLOCKED" otherwise sends a reader
+                  # looking for a failing check that does not exist. Past that,
+                  # ask GitHub and let it refuse: it is the authority on its
+                  # own rules, a refusal costs one API call, and the arm-or-land
+                  # step already downgrades a refusal to a warning.
+                  absent = never_reported(pr)
+                  if absent:
+                      verdict, act = (
+                          f"not mergeable (required never ran: {','.join(absent)})",
+                          "none",
+                      )
+                  else:
+                      state = check_state(pr)
+                      blocked = pr["mergeStateStatus"] == "BLOCKED"
+                      verdict, act = {
+                          "green": ("checks terminal and green", "merge"),
+                          "running": ("checks still running", "arm"),
+                          "failing": ("checks failing", "none"),
+                          "no-checks": ("no checks reported", "none"),
+                      }[state]
+                      if blocked and act != "none":
+                          verdict += " (BLOCKED for this token; asking anyway)"
               # Only shout when the sweep is unable to act. A PR being merged
               # on this very run is not stranded, however old it is.
               stale = act == "none" and label in names and age > stale_after
