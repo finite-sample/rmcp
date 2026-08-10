@@ -84,7 +84,7 @@ jobs:
     - name: Extract metadata
       id: meta
       if: steps.check-rebuild.outputs.rebuild_needed == 'true'
-      uses: docker/metadata-action@v5
+      uses: docker/metadata-action@v6
       with:
         images: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}
         tags: |
