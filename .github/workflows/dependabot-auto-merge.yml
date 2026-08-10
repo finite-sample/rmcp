@@ -1,16 +1,59 @@
 name: Dependabot auto-merge
 
-on: pull_request
+# Two entry points, one eligibility decision.
+#
+#   pull_request  decides eligibility once, records the verdict as a label, arms
+#   schedule      re-arms anything GitHub silently disarmed since
+#
+# The scheduled half exists because of a measured failure. On appeler/pranaam
+# PR #29 the workflow armed auto-merge at 17:27:11 and GitHub disabled it at
+# 17:42:38, four seconds after a PR-triggered docs workflow finished with a
+# skipped job. Nothing re-arms, `on: pull_request` never fires again, and the
+# PR sits green and unmerged while every workflow run reports success. Nine
+# PRs had accumulated that way. A sweep converges no matter what disarmed the
+# PR, which a `workflow_run` trigger racing the disarm event would not.
 
-permissions:
-  contents: write
-  pull-requests: write
+on:
+  pull_request:
+  schedule:
+    # Every three hours, offset off the hour so it does not queue behind the
+    # crowd of on-the-hour jobs.
+    - cron: "37 */3 * * *"
+  workflow_dispatch:
+
+# Granted per job rather than here: a workflow-level write grant applies to
+# every job, which zizmor's excessive-permissions audit rejects once there is
+# more than one.
+permissions: {}
+
+env:
+  # Eligibility is derived from Dependabot metadata, which is only available in
+  # a pull_request context. Rather than re-derive it from a branch name in the
+  # scheduled run -- where major-versus-minor is not recoverable -- the verdict
+  # is written once, here, and read back later. One decision, one place.
+  ELIGIBLE_LABEL: automerge-eligible
+  # How long an eligible PR may stay unmerged before the sweep says so out
+  # loud. Silence is the failure mode this workflow exists to fix, so a sweep
+  # that quietly does nothing must still leave a mark.
+  STALE_AFTER_HOURS: 12
+  # Neither job checks out the repo, so gh has no git remote to infer from.
+  # Steps that pass a PR URL resolve the repo from the argument; `gh label
+  # create` takes no URL, so it fell back to git and exited 1 -- on every
+  # eligible PR the fleet ever saw. Set once here rather than per step: the
+  # next gh call added to either job is then correct by default.
+  GH_REPO: ${{ github.repository }}
 
 jobs:
-  auto-merge:
+  classify:
+    name: Classify and arm
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    permissions:
+      contents: write        # arm auto-merge
+      pull-requests: write   # label, comment
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
@@ -46,6 +89,18 @@ jobs:
           echo "ecosystem=$ECOSYSTEM group=$GROUP update-type=$UPDATE_TYPE eligible=$eligible"
           echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
 
+      # The label is what makes the scheduled sweep possible without it having
+      # to guess. Created with --force so the first run in a repo works.
+      - name: Record the verdict on the PR
+        if: steps.gate.outputs.eligible == 'true'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "$ELIGIBLE_LABEL" --force --color 0e8a16 \
+            --description "Auto-merge policy says yes; the sweep may arm or land this"
+          gh pr edit "$PR_URL" --add-label "$ELIGIBLE_LABEL"
+
       # No `gh pr review --approve`: it fails outright where the repo has
       # "Allow GitHub Actions to create and approve pull requests" off, which
       # aborted the step before the merge ever ran. Our rulesets require status
@@ -65,10 +120,11 @@ jobs:
           # GitHub refuses to arm auto-merge on a PR it currently considers
           # mergeable, and this job finishes in seconds -- often before the
           # required check runs exist. Do not merge directly here: "clean" at
-          # t+4s does not mean the checks passed.
+          # t+4s does not mean the checks passed. The scheduled sweep picks it
+          # up once the checks are terminal, which is the safe moment.
           case "$err" in
             *"clean status"*|*"not mergeable"*|*"Auto merge is not allowed"*)
-              echo "::warning::auto-merge not armable yet; leaving PR open"
+              echo "::warning::auto-merge not armable yet; the sweep will retry"
               exit 0 ;;
           esac
           exit 1
@@ -81,3 +137,137 @@ jobs:
         run: |
           gh pr comment "$PR_URL" --body \
             "Left open for manual review — auto-merge covers GitHub-Actions updates, our minor-and-patch groups, and patch/minor Python bumps."
+
+  sweep:
+    name: Re-arm stranded PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # arm auto-merge, or squash-merge outright
+      pull-requests: write   # read labels, merge
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Collect open Dependabot PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr list --author "app/dependabot" --state open --limit 100 \
+            --json number,url,title,labels,autoMergeRequest,mergeStateStatus,statusCheckRollup,createdAt \
+            > prs.json
+          python3 -c "import json;print('collected',len(json.load(open('prs.json'))),'open Dependabot PRs')"
+
+          # Required contexts, so a check that never reported can be named. A
+          # green rollup is not the same as a satisfied ruleset: on
+          # appeler/pranaam#10 all seven reported checks passed while the
+          # required `build` context never ran at all -- its workflow had been
+          # cancelled by a concurrency collision -- and the PR sat BLOCKED for
+          # weeks looking entirely green. Counting reported checks cannot see
+          # that; comparing against the requirement can.
+          gh api "repos/${GH_REPO}/rulesets" --jq '.[].id' 2>/dev/null \
+            | while read -r id; do
+                gh api "repos/${GH_REPO}/rulesets/${id}" --jq \
+                  '.rules[]? | select(.type=="required_status_checks")
+                   | .parameters.required_status_checks[].context' 2>/dev/null
+              done | sort -u > required.txt || true
+          echo "required contexts: $(tr '\n' ' ' < required.txt)"
+
+      # Decide per PR, print one line for every one of them, and act. Check
+      # state is read from statusCheckRollup rather than from mergeStateStatus
+      # alone: CLEAN is GitHub's opinion about mergeability, and this job needs
+      # the stronger fact that every check has reached a terminal state and
+      # none of them failed before it will merge anything directly.
+      - name: Decide what to do with each
+        id: plan
+        run: |
+          python3 - <<'PY' > actions.txt
+          import json, os, datetime as dt
+
+          TERMINAL_OK = {"SUCCESS", "SKIPPED", "NEUTRAL"}
+          label = os.environ["ELIGIBLE_LABEL"]
+          stale_after = dt.timedelta(hours=float(os.environ["STALE_AFTER_HOURS"]))
+          now = dt.datetime.now(dt.UTC)
+
+          def check_state(pr):
+              """Terminal-and-green, still-running, or failing."""
+              rollup = pr.get("statusCheckRollup") or []
+              if not rollup:
+                  return "no-checks"
+              states = []
+              for c in rollup:
+                  # CheckRun reports status/conclusion; StatusContext reports state.
+                  if c.get("__typename") == "StatusContext" or "state" in c:
+                      states.append(c.get("state") or "PENDING")
+                  elif (c.get("status") or "").upper() != "COMPLETED":
+                      states.append("PENDING")
+                  else:
+                      states.append((c.get("conclusion") or "PENDING").upper())
+              if any(s == "PENDING" for s in states):
+                  return "running"
+              return "green" if all(s in TERMINAL_OK for s in states) else "failing"
+
+          def never_reported(pr):
+              """Required contexts with no check run at all on this PR."""
+              seen = {c.get("name") or c.get("context") for c in
+                      (pr.get("statusCheckRollup") or [])}
+              return sorted(required - seen)
+
+          try:
+              required = {ln.strip() for ln in open("required.txt") if ln.strip()}
+          except OSError:
+              required = set()
+
+          for pr in json.load(open("prs.json")):
+              n = pr["number"]
+              names = {l["name"] for l in pr.get("labels") or []}
+              age = now - dt.datetime.fromisoformat(pr["createdAt"].replace("Z", "+00:00"))
+              if label not in names:
+                  verdict, act = "ineligible (no policy label)", "none"
+              elif pr.get("autoMergeRequest"):
+                  verdict, act = "already armed", "none"
+              elif pr["mergeStateStatus"] in {"DIRTY", "BLOCKED", "DRAFT"}:
+                  # Name the missing requirement rather than only its symptom:
+                  # "BLOCKED" sends a reader looking for a failing check that
+                  # does not exist.
+                  absent = never_reported(pr)
+                  reason = (f"required never ran: {','.join(absent)}" if absent
+                            else pr["mergeStateStatus"])
+                  verdict, act = f"not mergeable ({reason})", "none"
+              else:
+                  state = check_state(pr)
+                  verdict, act = {
+                      "green": ("checks terminal and green", "merge"),
+                      "running": ("checks still running", "arm"),
+                      "failing": ("checks failing", "none"),
+                      "no-checks": ("no checks reported", "none"),
+                  }[state]
+              # Only shout when the sweep is unable to act. A PR being merged
+              # on this very run is not stranded, however old it is.
+              stale = act == "none" and label in names and age > stale_after
+              print(f"{n}\t{act}\t{verdict}\t{int(age.total_seconds()//3600)}h\t{int(stale)}")
+          PY
+          printf '%-6s %-6s %-32s %6s\n' "PR" "ACTION" "VERDICT" "AGE"
+          while IFS=$'\t' read -r n act verdict age stale; do
+            printf '%-6s %-6s %-32s %6s\n' "#$n" "$act" "$verdict" "$age"
+            if [ "$stale" = "1" ]; then
+              echo "::warning::PR #$n is eligible but still unmerged after ${age} — automation has not been able to land it"
+            fi
+          done < actions.txt
+
+      - name: Arm or land
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          acted=0
+          while IFS=$'\t' read -r n act _rest; do
+            case "$act" in
+              arm)
+                echo "arming #$n"
+                gh pr merge "$n" --auto --squash || echo "::warning::could not arm #$n"
+                acted=$((acted + 1)) ;;
+              merge)
+                echo "merging #$n"
+                gh pr merge "$n" --squash --delete-branch || echo "::warning::could not merge #$n"
+                acted=$((acted + 1)) ;;
+            esac
+          done < actions.txt
+          echo "sweep acted on $acted PR(s)"
