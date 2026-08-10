@@ -445,8 +445,32 @@ jobs:
         pytest tests/scenarios/ -v --tb=short --cov=rmcp --cov-append
 
     - name: Install gpg for Codecov uploader verification
+      # Best-effort by design. The only thing that wants gpg is the Codecov
+      # upload below, and that step already runs with fail_ci_if_error: false
+      # -- so a required job was hard-failing on a helper for an upload that
+      # is itself allowed to fail. The criticality was inverted.
+      #
+      # Not hypothetical. On 5 August this step failed with
+      #   E: Failed to fetch .../noble-cran40/Packages.gz
+      #      File has unexpected size (62232 != 61419). Mirror sync in progress?
+      # *after* the tests had already passed. Because "R Integration & Workflow
+      # Tests" is a required context, that mirror hiccup blocked PR #66 -- a
+      # security bump closing an open advisory -- for five days.
+      #
+      # Retries cover a mirror mid-sync, which clears in minutes.
+      # continue-on-error covers the case where it does not.
+      continue-on-error: true
       run: |
-        apt-get update -qq && apt-get install -y -qq gpg
+        set -u
+        for attempt in 1 2 3; do
+          if apt-get update -qq && apt-get install -y -qq gpg; then
+            echo "gpg installed on attempt $attempt"
+            exit 0
+          fi
+          echo "::warning::apt failed on attempt $attempt; retrying"
+          sleep $((attempt * 10))
+        done
+        echo "::warning::could not install gpg; the Codecov upload proceeds unverified"
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v7
