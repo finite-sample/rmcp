@@ -10,7 +10,7 @@ library(reshape2)
 library(rlang)
 
 # Prepare data and parameters
-variables <- args$variables
+variables <- args$variables %||% names(data)[vapply(data, is.numeric, logical(1))]
 method <- args$method %||% "pearson"
 title <- args$title %||% paste("Correlation Heatmap -", toupper(method))
 file_path <- args$file_path
@@ -19,7 +19,17 @@ width <- args$width %||% 800
 height <- args$height %||% 600
 
 # Calculate correlation matrix
+if (length(variables) < 2) {
+  stop("Correlation heatmap requires at least two numeric variables")
+}
+unknown_variables <- setdiff(variables, names(data))
+if (length(unknown_variables) > 0) {
+  stop("Unknown variables: ", paste(unknown_variables, collapse = ", "))
+}
 numeric_data <- data[variables]
+if (!all(vapply(numeric_data, is.numeric, logical(1)))) {
+  stop("Correlation heatmap variables must be numeric")
+}
 cor_matrix <- cor(numeric_data, use = "complete.obs", method = method)
 
 # Melt correlation matrix for ggplot

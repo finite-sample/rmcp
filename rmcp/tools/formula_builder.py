@@ -471,8 +471,10 @@ async def validate_formula(context, params) -> dict[str, Any]:
     if "~" not in formula:
         return {
             "is_valid": False,
+            "formula_parsed": False,
             "error": "Formula must contain '~' separator",
             "suggestions": ["Use format: outcome ~ predictor1 + predictor2"],
+            "analysis_type": analysis_type,
         }
     # Detailed validation using R
     validation = await _validate_formula(context, formula, data)

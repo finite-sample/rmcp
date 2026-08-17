@@ -20,7 +20,6 @@ try:
         LATEST_PROTOCOL_VERSION,
         Implementation,
         InitializeResult,
-        LoggingCapability,
         PromptsCapability,
         ResourcesCapability,
         ServerCapabilities,
@@ -479,15 +478,14 @@ class MCPServer:
         if _MCP_TYPES_AVAILABLE:
             # Build capabilities - completion capability is not available in current MCP version
             capabilities = ServerCapabilities(
-                tools=ToolsCapability(listChanged=False),
-                resources=ResourcesCapability(subscribe=True, listChanged=True),
-                prompts=PromptsCapability(listChanged=False),
-                logging=LoggingCapability(),
+                tools=ToolsCapability(list_changed=False),
+                resources=ResourcesCapability(subscribe=True, list_changed=True),
+                prompts=PromptsCapability(list_changed=False),
             )
             initialize_result = InitializeResult(
-                protocolVersion=protocol_version,
+                protocol_version=protocol_version,
                 capabilities=capabilities,
-                serverInfo=Implementation(name=self.name, version=self.version),
+                server_info=Implementation(name=self.name, version=self.version),
                 instructions=self.description or None,
             )
             # by_alias is required: the wire format is camelCase

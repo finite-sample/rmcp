@@ -31,6 +31,15 @@ def _elapsed_ms(started: float) -> int:
     return int((time.perf_counter() - started) * 1000)
 
 
+def _public_exception_message(exc: Exception) -> str:
+    """Return actionable error text without subprocess or environment details."""
+    message = str(exc).split("\nENVIRONMENT:", maxsplit=1)[0]
+    if message.startswith("R script failed with return code"):
+        stderr = getattr(exc, "stderr", "").strip()
+        return stderr or "R script execution failed"
+    return message
+
+
 class ToolHandler(Protocol):
     """Protocol for tool handler functions with MCP metadata."""
 
@@ -116,11 +125,14 @@ class ToolsRegistry:
     ) -> None:
         """Register a tool with the registry."""
         if name in self._tools:
-            logger.warning(f"Tool '{name}' already registered, overwriting")
+            raise ValueError(f"Tool '{name}' is already registered")
+        normalized_input_schema = dict(input_schema)
+        if normalized_input_schema.get("type") == "object":
+            normalized_input_schema.setdefault("additionalProperties", False)
         self._tools[name] = ToolDefinition(
             name=name,
             handler=handler,
-            input_schema=input_schema,
+            input_schema=normalized_input_schema,
             output_schema=output_schema,
             title=title or name,
             description=description or f"Execute {name}",
@@ -230,9 +242,15 @@ class ToolsRegistry:
                 duration_ms=_elapsed_ms(started),
                 ok=False,
             )
-            await context.error(f"Tool execution failed for '{name}': {e}")
+            public_message = _public_exception_message(e)
+            await context.error(f"Tool execution failed for '{name}': {public_message}")
             return {
-                "content": [{"type": "text", "text": f"Tool execution error: {e}"}],
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Tool execution error: {public_message}",
+                    }
+                ],
                 "isError": True,
             }
 
@@ -539,23 +557,6 @@ def tool(
 ):
     """
     Decorator to register a function as an MCP tool.
-
-    Usage:
-        @tool(
-            name="analyze_data",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "data": table_schema(),
-                    "method": choice_schema(["mean", "median", "mode"])
-                },
-                "required": ["data"]
-            },
-            description="Analyze dataset with specified method"
-        )
-        async def analyze_data(context: Context, params: dict[str, Any]) -> dict[str, Any]:
-            # Tool implementation
-            return {"result": "analysis complete"}
     """
 
     def decorator(

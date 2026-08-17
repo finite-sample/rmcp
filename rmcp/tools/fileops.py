@@ -98,6 +98,7 @@ from ..registries.tools import tool
 async def read_csv(context, params) -> dict[str, Any]:
     """Read CSV file and return data."""
     await context.info("Reading CSV file", file_path=params.get("file_path"))
+    context.require_read_path(params["file_path"])
 
     # Load R script from separated file
     r_script = get_r_script("fileops", "read_csv")
@@ -373,6 +374,7 @@ async def data_info(context, params) -> dict[str, Any]:
             "data": table_schema(),
             "conditions": {
                 "type": "array",
+                "minItems": 1,
                 "items": {
                     "type": "object",
                     "properties": {
@@ -381,9 +383,19 @@ async def data_info(context, params) -> dict[str, Any]:
                             "type": "string",
                             "enum": ["==", "!=", ">", "<", ">=", "<=", "%in%", "!%in%"],
                         },
-                        "value": {},
+                        "value": {
+                            "type": [
+                                "string",
+                                "number",
+                                "boolean",
+                                "null",
+                                "array",
+                            ],
+                            "items": {"type": ["string", "number", "boolean", "null"]},
+                        },
                     },
                     "required": ["variable", "operator", "value"],
+                    "additionalProperties": False,
                 },
             },
             "logic": {"type": "string", "enum": ["AND", "OR"], "default": "AND"},
@@ -442,6 +454,20 @@ async def data_info(context, params) -> dict[str, Any]:
 async def filter_data(context, params) -> dict[str, Any]:
     """Filter data based on conditions."""
     await context.info("Filtering data")
+
+    columns = params["data"]
+    missing = sorted(
+        {
+            condition["variable"]
+            for condition in params["conditions"]
+            if condition["variable"] not in columns
+        }
+    )
+    if missing:
+        raise ValueError(
+            f"Filter variables not found in data: {', '.join(missing)}. "
+            f"Available columns: {', '.join(sorted(columns))}"
+        )
 
     # Load R script from separated file
     r_script = get_r_script("fileops", "filter_data")
@@ -533,6 +559,7 @@ async def filter_data(context, params) -> dict[str, Any]:
 async def read_excel(context, params) -> dict[str, Any]:
     """Read Excel file and return data."""
     await context.info("Reading Excel file", file_path=params.get("file_path"))
+    context.require_read_path(params["file_path"])
 
     # Load R script from separated file
     r_script = get_r_script("fileops", "read_excel")
@@ -627,6 +654,7 @@ async def read_excel(context, params) -> dict[str, Any]:
 async def read_json(context, params) -> dict[str, Any]:
     """Read JSON file and return data."""
     await context.info("Reading JSON file", file_path=params.get("file_path"))
+    context.require_read_path(params["file_path"])
 
     # Load R script from separated file
     r_script = get_r_script("fileops", "read_json")

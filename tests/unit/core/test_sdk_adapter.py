@@ -102,7 +102,7 @@ async def test_initialize_and_capabilities(rmcp_server):
     assert caps.tools is not None
     assert caps.resources is not None and caps.resources.list_changed
     assert caps.prompts is not None
-    assert caps.logging is not None
+    assert caps.logging is None
 
 
 async def test_list_and_call_tool(rmcp_server):
@@ -197,12 +197,3 @@ async def test_resources_round_trip(rmcp_server):
         first = readme.contents[0]
         assert isinstance(first, types.TextResourceContents)
         assert "RMCP" in first.text or "rmcp" in first.text
-
-
-async def test_logging_set_level(rmcp_server):
-    adapter = build_sdk_server(rmcp_server)
-    async with create_connected_server_and_client_session(
-        adapter.sdk_server
-    ) as session:
-        await session.set_logging_level("debug")
-        assert rmcp_server.lifespan_state.current_log_level == "debug"

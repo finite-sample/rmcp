@@ -1,13 +1,18 @@
 """
 Regression Analysis Tools for RMCP MCP Server.
+
 This module provides comprehensive regression modeling capabilities including:
+
 - Linear regression with diagnostics
 - Logistic regression for binary outcomes
 - Correlation analysis with significance testing
 - Comprehensive model validation and statistics
+
 All tools support missing value handling, weighted observations, and return
 detailed statistical outputs suitable for research and business analysis.
+
 Example Usage:
+
     >>> # Linear regression on sales data
     >>> data = {"sales": [100, 120, 140], "advertising": [10, 15, 20]}
     >>> result = await linear_model(context, {

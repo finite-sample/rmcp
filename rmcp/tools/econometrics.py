@@ -123,7 +123,7 @@ async def panel_regression(context, params) -> dict[str, Any]:
 
     r_script = get_r_script("econometrics", "panel_regression")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Panel regression completed successfully")
         return result
     except Exception as e:

@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-17
+
+### Added
+
+- A versioned MCP behavior-evaluation suite driven through stdio by the official
+  MCP client. Its 30 checks cover exact statistical identities, package-heavy
+  tools, malformed and adversarial data, stateful approval workflows, recovery,
+  filesystem confinement, and production-container execution.
+- Release guidance for evaluating MCP servers and skills at the package,
+  contract, protocol, and model-selection layers, including data-as-code and
+  overlap-testing principles.
+- Strict table, formula, nested-condition, and top-level argument validation.
+
+### Changed
+
+- Consolidated the runtime, development, builder, and production Docker targets
+  in one multi-stage Dockerfile. The production image now installs only runtime
+  dependencies and is approximately 22% smaller by inspected size.
+- Docker builds now fail closed when declared R packages are unavailable and
+  always rebuild the local RMCP wheel when source changes.
+- Updated GitHub Actions to their current major releases and added packaged-image
+  MCP evaluations to CI.
+- Replaced `filter_data` string-built R evaluation with typed operations that
+  treat user values as data.
+- Simplified the comprehensive and Docker E2E runners around the canonical pytest
+  suites and production image.
+
+### Fixed
+
+- Enforced virtual-filesystem authorization before every file read and prevented
+  reads outside configured roots.
+- Sanitized client-facing execution errors so host paths, environment details,
+  and process configuration are not disclosed.
+- Corrected public contracts and output shapes for time-series, regression, and
+  correlation plots; empty outlier results; formula validation; strict data
+  validation; and second-order differencing.
+- Corrected non-robust panel regression coefficient extraction.
+- Rejected duplicate tool registrations, unknown arguments, ragged tables,
+  unsupported formula code, unknown filter columns, and nonnumeric outlier
+  targets before invoking R.
+- Corrected Docker deployment scenarios so supplied images are validated and
+  volume-mount checks work with Colima.
+- Restored the bundled R package metadata, namespace, documentation, license,
+  and test runner so `R CMD check` completes successfully.
+
+### Removed
+
+- The separate stale `Dockerfile.base` and obsolete tests that did not exercise
+  the current tool implementations.
+
 ## [0.11.0] - 2026-07-29
 
 ### Changed
@@ -804,38 +854,21 @@ fire on ordinary input — one variable, one row, one forecast period.
 ### Testing
 Run the test suite:
 ```bash
-# All tests
-pytest
-
-# With coverage
-pytest --cov=rmcp --cov-report=html
-
-# Specific test files
-pytest tests/test_common.py -v
+uv run pytest
+uv run pytest tests/evals/test_mcp_server_evals.py
 ```
 
 ### Code Quality
 ```bash
-# Format code
-black rmcp tests
-
-# Sort imports
-isort rmcp tests
-
-# Lint code
-flake8 rmcp tests
-
-# Type checking
-mypy rmcp
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
 ```
 
 ### Release Process
-1. Update version in `rmcp/__init__.py` and `pyproject.toml`
-2. Update CHANGELOG.md with new features and fixes
-3. Run full test suite: `pytest --cov=rmcp`
-4. Run integration tests: `./tests/test_all_tools.sh`
-5. Build package: `poetry build`
-6. Test package installation: `pip install dist/rmcp-*.whl`
-7. Verify CLI: `rmcp version`
-8. Create git tag: `git tag v0.1.1`
-9. Push: `git push && git push --tags`
+1. Update this changelog and run the complete local verification suite.
+2. Open a pull request and require independent review and green CI.
+3. Merge the reviewed commit to `main`.
+4. Tag the verified commit as `vX.Y.Z`; `uv-dynamic-versioning` derives the
+   package version from that tag.
+5. Push the tag and verify the trusted-publishing workflow and PyPI artifact.

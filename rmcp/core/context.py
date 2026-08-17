@@ -168,6 +168,13 @@ class Context:
             return None
         return vfs.validate_write_path(path)
 
+    def require_read_path(self, path: str | Path) -> Path | None:
+        """Require permission to read ``path`` before delegating to R."""
+        vfs = getattr(self.lifespan, "vfs", None)
+        if vfs is None:
+            return None
+        return vfs.validate_read_path(path)
+
     def get_cache_path(self, key: str) -> Path | None:
         """Get cache path for key if caching is enabled."""
         if self.lifespan.cache_root:

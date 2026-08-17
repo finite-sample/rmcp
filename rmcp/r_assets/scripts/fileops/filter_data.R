@@ -4,63 +4,49 @@
 # This script filters datasets based on multiple conditions with logical operators.
 # Supports various comparison operators and flexible condition combinations.
 
-# Load required libraries
-library(dplyr)
-
 # Prepare data and parameters
 conditions <- args$conditions
-condition <- args$condition # Support single condition string
 logic <- args$logic %||% "AND"
 
-# Build filter expressions
-filter_expressions <- c()
-
-# Handle single condition string (backward compatibility)
-if (!is.null(condition) && is.character(condition)) {
-  filter_expressions <- c(condition)
-} else if (!is.null(conditions)) {
-  # fromJSON() simplifies an array of condition objects to a data.frame;
-  # normalize to a list of row-lists so iteration sees one condition at a time
-  if (is.data.frame(conditions)) {
-    conditions <- lapply(
-      seq_len(nrow(conditions)),
-      function(i) as.list(conditions[i, , drop = FALSE])
-    )
-  }
-  # Handle structured conditions array
-  for (cond in conditions) {
-    var <- cond$variable
-    op <- cond$operator
-    val <- cond$value
-
-    if (op == "%in%") {
-      expr <- paste0(var, " %in% c(", paste(paste0("'", val, "'"), collapse = ","), ")")
-    } else if (op == "!%in%") {
-      expr <- paste0("!(", var, " %in% c(", paste(paste0("'", val, "'"), collapse = ","), "))")
-    } else if (is.character(val)) {
-      expr <- paste0(var, " ", op, " '", val, "'")
-    } else {
-      expr <- paste0(var, " ", op, " ", val)
-    }
-    filter_expressions <- c(filter_expressions, expr)
-  }
-} else {
-  stop("Either 'condition' (string) or 'conditions' (array) must be provided")
+# fromJSON() simplifies an array of condition objects to a data.frame;
+# normalize to a list of row-lists so iteration sees one condition at a time.
+if (is.data.frame(conditions)) {
+  conditions <- lapply(
+    seq_len(nrow(conditions)),
+    function(i) as.list(conditions[i, , drop = FALSE])
+  )
 }
-# Combine expressions
-if (logic == "AND") {
-  full_expression <- paste(filter_expressions, collapse = " & ")
-} else {
-  full_expression <- paste(filter_expressions, collapse = " | ")
+
+evaluate_condition <- function(cond) {
+  values <- data[[cond$variable]]
+  target <- cond$value
+  switch(cond$operator,
+    "==" = values == target,
+    "!=" = values != target,
+    ">" = values > target,
+    "<" = values < target,
+    ">=" = values >= target,
+    "<=" = values <= target,
+    "%in%" = values %in% target,
+    "!%in%" = !(values %in% target),
+    stop(paste("Unsupported filter operator:", cond$operator))
+  )
 }
-# Apply filter with error handling
-filtered_data <- tryCatch(
-  {
-    data %>% filter(eval(parse(text = full_expression)))
-  },
-  error = function(e) {
-    stop(paste("Filter expression failed:", full_expression, "Error:", e$message))
-  }
+
+matches <- lapply(conditions, evaluate_condition)
+keep <- if (logic == "AND") Reduce(`&`, matches) else Reduce(`|`, matches)
+keep[is.na(keep)] <- FALSE
+filtered_data <- data[keep, , drop = FALSE]
+
+format_value <- function(value) paste(as.character(value), collapse = ",")
+filter_expressions <- vapply(
+  conditions,
+  function(cond) paste(cond$variable, cond$operator, format_value(cond$value)),
+  character(1)
+)
+full_expression <- paste(
+  filter_expressions,
+  collapse = if (logic == "AND") " AND " else " OR "
 )
 result <- list(
   data = lapply(filtered_data, I), # Column-wise; I() keeps length-1 vectors as JSON arrays

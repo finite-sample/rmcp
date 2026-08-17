@@ -110,6 +110,17 @@ class VFS:
             )
         return resolved
 
+    def validate_read_path(self, path: str | Path) -> Path:
+        """Resolve and authorise a local file before another process reads it."""
+        if str(path).lower().startswith(("http://", "https://")):
+            raise VFSError(
+                "Remote URL access is not permitted by the VFS; download the file "
+                "to an allowed root first"
+            )
+        resolved = self._resolve_and_validate_path(path)
+        self._check_file_constraints(resolved)
+        return resolved
+
     def _is_writable(self, path: Path) -> bool:
         """Whether ``path`` may be written, honouring per-directory grants."""
         if not self.read_only:

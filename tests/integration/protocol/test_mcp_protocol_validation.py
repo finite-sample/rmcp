@@ -225,7 +225,6 @@ async def test_server():
         filter_data,
         read_excel,
         read_json,
-        write_csv,
         write_excel,
         write_json,
         # Natural language tools

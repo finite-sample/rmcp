@@ -171,6 +171,7 @@ if (n_rows < 30) {
   suggestions <- c(suggestions, "Small sample size - interpret results cautiously")
 }
 validation_results$suggestions <- suggestions
+validation_results$is_valid <- length(validation_results$errors) == 0
 # Data quality summary
 validation_results$data_quality <- list(
   dimensions = list(rows = n_rows, columns = n_cols),

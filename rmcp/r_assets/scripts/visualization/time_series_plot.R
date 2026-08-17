@@ -9,36 +9,28 @@ library(ggplot2)
 library(rlang)
 
 # Prepare data and parameters
-time_var <- args$time_variable %||% "time"
-variables <- args$variables %||% "value"
 title <- args$title %||% "Time Series Plot"
 file_path <- args$file_path
 return_image <- args$return_image %||% TRUE
+show_trend <- args$show_trend %||% TRUE
 width <- args$width %||% 800
 height <- args$height %||% 600
 
-# Convert time variable
-if (is.character(data[[time_var]])) {
-  data[[time_var]] <- as.Date(data[[time_var]])
-} else if (is.numeric(data[[time_var]])) {
-  data$time_index <- data[[time_var]]
+# Use the public schema: values are required and dates are optional.
+values <- as.numeric(data$values)
+has_dates <- "dates" %in% names(data) && !all(is.na(data$dates))
+if (has_dates) {
+  plot_data <- data.frame(time = as.character(data$dates), value = values)
+} else {
+  plot_data <- data.frame(time = seq_along(values), value = values)
 }
 
-# Reshape data for multiple variables
-if (length(variables) > 1) {
-  # Melt data for multiple series
-  library(reshape2)
-  melted_data <- melt(data, id.vars = time_var, measure.vars = variables)
-  p <- ggplot(melted_data, aes(x = !!sym(time_var), y = value, color = variable)) +
-    geom_line(linewidth = 1) +
-    geom_point(alpha = 0.6) +
-    labs(title = title, x = time_var, y = "Value", color = "Variable")
-} else {
-  # Single variable plot
-  p <- ggplot(data, aes(x = !!sym(time_var), y = !!sym(variables[1]))) +
-    geom_line(color = "steelblue", linewidth = 1) +
-    geom_point(alpha = 0.6, color = "steelblue") +
-    labs(title = title, x = time_var, y = variables[1])
+p <- ggplot(plot_data, aes(x = time, y = value, group = 1)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  labs(title = title, x = if (has_dates) "Date" else "Observation", y = "Value")
+if (show_trend) {
+  p <- p + geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "firebrick")
 }
 p <- p + theme_minimal() +
   theme(
@@ -52,22 +44,20 @@ if (!is.null(file_path)) {
 } else {
   plot_saved <- FALSE
 }
-# Calculate basic time series statistics
-n_obs <- nrow(data)
-date_range <- if (inherits(data[[time_var]], "Date")) {
-  list(start = min(data[[time_var]], na.rm = TRUE), end = max(data[[time_var]], na.rm = TRUE))
-} else {
-  list(start = min(data[[time_var]], na.rm = TRUE), end = max(data[[time_var]], na.rm = TRUE))
-}
 # Prepare result
 result <- list(
-  plot_type = "time_series",
-  time_variable = time_var,
-  variables = variables,
-  date_range = date_range,
-  title = title,
-  n_obs = n_obs,
-  plot_saved = plot_saved
+  plot_type = "time_series_plot",
+  statistics = list(
+    mean = mean(values, na.rm = TRUE),
+    sd = sd(values, na.rm = TRUE),
+    min = min(values, na.rm = TRUE),
+    max = max(values, na.rm = TRUE),
+    range = max(values, na.rm = TRUE) - min(values, na.rm = TRUE),
+    n_obs = sum(!is.na(values))
+  ),
+  has_dates = has_dates,
+  show_trend = show_trend,
+  dimensions = list(width = width, height = height)
 )
 # Add file path if provided
 if (!is.null(file_path)) {

@@ -6,6 +6,7 @@ Provides utilities for:
 - Type conversion helpers
 """
 
+import re
 from typing import Any
 
 from jsonschema import ValidationError as JsonSchemaValidationError
@@ -21,6 +22,71 @@ class SchemaError(Exception):
         self.code = -32602  # JSON-RPC invalid params error
 
 
+_FORMULA_CHARACTERS = re.compile(r"^[A-Za-z0-9_.\s~+\-*/:^(),]+$")
+_FORMULA_CALL = re.compile(r"([A-Za-z.][A-Za-z0-9_.]*)\s*\(")
+_ALLOWED_FORMULA_CALLS = {
+    "I",
+    "abs",
+    "as.factor",
+    "exp",
+    "factor",
+    "log",
+    "log10",
+    "log1p",
+    "poly",
+    "scale",
+    "sqrt",
+}
+
+
+def _validate_formula(value: str, context: str) -> None:
+    """Reject formula syntax that can evaluate arbitrary R code."""
+    if "::" in value or not _FORMULA_CHARACTERS.fullmatch(value):
+        raise SchemaError(
+            f"Unsafe or unsupported R formula syntax in {context}", field=context
+        )
+    calls = set(_FORMULA_CALL.findall(value))
+    unsupported = sorted(calls - _ALLOWED_FORMULA_CALLS)
+    if unsupported:
+        raise SchemaError(
+            f"Unsupported formula function(s) in {context}: {', '.join(unsupported)}",
+            field=context,
+        )
+
+
+def _validate_rmcp_extensions(data: Any, schema: dict[str, Any], path: str) -> None:
+    """Apply RMCP's cross-field constraints after JSON Schema validation."""
+    if schema.get("x-rmcp-table") and isinstance(data, dict):
+        if not data:
+            raise SchemaError(
+                f"Tabular data in {path} must contain at least one column"
+            )
+        lengths = {name: len(values) for name, values in data.items()}
+        if len(set(lengths.values())) != 1:
+            rendered = ", ".join(f"{name}={length}" for name, length in lengths.items())
+            raise SchemaError(
+                f"Tabular columns in {path} must have equal lengths ({rendered})"
+            )
+        if next(iter(lengths.values())) == 0:
+            raise SchemaError(f"Tabular data in {path} must contain at least one row")
+
+    if schema.get("x-rmcp-formula") and isinstance(data, str):
+        _validate_formula(data, path)
+
+    if isinstance(data, dict):
+        properties = schema.get("properties", {})
+        additional = schema.get("additionalProperties")
+        for key, value in data.items():
+            child_schema = properties.get(key)
+            if child_schema is None and isinstance(additional, dict):
+                child_schema = additional
+            if isinstance(child_schema, dict):
+                _validate_rmcp_extensions(value, child_schema, f"{path}.{key}")
+    elif isinstance(data, list) and isinstance(schema.get("items"), dict):
+        for index, value in enumerate(data):
+            _validate_rmcp_extensions(value, schema["items"], f"{path}[{index}]")
+
+
 def validate_schema(data: Any, schema: dict[str, Any], context: str = "") -> None:
     """
     Validate data against JSON schema.
@@ -28,6 +94,7 @@ def validate_schema(data: Any, schema: dict[str, Any], context: str = "") -> Non
     """
     try:
         validate(instance=data, schema=schema)
+        _validate_rmcp_extensions(data, schema, context or "value")
     except JsonSchemaValidationError as e:
         field_path = ".".join(str(p) for p in e.absolute_path)
         error_context = f" in {context}" if context else ""
@@ -36,6 +103,8 @@ def validate_schema(data: Any, schema: dict[str, Any], context: str = "") -> Non
             f"Schema validation failed{error_context}: {e.message}{field_info}",
             field=field_path,
         ) from e
+    except SchemaError:
+        raise
     except Exception as e:
         raise SchemaError(f"Schema validation error: {str(e)}") from e
 
@@ -45,10 +114,11 @@ def table_schema(required_columns: list[str] | None = None) -> dict[str, Any]:
     """Schema for tabular data (dict with column arrays)."""
     schema: dict[str, Any] = {
         "type": "object",
+        "x-rmcp-table": True,
         "properties": {},
         "additionalProperties": {
             "type": "array",
-            "items": {"type": ["number", "string", "null"]},
+            "items": {"type": ["number", "string", "boolean", "null"]},
         },
     }
     if required_columns:
@@ -57,7 +127,7 @@ def table_schema(required_columns: list[str] | None = None) -> dict[str, Any]:
         for col in required_columns:
             properties[col] = {
                 "type": "array",
-                "items": {"type": ["number", "string", "null"]},
+                "items": {"type": ["number", "string", "boolean", "null"]},
             }
     return schema
 
@@ -67,6 +137,7 @@ def formula_schema() -> dict[str, Any]:
     return {
         "type": "string",
         "pattern": r"^[^~]+~[^~]+$",
+        "x-rmcp-formula": True,
         "description": "R formula (e.g., 'y ~ x1 + x2')",
     }
 

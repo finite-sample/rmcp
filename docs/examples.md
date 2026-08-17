@@ -5,27 +5,27 @@ Comprehensive examples showing RMCP capabilities across different statistical an
 ## Quick Start Examples
 
 For immediate hands-on experience, see:
-- [Quick Start Guide](../examples/quick_start_guide.md) - Basic usage examples
-- [Working Examples →](../examples/quick_start_guide.md) - Get started immediately
+- [Quick Start Guide](https://github.com/finite-sample/rmcp/blob/main/examples/quick_start_guide.md) - Basic usage examples
+- [Working Examples →](https://github.com/finite-sample/rmcp/blob/main/examples/quick_start_guide.md) - Get started immediately
 
 ## Advanced Statistical Analysis
 
 ### Time Series Analysis
-[Advanced Time Series Example](../examples/advanced_time_series_example.md)
+[Advanced Time Series Example](https://github.com/finite-sample/rmcp/blob/main/examples/advanced_time_series_example.md)
 - ARIMA modeling and forecasting
 - Seasonal decomposition
 - Stationarity testing
 - Economic forecasting workflows
 
 ### Economic Research
-[Economic Research Example](../examples/economic_research_example.md)
+[Economic Research Example](https://github.com/finite-sample/rmcp/blob/main/examples/economic_research_example.md)
 - Panel data analysis
 - Instrumental variables
 - Policy impact analysis
 - Econometric modeling workflows
 
 ### Claude Desktop Integration
-[Claude Desktop Examples](../examples/claude_desktop_v0.5.0_examples.md)
+[Claude Desktop Examples](https://github.com/finite-sample/rmcp/blob/main/examples/claude_desktop_v0.5.0_examples.md)
 - Interactive statistical analysis
 - Real-time visualizations
 - Data exploration workflows

@@ -13,12 +13,13 @@ Usage:
 """
 
 import argparse
+import os
 import subprocess
 import sys
 import time
 
 
-def run_command(command, description="", timeout=60):
+def run_command(command, description="", timeout=60, env=None):
     """Run command and display results."""
     print(f"\n🔍 {description}")
     print("-" * 50)
@@ -30,6 +31,7 @@ def run_command(command, description="", timeout=60):
             shell=True if isinstance(command, str) else False,
             capture_output=False,  # Show output in real-time
             timeout=timeout,
+            env=env,
         )
 
         end_time = time.time()
@@ -51,10 +53,17 @@ def run_command(command, description="", timeout=60):
 
 
 def run_local_validation():
-    """Run local environment validation."""
+    """Run local protocol and package smoke tests."""
     return run_command(
-        [sys.executable, "scripts/setup/validate_local_setup.py"],
-        "Local Environment Validation",
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/smoke",
+            "tests/integration/protocol/test_mcp_protocol_compliance.py",
+            "-v",
+        ],
+        "Local Protocol Validation",
         timeout=120,
     )
 
@@ -67,7 +76,7 @@ def run_claude_desktop_tests():
             sys.executable,
             "-m",
             "pytest",
-            "tests/e2e/test_claude_desktop_e2e.py",
+            "tests/scenarios/test_claude_desktop_scenarios.py",
             "-v",
         ],
         "Claude Desktop Integration Tests",
@@ -82,7 +91,7 @@ def run_existing_e2e_scenarios():
             sys.executable,
             "-m",
             "pytest",
-            "tests/workflow/test_realistic_scenarios.py",
+            "tests/scenarios/test_realistic_scenarios.py",
             "-v",
         ],
         "Workflow Scenario Tests",
@@ -90,20 +99,35 @@ def run_existing_e2e_scenarios():
     )
 
 
+def run_mcp_evaluations():
+    """Run real-client semantic and adversarial MCP evaluations."""
+    return run_command(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/evals/test_mcp_server_evals.py",
+            "-v",
+        ],
+        "MCP Behavior Evaluations",
+        timeout=300,
+    )
+
+
 def run_docker_tests():
     """Run Docker workflow tests."""
     # First check if Docker is available
     docker_check = run_command(
-        ["docker", "--version"], "Docker Availability Check", timeout=10
+        ["docker", "info"], "Docker Availability Check", timeout=10
     )
 
     if not docker_check:
-        print("⚠️  Docker not available, skipping Docker tests")
-        return True  # Don't fail overall test if Docker not available
+        print("❌ Docker is required for Docker E2E tests")
+        return False
 
     # Build test image first
     build_success = run_command(
-        ["docker", "build", "-t", "rmcp-e2e-test", "."],
+        ["docker", "build", "--target", "production", "-t", "rmcp-e2e-test", "."],
         "Building Docker Test Image",
         timeout=300,
     )
@@ -112,18 +136,23 @@ def run_docker_tests():
         print("❌ Docker build failed, skipping Docker workflow tests")
         return False
 
-    # Run Docker workflow tests
+    test_env = dict(os.environ)
+    test_env["RMCP_PRODUCTION_IMAGE"] = "rmcp-e2e-test"
+    test_env["RMCP_EVAL_DOCKER_IMAGE"] = "rmcp-e2e-test"
+
     return run_command(
         [
             sys.executable,
             "-m",
             "pytest",
-            "tests/deployment/test_docker_workflows.py",
+            "tests/scenarios/test_deployment_scenarios.py",
+            "tests/evals/test_mcp_server_evals.py",
             "-v",
             "-s",
         ],
-        "Docker Workflow Tests",
+        "Docker Workflow and MCP Evaluation Tests",
         timeout=300,
+        env=test_env,
     )
 
 
@@ -134,7 +163,7 @@ def run_performance_tests():
             sys.executable,
             "-m",
             "pytest",
-            "tests/workflow/test_excel_plotting_workflow.py",
+            "tests/scenarios/test_excel_plotting_scenarios.py",
             "-v",
         ],
         "Performance/Excel Plotting Tests",
@@ -261,12 +290,17 @@ def main():
     parser.add_argument(
         "--performance", action="store_true", help="Run performance tests"
     )
+    parser.add_argument(
+        "--eval", action="store_true", help="Run MCP behavior evaluations"
+    )
     parser.add_argument("--all", action="store_true", help="Run all E2E tests")
 
     args = parser.parse_args()
 
     # If no specific tests selected, run quick validation
-    if not any([args.quick, args.claude, args.docker, args.performance, args.all]):
+    if not any(
+        [args.quick, args.claude, args.docker, args.performance, args.eval, args.all]
+    ):
         args.quick = True
 
     print("🧪 RMCP End-to-End Testing Suite")
@@ -292,6 +326,9 @@ def main():
         if args.all or args.performance:
             results["Performance Tests"] = run_performance_tests()
 
+        if args.all or args.eval:
+            results["MCP Behavior Evaluations"] = run_mcp_evaluations()
+
         # Final summary
         end_time = time.time()
         duration = end_time - start_time
@@ -313,14 +350,8 @@ def main():
         print(f"Total Duration: {duration:.1f}s")
 
         if passed_suites == total_suites:
-            print("\n🎉 ALL E2E TESTS PASSED!")
-            print("✅ RMCP is ready for production use across all environments")
-            print()
-            print("🚀 Ready for:")
-            print("  • Claude Desktop integration")
-            print("  • Docker deployment")
-            print("  • Production statistical analysis")
-            print("  • CI/CD pipeline")
+            print("\n🎉 ALL SELECTED E2E SUITES PASSED!")
+            print("✅ Validation is limited to the suites listed above")
         else:
             print(f"\n⚠️  {total_suites - passed_suites} test suite(s) failed")
             print("Check the individual test outputs above for details")

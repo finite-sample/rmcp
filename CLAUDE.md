@@ -164,7 +164,7 @@ docker run --rm rmcp-test:latest python -c "import pytest, pytest_asyncio; print
 docker run --rm rmcp-test:latest pytest --version
 
 # 3. Verify multi-platform builds work (prevents platform-specific errors)
-docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.base --cache-to=type=inline .
+docker buildx build --platform linux/amd64,linux/arm64 --target base --cache-to=type=inline .
 
 # 4. Test both fresh and cached build scenarios (prevents workflow logic errors)
 # Fresh build scenario:

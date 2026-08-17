@@ -24,7 +24,7 @@ jobs:
         python-version: "3.11"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v9.0.0
+      uses: astral-sh/setup-uv@v10.0.1
       with:
         enable-cache: true
 
@@ -78,21 +78,21 @@ jobs:
 
         # Always build if it's a manual trigger
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "should_build=true" >> $GITHUB_OUTPUT
+          echo "should_build=true" >> "$GITHUB_OUTPUT"
           echo "🔄 Building: Manual trigger (forced)"
           exit 0
         fi
 
         # Always build on main branch pushes (production deployments)
         if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-          echo "should_build=true" >> $GITHUB_OUTPUT
+          echo "should_build=true" >> "$GITHUB_OUTPUT"
           echo "🔄 Building: Main branch push"
           exit 0
         fi
 
         # For local testing with act, always build (git diff doesn't work reliably)
         if [ -n "${ACT:-}" ]; then
-          echo "should_build=true" >> $GITHUB_OUTPUT
+          echo "should_build=true" >> "$GITHUB_OUTPUT"
           echo "🔄 Building: Local testing with act"
           exit 0
         fi
@@ -107,7 +107,6 @@ jobs:
           # dependency bump changes what the image contains.
           docker_relevant_files=(
             "Dockerfile"
-            "Dockerfile.base"
             "pyproject.toml"
             "uv.lock"
             "rmcp/"
@@ -124,14 +123,14 @@ jobs:
           done
 
           if [ "$needs_build" = true ]; then
-            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
           else
-            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
             echo "⏭️  Skipping: No Docker-relevant files changed"
           fi
         else
           # No previous commit available (initial commit or shallow clone)
-          echo "should_build=true" >> $GITHUB_OUTPUT
+          echo "should_build=true" >> "$GITHUB_OUTPUT"
           echo "🔄 Building: No previous commit available for comparison"
         fi
 
@@ -221,11 +220,11 @@ jobs:
       if: steps.check-changes.outputs.should_build == 'false'
       run: |
         echo "Using existing development image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> "$GITHUB_OUTPUT"
 
     - name: Generate artifact attestation for development image
       if: steps.check-changes.outputs.should_build == 'true'
-      uses: actions/attest-build-provenance@v3
+      uses: actions/attest-build-provenance@v4
       with:
         subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         subject-digest: ${{ steps.build.outputs.digest }}
@@ -233,7 +232,7 @@ jobs:
 
     - name: Generate artifact attestation for production image
       if: steps.check-changes.outputs.should_build == 'true'
-      uses: actions/attest-build-provenance@v3
+      uses: actions/attest-build-provenance@v4
       with:
         subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         subject-digest: ${{ steps.prod-build.outputs.digest }}
@@ -383,7 +382,11 @@ jobs:
     - name: Run smoke tests (basic functionality)
       run: |
         # Ensure R is in PATH for skip condition checks
-        which R && export R_AVAILABLE=1 || export R_AVAILABLE=0
+        if which R; then
+          export R_AVAILABLE=1
+        else
+          export R_AVAILABLE=0
+        fi
         echo "R available: $R_AVAILABLE"
         pytest tests/smoke/ -v --tb=short --cov=rmcp --cov-report=xml
 
@@ -419,14 +422,14 @@ jobs:
         SERVER_PID=$!
 
         HEALTHY=0
-        for i in $(seq 1 30); do
+        for _ in $(seq 1 30); do
           if curl -s --cacert "$(mkcert -CAROOT)/rootCA.pem" https://localhost:8443/health | grep -q healthy; then
             HEALTHY=1
             break
           fi
           sleep 1
         done
-        kill $SERVER_PID || true
+        kill "$SERVER_PID" || true
         if [ "$HEALTHY" != "1" ]; then
           echo "❌ HTTPS health check failed"
           exit 1
@@ -532,7 +535,7 @@ jobs:
         python-version: "3.11"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v9.0.0
+      uses: astral-sh/setup-uv@v10.0.1
       with:
         enable-cache: true
 
@@ -578,7 +581,7 @@ jobs:
         docker images | grep rmcp || echo "No RMCP images found"
 
         # Export for subsequent steps
-        echo "RMCP_PRODUCTION_IMAGE=$RMCP_PRODUCTION_IMAGE" >> $GITHUB_ENV
+        echo "RMCP_PRODUCTION_IMAGE=$RMCP_PRODUCTION_IMAGE" >> "$GITHUB_ENV"
 
     - name: Run Docker deployment scenario tests
       run: |
@@ -613,6 +616,11 @@ jobs:
         uv run pytest tests/scenarios/test_deployment_scenarios.py::TestDockerCrossplatformCompatibility::test_docker_platform_specific_features -v --tb=short
 
         echo "✅ All Docker scenario tests completed"
+
+    - name: Run production MCP evaluations
+      env:
+        RMCP_EVAL_DOCKER_IMAGE: ${{ env.RMCP_PRODUCTION_IMAGE }}
+      run: uv run pytest tests/evals/test_mcp_server_evals.py -v --tb=short
 
   # Container-based tests for production image validation
   production-container-tests:
@@ -695,7 +703,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v9.0.0
+      uses: astral-sh/setup-uv@v10.0.1
       with:
         enable-cache: true
 

@@ -1,19 +1,3 @@
-#' @title RMCP R Utility Functions
-#' @description
-#' Shared utility functions for RMCP statistical analysis scripts.
-#' Provides common functionality for progress reporting, input validation,
-#' and output formatting across all R scripts.
-#'
-#' @details
-#' This package provides a comprehensive set of utility functions designed
-#' to standardize the interface between Python MCP server and R statistical
-#' computing scripts. All functions handle JSON input/output consistently
-#' and provide robust error handling for production use.
-#'
-#' @author RMCP Team
-#' @docType package
-#' @name rmcp.stats
-
 #' Report progress for long-running operations
 #'
 #' @description
@@ -91,8 +75,6 @@ rmcp_progress <- function(message, current = NULL, total = NULL, percentage = NU
 #'
 #' @return Named list of validated and potentially converted parameters
 #'
-#' @throws Error with descriptive message if validation fails
-#'
 #' @examples
 #' \dontrun{
 #' # Basic validation
@@ -147,7 +129,7 @@ validate_json_input <- function(params, required = character(0), optional = char
     # Try to parse formula
     tryCatch(
       {
-        as.formula(params$formula)
+        stats::as.formula(params$formula)
       },
       error = function(e) {
         stop("Invalid formula syntax: ", e$message)
@@ -203,7 +185,15 @@ validate_json_input <- function(params, required = character(0), optional = char
 format_json_output <- function(result, summary = NULL, interpretation = NULL) {
   # Ensure numeric values are properly formatted
   result <- rapply(result, function(x) {
+    if (length(x) == 1 && is.atomic(x) && is.na(x)) {
+      return(NULL)
+    }
     if (is.numeric(x)) {
+      # Preserve empty numeric vectors. Scalar predicates such as
+      # is.infinite(numeric(0)) return logical(0), which cannot be used in if.
+      if (length(x) == 0) {
+        return(x)
+      }
       # Handle vectors element-wise
       if (length(x) > 1) {
         return(sapply(x, function(val) {
@@ -276,6 +266,7 @@ format_json_output <- function(result, summary = NULL, interpretation = NULL) {
 #' "falsy" values like 0, FALSE, or empty strings.
 #'
 #' @return \code{a} if not NULL, otherwise \code{b}
+#' @name null-coalesce
 #'
 #' @examples
 #' \dontrun{

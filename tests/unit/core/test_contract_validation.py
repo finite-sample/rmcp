@@ -1,0 +1,111 @@
+"""Tests for cross-field MCP tool contract validation."""
+
+from __future__ import annotations
+
+import pytest
+from rmcp.core.context import Context, LifespanState
+from rmcp.core.schemas import SchemaError, formula_schema, table_schema, validate_schema
+from rmcp.r_integration import RExecutionError
+from rmcp.registries.tools import ToolsRegistry
+from rmcp.security.vfs import VFS, VFSError
+
+
+def test_table_contract_accepts_typed_equal_length_columns():
+    validate_schema(
+        {"x": [1, 2], "flag": [True, False], "label": ["a", None]},
+        table_schema(),
+        "data",
+    )
+
+
+@pytest.mark.parametrize("data", [{}, {"x": []}, {"x": [1, 2], "y": [3]}])
+def test_table_contract_rejects_structurally_invalid_data(data):
+    with pytest.raises(SchemaError):
+        validate_schema(data, table_schema(), "data")
+
+
+@pytest.mark.parametrize(
+    "formula",
+    ["y ~ x + z", "y ~ log(x) + I(z^2)", "y ~ x * factor(group)"],
+)
+def test_formula_contract_accepts_statistical_expressions(formula):
+    validate_schema(formula, formula_schema(), "formula")
+
+
+@pytest.mark.parametrize(
+    "formula",
+    [
+        'y ~ system("true")',
+        "y ~ base::log(x)",
+        "y ~ source(x)",
+        "y ~ .GlobalEnv$secret",
+        "y ~ x; print(x)",
+    ],
+)
+def test_formula_contract_rejects_code_execution(formula):
+    with pytest.raises(SchemaError):
+        validate_schema(formula, formula_schema(), "formula")
+
+
+def test_duplicate_tool_names_are_rejected():
+    async def handler(context, params):
+        return {}
+
+    registry = ToolsRegistry()
+    registry.register("duplicate", handler, {"type": "object"})
+
+    with pytest.raises(ValueError, match="already registered"):
+        registry.register("duplicate", handler, {"type": "object"})
+
+
+def test_tool_contracts_reject_unknown_arguments_by_default():
+    async def handler(context, params):
+        return {}
+
+    registry = ToolsRegistry()
+    registry.register(
+        "strict-input",
+        handler,
+        {"type": "object", "properties": {"value": {"type": "number"}}},
+    )
+
+    assert registry._tools["strict-input"].input_schema["additionalProperties"] is False
+
+
+def test_vfs_validates_delegated_reads(tmp_path):
+    allowed_file = tmp_path / "data.csv"
+    allowed_file.write_text("x\n1\n", encoding="utf-8")
+    context = Context.create(
+        "read",
+        "read_csv",
+        LifespanState(vfs=VFS([tmp_path], read_only=True)),
+    )
+
+    assert context.require_read_path(allowed_file) == allowed_file.resolve()
+    with pytest.raises(VFSError, match="Path access denied"):
+        context.require_read_path("/etc/passwd")
+    with pytest.raises(VFSError, match="Remote URL access is not permitted"):
+        context.require_read_path("https://example.test/data.csv")
+
+
+@pytest.mark.asyncio
+async def test_tool_errors_do_not_expose_subprocess_environment():
+    async def handler(context, params):
+        raise RExecutionError(
+            "R script failed with return code 1\n"
+            "COMMAND: /usr/bin/R --file=/private/tmp/secret.R\n"
+            "STDERR:\nunknown variable\n"
+            "ENVIRONMENT:\n{'PATH': '/private/bin'}",
+            stderr="unknown variable",
+            returncode=1,
+        )
+
+    registry = ToolsRegistry()
+    registry.register("fails", handler, {"type": "object"})
+    context = Context.create("failure", "tools/call", LifespanState())
+
+    response = await registry.call_tool(context, "fails", {})
+    text = response["content"][0]["text"]
+    assert text == "Tool execution error: unknown variable"
+    assert "ENVIRONMENT" not in text
+    assert "/private" not in text
