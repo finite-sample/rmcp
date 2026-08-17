@@ -227,7 +227,7 @@ rmcp start
 docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
 ```
 
-**📖 [Complete Configuration Guide →](docs/configuration/index.rst)** (auto-generated from code)
+**📖 [Complete Configuration Guide →](https://github.com/finite-sample/rmcp/blob/main/docs/configuration.md)**
 
 ## 🔥 Key Features
 
