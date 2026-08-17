@@ -82,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Unknown-tool calls still return an `isError` result. mcp 2.x would propagate
   them as a protocol error, changing the shape clients see; the adapter
-  preserves the previous behaviour.
+  preserves the previous behavior.
 
 ### Note for anyone reading MCP results in Python
 
@@ -222,7 +222,7 @@ fire on ordinary input — one variable, one row, one forecast period.
   server-side), and the 46 templated four-sentence descriptions are now
   one-liners.
 - The `initialize` instructions blob went from 2,789 to 922 characters and
-  stopped duplicating the tool catalogue. It was also defined twice verbatim.
+  stopped duplicating the tool catalog. It was also defined twice verbatim.
 - Tests that swallowed their own assertions now fail properly; several were
   passing regardless of outcome. Fixing them surfaced a real wrong assertion
   in `test_logistic_regression_separation_warning`.
@@ -230,7 +230,7 @@ fire on ordinary input — one variable, one row, one forecast period.
 ### Removed
 - `write_csv`'s `append` parameter: R's `write.csv` refuses it
   ("attempt to set 'append' ignored") and truncates, so the schema advertised
-  behaviour that never happened and silently lost data.
+  behavior that never happened and silently lost data.
 - ~1,700 lines of advertised-but-unwired subsystems: `package_tiers.py`,
   `package_security.py` (the documented "4-tier security system", which was
   never wired into any execution path), `discovery.py`, and `r_session.py`.
