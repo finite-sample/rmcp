@@ -122,7 +122,7 @@ class VFS:
         return resolved
 
     def _is_writable(self, path: Path) -> bool:
-        """Whether ``path`` may be written, honouring per-directory grants."""
+        """Whether ``path`` may be written, honoring per-directory grants."""
         if not self.read_only:
             return True
         return any(path == root or root in path.parents for root in self.writable_roots)

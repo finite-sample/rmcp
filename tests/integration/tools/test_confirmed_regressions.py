@@ -66,7 +66,50 @@ def test_time_series_plot_accepts_its_declared_data_shape(server):
     assert payload["plot_type"] == "time_series_plot"
     assert payload["statistics"]["n_obs"] == 4
     assert payload["has_dates"] is True
+    assert payload["time_axis"] == {
+        "type": "date",
+        "start": "2026-01-01",
+        "end": "2026-04-01",
+        "span_days": 90,
+    }
     assert payload["show_trend"] is False
+
+
+def test_time_series_plot_rejects_mismatched_dates(server):
+    result = call_tool(
+        server,
+        "time_series_plot",
+        {
+            "data": {
+                "values": [10, 12, 11, 15],
+                "dates": ["2026-01-01", "2026-02-01"],
+            },
+            "return_image": False,
+        },
+    )
+
+    assert result.get("isError") is True
+    assert "must have equal lengths" in result["content"][0]["text"]
+
+
+@pytest.mark.parametrize(
+    ("operator", "expected"),
+    [("%in%", [1, 3]), ("!%in%", [2])],
+)
+def test_filter_data_membership_arrays_are_values_not_nested_lists(
+    server, operator, expected
+):
+    result = call_tool(
+        server,
+        "filter_data",
+        {
+            "data": {"x": [1, 2, 3]},
+            "conditions": [{"variable": "x", "operator": operator, "value": [1, 3]}],
+        },
+    )
+
+    payload = assert_success(result)
+    assert payload["data"]["x"] == expected
 
 
 def test_correlation_heatmap_defaults_to_numeric_columns(server):

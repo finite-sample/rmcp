@@ -381,11 +381,19 @@ async def boxplot(context, params) -> dict[str, Any]:
         "properties": {
             "data": {
                 "type": "object",
+                "x-rmcp-table": True,
                 "properties": {
-                    "values": {"type": "array", "items": {"type": "number"}},
-                    "dates": {"type": "array", "items": {"type": "string"}},
+                    "values": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                    },
+                    "dates": {
+                        "type": "array",
+                        "items": {"type": "string", "format": "date"},
+                    },
                 },
                 "required": ["values"],
+                "additionalProperties": False,
             },
             "title": {"type": "string"},
             "file_path": {
@@ -427,6 +435,17 @@ async def boxplot(context, params) -> dict[str, Any]:
                 "type": "boolean",
                 "description": "Whether date information was provided",
             },
+            "time_axis": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string", "enum": ["date", "index"]},
+                    "start": {"type": ["string", "integer"]},
+                    "end": {"type": ["string", "integer"]},
+                    "span_days": {"type": "number"},
+                },
+                "required": ["type", "start", "end"],
+                "additionalProperties": False,
+            },
             "show_trend": {
                 "type": "boolean",
                 "description": "Whether trend line was included",
@@ -449,7 +468,13 @@ async def boxplot(context, params) -> dict[str, Any]:
                 "description": "MIME type of the image",
             },
         },
-        "required": ["plot_type", "statistics", "has_dates", "show_trend"],
+        "required": [
+            "plot_type",
+            "statistics",
+            "has_dates",
+            "time_axis",
+            "show_trend",
+        ],
     },
     description="Line plot of one or more series over time, with optional trend line. Returns a base64 PNG.",
 )

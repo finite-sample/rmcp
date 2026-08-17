@@ -20,6 +20,9 @@ if (is.data.frame(conditions)) {
 evaluate_condition <- function(cond) {
   values <- data[[cond$variable]]
   target <- cond$value
+  if (cond$operator %in% c("%in%", "!%in%") && is.list(target)) {
+    target <- unlist(target, recursive = TRUE, use.names = FALSE)
+  }
   switch(cond$operator,
     "==" = values == target,
     "!=" = values != target,

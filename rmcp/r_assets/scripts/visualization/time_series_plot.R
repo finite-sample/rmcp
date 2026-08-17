@@ -20,9 +20,20 @@ height <- args$height %||% 600
 values <- as.numeric(data$values)
 has_dates <- "dates" %in% names(data) && !all(is.na(data$dates))
 if (has_dates) {
-  plot_data <- data.frame(time = as.character(data$dates), value = values)
+  parsed_dates <- as.Date(data$dates)
+  if (any(is.na(parsed_dates))) {
+    stop("dates must contain valid ISO 8601 calendar dates")
+  }
+  plot_data <- data.frame(time = parsed_dates, value = values)
+  time_axis <- list(
+    type = "date",
+    start = as.character(min(parsed_dates)),
+    end = as.character(max(parsed_dates)),
+    span_days = as.numeric(max(parsed_dates) - min(parsed_dates))
+  )
 } else {
   plot_data <- data.frame(time = seq_along(values), value = values)
+  time_axis <- list(type = "index", start = 1L, end = length(values))
 }
 
 p <- ggplot(plot_data, aes(x = time, y = value, group = 1)) +
@@ -56,6 +67,7 @@ result <- list(
     n_obs = sum(!is.na(values))
   ),
   has_dates = has_dates,
+  time_axis = time_axis,
   show_trend = show_trend,
   dimensions = list(width = width, height = height)
 )

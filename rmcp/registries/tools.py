@@ -189,7 +189,11 @@ class ToolsRegistry:
             validate_schema(
                 arguments, tool_def.input_schema, f"tool '{name}' arguments"
             )
-            await context.info(f"Calling tool: {name}", arguments=arguments)
+            await context.info(
+                f"Calling tool: {name}",
+                argument_count=len(arguments),
+                argument_keys=sorted(arguments),
+            )
             # Check cancellation before execution
             context.check_cancellation()
             # Execute tool handler
@@ -212,8 +216,8 @@ class ToolsRegistry:
                 validate_schema(result, tool_def.output_schema, f"tool '{name}' output")
 
             await context.info(f"Tool completed: {name}")
-            # Deliberately name + timing only. context.info above already ships
-            # the raw arguments to the client; don't copy payloads into logs.
+            # Deliberately name + timing only. Request logs carry bounded
+            # argument metadata, never user data.
             logger.info(
                 "tool completed",
                 tool=name,

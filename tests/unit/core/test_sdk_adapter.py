@@ -1,6 +1,7 @@
 """End-to-end tests of the SDK adapter using the official in-memory client."""
 
 import contextlib
+import logging
 
 import anyio
 import mcp.types as types
@@ -122,6 +123,22 @@ async def test_list_and_call_tool(rmcp_server):
         assert result.is_error is not True
         # ...but results are still validated against it server-side
         assert result.structured_content == {"echoed": "hello", "length": 5}
+
+
+async def test_tool_call_logs_argument_metadata_without_values(rmcp_server, caplog):
+    adapter = build_sdk_server(rmcp_server)
+    secret = "private-dataset-value-7e6f"
+
+    with caplog.at_level(logging.INFO, logger="rmcp.core.sdk_adapter"):
+        async with create_connected_server_and_client_session(
+            adapter.sdk_server
+        ) as session:
+            result = await session.call_tool("echo", {"message": secret})
+
+    assert result.is_error is not True
+    assert secret not in caplog.text
+    assert "argument_count" in caplog.text
+    assert "argument_keys" in caplog.text
 
 
 async def test_call_tool_error_shape(rmcp_server):
