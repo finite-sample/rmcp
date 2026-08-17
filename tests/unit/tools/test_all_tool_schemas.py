@@ -11,7 +11,7 @@ import pytest
 from jsonschema import ValidationError, validate
 
 # Import available tool modules
-from rmcp.tools import regression, statistical_tests
+from rmcp.tools import fileops, regression, statistical_tests
 
 
 def get_test_tools() -> list[tuple[str, Any, dict[str, Any]]]:
@@ -70,6 +70,39 @@ class TestAllToolSchemas:
             pytest.fail(
                 f"{tool_name} schema validation failed with realistic data: {e}"
             )
+
+    @pytest.mark.parametrize(
+        "condition",
+        [
+            {"variable": "x", "operator": "==", "value": [1, 3]},
+            {"variable": "x", "operator": ">", "value": None},
+            {"variable": "x", "operator": "%in%", "value": 1},
+            {"variable": "x", "operator": "%in%", "value": []},
+        ],
+    )
+    def test_filter_schema_rejects_incompatible_operands(self, condition):
+        schema = fileops.filter_data._mcp_tool_input_schema
+
+        with pytest.raises(ValidationError):
+            validate(
+                instance={"data": {"x": [1, 2, 3]}, "conditions": [condition]},
+                schema=schema,
+            )
+
+    @pytest.mark.parametrize(
+        "condition",
+        [
+            {"variable": "x", "operator": "==", "value": None},
+            {"variable": "x", "operator": "%in%", "value": [1, 3]},
+        ],
+    )
+    def test_filter_schema_accepts_operator_specific_operands(self, condition):
+        schema = fileops.filter_data._mcp_tool_input_schema
+
+        validate(
+            instance={"data": {"x": [1, 2, 3]}, "conditions": [condition]},
+            schema=schema,
+        )
 
     @pytest.mark.parametrize("tool_name,tool_func,test_input", get_test_tools())
     def test_tool_function_signature(

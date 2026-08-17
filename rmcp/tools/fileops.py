@@ -384,18 +384,69 @@ async def data_info(context, params) -> dict[str, Any]:
                             "enum": ["==", "!=", ">", "<", ">=", "<=", "%in%", "!%in%"],
                         },
                         "value": {
-                            "type": [
-                                "string",
-                                "number",
-                                "boolean",
-                                "null",
-                                "array",
-                            ],
-                            "items": {"type": ["string", "number", "boolean", "null"]},
+                            "description": (
+                                "A non-empty array for membership operators; a scalar "
+                                "for comparisons; null only with == or !=."
+                            ),
                         },
                     },
                     "required": ["variable", "operator", "value"],
                     "additionalProperties": False,
+                    "allOf": [
+                        {
+                            "if": {
+                                "properties": {"operator": {"enum": ["%in%", "!%in%"]}},
+                                "required": ["operator"],
+                            },
+                            "then": {
+                                "properties": {
+                                    "value": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": [
+                                                "string",
+                                                "number",
+                                                "boolean",
+                                                "null",
+                                            ]
+                                        },
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "if": {
+                                "properties": {"operator": {"enum": ["==", "!="]}},
+                                "required": ["operator"],
+                            },
+                            "then": {
+                                "properties": {
+                                    "value": {
+                                        "type": [
+                                            "string",
+                                            "number",
+                                            "boolean",
+                                            "null",
+                                        ]
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "if": {
+                                "properties": {
+                                    "operator": {"enum": [">", "<", ">=", "<="]}
+                                },
+                                "required": ["operator"],
+                            },
+                            "then": {
+                                "properties": {
+                                    "value": {"type": ["string", "number", "boolean"]}
+                                }
+                            },
+                        },
+                    ],
                 },
             },
             "logic": {"type": "string", "enum": ["AND", "OR"], "default": "AND"},

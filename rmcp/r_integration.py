@@ -288,7 +288,11 @@ write_json(result, "{result_path_safe}", auto_unbox = TRUE)
 """
             script_file.write(full_script)
             script_file.flush()
-            logger.debug(f"Executing R script with args: {args}")
+            logger.debug(
+                "Executing R script",
+                argument_count=len(args),
+                argument_keys=sorted(args),
+            )
             # Execute R script
             r_binary = get_r_binary_path()
             process = subprocess.run(
@@ -379,7 +383,11 @@ Original error: {stderr.strip()}"""
             try:
                 with open(result_path) as f:
                     result = json.load(f)
-                logger.debug(f"R script executed successfully, result: {result}")
+                logger.debug(
+                    "R script executed successfully",
+                    result_type=type(result).__name__,
+                    result_keys=sorted(result) if isinstance(result, dict) else None,
+                )
                 return result
             except FileNotFoundError:
                 exc = RExecutionError("R script did not produce output file")
@@ -485,7 +493,11 @@ if (exists("result")) {{
                 # Write R script to file
                 script_file.write(full_script)
                 script_file.flush()
-                logger.debug(f"Executing R script asynchronously with args: {args}")
+                logger.debug(
+                    "Executing R script asynchronously",
+                    argument_count=len(args),
+                    argument_keys=sorted(args),
+                )
                 # Execute R script asynchronously
                 r_binary = get_r_binary_path()
                 proc = await asyncio.create_subprocess_exec(

@@ -112,6 +112,16 @@ def _literal_filter_value(payload: dict[str, Any]) -> None:
     assert payload["data"]["id"] == [2]
 
 
+def _membership_filter(payload: dict[str, Any]) -> None:
+    assert payload["filtered_rows"] == 2
+    assert payload["data"]["x"] == [1, 3]
+
+
+def _missing_filter(payload: dict[str, Any]) -> None:
+    assert payload["filtered_rows"] == 1
+    assert payload["data"]["id"] == [2]
+
+
 def _invalid_formula(payload: dict[str, Any]) -> None:
     assert payload["is_valid"] is False
     assert payload["formula_parsed"] is False
@@ -228,6 +238,28 @@ CASES = (
             ],
         },
         oracle=_literal_filter_value,
+    ),
+    EvalCase(
+        "filter-membership-array",
+        "semantic",
+        "Treat a membership operand as a flat collection of values",
+        "filter_data",
+        {
+            "data": {"x": [1, 2, 3]},
+            "conditions": [{"variable": "x", "operator": "%in%", "value": [1, 3]}],
+        },
+        oracle=_membership_filter,
+    ),
+    EvalCase(
+        "filter-missing-value",
+        "semantic",
+        "Use null equality to select missing observations",
+        "filter_data",
+        {
+            "data": {"id": [1, 2, 3], "x": [1, None, 3]},
+            "conditions": [{"variable": "x", "operator": "==", "value": None}],
+        },
+        oracle=_missing_filter,
     ),
     EvalCase(
         "invalid-formula-result",
@@ -435,6 +467,28 @@ CASES = (
             "conditions": [{"variable": "x", "operator": ">", "value": 1, "vale": 2}],
         },
         error_contains="Additional properties are not allowed",
+    ),
+    EvalCase(
+        "filter-array-with-scalar-operator",
+        "contract",
+        "Reject an array operand for scalar equality before invoking R",
+        "filter_data",
+        {
+            "data": {"x": [1, 2, 3]},
+            "conditions": [{"variable": "x", "operator": "==", "value": [1, 3]}],
+        },
+        error_contains="is not of type 'string', 'number', 'boolean', 'null'",
+    ),
+    EvalCase(
+        "filter-null-ordering",
+        "contract",
+        "Reject an undefined ordering comparison against null before invoking R",
+        "filter_data",
+        {
+            "data": {"x": [1, None, 3]},
+            "conditions": [{"variable": "x", "operator": ">", "value": None}],
+        },
+        error_contains="is not of type 'string', 'number', 'boolean'",
     ),
     EvalCase(
         "nonnumeric-outlier-variable",

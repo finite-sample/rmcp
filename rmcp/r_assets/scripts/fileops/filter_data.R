@@ -23,6 +23,16 @@ evaluate_condition <- function(cond) {
   if (cond$operator %in% c("%in%", "!%in%") && is.list(target)) {
     target <- unlist(target, recursive = TRUE, use.names = FALSE)
   }
+  target_is_null <- is.null(target) ||
+    (length(target) == 1 && is.atomic(target) && is.na(target))
+  if (target_is_null) {
+    return(switch(
+      cond$operator,
+      "==" = is.na(values),
+      "!=" = !is.na(values),
+      stop("null filter values are supported only with == or !=")
+    ))
+  }
   switch(cond$operator,
     "==" = values == target,
     "!=" = values != target,
@@ -41,7 +51,11 @@ keep <- if (logic == "AND") Reduce(`&`, matches) else Reduce(`|`, matches)
 keep[is.na(keep)] <- FALSE
 filtered_data <- data[keep, , drop = FALSE]
 
-format_value <- function(value) paste(as.character(value), collapse = ",")
+format_value <- function(value) {
+  value_is_null <- is.null(value) ||
+    (length(value) == 1 && is.atomic(value) && is.na(value))
+  if (value_is_null) "null" else paste(as.character(value), collapse = ",")
+}
 filter_expressions <- vapply(
   conditions,
   function(cond) paste(cond$variable, cond$operator, format_value(cond$value)),
