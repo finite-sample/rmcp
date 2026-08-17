@@ -96,7 +96,7 @@ class VFS:
         return resolved
 
     def validate_write_path(self, path: str | Path) -> Path:
-        """Resolve and authorise a write target without requiring it to exist.
+        """Resolve and authorize a write target without requiring it to exist.
 
         Tools that delegate the actual write to R must call this *before*
         handing the path over: once the subprocess starts, Python has no say in
@@ -111,7 +111,7 @@ class VFS:
         return resolved
 
     def validate_read_path(self, path: str | Path) -> Path:
-        """Resolve and authorise a local file before another process reads it."""
+        """Resolve and authorize a local file before another process reads it."""
         if str(path).lower().startswith(("http://", "https://")):
             raise VFSError(
                 "Remote URL access is not permitted by the VFS; download the file "
