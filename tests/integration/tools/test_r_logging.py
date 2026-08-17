@@ -3,6 +3,7 @@
 from shutil import which
 
 import pytest
+from rmcp.logging_config import configure_structured_logging
 from rmcp.r_integration import execute_r_script, execute_r_script_async
 
 pytestmark = pytest.mark.skipif(
@@ -12,6 +13,7 @@ pytestmark = pytest.mark.skipif(
 
 def test_sync_r_execution_logs_metadata_without_values(capsys):
     secret = "private-r-input-value-sync-82f1"
+    configure_structured_logging(level="DEBUG")
 
     result = execute_r_script("result <- list(answer = args$value)", {"value": secret})
     logs = "\n".join(capsys.readouterr())
@@ -25,6 +27,7 @@ def test_sync_r_execution_logs_metadata_without_values(capsys):
 
 async def test_async_r_execution_logs_metadata_without_values(capsys):
     secret = "private-r-input-value-async-a56c"
+    configure_structured_logging(level="DEBUG")
 
     result = await execute_r_script_async(
         "result <- list(answer = args$value)", {"value": secret}

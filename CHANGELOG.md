@@ -40,7 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reads outside configured roots.
 - Sanitized client-facing execution errors so host paths, environment details,
   and process configuration are not disclosed.
-- Replaced raw R argument and result debug logs with field-level metadata.
+- Replaced raw R argument and result debug logs with field-level metadata and
+  removed frame locals from structured exception tracebacks.
 - Corrected public contracts and output shapes for time-series, regression, and
   correlation plots; empty outlier results; formula validation; strict data
   validation; and second-order differencing.
