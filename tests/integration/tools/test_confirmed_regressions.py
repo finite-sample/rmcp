@@ -35,6 +35,24 @@ def assert_success(result: dict) -> dict:
     return result["structuredContent"]
 
 
+def test_parenthesized_formula_callee_cannot_execute(server, tmp_path):
+    marker = tmp_path / "formula-executed"
+    command = f"touch {marker}"
+
+    result = call_tool(
+        server,
+        "linear_model",
+        {
+            "data": {"y": [1, 2, 3], "cmd": [command, command, command]},
+            "formula": "y ~ (system)(cmd)",
+        },
+    )
+
+    assert result.get("isError") is True
+    assert "Unsafe or unsupported R formula syntax" in result["content"][0]["text"]
+    assert not marker.exists()
+
+
 def test_outlier_detection_returns_empty_arrays_when_no_outliers(server):
     result = call_tool(
         server,

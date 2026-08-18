@@ -137,10 +137,7 @@ async def panel_regression(context, params) -> dict[str, Any]:
         "type": "object",
         "properties": {
             "data": table_schema(),
-            "formula": {
-                "type": "string",
-                "description": "Format: 'y ~ x1 + x2 | z1 + z2' where | separates instruments",
-            },
+            "formula": formula_schema(),
             "robust": {"type": "boolean", "default": True},
         },
         "required": ["data", "formula"],

@@ -31,8 +31,7 @@ evaluate_condition <- function(cond) {
   target_is_null <- is.null(target) ||
     (length(target) == 1 && is.atomic(target) && is.na(target))
   if (target_is_null) {
-    return(switch(
-      cond$operator,
+    return(switch(cond$operator,
       "==" = is.na(values),
       "!=" = !is.na(values),
       "%in%" = is.na(values),

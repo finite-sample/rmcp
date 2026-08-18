@@ -29,7 +29,12 @@ def test_table_contract_rejects_structurally_invalid_data(data):
 
 @pytest.mark.parametrize(
     "formula",
-    ["y ~ x + z", "y ~ log(x) + I(z^2)", "y ~ x * factor(group)"],
+    [
+        "y ~ x + z",
+        "y ~ log(x) + I(z^2)",
+        "y ~ x * factor(group)",
+        "y ~ x | instrument",
+    ],
 )
 def test_formula_contract_accepts_statistical_expressions(formula):
     validate_schema(formula, formula_schema(), "formula")
@@ -43,6 +48,8 @@ def test_formula_contract_accepts_statistical_expressions(formula):
         "y ~ source(x)",
         "y ~ .GlobalEnv$secret",
         "y ~ x; print(x)",
+        "y ~ (system)(cmd)",
+        "y ~ I(system)(cmd)",
     ],
 )
 def test_formula_contract_rejects_code_execution(formula):

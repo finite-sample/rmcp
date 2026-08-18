@@ -545,6 +545,17 @@ CASES = (
         error_contains="Unsafe or unsupported R formula syntax",
     ),
     EvalCase(
+        "formula-parenthesized-callee",
+        "safety",
+        "Reject a parenthesized R function call before it can execute",
+        "linear_model",
+        {
+            "data": {"y": [1, 2, 3], "cmd": ["false", "false", "false"]},
+            "formula": "y ~ (system)(cmd)",
+        },
+        error_contains="Unsafe or unsupported R formula syntax",
+    ),
+    EvalCase(
         "unknown-argument",
         "contract",
         "Reject misspelled or stale tool arguments",

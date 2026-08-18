@@ -22,8 +22,9 @@ class SchemaError(Exception):
         self.code = -32602  # JSON-RPC invalid params error
 
 
-_FORMULA_CHARACTERS = re.compile(r"^[A-Za-z0-9_.\s~+\-*/:^(),]+$")
+_FORMULA_CHARACTERS = re.compile(r"^[A-Za-z0-9_.\s~+\-*/:^(),|]+$")
 _FORMULA_CALL = re.compile(r"([A-Za-z.][A-Za-z0-9_.]*)\s*\(")
+_PARENTHESIZED_FORMULA_CALLEE = re.compile(r"\)\s*\(")
 _ALLOWED_FORMULA_CALLS = {
     "I",
     "abs",
@@ -41,7 +42,11 @@ _ALLOWED_FORMULA_CALLS = {
 
 def _validate_formula(value: str, context: str) -> None:
     """Reject formula syntax that can evaluate arbitrary R code."""
-    if "::" in value or not _FORMULA_CHARACTERS.fullmatch(value):
+    if (
+        "::" in value
+        or not _FORMULA_CHARACTERS.fullmatch(value)
+        or _PARENTHESIZED_FORMULA_CALLEE.search(value)
+    ):
         raise SchemaError(
             f"Unsafe or unsupported R formula syntax in {context}", field=context
         )
