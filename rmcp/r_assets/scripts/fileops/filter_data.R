@@ -20,7 +20,8 @@ if (is.data.frame(conditions)) {
 evaluate_condition <- function(cond) {
   values <- data[[cond$variable]]
   target <- cond$value
-  if (cond$operator %in% c("%in%", "!%in%") && is.list(target)) {
+  membership_operator <- cond$operator %in% c("%in%", "!%in%")
+  if (membership_operator && is.list(target)) {
     target <- unlist(target, recursive = TRUE, use.names = FALSE)
   }
   target_is_null <- is.null(target) ||
@@ -30,6 +31,8 @@ evaluate_condition <- function(cond) {
       cond$operator,
       "==" = is.na(values),
       "!=" = !is.na(values),
+      "%in%" = is.na(values),
+      "!%in%" = !is.na(values),
       stop("null filter values are supported only with == or !=")
     ))
   }

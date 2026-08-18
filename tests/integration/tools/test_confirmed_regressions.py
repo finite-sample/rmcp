@@ -93,18 +93,23 @@ def test_time_series_plot_rejects_mismatched_dates(server):
 
 
 @pytest.mark.parametrize(
-    ("operator", "expected"),
-    [("%in%", [1, 3]), ("!%in%", [2])],
+    ("operator", "operand", "values", "expected"),
+    [
+        ("%in%", [1, 3], [1, 2, 3], [1, 3]),
+        ("!%in%", [1, 3], [1, 2, 3], [2]),
+        ("%in%", [None], [1, None, 2, 3], [None]),
+        ("!%in%", [None], [1, None, 2, 3], [1, 2, 3]),
+    ],
 )
 def test_filter_data_membership_arrays_are_values_not_nested_lists(
-    server, operator, expected
+    server, operator, operand, values, expected
 ):
     result = call_tool(
         server,
         "filter_data",
         {
-            "data": {"x": [1, 2, 3]},
-            "conditions": [{"variable": "x", "operator": operator, "value": [1, 3]}],
+            "data": {"x": values},
+            "conditions": [{"variable": "x", "operator": operator, "value": operand}],
         },
     )
 

@@ -116,6 +116,22 @@ def test_vfs_stages_an_isolated_snapshot_for_delegated_reads(tmp_path):
     assert not staged_path.exists()
 
 
+def test_vfs_snapshot_preserves_requested_symlink_suffix(tmp_path):
+    target = tmp_path / "extensionless-workbook"
+    target.write_bytes(b"workbook")
+    alias = tmp_path / "data.xlsx"
+    alias.symlink_to(target.name)
+    context = Context.create(
+        "read",
+        "read_excel",
+        LifespanState(vfs=VFS([tmp_path], read_only=True)),
+    )
+
+    with context.stage_read_path(alias) as staged_path:
+        assert staged_path.suffix == ".xlsx"
+        assert staged_path.read_bytes() == b"workbook"
+
+
 def test_windows_final_paths_are_normalized_and_confined(tmp_path):
     vfs = VFS([tmp_path], read_only=True)
     vfs.allowed_roots = [Path("C:/allowed")]
@@ -153,6 +169,35 @@ async def test_tool_errors_do_not_expose_subprocess_environment():
     assert text == "Tool execution error: R script execution failed"
     assert "ENVIRONMENT" not in text
     assert "/private" not in text
+
+
+@pytest.mark.asyncio
+async def test_vfs_errors_do_not_expose_configured_roots(tmp_path):
+    async def handler(context, params):
+        context.require_read_path(params["file_path"])
+        return {}
+
+    registry = ToolsRegistry()
+    registry.register(
+        "read",
+        handler,
+        {
+            "type": "object",
+            "properties": {"file_path": {"type": "string"}},
+            "required": ["file_path"],
+        },
+    )
+    context = Context.create(
+        "failure",
+        "tools/call",
+        LifespanState(vfs=VFS([tmp_path], read_only=True)),
+    )
+
+    response = await registry.call_tool(context, "read", {"file_path": "/etc/passwd"})
+    text = response["content"][0]["text"]
+    assert text == "Tool execution error: File access denied by virtual filesystem"
+    assert str(tmp_path) not in text
+    assert "Allowed roots" not in text
 
 
 @pytest.mark.asyncio

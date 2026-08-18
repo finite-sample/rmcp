@@ -387,7 +387,8 @@ async def data_info(context, params) -> dict[str, Any]:
                         "value": {
                             "description": (
                                 "A non-empty array for membership operators; a scalar "
-                                "for comparisons; null only with == or !=."
+                                "for comparisons. Membership arrays may include null; "
+                                "a scalar null is supported only with == or !=."
                             ),
                         },
                     },

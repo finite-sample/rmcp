@@ -135,6 +135,29 @@ class TestEnhancedFileOps:
         ).strftime("%Y-%m-%d %H:%M:%S")
 
     @pytest.mark.asyncio
+    async def test_read_excel_through_extension_bearing_symlink(self, tmp_path):
+        import openpyxl
+
+        target = tmp_path / "workbook-data"
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+        worksheet.append(["x"])
+        worksheet.append([1])
+        workbook.save(target)
+        alias = tmp_path / "data.xlsx"
+        alias.symlink_to(target.name)
+        context = Context.create(
+            "test",
+            "read_excel",
+            LifespanState(vfs=VFS([tmp_path], read_only=True)),
+        )
+
+        result = await read_excel(context, {"file_path": str(alias)})
+
+        assert result["data"]["x"] == [1]
+        assert result["file_info"]["file_path"] == str(alias)
+
+    @pytest.mark.asyncio
     async def test_write_json_functionality(self):
         """Test writing JSON files with actual R execution."""
         context = await create_test_context()

@@ -22,6 +22,7 @@ from ..core.schemas import SchemaError, validate_schema
 from ..exceptions import RExecutionError as DomainRExecutionError
 from ..logging_config import get_logger
 from ..r_integration import RExecutionError
+from ..security.vfs import VFSError
 
 # structlog rather than stdlib: this module logs keyword fields (tool,
 # duration_ms) that stdlib logging would drop.
@@ -35,6 +36,8 @@ def _elapsed_ms(started: float) -> int:
 
 def _public_exception_message(exc: Exception) -> str:
     """Return actionable error text without subprocess or environment details."""
+    if isinstance(exc, VFSError):
+        return "File access denied by virtual filesystem"
     if isinstance(exc, (RExecutionError, DomainRExecutionError)):
         message = str(exc)
         safe_guidance_prefixes = (

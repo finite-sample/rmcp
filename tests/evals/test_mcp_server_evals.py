@@ -118,6 +118,11 @@ def _membership_filter(payload: dict[str, Any]) -> None:
     assert payload["data"]["x"] == [1, 3]
 
 
+def _null_membership_filter(payload: dict[str, Any]) -> None:
+    assert payload["filtered_rows"] == 1
+    assert payload["data"]["id"] == [2]
+
+
 def _missing_filter(payload: dict[str, Any]) -> None:
     assert payload["filtered_rows"] == 1
     assert payload["data"]["id"] == [2]
@@ -275,6 +280,17 @@ CASES = (
             "conditions": [{"variable": "x", "operator": "%in%", "value": [1, 3]}],
         },
         oracle=_membership_filter,
+    ),
+    EvalCase(
+        "filter-null-membership",
+        "semantic",
+        "Treat null in a membership operand as the missing-value class",
+        "filter_data",
+        {
+            "data": {"id": [1, 2, 3], "x": [1, None, 3]},
+            "conditions": [{"variable": "x", "operator": "%in%", "value": [None]}],
+        },
+        oracle=_null_membership_filter,
     ),
     EvalCase(
         "filter-missing-value",
@@ -602,7 +618,8 @@ CASES = (
         "Deny reads outside the configured workspace",
         "read_csv",
         {"file_path": "/etc/passwd"},
-        error_contains="Path access denied",
+        error_contains="File access denied by virtual filesystem",
+        error_excludes=("Allowed roots:", "/app", "/workspace", "/private/", "/Users/"),
     ),
 )
 

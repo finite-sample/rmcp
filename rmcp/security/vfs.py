@@ -141,6 +141,7 @@ class VFS:
                 "to an allowed root first"
             )
 
+        requested_suffix = Path(path).suffix
         resolved = self._resolve_and_validate_path(path)
         self._check_mime_type(resolved)
         descriptors: list[int] = []
@@ -195,7 +196,7 @@ class VFS:
                 )
 
             with tempfile.NamedTemporaryFile(
-                prefix="rmcp-read-", suffix=resolved.suffix, delete=False
+                prefix="rmcp-read-", suffix=requested_suffix, delete=False
             ) as staged:
                 staged_path = Path(staged.name)
                 with os.fdopen(os.dup(file_fd), "rb") as source:
