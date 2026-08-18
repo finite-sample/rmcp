@@ -7,6 +7,7 @@ Tests input schema validation and file operations without R execution where poss
 import json
 import os
 import tempfile
+from datetime import datetime
 from shutil import which
 
 import pytest
@@ -17,6 +18,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 from rmcp.core.context import Context, LifespanState
+from rmcp.security.vfs import VFS
 from rmcp.tools.fileops import (
     data_info,
     filter_data,
@@ -111,6 +113,26 @@ class TestEnhancedFileOps:
         finally:
             # Cleanup
             os.unlink(temp_path)
+
+    @pytest.mark.asyncio
+    async def test_staged_csv_read_preserves_source_metadata(self, tmp_path):
+        source = tmp_path / "source.csv"
+        source.write_text("x\n1\n", encoding="utf-8")
+        source_mtime = 946_684_800
+        os.utime(source, (source_mtime, source_mtime))
+        context = Context.create(
+            "test",
+            "read_csv",
+            LifespanState(vfs=VFS([tmp_path], read_only=True)),
+        )
+
+        result = await read_csv(context, {"file_path": str(source)})
+
+        assert result["file_info"]["file_path"] == str(source)
+        assert result["file_info"]["file_size_bytes"] == source.stat().st_size
+        assert result["file_info"]["modified_date"] == datetime.fromtimestamp(
+            source_mtime
+        ).strftime("%Y-%m-%d %H:%M:%S")
 
     @pytest.mark.asyncio
     async def test_write_json_functionality(self):

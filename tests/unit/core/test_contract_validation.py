@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import pytest
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.schemas import SchemaError, formula_schema, table_schema, validate_schema
@@ -91,6 +94,12 @@ def test_vfs_validates_delegated_reads(tmp_path):
 def test_vfs_stages_an_isolated_snapshot_for_delegated_reads(tmp_path):
     allowed_file = tmp_path / "data.csv"
     allowed_file.write_text("x\n1\n", encoding="utf-8")
+    source_mtime_ns = 946_684_800_123_456_700
+    allowed_file_stat = allowed_file.stat()
+    os.utime(
+        allowed_file,
+        ns=(allowed_file_stat.st_atime_ns, source_mtime_ns),
+    )
     context = Context.create(
         "read",
         "read_csv",
@@ -102,8 +111,25 @@ def test_vfs_stages_an_isolated_snapshot_for_delegated_reads(tmp_path):
         assert staged_path.suffix == ".csv"
         allowed_file.write_text("x\n2\n", encoding="utf-8")
         assert staged_path.read_text(encoding="utf-8") == "x\n1\n"
+        assert staged_path.stat().st_mtime_ns == source_mtime_ns
 
     assert not staged_path.exists()
+
+
+def test_windows_final_paths_are_normalized_and_confined(tmp_path):
+    vfs = VFS([tmp_path], read_only=True)
+    vfs.allowed_roots = [Path("C:/allowed")]
+
+    assert (
+        vfs._normalize_windows_final_path(r"\\?\C:\allowed\data.csv")
+        == r"C:\allowed\data.csv"
+    )
+    assert (
+        vfs._normalize_windows_final_path(r"\\?\UNC\server\share\data.csv")
+        == r"\\server\share\data.csv"
+    )
+    assert vfs._windows_path_is_allowed(r"c:\ALLOWED\nested\data.csv")
+    assert not vfs._windows_path_is_allowed(r"C:\allowed-neighbor\data.csv")
 
 
 @pytest.mark.asyncio

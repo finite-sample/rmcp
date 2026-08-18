@@ -10,13 +10,14 @@ Following the pattern: "Gate filesystem access with a tiny VFS."
 
 import logging
 import mimetypes
+import ntpath
 import os
 import stat
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ..config import get_config
 
@@ -129,10 +130,10 @@ class VFS:
     def stage_read_file(self, path: str | Path) -> Iterator[Path]:
         """Yield a private snapshot of an authorized file for a subprocess.
 
-        Each path component is opened relative to an already-open directory
-        with symlink following disabled. The subprocess receives only the
-        snapshot, so renames or symlink swaps after validation cannot redirect
-        its read outside the VFS.
+        POSIX paths are opened component-by-component without following
+        symlinks. Windows paths are authorized from the final kernel-resolved
+        handle. The subprocess receives only the snapshot, so later renames or
+        path swaps cannot redirect its read outside the VFS.
         """
         if str(path).lower().startswith(("http://", "https://")):
             raise VFSError(
@@ -142,34 +143,48 @@ class VFS:
 
         resolved = self._resolve_and_validate_path(path)
         self._check_mime_type(resolved)
-        root = next(
-            allowed_root
-            for allowed_root in self.allowed_roots
-            if resolved == allowed_root or allowed_root in resolved.parents
-        )
-        relative = resolved.relative_to(root)
-        if not relative.parts:
-            raise VFSError(f"Not a regular file: {resolved}")
-
-        directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
-        no_follow = getattr(os, "O_NOFOLLOW", 0)
         descriptors: list[int] = []
         staged_path: Path | None = None
         try:
-            directory_fd = os.open(root, directory_flags | no_follow)
-            descriptors.append(directory_fd)
-            for part in relative.parts[:-1]:
-                directory_fd = os.open(
-                    part,
-                    directory_flags | no_follow,
-                    dir_fd=directory_fd,
+            if os.name == "nt":
+                file_fd = os.open(
+                    resolved,
+                    os.O_RDONLY
+                    | getattr(os, "O_BINARY", 0)
+                    | getattr(os, "O_NOINHERIT", 0),
                 )
-                descriptors.append(directory_fd)
+                descriptors.append(file_fd)
+                final_path = self._windows_final_path(file_fd)
+                if not self._windows_path_is_allowed(final_path):
+                    raise VFSError(f"Path access denied: {final_path}")
+                self._check_mime_type(Path(final_path))
+            else:
+                root = next(
+                    allowed_root
+                    for allowed_root in self.allowed_roots
+                    if resolved == allowed_root or allowed_root in resolved.parents
+                )
+                relative = resolved.relative_to(root)
+                if not relative.parts:
+                    raise VFSError(f"Not a regular file: {resolved}")
 
-            file_fd = os.open(
-                relative.parts[-1], os.O_RDONLY | no_follow, dir_fd=directory_fd
-            )
-            descriptors.append(file_fd)
+                directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+                no_follow = getattr(os, "O_NOFOLLOW", 0)
+                directory_fd = os.open(root, directory_flags | no_follow)
+                descriptors.append(directory_fd)
+                for part in relative.parts[:-1]:
+                    directory_fd = os.open(
+                        part,
+                        directory_flags | no_follow,
+                        dir_fd=directory_fd,
+                    )
+                    descriptors.append(directory_fd)
+
+                file_fd = os.open(
+                    relative.parts[-1], os.O_RDONLY | no_follow, dir_fd=directory_fd
+                )
+                descriptors.append(file_fd)
+
             file_stat = os.fstat(file_fd)
             if not stat.S_ISREG(file_stat.st_mode):
                 raise VFSError(f"Not a regular file: {resolved}")
@@ -196,6 +211,12 @@ class VFS:
                             )
                         staged.write(chunk)
 
+            assert staged_path is not None
+            os.utime(
+                staged_path,
+                ns=(file_stat.st_atime_ns, file_stat.st_mtime_ns),
+            )
+
             yield staged_path
         except OSError as exc:
             raise VFSError(f"Failed to stage file {resolved}: {exc}") from exc
@@ -210,6 +231,59 @@ class VFS:
                     staged_path.unlink()
                 except OSError:
                     pass
+
+    @staticmethod
+    def _normalize_windows_final_path(path: str) -> str:
+        """Convert a Win32 final-handle path to a normal DOS or UNC path."""
+        if path.startswith("\\\\?\\UNC\\"):
+            return "\\\\" + path[8:]
+        if path.startswith("\\\\?\\"):
+            return path[4:]
+        return path
+
+    def _windows_path_is_allowed(self, path: str) -> bool:
+        """Check a handle-resolved Windows path against configured roots."""
+        candidate = ntpath.normcase(ntpath.normpath(path))
+        for allowed_root in self.allowed_roots:
+            root = ntpath.normcase(ntpath.normpath(str(allowed_root)))
+            try:
+                if ntpath.commonpath((candidate, root)) == root:
+                    return True
+            except ValueError:
+                continue
+        return False
+
+    @classmethod
+    def _windows_final_path(cls, file_descriptor: int) -> str:
+        """Return the kernel-resolved path for an open Windows file."""
+        import ctypes
+        import msvcrt
+        from ctypes import wintypes
+
+        ctypes_windows = cast(Any, ctypes)
+        msvcrt_windows = cast(Any, msvcrt)
+        get_final_path = ctypes_windows.WinDLL(
+            "kernel32", use_last_error=True
+        ).GetFinalPathNameByHandleW
+        get_final_path.argtypes = (
+            wintypes.HANDLE,
+            wintypes.LPWSTR,
+            wintypes.DWORD,
+            wintypes.DWORD,
+        )
+        get_final_path.restype = wintypes.DWORD
+        handle = wintypes.HANDLE(msvcrt_windows.get_osfhandle(file_descriptor))
+        size = 32768
+        while True:
+            buffer = ctypes.create_unicode_buffer(size)
+            length = get_final_path(handle, buffer, size, 0)
+            if length == 0:
+                error_code = ctypes_windows.get_last_error()
+                message = ctypes_windows.FormatError(error_code)
+                raise OSError(error_code, message)
+            if length < size:
+                return cls._normalize_windows_final_path(buffer.value)
+            size = length + 1
 
     def _is_writable(self, path: Path) -> bool:
         """Whether ``path`` may be written, honoring per-directory grants."""

@@ -47,6 +47,28 @@ jobs:
         # Run all unit tests (Python-only, schema validation, etc.)
         uv run pytest tests/unit/ -v --tb=short
 
+  windows-vfs:
+    name: Windows VFS Tests
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Python
+      uses: actions/setup-python@v7
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.0.1
+      with:
+        enable-cache: true
+
+    - name: Install dependencies
+      run: uv sync --group dev
+
+    - name: Run VFS tests
+      run: uv run pytest tests/unit/core/test_contract_validation.py -v --tb=short
+
   # Build Docker images for R testing (both development and production)
   docker-build:
     name: Build R Testing Environment
