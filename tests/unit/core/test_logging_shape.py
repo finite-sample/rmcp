@@ -99,6 +99,45 @@ class TestRequestIdPropagation:
         assert [entry.get("request_id") for entry in lines] == ["req-42", "req-42"]
 
 
+class TestTracebackPrivacy:
+    def test_structured_tracebacks_omit_frame_locals(self):
+        secret = "private-frame-local-b46d"
+
+        def emit():
+            private_value = secret
+            try:
+                raise RuntimeError("deliberate failure")
+            except RuntimeError:
+                get_logger("rmcp.demo").exception("operation failed")
+            assert private_value
+
+        entry = _emit(emit)[0]
+        serialized = json.dumps(entry)
+
+        assert secret not in serialized
+        assert "exception" in entry
+        assert all(
+            "locals" not in frame
+            for exception in entry["exception"]
+            for frame in exception["frames"]
+        )
+
+    def test_development_tracebacks_omit_frame_locals(self):
+        secret = "private-development-local-9b8e"
+        buf = io.StringIO()
+
+        with contextlib.redirect_stderr(buf):
+            configure_structured_logging(level="INFO", development_mode=True)
+            private_value = secret
+            try:
+                raise RuntimeError("deliberate failure")
+            except RuntimeError:
+                get_logger("rmcp.demo").exception("operation failed")
+            assert private_value
+
+        assert secret not in buf.getvalue()
+
+
 class TestStdoutIsNeverWritten:
     def test_output_goes_to_stderr(self):
         """stdout carries the JSON-RPC stream in stdio mode."""

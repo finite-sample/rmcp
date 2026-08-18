@@ -5,7 +5,7 @@ Comprehensive statistical testing capabilities.
 
 from typing import Any
 
-from ..core.schemas import table_schema
+from ..core.schemas import formula_schema, table_schema
 from ..r_assets.loader import get_r_script
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
@@ -150,7 +150,7 @@ async def t_test(context, params) -> dict[str, Any]:
         "type": "object",
         "properties": {
             "data": table_schema(),
-            "formula": {"type": "string"},
+            "formula": formula_schema(),
             "type": {"type": "string", "enum": ["I", "II", "III"], "default": "I"},
         },
         "required": ["data", "formula"],

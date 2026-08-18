@@ -38,13 +38,13 @@ if (robust) {
   coef_table <- summary(model)$coefficients
 }
 # Extract coefficients with proper names
-coef_vals <- coef_table[, "Estimate"]
+coef_vals <- coef_table[, 1]
 names(coef_vals) <- rownames(coef_table)
-std_err_vals <- coef_table[, "Std. Error"]
+std_err_vals <- coef_table[, 2]
 names(std_err_vals) <- rownames(coef_table)
-t_vals <- coef_table[, "t value"]
+t_vals <- coef_table[, 3]
 names(t_vals) <- rownames(coef_table)
-p_vals <- coef_table[, "Pr(>|t|)"]
+p_vals <- coef_table[, 4]
 names(p_vals) <- rownames(coef_table)
 result <- list(
   coefficients = as.list(coef_vals),

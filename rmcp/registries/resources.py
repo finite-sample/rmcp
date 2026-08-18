@@ -614,15 +614,6 @@ def resource(
 ):
     """
     Decorator to register a static resource.
-
-    Usage:
-        @resource(
-            uri="static://example",
-            name="Example Resource",
-            description="An example static resource"
-        )
-        def example_resource():
-            return "resource content"
     """
 
     def decorator(func):

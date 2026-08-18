@@ -47,7 +47,7 @@ if (is.list(json_data) && !is.data.frame(json_data)) {
 if (!grepl("^https?://", file_path)) {
   file_info <- file.info(file_path)
   file_size <- file_info$size
-  modified_date <- as.character(file_info$mtime)
+  modified_date <- format(file_info$mtime, "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
 } else {
   file_size <- NA
   modified_date <- NA

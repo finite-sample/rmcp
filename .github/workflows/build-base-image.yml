@@ -18,7 +18,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'Dockerfile.base'
+      - 'Dockerfile'
       - '.github/workflows/build-base-image.yml'
 
 env:
@@ -51,11 +51,11 @@ jobs:
       id: check-rebuild
       run: |
         # Check if base image exists and get its creation date
-        if docker manifest inspect ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest >/dev/null 2>&1; then
+        if docker manifest inspect "${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest" >/dev/null 2>&1; then
           echo "Base image exists"
 
           # Get image creation date (simplified check)
-          CREATION_DATE=$(docker manifest inspect ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest | jq -r '.history[0].created // empty')
+          CREATION_DATE=$(docker manifest inspect "${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest" | jq -r '.history[0].created // empty')
 
           if [ -n "$CREATION_DATE" ]; then
             # Check if image is older than 7 days
@@ -67,18 +67,18 @@ jobs:
 
             if [ "$AGE_DAYS" -lt 7 ] && [ "${{ github.event.inputs.force_rebuild }}" != "true" ]; then
               echo "Image is recent (< 7 days old) and no force rebuild requested"
-              echo "rebuild_needed=false" >> $GITHUB_OUTPUT
+              echo "rebuild_needed=false" >> "$GITHUB_OUTPUT"
             else
               echo "Image is old (>= 7 days) or force rebuild requested"
-              echo "rebuild_needed=true" >> $GITHUB_OUTPUT
+              echo "rebuild_needed=true" >> "$GITHUB_OUTPUT"
             fi
           else
             echo "Could not determine image age, rebuilding"
-            echo "rebuild_needed=true" >> $GITHUB_OUTPUT
+            echo "rebuild_needed=true" >> "$GITHUB_OUTPUT"
           fi
         else
           echo "Base image does not exist, building"
-          echo "rebuild_needed=true" >> $GITHUB_OUTPUT
+          echo "rebuild_needed=true" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Extract metadata
@@ -98,7 +98,8 @@ jobs:
       uses: docker/build-push-action@v7
       with:
         context: .
-        file: ./Dockerfile.base
+        file: ./Dockerfile
+        target: base
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.tags }}
@@ -116,7 +117,7 @@ jobs:
         echo "🧪 Testing base image functionality..."
 
         # Test R availability and packages
-        docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest R -e "
+        docker run --rm "${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest" R -e "
         cat('✅ R version:', R.version.string, '\n')
 
         # Test key packages
@@ -136,11 +137,8 @@ jobs:
         }
         "
 
-        # Test mkcert availability
-        docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest mkcert -version
-
         # Test Python availability
-        docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest python3 --version
+        docker run --rm "${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest" python3 --version
 
         echo "✅ Base image tests passed"
 
@@ -148,7 +146,7 @@ jobs:
       if: steps.check-rebuild.outputs.rebuild_needed == 'true'
       run: |
         # Extract and display build information
-        docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest cat /opt/rmcp-base-info.json | jq .
+        docker run --rm "${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest" cat /opt/rmcp-base-info.json | jq .
 
         echo "📊 Base image build completed:"
         echo "  Registry: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}"
@@ -161,27 +159,30 @@ jobs:
     - name: Create release note
       if: steps.check-rebuild.outputs.rebuild_needed == 'true' && github.event_name == 'schedule'
       run: |
-        echo "📦 **Base Image Updated**" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "The RMCP base R environment has been rebuilt with:" >> $GITHUB_STEP_SUMMARY
-        echo "- 🔄 Latest system packages" >> $GITHUB_STEP_SUMMARY
-        echo "- 📊 All R statistical packages" >> $GITHUB_STEP_SUMMARY
-        echo "- 🔒 mkcert for HTTPS development" >> $GITHUB_STEP_SUMMARY
-        echo "- 🐍 Python development environment" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Impact:** CI builds will now be significantly faster! ⚡" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Next Steps:** " >> $GITHUB_STEP_SUMMARY
-        echo "1. Main CI will automatically use the new base image" >> $GITHUB_STEP_SUMMARY
-        echo "2. Development Docker builds will benefit from faster startup" >> $GITHUB_STEP_SUMMARY
-        echo "3. No action required from developers" >> $GITHUB_STEP_SUMMARY
+        {
+          echo "📦 **Base Image Updated**"
+          echo ""
+          echo "The RMCP base R environment has been rebuilt with:"
+          echo "- 🔄 Latest system packages"
+          echo "- 📊 All R statistical packages"
+          echo "- 🐍 Python runtime environment"
+          echo ""
+          echo "**Impact:** Production images inherit only runtime dependencies."
+          echo ""
+          echo "**Next Steps:** "
+          echo "1. Main CI will automatically use the new base image"
+          echo "2. Development Docker builds will benefit from faster startup"
+          echo "3. No action required from developers"
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Skip notification
       if: steps.check-rebuild.outputs.rebuild_needed == 'false'
       run: |
-        echo "ℹ️ Base image rebuild skipped - image is recent and no changes detected" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Current base image:** ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
-        echo "**Reason:** Image is less than 7 days old and no force rebuild requested" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "To force a rebuild, use the manual trigger with 'force_rebuild' option." >> $GITHUB_STEP_SUMMARY
+        {
+          echo "ℹ️ Base image rebuild skipped - image is recent and no changes detected"
+          echo ""
+          echo "**Current base image:** ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest"
+          echo "**Reason:** Image is less than 7 days old and no force rebuild requested"
+          echo ""
+          echo "To force a rebuild, use the manual trigger with 'force_rebuild' option."
+        } >> "$GITHUB_STEP_SUMMARY"

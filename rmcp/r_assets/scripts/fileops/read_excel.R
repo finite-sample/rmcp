@@ -76,7 +76,7 @@ result <- list(
     columns = ncol(data),
     column_names = I(colnames(data)),
     file_size_bytes = file_info$size,
-    modified_date = as.character(file_info$mtime)
+    modified_date = format(file_info$mtime, "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
   ),
   summary = list(
     rows_read = nrow(data),

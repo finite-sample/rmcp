@@ -17,7 +17,7 @@ from .version import get_version
 
 __version__ = get_version()
 __author__ = "Gaurav Sood"
-__email__ = "gsood07@gmail.com"
+__email__ = "contact@gsood.com"
 __all__ = [
     "Context",
     "create_server",

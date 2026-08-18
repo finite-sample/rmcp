@@ -381,11 +381,19 @@ async def boxplot(context, params) -> dict[str, Any]:
         "properties": {
             "data": {
                 "type": "object",
+                "x-rmcp-table": True,
                 "properties": {
-                    "values": {"type": "array", "items": {"type": "number"}},
-                    "dates": {"type": "array", "items": {"type": "string"}},
+                    "values": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                    },
+                    "dates": {
+                        "type": "array",
+                        "items": {"type": "string", "format": "date"},
+                    },
                 },
                 "required": ["values"],
+                "additionalProperties": False,
             },
             "title": {"type": "string"},
             "file_path": {
@@ -415,7 +423,13 @@ async def boxplot(context, params) -> dict[str, Any]:
                 "type": "object",
                 "properties": {
                     "mean": {"type": "number"},
-                    "sd": {"type": "number"},
+                    "sd": {
+                        "type": ["number", "null"],
+                        "description": (
+                            "Sample standard deviation, or null with fewer than "
+                            "two nonmissing observations"
+                        ),
+                    },
                     "min": {"type": "number"},
                     "max": {"type": "number"},
                     "range": {"type": "number"},
@@ -426,6 +440,17 @@ async def boxplot(context, params) -> dict[str, Any]:
             "has_dates": {
                 "type": "boolean",
                 "description": "Whether date information was provided",
+            },
+            "time_axis": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string", "enum": ["date", "index"]},
+                    "start": {"type": ["string", "integer"]},
+                    "end": {"type": ["string", "integer"]},
+                    "span_days": {"type": "number"},
+                },
+                "required": ["type", "start", "end"],
+                "additionalProperties": False,
             },
             "show_trend": {
                 "type": "boolean",
@@ -449,7 +474,13 @@ async def boxplot(context, params) -> dict[str, Any]:
                 "description": "MIME type of the image",
             },
         },
-        "required": ["plot_type", "statistics", "has_dates", "show_trend"],
+        "required": [
+            "plot_type",
+            "statistics",
+            "has_dates",
+            "time_axis",
+            "show_trend",
+        ],
     },
     description="Line plot of one or more series over time, with optional trend line. Returns a base64 PNG.",
 )
@@ -517,7 +548,10 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             "correlation_matrix": {
                 "type": "object",
                 "description": "Correlation coefficients between variables",
-                "additionalProperties": {"type": "array", "items": {"type": "number"}},
+                "additionalProperties": {
+                    "type": "array",
+                    "items": {"type": ["number", "null"]},
+                },
             },
             "variables": {
                 "type": "array",
@@ -648,13 +682,19 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
                 "maximum": 1,
             },
             "adj_r_squared": {
-                "type": "number",
-                "description": "Adjusted R-squared value",
+                "type": ["number", "null"],
+                "description": (
+                    "Adjusted R-squared value, or null with no residual degrees "
+                    "of freedom"
+                ),
                 "maximum": 1,
             },
             "residual_se": {
-                "type": "number",
-                "description": "Residual standard error",
+                "type": ["number", "null"],
+                "description": (
+                    "Residual standard error, or null with no residual degrees "
+                    "of freedom"
+                ),
                 "minimum": 0,
             },
             "formula": {"type": "string", "description": "Regression formula used"},

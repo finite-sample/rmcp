@@ -170,6 +170,21 @@ async def outlier_detection(context, params) -> dict[str, Any]:
     """Detect outliers in data."""
     await context.info("Detecting outliers")
 
+    variable = params["variable"]
+    data = params["data"]
+    if variable not in data:
+        available = ", ".join(sorted(data))
+        raise ValueError(
+            f"Variable '{variable}' was not found in data. "
+            f"Available columns: {available}"
+        )
+    if any(
+        value is not None
+        and (not isinstance(value, int | float) or isinstance(value, bool))
+        for value in data[variable]
+    ):
+        raise ValueError(f"Variable '{variable}' must contain only numeric values")
+
     r_script = get_r_script("descriptive", "outlier_detection")
     try:
         result = await execute_r_script_async(r_script, params)

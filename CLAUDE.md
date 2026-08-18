@@ -60,11 +60,9 @@ uv run ruff format --check .     # Code formatting check
 
 **Complete integration tests (Docker-based):**
 ```bash
-# Docker includes R for complete test coverage (all 240+ tests)
-docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/integration/"
-docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/scenarios/"
-# Full test suite: smoke + unit + integration + scenarios + protocol + config
-docker run -v $(pwd):/workspace rmcp-dev bash -c "cd /workspace && pip install -e . && pytest tests/"
+uv run pytest
+uv run python scripts/testing/run_e2e_tests.py --docker
+Rscript rmcp/r_assets/run_tests.R
 ```
 
 ### Code Quality
@@ -131,9 +129,9 @@ uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
   - `test_deployment_scenarios.py`: Docker environment validation, production builds, multi-platform testing
 
 **Development Utilities**
-- **`scripts/testing/run_comprehensive_tests.py`**: Comprehensive test runner for development (exercises every tool with real R)
+- **`scripts/testing/run_comprehensive_tests.py`**: Canonical full pytest runner
 
-**Complete Test Coverage**: Docker environment includes **all 240+ tests** with comprehensive coverage across all components:
+**Complete Test Coverage**: The host and packaged-image suites cover all components:
 - ✅ **R Integration**: statistical tools exercised against real R
 - ✅ **HTTP Transport**: MCP SDK Streamable HTTP, uvicorn, bearer auth, session management
 - ✅ **Core MCP Protocol**: JSON-RPC 2.0, tool calls, capabilities, error handling
@@ -147,155 +145,30 @@ uv run sphinx-autogen docs/**/*.rst        # Generate autosummary stubs
 
 ## Pre-Commit Validation Protocol
 
-**Critical**: Always test in CI-equivalent environments before committing to prevent CI failures.
-
-### Mandatory Pre-Commit Checklist
-
-**Before every commit that touches Docker, CI workflows, or dependencies:**
+Run each check separately and inspect its exit status:
 
 ```bash
-# 1. Build and test in actual CI containers (prevents environment drift)
-docker build --target development -t rmcp-test:latest .
-docker run --rm -v $(pwd):/workspace rmcp-test:latest bash -c "cd /workspace && pip install -e . && pytest tests/smoke/ -v"
-docker run --rm -v $(pwd):/workspace rmcp-test:latest bash -c "cd /workspace && pip install -e . && pytest tests/unit/ -v"
-
-# 2. Test dependency compatibility (prevents pytest-asyncio type issues)
-docker run --rm rmcp-test:latest python -c "import pytest, pytest_asyncio; print('✅ Dependencies compatible')"
-docker run --rm rmcp-test:latest pytest --version
-
-# 3. Verify multi-platform builds work (prevents platform-specific errors)
-docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.base --cache-to=type=inline .
-
-# 4. Test both fresh and cached build scenarios (prevents workflow logic errors)
-# Fresh build scenario:
-docker buildx build --no-cache --target development -t rmcp-fresh:latest .
-# Cached build scenario:
-docker buildx build --target development -t rmcp-cached:latest .
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest
+Rscript rmcp/r_assets/run_tests.R
+uv run --group docs sphinx-build -W -b html docs /tmp/rmcp-docs
+actionlint
+uv build
+uvx twine check dist/*
 ```
 
-### Local CI Simulation
-
-**Test GitHub Actions workflows locally before push:**
+For Docker, R integration, or workflow changes, also run:
 
 ```bash
-# Install act (GitHub Actions local runner)
-# macOS: brew install act
-# Linux: curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
-
-# Test CI workflow locally (requires Docker)
-act push -W .github/workflows/ci.yml
-
-# Test specific CI job
-act -j python-checks
-act -j docker-build
-
-# Test with different scenarios
-act push --var GITHUB_REF=refs/heads/main  # Test main branch behavior
-act pull_request --var GITHUB_REF=refs/pull/1/merge  # Test PR behavior
+docker build --target development -t rmcp:development .
+docker build --target production -t rmcp:production .
+uv run python scripts/testing/run_e2e_tests.py --docker
 ```
 
-### Environment Consistency Validation
-
-**Prevent local vs CI environment drift:**
-
-```bash
-# 1. Verify Python package versions match between uv and Docker
-uv export --no-hashes > requirements-uv.txt
-docker run --rm rmcp-test:latest pip freeze > requirements-docker.txt
-diff requirements-uv.txt requirements-docker.txt
-
-# 2. Test pytest configuration consistency
-uv run pytest --collect-only tests/smoke/ > pytest-uv.log
-docker run --rm -v $(pwd):/workspace rmcp-test:latest pytest --collect-only /workspace/tests/smoke/ > pytest-docker.log
-diff pytest-uv.log pytest-docker.log
-
-# 3. Validate R environment consistency
-docker run --rm rmcp-test:latest R -e "cat('R packages:', length(.packages(all.available=TRUE)), '\n')"
-```
-
-### Build Optimization Regression Testing
-
-**Ensure Docker optimizations don't break with changes:**
-
-```bash
-# 1. Time build performance (should remain sub-second for cached builds)
-time docker build --target development -t rmcp-perf:latest .
-
-# 2. Verify cache effectiveness
-docker buildx build --target development --cache-from=type=gha --cache-to=type=gha,mode=max -t rmcp-cache-test:latest .
-
-# 3. Test production build size (should remain optimized)
-docker images --filter "reference=rmcp*" --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}"
-```
-
-### Workflow Edge Case Testing
-
-**Test GitHub Actions conditional logic before commit:**
-
-```bash
-# 1. Test workflow with no Docker-relevant changes (should skip builds)
-git checkout -b test-skip-build
-echo "# Test comment" >> README.md
-git add . && git commit -m "Test: non-docker change"
-# Push and verify CI skips Docker builds
-
-# 2. Test workflow with Docker changes (should trigger builds)
-git checkout -b test-trigger-build
-echo "# Test comment" >> Dockerfile
-git add . && git commit -m "Test: docker change"
-# Push and verify CI runs Docker builds
-
-# 3. Test attestation logic with both scenarios
-# Verify attestation steps only run when should_build=true
-```
-
-### Common CI Issue Prevention
-
-**Patterns that prevent typical CI failures:**
-
-1. **Always test with exact CI dependency versions**:
-   ```bash
-   # Don't just test with latest packages
-   docker run --rm rmcp-test:latest pip list | grep pytest
-   ```
-
-2. **Validate pytest configuration changes**:
-   ```bash
-   # Test asyncio_mode setting works
-   docker run --rm -v $(pwd):/workspace rmcp-test:latest pytest /workspace/tests/ --collect-only
-   ```
-
-3. **Test GitHub Actions conditional steps**:
-   ```bash
-   # Use act to test both cached and fresh build paths
-   act -j docker-build --var should_build=true
-   act -j docker-build --var should_build=false
-   ```
-
-4. **Verify multi-platform compatibility**:
-   ```bash
-   # Test both platforms build successfully
-   docker buildx build --platform linux/amd64 --load -t test-amd64 .
-   docker buildx build --platform linux/arm64 --load -t test-arm64 .
-   ```
-
-### Integration with Development Workflow
-
-**When to use this protocol:**
-
-- **Always**: Before committing changes to `Dockerfile*`, `.github/workflows/`, `pyproject.toml`
-- **Docker optimizations**: When modifying cache strategies, base images, or build stages
-- **Dependency updates**: When upgrading pytest, Python packages, or R packages
-- **CI logic changes**: When modifying conditional steps, build matrices, or attestation workflows
-- **Pre-release**: Before tagging releases or major feature merges
-
-**Quick validation for minor changes:**
-```bash
-# Minimal check for small Python changes
-docker run --rm -v $(pwd):/workspace rmcp-test:latest bash -c "cd /workspace && pip install -e . && python -c 'import rmcp; print(\"✅ Import OK\")'"
-```
-
-This protocol ensures CI failures are caught locally, maintaining the 99%+ build optimization improvements while preventing regression issues.
+CI remains the cross-platform and multi-architecture gate. Do not substitute README
+inspection or a local Actions emulator for functional tests.
 
 ## Hybrid Development Approach
 

@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-17
+
+### Added
+
+- A versioned MCP behavior-evaluation suite driven through stdio by the official
+  MCP client. Its 42 checks cover exact statistical identities, package-heavy
+  tools, malformed and adversarial data, stateful approval workflows, recovery,
+  filesystem confinement, and production-container execution.
+- Release guidance for evaluating MCP servers and skills at the package,
+  contract, protocol, and model-selection layers, including data-as-code and
+  overlap-testing principles.
+- Strict table, formula, nested-condition, and top-level argument validation.
+
+### Changed
+
+- Consolidated the runtime, development, builder, and production Docker targets
+  in one multi-stage Dockerfile. The production image now installs only runtime
+  dependencies and is approximately 22% smaller by inspected size.
+- Docker builds now fail closed when declared R packages are unavailable and
+  always rebuild the local RMCP wheel when source changes.
+- Updated GitHub Actions to their current major releases and added packaged-image
+  MCP evaluations to CI.
+- Replaced Hatchling and dynamic VCS versioning with the native `uv_build`
+  backend and explicit versions managed by `uv version`.
+- Updated Python and R package contact metadata to `contact@gsood.com`.
+- Replaced `filter_data` string-built R evaluation with typed operations that
+  treat user values as data and enforce operator-specific operand shapes.
+- Simplified the comprehensive and Docker E2E runners around the canonical pytest
+  suites and production image.
+
+### Fixed
+
+- Preserved undefined one-point sample deviations, adjusted R-squared values,
+  residual standard errors, and constant-column correlations as schema-valid
+  `null` values.
+- Enforced virtual-filesystem authorization before every file read and prevented
+  reads outside configured roots, including path-swap races during delegated
+  reads.
+- Rejected FIFOs and other special files without blocking the server, preserved
+  runtime errors raised after staging, and made file modification timestamps
+  stable UTC values across platforms.
+- Sanitized all R execution failures returned to MCP clients so host paths,
+  environment details, and process configuration are not disclosed, while
+  retaining subprocess diagnostics in server logs.
+- Prevented parenthesized R function calls from bypassing formula validation
+  and the operation-approval boundary.
+- Replaced raw R argument and result debug logs with field-level metadata and
+  removed frame locals from structured exception tracebacks.
+- Corrected public contracts and output shapes for time-series, regression, and
+  correlation plots; empty outlier results; formula validation; strict data
+  validation; and second-order differencing.
+- Kept regression-plot observations aligned when R omits incomplete rows.
+- Corrected non-robust panel regression coefficient extraction.
+- Rejected duplicate tool registrations, unknown arguments, ragged tables,
+  unsupported formula code, unknown filter columns, and nonnumeric outlier
+  targets before invoking R.
+- Corrected Docker deployment scenarios so supplied images are validated and
+  volume-mount checks work with Colima.
+- Restored the bundled R package metadata, namespace, documentation, license,
+  and test runner so `R CMD check` completes successfully.
+
+### Removed
+
+- The separate stale `Dockerfile.base` and obsolete tests that did not exercise
+  the current tool implementations.
+
 ## [0.11.0] - 2026-07-29
 
 ### Changed
@@ -32,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Unknown-tool calls still return an `isError` result. mcp 2.x would propagate
   them as a protocol error, changing the shape clients see; the adapter
-  preserves the previous behaviour.
+  preserves the previous behavior.
 
 ### Note for anyone reading MCP results in Python
 
@@ -172,7 +238,7 @@ fire on ordinary input — one variable, one row, one forecast period.
   server-side), and the 46 templated four-sentence descriptions are now
   one-liners.
 - The `initialize` instructions blob went from 2,789 to 922 characters and
-  stopped duplicating the tool catalogue. It was also defined twice verbatim.
+  stopped duplicating the tool catalog. It was also defined twice verbatim.
 - Tests that swallowed their own assertions now fail properly; several were
   passing regardless of outcome. Fixing them surfaced a real wrong assertion
   in `test_logistic_regression_separation_warning`.
@@ -180,7 +246,7 @@ fire on ordinary input — one variable, one row, one forecast period.
 ### Removed
 - `write_csv`'s `append` parameter: R's `write.csv` refuses it
   ("attempt to set 'append' ignored") and truncates, so the schema advertised
-  behaviour that never happened and silently lost data.
+  behavior that never happened and silently lost data.
 - ~1,700 lines of advertised-but-unwired subsystems: `package_tiers.py`,
   `package_security.py` (the documented "4-tier security system", which was
   never wired into any execution path), `discovery.py`, and `r_session.py`.
@@ -804,38 +870,21 @@ fire on ordinary input — one variable, one row, one forecast period.
 ### Testing
 Run the test suite:
 ```bash
-# All tests
-pytest
-
-# With coverage
-pytest --cov=rmcp --cov-report=html
-
-# Specific test files
-pytest tests/test_common.py -v
+uv run pytest
+uv run pytest tests/evals/test_mcp_server_evals.py
 ```
 
 ### Code Quality
 ```bash
-# Format code
-black rmcp tests
-
-# Sort imports
-isort rmcp tests
-
-# Lint code
-flake8 rmcp tests
-
-# Type checking
-mypy rmcp
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
 ```
 
 ### Release Process
-1. Update version in `rmcp/__init__.py` and `pyproject.toml`
-2. Update CHANGELOG.md with new features and fixes
-3. Run full test suite: `pytest --cov=rmcp`
-4. Run integration tests: `./tests/test_all_tools.sh`
-5. Build package: `poetry build`
-6. Test package installation: `pip install dist/rmcp-*.whl`
-7. Verify CLI: `rmcp version`
-8. Create git tag: `git tag v0.1.1`
-9. Push: `git push && git push --tags`
+1. Update this changelog and run the complete local verification suite.
+2. Open a pull request and require independent review and green CI.
+3. Merge the reviewed commit to `main`.
+4. Set the release version with `uv version X.Y.Z`, verify it, and tag the
+   merged commit as `vX.Y.Z`.
+5. Push the tag and verify the trusted-publishing workflow and PyPI artifact.

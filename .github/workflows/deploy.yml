@@ -40,24 +40,24 @@ jobs:
 
     - name: Configure Docker for Artifact Registry
       run: |
-        gcloud auth configure-docker $AR_REGION-docker.pkg.dev
+        gcloud auth configure-docker "$AR_REGION-docker.pkg.dev"
 
     - name: Pull image from GitHub Container Registry
       run: |
-        docker pull $GHCR_IMAGE
+        docker pull "$GHCR_IMAGE"
 
     - name: Tag and push to Artifact Registry
       run: |
-        docker tag $GHCR_IMAGE $AR_IMAGE
-        docker push $AR_IMAGE
+        docker tag "$GHCR_IMAGE" "$AR_IMAGE"
+        docker push "$AR_IMAGE"
 
     - name: Deploy to Cloud Run
       env:
         RMCP_API_KEY: ${{ secrets.RMCP_API_KEY }}
       run: |
-        gcloud run deploy $SERVICE_NAME \
-          --image $AR_IMAGE \
-          --region $REGION \
+        gcloud run deploy "$SERVICE_NAME" \
+          --image "$AR_IMAGE" \
+          --region "$REGION" \
           --platform managed \
           --allow-unauthenticated \
           --command rmcp \

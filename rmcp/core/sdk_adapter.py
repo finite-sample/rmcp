@@ -27,25 +27,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_MCP_TO_PYTHON_LOG_LEVEL = {
-    "debug": logging.DEBUG,
-    "info": logging.INFO,
-    "notice": logging.INFO,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-    "critical": logging.CRITICAL,
-    "alert": logging.CRITICAL,
-    "emergency": logging.CRITICAL,
-}
-
-_PYTHON_TO_MCP_LOG_LEVEL: dict[str, types.LoggingLevel] = {
-    "debug": "debug",
-    "info": "info",
-    "warning": "warning",
-    "error": "error",
-    "critical": "critical",
-}
-
 
 class _RMCPSDKServer(Server):
     """SDK server that advertises resource list_changed by default.
@@ -90,7 +71,6 @@ class SDKServerAdapter:
             on_unsubscribe_resource=self._on_unsubscribe_resource,
             on_list_prompts=self._on_list_prompts,
             on_get_prompt=self._on_get_prompt,
-            on_set_logging_level=self._on_set_logging_level,
         )
         rmcp_server.add_list_changed_listener(self._on_list_changed)
 
@@ -129,24 +109,16 @@ class SDKServerAdapter:
                 logger.warning("Failed to send progress notification: %s", exc)
 
         async def log_callback(level: str, message: str, data: dict[str, Any]) -> None:
-            mcp_level = _PYTHON_TO_MCP_LOG_LEVEL.get(level.lower(), "info")
-            if session is None:
-                logger.log(
-                    _MCP_TO_PYTHON_LOG_LEVEL.get(mcp_level, logging.INFO),
-                    "%s: %s %s",
-                    request_id,
-                    message,
-                    data,
-                )
-                return
-            try:
-                await session.send_log_message(
-                    level=mcp_level,
-                    data={"message": message, **data},
-                    logger="rmcp",
-                )
-            except Exception as exc:  # pragma: no cover - defensive logging
-                logger.warning("Failed to send log notification: %s", exc)
+            logger.log(
+                getattr(logging, level.upper(), logging.INFO),
+                "%s: context event",
+                request_id,
+                extra={
+                    "event_level": level,
+                    "field_count": len(data),
+                    "field_keys": sorted(data),
+                },
+            )
 
         context = Context.create(
             request_id=request_id,
@@ -195,7 +167,7 @@ class SDKServerAdapter:
             # the shape clients already see.
             return types.CallToolResult(
                 content=[types.TextContent(type="text", text=str(exc))],
-                isError=True,
+                is_error=True,
             )
         finally:
             self._finish(context)
@@ -226,9 +198,9 @@ class SDKServerAdapter:
         self, ctx: Any, params: Any = None
     ) -> types.ListResourceTemplatesResult:
         return types.ListResourceTemplatesResult(
-            resourceTemplates=[
+            resource_templates=[
                 types.ResourceTemplate(
-                    uriTemplate=uri_template,
+                    uri_template=uri_template,
                     name=meta.get("name", uri_template),
                     description=meta.get("description"),
                 )
@@ -300,10 +272,6 @@ class SDKServerAdapter:
             return types.GetPromptResult.model_validate(result)
         finally:
             self._finish(context)
-
-    async def _on_set_logging_level(self, ctx: Any, params: Any) -> types.EmptyResult:
-        await self.rmcp_server._handle_set_log_level(params.level)
-        return types.EmptyResult()
 
     # ------------------------------------------------------------------
     # Notifications

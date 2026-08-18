@@ -1,6 +1,7 @@
 """End-to-end tests of the SDK adapter using the official in-memory client."""
 
 import contextlib
+import logging
 
 import anyio
 import mcp.types as types
@@ -48,6 +49,9 @@ def _make_server(tmp_path):
     server.configure(allowed_paths=[str(tmp_path)], read_only=True)
 
     async def echo_handler(context, params):
+        await context.info(
+            f"Echoing {params.get('message', '')}", provided=params.get("message", "")
+        )
         return {
             "echoed": params.get("message", ""),
             "length": len(params.get("message", "")),
@@ -102,7 +106,7 @@ async def test_initialize_and_capabilities(rmcp_server):
     assert caps.tools is not None
     assert caps.resources is not None and caps.resources.list_changed
     assert caps.prompts is not None
-    assert caps.logging is not None
+    assert caps.logging is None
 
 
 async def test_list_and_call_tool(rmcp_server):
@@ -122,6 +126,33 @@ async def test_list_and_call_tool(rmcp_server):
         assert result.is_error is not True
         # ...but results are still validated against it server-side
         assert result.structured_content == {"echoed": "hello", "length": 5}
+
+
+async def test_tool_call_logs_argument_metadata_without_values(rmcp_server, caplog):
+    adapter = build_sdk_server(rmcp_server)
+    secret = "private-dataset-value-7e6f"
+
+    with caplog.at_level(logging.INFO, logger="rmcp.core.sdk_adapter"):
+        async with create_connected_server_and_client_session(
+            adapter.sdk_server
+        ) as session:
+            result = await session.call_tool("echo", {"message": secret})
+
+    assert result.is_error is not True
+    assert secret not in caplog.text
+    context_records = [
+        record
+        for record in caplog.records
+        if record.getMessage().endswith("context event")
+    ]
+    assert any(
+        getattr(record, "field_keys", None) == ["argument_count", "argument_keys"]
+        for record in context_records
+    )
+    assert any(
+        getattr(record, "field_keys", None) == ["provided"]
+        for record in context_records
+    )
 
 
 async def test_call_tool_error_shape(rmcp_server):
@@ -197,12 +228,3 @@ async def test_resources_round_trip(rmcp_server):
         first = readme.contents[0]
         assert isinstance(first, types.TextResourceContents)
         assert "RMCP" in first.text or "rmcp" in first.text
-
-
-async def test_logging_set_level(rmcp_server):
-    adapter = build_sdk_server(rmcp_server)
-    async with create_connected_server_and_client_session(
-        adapter.sdk_server
-    ) as session:
-        await session.set_logging_level("debug")
-        assert rmcp_server.lifespan_state.current_log_level == "debug"

@@ -24,7 +24,7 @@ rmcp start
 
 That's it! RMCP is now ready to handle statistical analysis requests via Claude Desktop, Claude web, or any MCP client.
 
-**🎯 [Working examples →](examples/quick_start_guide.md)** | **🔧 [Troubleshooting →](#-quick-troubleshooting)**
+**🎯 [Working examples →](https://github.com/finite-sample/rmcp/blob/main/examples/quick_start_guide.md)** | **🔧 [Troubleshooting →](https://github.com/finite-sample/rmcp#-quick-troubleshooting)**
 
 ## ✨ What Can RMCP Do?
 
@@ -55,7 +55,7 @@ CSV, Excel, JSON import with validation → *"Load and analyze my sales data"*
 ### 🤖 **Natural Language Features**
 Formula building, error recovery, example datasets → *"Help me build a regression formula"*
 
-**👉 [See working examples →](examples/quick_start_guide.md)**
+**👉 [See working examples →](https://github.com/finite-sample/rmcp/blob/main/examples/quick_start_guide.md)**
 
 ## 📊 Real Usage with Claude
 
@@ -227,7 +227,7 @@ rmcp start
 docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
 ```
 
-**📖 [Complete Configuration Guide →](docs/configuration/index.rst)** (auto-generated from code)
+**📖 [Complete Configuration Guide →](https://github.com/finite-sample/rmcp/blob/main/docs/configuration.md)**
 
 ## 🔥 Key Features
 
@@ -236,7 +236,7 @@ docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
 - **📊 Professional Output**: Formatted results with markdown tables and inline visualizations
 - **🔒 Production Ready**: Official MCP SDK with stdio and Streamable HTTP transports, plus bearer-token auth for remote deployments
 - **⚙️ Flexible Configuration**: Environment variables, config files, and CLI options
-- **⚡ Fast & Reliable**: 100% test success rate across all scenarios
+- **⚡ Tested at the protocol boundary**: deterministic semantic, malformed-data, security, approval, and recovery contracts run through the official MCP client
 - **🌐 Multiple Transports**: stdio (Claude Desktop) and HTTP (web applications)
 - **🛡️ Guardrails**: Package allowlist, explicit user approval for file writes, package installs and system calls, and filesystem confinement for tool-written files. These guard against mistakes, not adversaries — RMCP executes R as the invoking user, so run it as a trusted local tool rather than an untrusted multi-tenant service.
 
@@ -244,20 +244,23 @@ docker run -e RMCP_HTTP_HOST=0.0.0.0 -e RMCP_HTTP_PORT=8000 rmcp:latest
 
 | Resource | Description |
 |----------|-------------|
-| **[Quick Start Guide](examples/quick_start_guide.md)** | Copy-paste ready examples with real data |
-| **[Economic Research Examples](examples/economic_research_example.md)** | Panel data, time series, advanced econometrics |
-| **[Time Series Examples](examples/advanced_time_series_example.md)** | ARIMA, forecasting, decomposition |
-| **[Image Display Examples](examples/image_display_example.md)** | Inline visualizations in Claude |
+| **[Quick Start Guide](https://github.com/finite-sample/rmcp/blob/main/examples/quick_start_guide.md)** | Copy-paste ready examples with real data |
+| **[Economic Research Examples](https://github.com/finite-sample/rmcp/blob/main/examples/economic_research_example.md)** | Panel data, time series, advanced econometrics |
+| **[Time Series Examples](https://github.com/finite-sample/rmcp/blob/main/examples/advanced_time_series_example.md)** | ARIMA, forecasting, decomposition |
+| **[Image Display Examples](https://github.com/finite-sample/rmcp/blob/main/examples/image_display_example.md)** | Inline visualizations in Claude |
 | **[API Documentation](docs/)** | Auto-generated API reference |
 
 ## 🧪 Validation
 
-RMCP has been tested with real-world scenarios achieving **100% success rate**:
+RMCP's [evaluation guide](docs/evaluation.md) defines package, contract, protocol,
+and model-level release gates. The deterministic E2E suite launches a real RMCP
+stdio process, connects with the official MCP client, and checks exact statistical
+identities alongside malformed data, code-like inputs, filesystem escape attempts,
+approval state, and recovery behavior.
 
-- ✅ **Business Analysts**: Sales forecasting with 97.9% R², $4.70 ROI per marketing dollar
-- ✅ **Economists**: Macroeconomic analysis confirming Okun's Law (r=-0.944)
-- ✅ **Data Scientists**: Customer churn prediction with 100% accuracy
-- ✅ **Researchers**: Treatment effect analysis with significant results (p<0.001)
+```bash
+uv run pytest tests/evals/test_mcp_server_evals.py
+```
 
 ## 🤝 Contributing
 
@@ -300,12 +303,12 @@ rmcp list-capabilities   # verify tools register without starting a session
 rmcp --debug start       # run the server with verbose logging on stderr
 ```
 
-**📖 Need more help?** Check the [examples](examples/) directory for working code.
+**📖 Need more help?** Check the [examples](https://github.com/finite-sample/rmcp/tree/main/examples) directory for working code.
 
 ## 🙋 Support
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/finite-sample/rmcp/issues)
-- 📖 **Examples**: [Working examples](examples/quick_start_guide.md)
+- 📖 **Examples**: [Working examples](https://github.com/finite-sample/rmcp/blob/main/examples/quick_start_guide.md)
 
 ---
 

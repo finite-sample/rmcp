@@ -517,11 +517,11 @@ class LocalEnvironmentValidator:
             )
             report.append("\nNext steps:")
             report.append(
-                "  1. Try running: pytest tests/e2e/test_real_claude_desktop_e2e.py"
+                "  1. Try running: pytest tests/scenarios/test_claude_desktop_scenarios.py"
             )
             report.append("  2. Open Claude Desktop and test RMCP integration")
             report.append(
-                "  3. Run Docker tests: pytest tests/e2e/test_docker_full_workflow.py"
+                "  3. Run Docker tests: pytest tests/scenarios/test_deployment_scenarios.py"
             )
         else:
             report.append("\n⚠️  Some issues found. Address the recommendations above.")

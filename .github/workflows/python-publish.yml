@@ -24,19 +24,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # uv-dynamic-versioning derives the version from tags
 
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Build distributions
-        run: uv build
+        run: uv build --no-sources
 
       - name: Check metadata
         run: uvx twine check dist/*
 
-      # Cheap guard against a shallow clone or missing tags yielding 0.0.0,
-      # which would otherwise publish a bogus version under a good tag.
+      # Prevent a mistagged release from publishing the wrong project version.
       - name: Confirm the built version matches the tag
         run: |
           set -euo pipefail

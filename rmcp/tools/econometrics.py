@@ -123,7 +123,7 @@ async def panel_regression(context, params) -> dict[str, Any]:
 
     r_script = get_r_script("econometrics", "panel_regression")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Panel regression completed successfully")
         return result
     except Exception as e:
@@ -137,10 +137,7 @@ async def panel_regression(context, params) -> dict[str, Any]:
         "type": "object",
         "properties": {
             "data": table_schema(),
-            "formula": {
-                "type": "string",
-                "description": "Format: 'y ~ x1 + x2 | z1 + z2' where | separates instruments",
-            },
+            "formula": formula_schema(),
             "robust": {"type": "boolean", "default": True},
         },
         "required": ["data", "formula"],

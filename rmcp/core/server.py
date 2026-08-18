@@ -20,7 +20,6 @@ try:
         LATEST_PROTOCOL_VERSION,
         Implementation,
         InitializeResult,
-        LoggingCapability,
         PromptsCapability,
         ResourcesCapability,
         ServerCapabilities,
@@ -84,7 +83,7 @@ Two ways in:
 - Named tools (linear_model, arima_model, t_test, ...) cover common analyses with validated inputs and schemas. Prefer these.
 - execute_r_analysis runs arbitrary R when no named tool fits. The code must assign its output to a variable named `result`.
 
-Behaviour worth knowing before you call:
+Behavior worth knowing before you call:
 - R packages are restricted to an allowlist. Loading anything outside it fails; call list_allowed_r_packages to check, or approve_r_package to permit one.
 - File writes, package installs, and system calls from execute_r_analysis are blocked until approved. When a result reports approval_required, call approve_operation and retry.
 - Results over 1000 rows or 50KB are returned as a resource_link (rmcp://data/...) instead of inline; read that URI for the payload.
@@ -479,20 +478,19 @@ class MCPServer:
         if _MCP_TYPES_AVAILABLE:
             # Build capabilities - completion capability is not available in current MCP version
             capabilities = ServerCapabilities(
-                tools=ToolsCapability(listChanged=False),
-                resources=ResourcesCapability(subscribe=True, listChanged=True),
-                prompts=PromptsCapability(listChanged=False),
-                logging=LoggingCapability(),
+                tools=ToolsCapability(list_changed=False),
+                resources=ResourcesCapability(subscribe=True, list_changed=True),
+                prompts=PromptsCapability(list_changed=False),
             )
             initialize_result = InitializeResult(
-                protocolVersion=protocol_version,
+                protocol_version=protocol_version,
                 capabilities=capabilities,
-                serverInfo=Implementation(name=self.name, version=self.version),
+                server_info=Implementation(name=self.name, version=self.version),
                 instructions=self.description or None,
             )
             # by_alias is required: the wire format is camelCase
             # (protocolVersion, serverInfo, listChanged) while the pydantic
-            # fields are snake_case. Without it, mcp 2.0 serialises field
+            # fields are snake_case. Without it, mcp 2.0 serializes field
             # names and the response is not spec-conformant.
             return initialize_result.model_dump(
                 mode="json", exclude_none=True, by_alias=True
