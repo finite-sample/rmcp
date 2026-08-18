@@ -7,7 +7,6 @@ Tests input schema validation and file operations without R execution where poss
 import json
 import os
 import tempfile
-from datetime import datetime
 from shutil import which
 
 import pytest
@@ -99,6 +98,7 @@ class TestEnhancedFileOps:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump({"name": "test", "values": [1, 2, 3]}, f)
             temp_path = f.name
+        os.utime(temp_path, (946_684_800, 946_684_800))
 
         try:
             # Test reading the JSON file with actual R execution
@@ -107,6 +107,7 @@ class TestEnhancedFileOps:
             assert "data" in result
             assert "file_info" in result
             assert "summary" in result
+            assert result["file_info"]["modified_date"] == "2000-01-01T00:00:00Z"
             # R's jsonlite expands JSON objects to column-wise format
             assert "name" in result["data"]
             assert "values" in result["data"]
@@ -130,9 +131,7 @@ class TestEnhancedFileOps:
 
         assert result["file_info"]["file_path"] == str(source)
         assert result["file_info"]["file_size_bytes"] == source.stat().st_size
-        assert result["file_info"]["modified_date"] == datetime.fromtimestamp(
-            source_mtime
-        ).strftime("%Y-%m-%d %H:%M:%S")
+        assert result["file_info"]["modified_date"] == "2000-01-01T00:00:00Z"
 
     @pytest.mark.asyncio
     async def test_read_excel_through_extension_bearing_symlink(self, tmp_path):
@@ -144,6 +143,7 @@ class TestEnhancedFileOps:
         worksheet.append(["x"])
         worksheet.append([1])
         workbook.save(target)
+        os.utime(target, (946_684_800, 946_684_800))
         alias = tmp_path / "data.xlsx"
         alias.symlink_to(target.name)
         context = Context.create(
@@ -156,6 +156,7 @@ class TestEnhancedFileOps:
 
         assert result["data"]["x"] == [1]
         assert result["file_info"]["file_path"] == str(alias)
+        assert result["file_info"]["modified_date"] == "2000-01-01T00:00:00Z"
 
     @pytest.mark.asyncio
     async def test_write_json_functionality(self):

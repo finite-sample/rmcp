@@ -45,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enforced virtual-filesystem authorization before every file read and prevented
   reads outside configured roots, including path-swap races during delegated
   reads.
+- Rejected FIFOs and other special files without blocking the server, preserved
+  runtime errors raised after staging, and made file modification timestamps
+  stable UTC values across platforms.
 - Sanitized all R execution failures returned to MCP clients so host paths,
   environment details, and process configuration are not disclosed, while
   retaining subprocess diagnostics in server logs.

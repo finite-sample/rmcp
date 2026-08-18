@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -137,6 +139,47 @@ def test_vfs_snapshot_preserves_requested_symlink_suffix(tmp_path):
     with context.stage_read_path(alias) as staged_path:
         assert staged_path.suffix == ".xlsx"
         assert staged_path.read_bytes() == b"workbook"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX FIFO behavior")
+def test_vfs_rejects_fifo_without_blocking(tmp_path):
+    fifo = tmp_path / "data.csv"
+    os.mkfifo(fifo)
+    code = """
+import sys
+from pathlib import Path
+from rmcp.security.vfs import VFS, VFSError
+
+path = Path(sys.argv[1])
+try:
+    with VFS([path.parent], read_only=True).stage_read_file(path):
+        pass
+except VFSError as exc:
+    if "Not a regular file" not in str(exc):
+        raise
+else:
+    raise AssertionError("FIFO was accepted")
+"""
+
+    completed = subprocess.run(
+        [sys.executable, "-c", code, str(fifo)],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=2,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_vfs_does_not_relabel_errors_from_staged_consumer(tmp_path):
+    allowed_file = tmp_path / "data.csv"
+    allowed_file.write_text("x\n1\n", encoding="utf-8")
+    vfs = VFS([tmp_path], read_only=True)
+
+    with pytest.raises(FileNotFoundError, match="R binary unavailable"):
+        with vfs.stage_read_file(allowed_file):
+            raise FileNotFoundError("R binary unavailable")
 
 
 def test_windows_final_paths_are_normalized_and_confined(tmp_path):

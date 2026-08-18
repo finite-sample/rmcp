@@ -147,80 +147,83 @@ class VFS:
         descriptors: list[int] = []
         staged_path: Path | None = None
         try:
-            if os.name == "nt":
-                file_fd = os.open(
-                    resolved,
-                    os.O_RDONLY
-                    | getattr(os, "O_BINARY", 0)
-                    | getattr(os, "O_NOINHERIT", 0),
-                )
-                descriptors.append(file_fd)
-                final_path = self._windows_final_path(file_fd)
-                if not self._windows_path_is_allowed(final_path):
-                    raise VFSError(f"Path access denied: {final_path}")
-                self._check_mime_type(Path(final_path))
-            else:
-                root = next(
-                    allowed_root
-                    for allowed_root in self.allowed_roots
-                    if resolved == allowed_root or allowed_root in resolved.parents
-                )
-                relative = resolved.relative_to(root)
-                if not relative.parts:
-                    raise VFSError(f"Not a regular file: {resolved}")
+            try:
+                if os.name == "nt":
+                    file_fd = os.open(
+                        resolved,
+                        os.O_RDONLY
+                        | getattr(os, "O_BINARY", 0)
+                        | getattr(os, "O_NOINHERIT", 0),
+                    )
+                    descriptors.append(file_fd)
+                    final_path = self._windows_final_path(file_fd)
+                    if not self._windows_path_is_allowed(final_path):
+                        raise VFSError(f"Path access denied: {final_path}")
+                    self._check_mime_type(Path(final_path))
+                else:
+                    root = next(
+                        allowed_root
+                        for allowed_root in self.allowed_roots
+                        if resolved == allowed_root or allowed_root in resolved.parents
+                    )
+                    relative = resolved.relative_to(root)
+                    if not relative.parts:
+                        raise VFSError(f"Not a regular file: {resolved}")
 
-                directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
-                no_follow = getattr(os, "O_NOFOLLOW", 0)
-                directory_fd = os.open(root, directory_flags | no_follow)
-                descriptors.append(directory_fd)
-                for part in relative.parts[:-1]:
-                    directory_fd = os.open(
-                        part,
-                        directory_flags | no_follow,
+                    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+                    no_follow = getattr(os, "O_NOFOLLOW", 0)
+                    directory_fd = os.open(root, directory_flags | no_follow)
+                    descriptors.append(directory_fd)
+                    for part in relative.parts[:-1]:
+                        directory_fd = os.open(
+                            part,
+                            directory_flags | no_follow,
+                            dir_fd=directory_fd,
+                        )
+                        descriptors.append(directory_fd)
+
+                    file_fd = os.open(
+                        relative.parts[-1],
+                        os.O_RDONLY | no_follow | getattr(os, "O_NONBLOCK", 0),
                         dir_fd=directory_fd,
                     )
-                    descriptors.append(directory_fd)
+                    descriptors.append(file_fd)
 
-                file_fd = os.open(
-                    relative.parts[-1], os.O_RDONLY | no_follow, dir_fd=directory_fd
+                file_stat = os.fstat(file_fd)
+                if not stat.S_ISREG(file_stat.st_mode):
+                    raise VFSError(f"Not a regular file: {resolved}")
+                if file_stat.st_size > self.max_file_size:
+                    raise VFSError(
+                        f"File too large: {resolved} "
+                        f"({file_stat.st_size} bytes, max {self.max_file_size})"
+                    )
+
+                with tempfile.NamedTemporaryFile(
+                    prefix="rmcp-read-", suffix=requested_suffix, delete=False
+                ) as staged:
+                    staged_path = Path(staged.name)
+                    with os.fdopen(os.dup(file_fd), "rb") as source:
+                        copied = 0
+                        while chunk := source.read(
+                            min(1024 * 1024, self.max_file_size + 1)
+                        ):
+                            copied += len(chunk)
+                            if copied > self.max_file_size:
+                                raise VFSError(
+                                    f"File too large: {resolved} "
+                                    f"(more than {self.max_file_size} bytes)"
+                                )
+                            staged.write(chunk)
+
+                assert staged_path is not None
+                os.utime(
+                    staged_path,
+                    ns=(file_stat.st_atime_ns, file_stat.st_mtime_ns),
                 )
-                descriptors.append(file_fd)
-
-            file_stat = os.fstat(file_fd)
-            if not stat.S_ISREG(file_stat.st_mode):
-                raise VFSError(f"Not a regular file: {resolved}")
-            if file_stat.st_size > self.max_file_size:
-                raise VFSError(
-                    f"File too large: {resolved} "
-                    f"({file_stat.st_size} bytes, max {self.max_file_size})"
-                )
-
-            with tempfile.NamedTemporaryFile(
-                prefix="rmcp-read-", suffix=requested_suffix, delete=False
-            ) as staged:
-                staged_path = Path(staged.name)
-                with os.fdopen(os.dup(file_fd), "rb") as source:
-                    copied = 0
-                    while chunk := source.read(
-                        min(1024 * 1024, self.max_file_size + 1)
-                    ):
-                        copied += len(chunk)
-                        if copied > self.max_file_size:
-                            raise VFSError(
-                                f"File too large: {resolved} "
-                                f"(more than {self.max_file_size} bytes)"
-                            )
-                        staged.write(chunk)
-
-            assert staged_path is not None
-            os.utime(
-                staged_path,
-                ns=(file_stat.st_atime_ns, file_stat.st_mtime_ns),
-            )
+            except OSError as exc:
+                raise VFSError(f"Failed to stage file {resolved}: {exc}") from exc
 
             yield staged_path
-        except OSError as exc:
-            raise VFSError(f"Failed to stage file {resolved}: {exc}") from exc
         finally:
             for descriptor in reversed(descriptors):
                 try:
