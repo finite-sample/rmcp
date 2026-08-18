@@ -1,11 +1,10 @@
 [project]
 name = "rmcp"
-# The git tag is the version -- derived from the latest v* tag by
-# uv-dynamic-versioning. No bump commits, no version edits.
-dynamic = ["version"]
+version = "0.12.0"
 description = "Model Context Protocol server bringing R statistical analysis to Claude Desktop and Claude web, over stdio and Streamable HTTP"
-authors = [{name = "Gaurav Sood", email = "gsood07@gmail.com"}]
-license = {text = "MIT"}
+authors = [{name = "Gaurav Sood", email = "contact@gsood.com"}]
+license = "MIT"
+license-files = ["LICENSE"]
 readme = "README.md"
 keywords = ["mcp", "r", "statistics", "econometrics", "model-context-protocol", "data-analysis", "http", "fastapi", "sse", "configuration", "claude-web", "connector", "anthropic"]
 classifiers = [
@@ -54,7 +53,7 @@ all = [
 dev = [
     # Development and testing tools
     "pytest>=8.2.0",
-    "pytest-asyncio>=0.21.0", 
+    "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.4.0",
     "pre-commit>=3.8.0",
@@ -87,33 +86,14 @@ Documentation = "https://github.com/finite-sample/rmcp#readme"
 Issues = "https://github.com/finite-sample/rmcp/issues"
 
 [build-system]
-requires = ["hatchling>=1.27", "uv-dynamic-versioning"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.12.5,<0.13"]
+build-backend = "uv_build"
 
-[tool.hatch.version]
-source = "uv-dynamic-versioning"
-
-[tool.uv-dynamic-versioning]
-vcs = "git"
-style = "pep440"
-# The Docker build copies only pyproject.toml and rmcp/ (.dockerignore
-# excludes .git), so there is no repository to read a tag from. Without a
-# fallback the backend raises "This does not appear to be a Git project" and
-# the image build fails. Release builds run in a full checkout and derive the
-# real version from the tag; the publish workflow asserts that it matches.
-fallback-version = "0.0.0"
-
-# Flat layout: the package lives at the repo root, not under src/.
-[tool.hatch.build.targets.wheel]
-packages = ["rmcp"]
-
-[tool.hatch.build.targets.sdist]
-include = ["rmcp", "README.md", "LICENSE", "CHANGELOG.md"]
-
-# uv_build packaged from the working directory, so local Finder metadata
-# could reach a distribution. Keep it out explicitly.
-[tool.hatch.build]
-exclude = ["**/.DS_Store"]
+[tool.uv.build-backend]
+module-name = "rmcp"
+module-root = ""
+source-include = ["CHANGELOG.md"]
+source-exclude = ["**/.DS_Store"]
 
 # Tool configurations
 [tool.pytest.ini_options]

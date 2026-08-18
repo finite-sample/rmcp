@@ -101,7 +101,7 @@ ENV PYTHONPATH=/workspace \
     VIRTUAL_ENV=/workspace/.venv \
     PATH="/workspace/.venv/bin:$PATH"
 
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock LICENSE ./
 RUN echo "# RMCP Development Environment" > README.md
 COPY rmcp/ ./rmcp/
 
@@ -121,7 +121,7 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock LICENSE ./
 RUN echo "# RMCP Production Build" > README.md
 COPY rmcp/ ./rmcp/
 

@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   always rebuild the local RMCP wheel when source changes.
 - Updated GitHub Actions to their current major releases and added packaged-image
   MCP evaluations to CI.
+- Replaced Hatchling and dynamic VCS versioning with the native `uv_build`
+  backend and explicit versions managed by `uv version`.
+- Updated Python and R package contact metadata to `contact@gsood.com`.
 - Replaced `filter_data` string-built R evaluation with typed operations that
   treat user values as data and enforce operator-specific operand shapes.
 - Simplified the comprehensive and Docker E2E runners around the canonical pytest
@@ -874,6 +877,6 @@ uv run pyright
 1. Update this changelog and run the complete local verification suite.
 2. Open a pull request and require independent review and green CI.
 3. Merge the reviewed commit to `main`.
-4. Tag the verified commit as `vX.Y.Z`; `uv-dynamic-versioning` derives the
-   package version from that tag.
+4. Set the release version with `uv version X.Y.Z`, verify it, and tag the
+   merged commit as `vX.Y.Z`.
 5. Push the tag and verify the trusted-publishing workflow and PyPI artifact.
