@@ -548,7 +548,10 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             "correlation_matrix": {
                 "type": "object",
                 "description": "Correlation coefficients between variables",
-                "additionalProperties": {"type": "array", "items": {"type": "number"}},
+                "additionalProperties": {
+                    "type": "array",
+                    "items": {"type": ["number", "null"]},
+                },
             },
             "variables": {
                 "type": "array",

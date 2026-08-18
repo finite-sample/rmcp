@@ -98,12 +98,13 @@ from ..registries.tools import tool
 async def read_csv(context, params) -> dict[str, Any]:
     """Read CSV file and return data."""
     await context.info("Reading CSV file", file_path=params.get("file_path"))
-    context.require_read_path(params["file_path"])
-
-    # Load R script from separated file
+    requested_path = params["file_path"]
     r_script = get_r_script("fileops", "read_csv")
     try:
-        result = await execute_r_script_async(r_script, params)
+        with context.stage_read_path(requested_path) as staged_path:
+            delegated_params = {**params, "file_path": str(staged_path)}
+            result = await execute_r_script_async(r_script, delegated_params)
+        result["file_info"]["file_path"] = requested_path
         await context.info(
             "CSV file read successfully",
             rows=result["file_info"]["n_rows"],
@@ -610,12 +611,13 @@ async def filter_data(context, params) -> dict[str, Any]:
 async def read_excel(context, params) -> dict[str, Any]:
     """Read Excel file and return data."""
     await context.info("Reading Excel file", file_path=params.get("file_path"))
-    context.require_read_path(params["file_path"])
-
-    # Load R script from separated file
+    requested_path = params["file_path"]
     r_script = get_r_script("fileops", "read_excel")
     try:
-        result = await execute_r_script_async(r_script, params)
+        with context.stage_read_path(requested_path) as staged_path:
+            delegated_params = {**params, "file_path": str(staged_path)}
+            result = await execute_r_script_async(r_script, delegated_params)
+        result["file_info"]["file_path"] = requested_path
         await context.info(
             "Excel file read successfully",
             rows=result["file_info"]["rows"],
@@ -705,12 +707,13 @@ async def read_excel(context, params) -> dict[str, Any]:
 async def read_json(context, params) -> dict[str, Any]:
     """Read JSON file and return data."""
     await context.info("Reading JSON file", file_path=params.get("file_path"))
-    context.require_read_path(params["file_path"])
-
-    # Load R script from separated file
+    requested_path = params["file_path"]
     r_script = get_r_script("fileops", "read_json")
     try:
-        result = await execute_r_script_async(r_script, params)
+        with context.stage_read_path(requested_path) as staged_path:
+            delegated_params = {**params, "file_path": str(staged_path)}
+            result = await execute_r_script_async(r_script, delegated_params)
+        result["file_info"]["file_path"] = requested_path
         await context.info(
             "JSON file read successfully",
             rows=result["file_info"]["rows"],

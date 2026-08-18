@@ -171,6 +171,18 @@ def _two_point_regression(payload: dict[str, Any]) -> None:
     assert payload["residual_se"] is None
 
 
+def _constant_correlation(payload: dict[str, Any]) -> None:
+    assert payload["correlation_matrix"] == {
+        "x": [1, None],
+        "y": [None, 1],
+    }
+
+
+def _incomplete_regression_plot(payload: dict[str, Any]) -> None:
+    assert payload["n_obs"] == 3
+    assert payload["r_squared"] == pytest.approx(1)
+
+
 CASES = (
     EvalCase(
         "known-linear-effect",
@@ -401,6 +413,30 @@ CASES = (
             "residual_plots": False,
         },
         oracle=_two_point_regression,
+    ),
+    EvalCase(
+        "constant-correlation-heatmap",
+        "boundary",
+        "Represent correlations of constant columns as null coefficients",
+        "correlation_heatmap",
+        {
+            "data": {"x": [1, 1, 1], "y": [2, 2, 2]},
+            "return_image": False,
+        },
+        oracle=_constant_correlation,
+    ),
+    EvalCase(
+        "incomplete-regression-plot",
+        "boundary",
+        "Align fitted and actual rows after incomplete observations are omitted",
+        "regression_plot",
+        {
+            "data": {"x": [1, 2, 3, 4], "y": [3, None, 7, 9]},
+            "formula": "y ~ x",
+            "return_image": False,
+            "residual_plots": False,
+        },
+        oracle=_incomplete_regression_plot,
     ),
     EvalCase(
         "approve-versioned-data-write",

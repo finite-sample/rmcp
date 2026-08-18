@@ -8,7 +8,8 @@ Following the principle: "Makes cross-cutting features universal without globals
 """
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Self
@@ -174,6 +175,16 @@ class Context:
         if vfs is None:
             return None
         return vfs.validate_read_path(path)
+
+    @contextmanager
+    def stage_read_path(self, path: str | Path) -> Iterator[Path]:
+        """Yield a stable authorized path suitable for delegated reads."""
+        vfs = getattr(self.lifespan, "vfs", None)
+        if vfs is None:
+            yield Path(path)
+            return
+        with vfs.stage_read_file(path) as staged_path:
+            yield staged_path
 
     def get_cache_path(self, key: str) -> Path | None:
         """Get cache path for key if caching is enabled."""

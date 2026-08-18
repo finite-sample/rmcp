@@ -11,6 +11,10 @@ Following the pattern: "Gate filesystem access with a tiny VFS."
 import logging
 import mimetypes
 import os
+import stat
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -121,6 +125,92 @@ class VFS:
         self._check_file_constraints(resolved)
         return resolved
 
+    @contextmanager
+    def stage_read_file(self, path: str | Path) -> Iterator[Path]:
+        """Yield a private snapshot of an authorized file for a subprocess.
+
+        Each path component is opened relative to an already-open directory
+        with symlink following disabled. The subprocess receives only the
+        snapshot, so renames or symlink swaps after validation cannot redirect
+        its read outside the VFS.
+        """
+        if str(path).lower().startswith(("http://", "https://")):
+            raise VFSError(
+                "Remote URL access is not permitted by the VFS; download the file "
+                "to an allowed root first"
+            )
+
+        resolved = self._resolve_and_validate_path(path)
+        self._check_mime_type(resolved)
+        root = next(
+            allowed_root
+            for allowed_root in self.allowed_roots
+            if resolved == allowed_root or allowed_root in resolved.parents
+        )
+        relative = resolved.relative_to(root)
+        if not relative.parts:
+            raise VFSError(f"Not a regular file: {resolved}")
+
+        directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        no_follow = getattr(os, "O_NOFOLLOW", 0)
+        descriptors: list[int] = []
+        staged_path: Path | None = None
+        try:
+            directory_fd = os.open(root, directory_flags | no_follow)
+            descriptors.append(directory_fd)
+            for part in relative.parts[:-1]:
+                directory_fd = os.open(
+                    part,
+                    directory_flags | no_follow,
+                    dir_fd=directory_fd,
+                )
+                descriptors.append(directory_fd)
+
+            file_fd = os.open(
+                relative.parts[-1], os.O_RDONLY | no_follow, dir_fd=directory_fd
+            )
+            descriptors.append(file_fd)
+            file_stat = os.fstat(file_fd)
+            if not stat.S_ISREG(file_stat.st_mode):
+                raise VFSError(f"Not a regular file: {resolved}")
+            if file_stat.st_size > self.max_file_size:
+                raise VFSError(
+                    f"File too large: {resolved} "
+                    f"({file_stat.st_size} bytes, max {self.max_file_size})"
+                )
+
+            with tempfile.NamedTemporaryFile(
+                prefix="rmcp-read-", suffix=resolved.suffix, delete=False
+            ) as staged:
+                staged_path = Path(staged.name)
+                with os.fdopen(os.dup(file_fd), "rb") as source:
+                    copied = 0
+                    while chunk := source.read(
+                        min(1024 * 1024, self.max_file_size + 1)
+                    ):
+                        copied += len(chunk)
+                        if copied > self.max_file_size:
+                            raise VFSError(
+                                f"File too large: {resolved} "
+                                f"(more than {self.max_file_size} bytes)"
+                            )
+                        staged.write(chunk)
+
+            yield staged_path
+        except OSError as exc:
+            raise VFSError(f"Failed to stage file {resolved}: {exc}") from exc
+        finally:
+            for descriptor in reversed(descriptors):
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
+            if staged_path is not None:
+                try:
+                    staged_path.unlink()
+                except OSError:
+                    pass
+
     def _is_writable(self, path: Path) -> bool:
         """Whether ``path`` may be written, honoring per-directory grants."""
         if not self.read_only:
@@ -159,7 +249,10 @@ class VFS:
             raise VFSError(
                 f"File too large: {path} ({file_size} bytes, max {self.max_file_size})"
             )
-        # Check MIME type
+        self._check_mime_type(path)
+
+    def _check_mime_type(self, path: Path) -> None:
+        """Check a path's declared file type against the allowlist."""
         mime_type, _ = mimetypes.guess_type(str(path))
         if mime_type and mime_type not in self.allowed_mime_types:
             raise VFSError(

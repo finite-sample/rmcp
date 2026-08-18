@@ -27,8 +27,7 @@ model <- lm(formula, data = data)
 fitted_vals <- fitted(model)
 residuals_vals <- residuals(model)
 std_residuals <- rstandard(model)
-response_var <- all.vars(formula)[1]
-actual_vals <- data[[response_var]]
+actual_vals <- model.response(model.frame(model))
 # Create diagnostic plots
 # 1. Residuals vs Fitted
 p1 <- ggplot(

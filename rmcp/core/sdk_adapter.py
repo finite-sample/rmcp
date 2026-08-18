@@ -111,10 +111,13 @@ class SDKServerAdapter:
         async def log_callback(level: str, message: str, data: dict[str, Any]) -> None:
             logger.log(
                 getattr(logging, level.upper(), logging.INFO),
-                "%s: %s %s",
+                "%s: context event",
                 request_id,
-                message,
-                data,
+                extra={
+                    "event_level": level,
+                    "field_count": len(data),
+                    "field_keys": sorted(data),
+                },
             )
 
         context = Context.create(

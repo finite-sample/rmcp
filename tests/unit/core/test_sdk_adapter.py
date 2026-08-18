@@ -49,6 +49,9 @@ def _make_server(tmp_path):
     server.configure(allowed_paths=[str(tmp_path)], read_only=True)
 
     async def echo_handler(context, params):
+        await context.info(
+            f"Echoing {params.get('message', '')}", provided=params.get("message", "")
+        )
         return {
             "echoed": params.get("message", ""),
             "length": len(params.get("message", "")),
@@ -137,8 +140,19 @@ async def test_tool_call_logs_argument_metadata_without_values(rmcp_server, capl
 
     assert result.is_error is not True
     assert secret not in caplog.text
-    assert "argument_count" in caplog.text
-    assert "argument_keys" in caplog.text
+    context_records = [
+        record
+        for record in caplog.records
+        if record.getMessage().endswith("context event")
+    ]
+    assert any(
+        getattr(record, "field_keys", None) == ["argument_count", "argument_keys"]
+        for record in context_records
+    )
+    assert any(
+        getattr(record, "field_keys", None) == ["provided"]
+        for record in context_records
+    )
 
 
 async def test_call_tool_error_shape(rmcp_server):

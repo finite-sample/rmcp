@@ -131,6 +131,23 @@ def test_correlation_heatmap_defaults_to_numeric_columns(server):
     assert payload["n_variables"] == 2
 
 
+def test_correlation_heatmap_preserves_undefined_coefficients(server):
+    result = call_tool(
+        server,
+        "correlation_heatmap",
+        {
+            "data": {"x": [1, 1, 1], "y": [2, 2, 2]},
+            "return_image": False,
+        },
+    )
+
+    payload = assert_success(result)
+    assert payload["correlation_matrix"] == {
+        "x": [1, None],
+        "y": [None, 1],
+    }
+
+
 def test_regression_plot_matches_declared_output_schema(server):
     result = call_tool(
         server,
@@ -150,6 +167,23 @@ def test_regression_plot_matches_declared_output_schema(server):
     assert payload["residual_se"] == pytest.approx(0, abs=1e-12)
     assert payload["residual_plots"] is False
     assert payload["n_obs"] == 5
+
+
+def test_regression_plot_aligns_rows_after_missing_values_are_omitted(server):
+    result = call_tool(
+        server,
+        "regression_plot",
+        {
+            "data": {"x": [1, 2, 3, 4], "y": [3, None, 7, 9]},
+            "formula": "y ~ x",
+            "residual_plots": False,
+            "return_image": False,
+        },
+    )
+
+    payload = assert_success(result)
+    assert payload["n_obs"] == 3
+    assert payload["r_squared"] == pytest.approx(1)
 
 
 def test_validate_data_honors_analysis_type_and_strict_mode(server):

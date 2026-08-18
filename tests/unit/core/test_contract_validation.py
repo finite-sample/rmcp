@@ -88,6 +88,24 @@ def test_vfs_validates_delegated_reads(tmp_path):
         context.require_read_path("https://example.test/data.csv")
 
 
+def test_vfs_stages_an_isolated_snapshot_for_delegated_reads(tmp_path):
+    allowed_file = tmp_path / "data.csv"
+    allowed_file.write_text("x\n1\n", encoding="utf-8")
+    context = Context.create(
+        "read",
+        "read_csv",
+        LifespanState(vfs=VFS([tmp_path], read_only=True)),
+    )
+
+    with context.stage_read_path(allowed_file) as staged_path:
+        assert staged_path != allowed_file
+        assert staged_path.suffix == ".csv"
+        allowed_file.write_text("x\n2\n", encoding="utf-8")
+        assert staged_path.read_text(encoding="utf-8") == "x\n1\n"
+
+    assert not staged_path.exists()
+
+
 @pytest.mark.asyncio
 async def test_tool_errors_do_not_expose_subprocess_environment():
     async def handler(context, params):

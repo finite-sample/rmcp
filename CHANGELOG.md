@@ -40,9 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Preserved undefined one-point sample deviations, adjusted R-squared values,
-  and residual standard errors as schema-valid `null` values.
+  residual standard errors, and constant-column correlations as schema-valid
+  `null` values.
 - Enforced virtual-filesystem authorization before every file read and prevented
-  reads outside configured roots.
+  reads outside configured roots, including path-swap races during delegated
+  reads.
 - Sanitized all R execution failures returned to MCP clients so host paths,
   environment details, and process configuration are not disclosed, while
   retaining subprocess diagnostics in server logs.
@@ -51,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected public contracts and output shapes for time-series, regression, and
   correlation plots; empty outlier results; formula validation; strict data
   validation; and second-order differencing.
+- Kept regression-plot observations aligned when R omits incomplete rows.
 - Corrected non-robust panel regression coefficient extraction.
 - Rejected duplicate tool registrations, unknown arguments, ragged tables,
   unsupported formula code, unknown filter columns, and nonnumeric outlier
