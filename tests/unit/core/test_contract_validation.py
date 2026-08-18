@@ -106,6 +106,31 @@ async def test_tool_errors_do_not_expose_subprocess_environment():
 
     response = await registry.call_tool(context, "fails", {})
     text = response["content"][0]["text"]
-    assert text == "Tool execution error: unknown variable"
+    assert text == "Tool execution error: R script execution failed"
+    assert "ENVIRONMENT" not in text
+    assert "/private" not in text
+
+
+@pytest.mark.asyncio
+async def test_enhanced_r_errors_do_not_expose_subprocess_details():
+    async def handler(context, params):
+        raise RExecutionError(
+            "❌ Statistical Computation Error\n"
+            "Original error: R script failed with return code 1\n"
+            "COMMAND: /usr/local/bin/R --file=/private/tmp/secret.R\n"
+            "STDERR:\nnot enough observations\n"
+            "ENVIRONMENT:\n{'PATH': '/private/bin'}",
+            stderr="not enough observations",
+            returncode=1,
+        )
+
+    registry = ToolsRegistry()
+    registry.register("fails", handler, {"type": "object"})
+    context = Context.create("failure", "tools/call", LifespanState())
+
+    response = await registry.call_tool(context, "fails", {})
+    text = response["content"][0]["text"]
+    assert text == "Tool execution error: R script execution failed"
+    assert "COMMAND" not in text
     assert "ENVIRONMENT" not in text
     assert "/private" not in text

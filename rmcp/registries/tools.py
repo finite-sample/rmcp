@@ -19,7 +19,9 @@ from typing import Any, Protocol
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, validate_schema
+from ..exceptions import RExecutionError as DomainRExecutionError
 from ..logging_config import get_logger
+from ..r_integration import RExecutionError
 
 # structlog rather than stdlib: this module logs keyword fields (tool,
 # duration_ms) that stdlib logging would drop.
@@ -33,11 +35,9 @@ def _elapsed_ms(started: float) -> int:
 
 def _public_exception_message(exc: Exception) -> str:
     """Return actionable error text without subprocess or environment details."""
-    message = str(exc).split("\nENVIRONMENT:", maxsplit=1)[0]
-    if message.startswith("R script failed with return code"):
-        stderr = getattr(exc, "stderr", "").strip()
-        return stderr or "R script execution failed"
-    return message
+    if isinstance(exc, (RExecutionError, DomainRExecutionError)):
+        return "R script execution failed"
+    return str(exc)
 
 
 class ToolHandler(Protocol):

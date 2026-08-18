@@ -618,9 +618,10 @@ jobs:
         echo "✅ All Docker scenario tests completed"
 
     - name: Run production MCP evaluations
-      env:
-        RMCP_EVAL_DOCKER_IMAGE: ${{ env.RMCP_PRODUCTION_IMAGE }}
-      run: uv run pytest tests/evals/test_mcp_server_evals.py -v --tb=short
+      run: |
+        test -n "$RMCP_PRODUCTION_IMAGE"
+        RMCP_EVAL_DOCKER_IMAGE="$RMCP_PRODUCTION_IMAGE" \
+          uv run pytest tests/evals/test_mcp_server_evals.py -v --tb=short
 
   # Container-based tests for production image validation
   production-container-tests:

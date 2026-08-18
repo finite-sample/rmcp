@@ -423,7 +423,13 @@ async def boxplot(context, params) -> dict[str, Any]:
                 "type": "object",
                 "properties": {
                     "mean": {"type": "number"},
-                    "sd": {"type": "number"},
+                    "sd": {
+                        "type": ["number", "null"],
+                        "description": (
+                            "Sample standard deviation, or null with fewer than "
+                            "two nonmissing observations"
+                        ),
+                    },
                     "min": {"type": "number"},
                     "max": {"type": "number"},
                     "range": {"type": "number"},
@@ -673,13 +679,19 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
                 "maximum": 1,
             },
             "adj_r_squared": {
-                "type": "number",
-                "description": "Adjusted R-squared value",
+                "type": ["number", "null"],
+                "description": (
+                    "Adjusted R-squared value, or null with no residual degrees "
+                    "of freedom"
+                ),
                 "maximum": 1,
             },
             "residual_se": {
-                "type": "number",
-                "description": "Residual standard error",
+                "type": ["number", "null"],
+                "description": (
+                    "Residual standard error, or null with no residual degrees "
+                    "of freedom"
+                ),
                 "minimum": 0,
             },
             "formula": {"type": "string", "description": "Regression formula used"},

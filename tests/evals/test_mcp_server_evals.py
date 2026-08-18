@@ -35,6 +35,7 @@ class EvalCase:
     arguments: dict[str, Any]
     oracle: Oracle | None = None
     error_contains: str | None = None
+    error_excludes: tuple[str, ...] = ()
 
 
 def _exact_linear_model(payload: dict[str, Any]) -> None:
@@ -155,6 +156,19 @@ def _panel_fit(payload: dict[str, Any]) -> None:
     assert payload["n_obs"] == 12
     assert payload["n_groups"] == 3
     assert payload["time_periods"] == 4
+
+
+def _one_point_time_series(payload: dict[str, Any]) -> None:
+    assert payload["statistics"]["n_obs"] == 1
+    assert payload["statistics"]["mean"] == 7
+    assert payload["statistics"]["sd"] is None
+
+
+def _two_point_regression(payload: dict[str, Any]) -> None:
+    assert payload["n_obs"] == 2
+    assert payload["r_squared"] == pytest.approx(1)
+    assert payload["adj_r_squared"] is None
+    assert payload["residual_se"] is None
 
 
 CASES = (
@@ -368,6 +382,27 @@ CASES = (
         oracle=_panel_fit,
     ),
     EvalCase(
+        "one-point-time-series",
+        "boundary",
+        "Represent an undefined one-point sample standard deviation as null",
+        "time_series_plot",
+        {"data": {"values": [7]}, "return_image": False, "show_trend": False},
+        oracle=_one_point_time_series,
+    ),
+    EvalCase(
+        "two-point-regression-plot",
+        "boundary",
+        "Represent residual standard error with zero residual degrees of freedom as null",
+        "regression_plot",
+        {
+            "data": {"x": [1, 2], "y": [3, 5]},
+            "formula": "y ~ x",
+            "return_image": False,
+            "residual_plots": False,
+        },
+        oracle=_two_point_regression,
+    ),
+    EvalCase(
         "approve-versioned-data-write",
         "workflow",
         "Grant a session-scoped write to the server workspace",
@@ -507,6 +542,19 @@ CASES = (
         error_contains="Variable 'missing' was not found in data",
     ),
     EvalCase(
+        "underspecified-regression-sanitized",
+        "safety",
+        "Return a safe R failure without subprocess, path, or environment details",
+        "regression_plot",
+        {
+            "data": {"x": [1], "y": [3]},
+            "formula": "y ~ x",
+            "return_image": False,
+        },
+        error_contains="R script execution failed",
+        error_excludes=("COMMAND:", "ENVIRONMENT:", "/private/", "/usr/local/"),
+    ),
+    EvalCase(
         "filesystem-escape",
         "safety",
         "Deny reads outside the configured workspace",
@@ -570,6 +618,8 @@ def test_mcp_behavior_contract(case: EvalCase, protocol_run):
     if case.error_contains is not None:
         assert result.get("isError") is True, case.intent
         assert case.error_contains in text, text
+        for forbidden in case.error_excludes:
+            assert forbidden not in text, text
         return
 
     assert not result.get("isError"), f"{case.intent}: {text}"

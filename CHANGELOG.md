@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - A versioned MCP behavior-evaluation suite driven through stdio by the official
-  MCP client. Its 34 checks cover exact statistical identities, package-heavy
+  MCP client. Its 37 checks cover exact statistical identities, package-heavy
   tools, malformed and adversarial data, stateful approval workflows, recovery,
   filesystem confinement, and production-container execution.
 - Release guidance for evaluating MCP servers and skills at the package,
@@ -36,10 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserved undefined one-point sample deviations, adjusted R-squared values,
+  and residual standard errors as schema-valid `null` values.
 - Enforced virtual-filesystem authorization before every file read and prevented
   reads outside configured roots.
-- Sanitized client-facing execution errors so host paths, environment details,
-  and process configuration are not disclosed.
+- Sanitized all R execution failures returned to MCP clients so host paths,
+  environment details, and process configuration are not disclosed, while
+  retaining subprocess diagnostics in server logs.
 - Replaced raw R argument and result debug logs with field-level metadata and
   removed frame locals from structured exception tracebacks.
 - Corrected public contracts and output shapes for time-series, regression, and
