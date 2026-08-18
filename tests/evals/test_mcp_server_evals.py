@@ -551,8 +551,14 @@ CASES = (
             "formula": "y ~ x",
             "return_image": False,
         },
-        error_contains="R script execution failed",
-        error_excludes=("COMMAND:", "ENVIRONMENT:", "/private/", "/usr/local/"),
+        error_contains="Statistical Computation Error",
+        error_excludes=(
+            "Original error:",
+            "COMMAND:",
+            "ENVIRONMENT:",
+            "/private/",
+            "/usr/local/",
+        ),
     ),
     EvalCase(
         "filesystem-escape",

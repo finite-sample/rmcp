@@ -36,6 +36,28 @@ def _elapsed_ms(started: float) -> int:
 def _public_exception_message(exc: Exception) -> str:
     """Return actionable error text without subprocess or environment details."""
     if isinstance(exc, (RExecutionError, DomainRExecutionError)):
+        message = str(exc)
+        safe_guidance_prefixes = (
+            "❌ Insufficient Data for Statistical Analysis",
+            "❌ Statistical Computation Error",
+            "❌ R Function Error",
+        )
+        if message.startswith(safe_guidance_prefixes):
+            guidance, separator, _ = message.partition("\nOriginal error:")
+            if separator:
+                return guidance.strip()
+        if message.startswith("❌ Missing R Package:"):
+            package_name = message.partition("'")[2].partition("'")[0]
+            if package_name and all(
+                character.isalnum() or character in "._-" for character in package_name
+            ):
+                return f"Required R package '{package_name}' is not installed"
+
+        stderr = exc.stderr.casefold()
+        if "file not found" in stderr or "no such file" in stderr:
+            return "R file operation failed: requested file was not found"
+        if "permission denied" in stderr:
+            return "R file operation failed: permission denied"
         return "R script execution failed"
     return str(exc)
 

@@ -130,7 +130,8 @@ async def test_enhanced_r_errors_do_not_expose_subprocess_details():
 
     response = await registry.call_tool(context, "fails", {})
     text = response["content"][0]["text"]
-    assert text == "Tool execution error: R script execution failed"
+    assert text.startswith("Tool execution error: ❌ Statistical Computation Error")
+    assert "Original error" not in text
     assert "COMMAND" not in text
     assert "ENVIRONMENT" not in text
     assert "/private" not in text
