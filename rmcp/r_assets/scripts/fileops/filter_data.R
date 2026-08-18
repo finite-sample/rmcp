@@ -13,7 +13,11 @@ logic <- args$logic %||% "AND"
 if (is.data.frame(conditions)) {
   conditions <- lapply(
     seq_len(nrow(conditions)),
-    function(i) as.list(conditions[i, , drop = FALSE])
+    function(i) {
+      condition <- lapply(conditions, function(column) column[[i]])
+      names(condition) <- names(conditions)
+      condition
+    }
   )
 }
 

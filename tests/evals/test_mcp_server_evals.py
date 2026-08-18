@@ -128,6 +128,11 @@ def _missing_filter(payload: dict[str, Any]) -> None:
     assert payload["data"]["id"] == [2]
 
 
+def _mixed_filter(payload: dict[str, Any]) -> None:
+    assert payload["filtered_rows"] == 2
+    assert payload["data"]["id"] == [1, 3]
+
+
 def _invalid_formula(payload: dict[str, Any]) -> None:
     assert payload["is_valid"] is False
     assert payload["formula_parsed"] is False
@@ -302,6 +307,20 @@ CASES = (
             "conditions": [{"variable": "x", "operator": "==", "value": None}],
         },
         oracle=_missing_filter,
+    ),
+    EvalCase(
+        "filter-mixed-operands",
+        "semantic",
+        "Combine a null scalar condition with a membership-list condition",
+        "filter_data",
+        {
+            "data": {"id": [1, 2, 3], "x": [1, None, 3], "g": ["a", "c", "b"]},
+            "conditions": [
+                {"variable": "x", "operator": "!=", "value": None},
+                {"variable": "g", "operator": "%in%", "value": ["a", "b"]},
+            ],
+        },
+        oracle=_mixed_filter,
     ),
     EvalCase(
         "invalid-formula-result",

@@ -6,7 +6,8 @@ Description: Collection of R scripts providing statistical analysis capabilities
     modeling, machine learning, descriptive statistics, and data visualization functions.
     All scripts are designed to work with JSON input/output for seamless integration
     with Python MCP server infrastructure.
-Authors@R: c(person("RMCP Team", email = "contact@gsood.com", role = c("aut", "cre")))
+Authors@R: person(given = "Gaurav", family = "Sood", email = "contact@gsood.com",
+    role = c("aut", "cre"))
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

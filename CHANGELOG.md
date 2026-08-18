@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - A versioned MCP behavior-evaluation suite driven through stdio by the official
-  MCP client. Its 40 checks cover exact statistical identities, package-heavy
+  MCP client. Its 41 checks cover exact statistical identities, package-heavy
   tools, malformed and adversarial data, stateful approval workflows, recovery,
   filesystem confinement, and production-container execution.
 - Release guidance for evaluating MCP servers and skills at the package,

@@ -117,6 +117,23 @@ def test_filter_data_membership_arrays_are_values_not_nested_lists(
     assert payload["data"]["x"] == expected
 
 
+def test_filter_data_combines_null_scalar_and_membership_conditions(server):
+    result = call_tool(
+        server,
+        "filter_data",
+        {
+            "data": {"id": [1, 2, 3], "x": [1, None, 3], "g": ["a", "c", "b"]},
+            "conditions": [
+                {"variable": "x", "operator": "!=", "value": None},
+                {"variable": "g", "operator": "%in%", "value": ["a", "b"]},
+            ],
+        },
+    )
+
+    payload = assert_success(result)
+    assert payload["data"]["id"] == [1, 3]
+
+
 def test_correlation_heatmap_defaults_to_numeric_columns(server):
     result = call_tool(
         server,

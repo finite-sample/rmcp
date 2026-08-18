@@ -30,21 +30,29 @@ def _ensure_production_image():
         str: Docker image name ready for use in tests
 
     Raises:
-        pytest.skip: If Docker is not available or image build fails
+        AssertionError: If an explicitly supplied image cannot be validated
+        pytest.skip: If a local Docker environment or locally built image is unavailable
     """
+    supplied_image = "RMCP_PRODUCTION_IMAGE" in os.environ
+
+    def unavailable(message: str) -> None:
+        if supplied_image:
+            raise AssertionError(message)
+        pytest.skip(message)
+
     # Check Docker availability first
     if not shutil.which("docker"):
-        pytest.skip("Docker not available in PATH")
+        unavailable("Docker not available in PATH")
 
     try:
         result = subprocess.run(["docker", "info"], capture_output=True, timeout=10)
         if result.returncode != 0:
-            pytest.skip("Docker daemon not accessible")
+            unavailable("Docker daemon not accessible")
     except (subprocess.TimeoutExpired, FileNotFoundError):
-        pytest.skip("Docker not accessible")
+        unavailable("Docker not accessible")
 
     # Use environment variable if explicitly set (for CI/custom scenarios)
-    if "RMCP_PRODUCTION_IMAGE" in os.environ:
+    if supplied_image:
         image_name = os.environ["RMCP_PRODUCTION_IMAGE"]
         print(f"🐳 Using specified production image: {image_name}")
     else:
@@ -101,7 +109,7 @@ def _ensure_production_image():
     if validation_result.returncode != 0:
         error_msg = f"Image validation failed: {validation_result.stderr}"
         print(f"❌ {error_msg}")
-        pytest.skip(
+        unavailable(
             f"Production image missing required dependencies: {validation_result.stderr}"
         )
 
@@ -137,7 +145,7 @@ print("✅ Production Python capabilities validated")
     if workflow_result.returncode != 0:
         error_msg = f"Workflow validation failed: {workflow_result.stderr}"
         print(f"❌ {error_msg}")
-        pytest.skip(
+        unavailable(
             f"Production image workflow capabilities failed: {workflow_result.stderr}"
         )
 
@@ -205,7 +213,7 @@ cat('✅ All critical R packages validated\\n')
         error_msg = f"R package validation failed: {r_result.stderr}"
         print(f"❌ {error_msg}")
         print("R validation output:", r_result.stdout)
-        pytest.skip(f"Production image missing critical R packages: {r_result.stderr}")
+        unavailable(f"Production image missing critical R packages: {r_result.stderr}")
 
     print("✅ Production image R packages validated")
     return image_name
