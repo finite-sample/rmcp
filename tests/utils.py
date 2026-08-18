@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+from pathlib import Path
 from typing import Any
 
 
@@ -12,6 +13,7 @@ def run_mcp_stdio_workflow(
     args: list[str] | None = None,
     tool_calls: list[tuple[str, dict[str, Any]]] | None = None,
     env: dict[str, str] | None = None,
+    cwd: str | Path | None = None,
     timeout: float = 120.0,
 ) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
     """Drive a stdio MCP server with the official client (sync wrapper).
@@ -29,7 +31,9 @@ def run_mcp_stdio_workflow(
     from mcp.client.stdio import stdio_client
 
     async def _run():
-        params = StdioServerParameters(command=command, args=args or [], env=env)
+        params = StdioServerParameters(
+            command=command, args=args or [], env=env, cwd=cwd
+        )
         async with stdio_client(params) as (read_stream, write_stream):
             async with ClientSession(read_stream, write_stream) as session:
                 init = await session.initialize()

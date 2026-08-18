@@ -2,9 +2,6 @@
 library(testthat)
 library(jsonlite)
 
-# Source the utility functions
-source("../../R/utils.R")
-
 test_that("rmcp_progress outputs correctly", {
   # Capture stderr output
   output <- capture.output(
@@ -101,6 +98,13 @@ test_that("format_json_output handles special values", {
   # Large/small values should use scientific notation
   expect_true(is.character(result$very_large))
   expect_true(grepl("e", result$very_large))
+})
+
+test_that("format_json_output preserves empty numeric vectors", {
+  result <- format_json_output(list(values = numeric(0)))
+
+  expect_type(result$values, "double")
+  expect_length(result$values, 0)
 })
 
 test_that("format_json_output adds formatting metadata", {

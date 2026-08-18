@@ -19,7 +19,10 @@ from typing import Any, Protocol
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, validate_schema
+from ..exceptions import RExecutionError as DomainRExecutionError
 from ..logging_config import get_logger
+from ..r_integration import RExecutionError
+from ..security.vfs import VFSError
 
 # structlog rather than stdlib: this module logs keyword fields (tool,
 # duration_ms) that stdlib logging would drop.
@@ -29,6 +32,37 @@ logger = get_logger(__name__)
 def _elapsed_ms(started: float) -> int:
     """Milliseconds since a ``time.perf_counter()`` reading."""
     return int((time.perf_counter() - started) * 1000)
+
+
+def _public_exception_message(exc: Exception) -> str:
+    """Return actionable error text without subprocess or environment details."""
+    if isinstance(exc, VFSError):
+        return "File access denied by virtual filesystem"
+    if isinstance(exc, (RExecutionError, DomainRExecutionError)):
+        message = str(exc)
+        safe_guidance_prefixes = (
+            "❌ Insufficient Data for Statistical Analysis",
+            "❌ Statistical Computation Error",
+            "❌ R Function Error",
+        )
+        if message.startswith(safe_guidance_prefixes):
+            guidance, separator, _ = message.partition("\nOriginal error:")
+            if separator:
+                return guidance.strip()
+        if message.startswith("❌ Missing R Package:"):
+            package_name = message.partition("'")[2].partition("'")[0]
+            if package_name and all(
+                character.isalnum() or character in "._-" for character in package_name
+            ):
+                return f"Required R package '{package_name}' is not installed"
+
+        stderr = exc.stderr.casefold()
+        if "file not found" in stderr or "no such file" in stderr:
+            return "R file operation failed: requested file was not found"
+        if "permission denied" in stderr:
+            return "R file operation failed: permission denied"
+        return "R script execution failed"
+    return str(exc)
 
 
 class ToolHandler(Protocol):
@@ -116,11 +150,14 @@ class ToolsRegistry:
     ) -> None:
         """Register a tool with the registry."""
         if name in self._tools:
-            logger.warning(f"Tool '{name}' already registered, overwriting")
+            raise ValueError(f"Tool '{name}' is already registered")
+        normalized_input_schema = dict(input_schema)
+        if normalized_input_schema.get("type") == "object":
+            normalized_input_schema.setdefault("additionalProperties", False)
         self._tools[name] = ToolDefinition(
             name=name,
             handler=handler,
-            input_schema=input_schema,
+            input_schema=normalized_input_schema,
             output_schema=output_schema,
             title=title or name,
             description=description or f"Execute {name}",
@@ -177,7 +214,11 @@ class ToolsRegistry:
             validate_schema(
                 arguments, tool_def.input_schema, f"tool '{name}' arguments"
             )
-            await context.info(f"Calling tool: {name}", arguments=arguments)
+            await context.info(
+                f"Calling tool: {name}",
+                argument_count=len(arguments),
+                argument_keys=sorted(arguments),
+            )
             # Check cancellation before execution
             context.check_cancellation()
             # Execute tool handler
@@ -200,8 +241,8 @@ class ToolsRegistry:
                 validate_schema(result, tool_def.output_schema, f"tool '{name}' output")
 
             await context.info(f"Tool completed: {name}")
-            # Deliberately name + timing only. context.info above already ships
-            # the raw arguments to the client; don't copy payloads into logs.
+            # Deliberately name + timing only. Request logs carry bounded
+            # argument metadata, never user data.
             logger.info(
                 "tool completed",
                 tool=name,
@@ -230,9 +271,15 @@ class ToolsRegistry:
                 duration_ms=_elapsed_ms(started),
                 ok=False,
             )
-            await context.error(f"Tool execution failed for '{name}': {e}")
+            public_message = _public_exception_message(e)
+            await context.error(f"Tool execution failed for '{name}': {public_message}")
             return {
-                "content": [{"type": "text", "text": f"Tool execution error: {e}"}],
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Tool execution error: {public_message}",
+                    }
+                ],
                 "isError": True,
             }
 
@@ -539,23 +586,6 @@ def tool(
 ):
     """
     Decorator to register a function as an MCP tool.
-
-    Usage:
-        @tool(
-            name="analyze_data",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "data": table_schema(),
-                    "method": choice_schema(["mean", "median", "mode"])
-                },
-                "required": ["data"]
-            },
-            description="Analyze dataset with specified method"
-        )
-        async def analyze_data(context: Context, params: dict[str, Any]) -> dict[str, Any]:
-            # Tool implementation
-            return {"result": "analysis complete"}
     """
 
     def decorator(

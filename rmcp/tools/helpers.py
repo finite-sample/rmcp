@@ -6,6 +6,7 @@ Intelligent error diagnosis, data validation, and recovery suggestions.
 import re
 from typing import Any
 
+from ..core.schemas import table_schema
 from ..r_assets.loader import get_r_script
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
@@ -325,7 +326,7 @@ async def _analyze_data_for_errors(context, data: dict) -> dict[str, Any]:
     input_schema={
         "type": "object",
         "properties": {
-            "data": {"type": "object", "description": "Dataset to validate"},
+            "data": table_schema(),
             "analysis_type": {
                 "type": "string",
                 "enum": [
@@ -438,11 +439,11 @@ async def validate_data(context, params) -> dict[str, Any]:
     await context.info("Validating data", analysis_type=analysis_type)
     # Create R script with interpolated values
     r_script = get_r_script("helpers", "validate_data")
-    # Pass the analysis type and strict mode as arguments
-    params["analysis_type"] = analysis_type
-    params["strict"] = strict
     try:
-        result = await execute_r_script_async(r_script, {"data": data})
+        result = await execute_r_script_async(
+            r_script,
+            {"data": data, "analysis_type": analysis_type, "strict": strict},
+        )
         # Add analysis-specific recommendations
         recommendations = _get_analysis_recommendations(analysis_type, result)
         result["recommendations"] = recommendations

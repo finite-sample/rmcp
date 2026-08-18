@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
+from structlog.tracebacks import ExceptionDictTransformer
 
 #: Set once per request by ``SDKServerAdapter._create_context``. asyncio copies
 #: the context when a task is created, so every line logged while serving a
@@ -112,11 +113,19 @@ def configure_structured_logging(
     )
 
     if development_mode and enable_console:
-        renderer: Any = structlog.dev.ConsoleRenderer(colors=True)
+        renderer: Any = structlog.dev.ConsoleRenderer(
+            colors=True,
+            exception_formatter=structlog.dev.plain_traceback,
+        )
         render_chain = [renderer]
     else:
         renderer = structlog.processors.JSONRenderer()
-        render_chain = [structlog.processors.dict_tracebacks, renderer]
+        render_chain = [
+            structlog.processors.ExceptionRenderer(
+                ExceptionDictTransformer(show_locals=False)
+            ),
+            renderer,
+        ]
 
     # foreign_pre_chain is what gives records from the plain-`logging` modules
     # the same envelope as structlog ones, without touching those modules.

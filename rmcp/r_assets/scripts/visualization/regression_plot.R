@@ -15,6 +15,7 @@ formula_str <- args$formula
 title <- args$title %||% "Regression Diagnostic Plots"
 file_path <- args$file_path
 return_image <- args$return_image %||% TRUE
+residual_plots <- args$residual_plots %||% TRUE
 width <- args$width %||% 800
 height <- args$height %||% 600
 
@@ -26,8 +27,7 @@ model <- lm(formula, data = data)
 fitted_vals <- fitted(model)
 residuals_vals <- residuals(model)
 std_residuals <- rstandard(model)
-response_var <- all.vars(formula)[1]
-actual_vals <- data[[response_var]]
+actual_vals <- model.response(model.frame(model))
 # Create diagnostic plots
 # 1. Residuals vs Fitted
 p1 <- ggplot(
@@ -66,7 +66,18 @@ p4 <- ggplot(
   theme_minimal()
 # Combine plots using arrangeGrob with null graphics device
 pdf(file = NULL) # Create null device for layout calculations
-combined_plot <- arrangeGrob(p1, p2, p3, p4, ncol = 2, top = title)
+if (residual_plots) {
+  combined_plot <- arrangeGrob(p1, p2, p3, p4, ncol = 2, top = title)
+} else {
+  combined_plot <- ggplot(
+    data.frame(actual = actual_vals, fitted = fitted_vals),
+    aes(x = actual, y = fitted)
+  ) +
+    geom_point(alpha = 0.7) +
+    geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+    labs(title = title, x = "Actual", y = "Fitted") +
+    theme_minimal()
+}
 dev.off() # Close null device
 # Save to file if path provided
 if (!is.null(file_path)) {
@@ -81,22 +92,16 @@ r_squared <- model_summary$r.squared
 adj_r_squared <- model_summary$adj.r.squared
 f_statistic <- model_summary$fstatistic[1]
 p_value <- pf(f_statistic, model_summary$fstatistic[2], model_summary$fstatistic[3], lower.tail = FALSE)
-diagnostics <- list(
-  r_squared = r_squared,
-  adj_r_squared = adj_r_squared,
-  f_statistic = f_statistic,
-  p_value = p_value,
-  residual_se = model_summary$sigma,
-  n_obs = nobs(model),
-  degrees_freedom = model_summary$df[2]
-)
 # Prepare result
 result <- list(
   plot_type = "regression_plot",
+  r_squared = r_squared,
+  adj_r_squared = adj_r_squared,
+  residual_se = model_summary$sigma,
   formula = formula_str,
-  model_summary = diagnostics,
-  title = title,
-  plot_saved = plot_saved
+  residual_plots = residual_plots,
+  n_obs = nobs(model),
+  dimensions = list(width = width, height = height)
 )
 # Add file path if provided
 if (!is.null(file_path)) {

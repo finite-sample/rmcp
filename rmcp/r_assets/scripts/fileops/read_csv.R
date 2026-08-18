@@ -54,7 +54,7 @@ factor_vars <- names(data)[sapply(data, is.factor)]
 if (!is_url) {
   file_info_obj <- file.info(file_path)
   file_size <- file_info_obj$size
-  modified_date <- as.character(file_info_obj$mtime)
+  modified_date <- format(file_info_obj$mtime, "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
 } else {
   file_size <- NA
   modified_date <- NA

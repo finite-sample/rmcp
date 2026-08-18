@@ -30,56 +30,66 @@ def _ensure_production_image():
         str: Docker image name ready for use in tests
 
     Raises:
-        pytest.skip: If Docker is not available or image build fails
+        AssertionError: If an explicitly supplied image cannot be validated
+        pytest.skip: If a local Docker environment or locally built image is unavailable
     """
+    supplied_image = "RMCP_PRODUCTION_IMAGE" in os.environ
+
+    def unavailable(message: str) -> None:
+        if supplied_image:
+            raise AssertionError(message)
+        pytest.skip(message)
+
     # Check Docker availability first
     if not shutil.which("docker"):
-        pytest.skip("Docker not available in PATH")
+        unavailable("Docker not available in PATH")
 
     try:
         result = subprocess.run(["docker", "info"], capture_output=True, timeout=10)
         if result.returncode != 0:
-            pytest.skip("Docker daemon not accessible")
+            unavailable("Docker daemon not accessible")
     except (subprocess.TimeoutExpired, FileNotFoundError):
-        pytest.skip("Docker not accessible")
+        unavailable("Docker not accessible")
 
     # Use environment variable if explicitly set (for CI/custom scenarios)
-    if "RMCP_PRODUCTION_IMAGE" in os.environ:
+    if supplied_image:
         image_name = os.environ["RMCP_PRODUCTION_IMAGE"]
         print(f"🐳 Using specified production image: {image_name}")
-        return image_name
-
-    # Standard image name for local builds
-    image_name = "rmcp:prod"
-
-    # Check if image exists locally
-    check_cmd = ["docker", "images", "-q", image_name]
-    check_result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=10)
-
-    image_exists = bool(check_result.stdout.strip())
-
-    if not image_exists:
-        print(f"🔨 Production image {image_name} not found, building...")
-
-        # Build production image from current directory
-        build_cmd = ["docker", "build", "--target", "production", "-t", image_name, "."]
-
-        print(f"Running: {' '.join(build_cmd)}")
-        build_result = subprocess.run(
-            build_cmd,
-            capture_output=True,
-            text=True,
-            timeout=600,  # 10 minutes for build
+    else:
+        image_name = "rmcp:prod"
+        check_cmd = ["docker", "images", "-q", image_name]
+        check_result = subprocess.run(
+            check_cmd, capture_output=True, text=True, timeout=10
         )
 
-        if build_result.returncode != 0:
-            error_msg = f"Docker build failed:\nSTDOUT:\n{build_result.stdout}\nSTDERR:\n{build_result.stderr}"
-            print(f"❌ {error_msg}")
-            pytest.skip(f"Failed to build production image: {build_result.stderr}")
-
-        print(f"✅ Successfully built production image: {image_name}")
-    else:
-        print(f"🐳 Using existing production image: {image_name}")
+        if not check_result.stdout.strip():
+            print(f"🔨 Production image {image_name} not found, building...")
+            build_cmd = [
+                "docker",
+                "build",
+                "--target",
+                "production",
+                "-t",
+                image_name,
+                ".",
+            ]
+            print(f"Running: {' '.join(build_cmd)}")
+            build_result = subprocess.run(
+                build_cmd,
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            if build_result.returncode != 0:
+                error_msg = (
+                    f"Docker build failed:\nSTDOUT:\n{build_result.stdout}"
+                    f"\nSTDERR:\n{build_result.stderr}"
+                )
+                print(f"❌ {error_msg}")
+                pytest.skip(f"Failed to build production image: {build_result.stderr}")
+            print(f"✅ Successfully built production image: {image_name}")
+        else:
+            print(f"🐳 Using existing production image: {image_name}")
 
     # Validate that the image has required dependencies
     validation_cmd = [
@@ -89,7 +99,7 @@ def _ensure_production_image():
         image_name,
         "python",
         "-c",
-        "import rmcp, mcp, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil; print('✅ Basic dependencies validated')",
+        "import rmcp, mcp, uvicorn, jsonschema, click, psutil; print('✅ Runtime dependencies validated')",
     ]
 
     validation_result = subprocess.run(
@@ -99,7 +109,7 @@ def _ensure_production_image():
     if validation_result.returncode != 0:
         error_msg = f"Image validation failed: {validation_result.stderr}"
         print(f"❌ {error_msg}")
-        pytest.skip(
+        unavailable(
             f"Production image missing required dependencies: {validation_result.stderr}"
         )
 
@@ -114,25 +124,8 @@ def _ensure_production_image():
         "python",
         "-c",
         """
-# Test production superset capabilities
-print("Testing production superset...")
-import pandas as pd
+# Test production Python capabilities
 import json
-import os
-import tempfile
-
-# Test pandas + superset includes what tests need
-df = pd.DataFrame({'x': [1, 2, 3], 'y': [4, 5, 6]})
-assert len(df) == 3
-print("✅ Pandas available")
-
-# Test Excel capabilities
-with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as f:
-    df.to_excel(f.name, index=False)
-    df_read = pd.read_excel(f.name)
-    os.unlink(f.name)
-    assert len(df_read) == 3
-print("✅ Excel read/write working")
 
 # Test JSON (R communication)
 data = {"test": "value", "numbers": [1, 2, 3]}
@@ -141,7 +134,7 @@ parsed = json.loads(json_str)
 assert parsed == data
 print("✅ JSON serialization working")
 
-print("✅ Production superset validated (Python + R capabilities)")
+print("✅ Production Python capabilities validated")
         """,
     ]
 
@@ -152,7 +145,7 @@ print("✅ Production superset validated (Python + R capabilities)")
     if workflow_result.returncode != 0:
         error_msg = f"Workflow validation failed: {workflow_result.stderr}"
         print(f"❌ {error_msg}")
-        pytest.skip(
+        unavailable(
             f"Production image workflow capabilities failed: {workflow_result.stderr}"
         )
 
@@ -220,7 +213,7 @@ cat('✅ All critical R packages validated\\n')
         error_msg = f"R package validation failed: {r_result.stderr}"
         print(f"❌ {error_msg}")
         print("R validation output:", r_result.stdout)
-        pytest.skip(f"Production image missing critical R packages: {r_result.stderr}")
+        unavailable(f"Production image missing critical R packages: {r_result.stderr}")
 
     print("✅ Production image R packages validated")
     return image_name
@@ -247,12 +240,8 @@ def production_docker_image():
     os.environ["RMCP_PRODUCTION_IMAGE"] = image_name
 
     print(f"🎉 Production Docker image ready: {image_name}")
-    print(
-        "   Python superset validated: rmcp, mcp, uvicorn, httpx, pandas, openpyxl, jsonschema, click, psutil"
-    )
-    print(
-        "   Workflow capabilities validated: Excel read/write, JSON serialization, data manipulation"
-    )
+    print("   Python runtime validated: rmcp, mcp, uvicorn, jsonschema, click, psutil")
+    print("   Serialization validated; readxl and openxlsx packages are available")
     print("   R packages validated: 21 critical packages for statistical analysis")
 
     return image_name
@@ -647,7 +636,7 @@ class TestDockerProductionScenarios:
             production_docker_image,
             "python",
             "-c",
-            "import mcp, uvicorn, httpx; print('HTTP transport ready')",
+            "import mcp, uvicorn; print('HTTP transport ready')",
         ]
 
         fastapi_result = subprocess.run(
@@ -710,7 +699,9 @@ class TestDockerProductionScenarios:
         _check_docker_available()
         print("🐳 Testing volume mounts in Docker...")
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory(
+            dir=Path.cwd(), prefix=".rmcp-volume-test-"
+        ) as temp_dir:
             # Create test data file
             test_file = Path(temp_dir) / "test_data.csv"
             test_file.write_text("x,y\n1,2\n3,4\n5,6\n")
@@ -731,7 +722,7 @@ class TestDockerProductionScenarios:
                     production_docker_image,
                     "python",
                     "-c",
-                    "import pandas as pd; df = pd.read_csv('/data/test_data.csv'); print(f'Loaded {len(df)} rows')",
+                    "import csv; rows = list(csv.DictReader(open('/data/test_data.csv'))); print(f'Loaded {len(rows)} rows')",
                 ],
                 capture_output=True,
                 text=True,
