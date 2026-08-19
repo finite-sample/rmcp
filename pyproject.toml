@@ -218,3 +218,11 @@ DEP004 = ["pytest", "numpy"]           # Dev dependencies in scripts/streamlit
 [tool.deptry.package_module_name_map]
 structlog = "structlog"
 linkify-it-py = "linkify_it_py"
+
+[tool.preen]
+# Fleet exemption (decided 2026-08-18): rmcp is an MCP server whose real gate
+# is its own CI — Python lint/tests plus R integration and Docker scenario
+# tests that canon's reusable-ci matrix cannot express. It stays in py-canon's
+# FLEET for monitoring but does not adopt the copier template or the shared
+# workflow layer. See py-canon docs/fleet-inventory.md.
+skip_checks = ["template", "workflows", "ci-matrix"]
