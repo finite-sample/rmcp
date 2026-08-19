@@ -235,7 +235,12 @@ The system categorizes operations by security level and impact:
 ```python
 OPERATION_CATEGORIES = {
     "file_operations": {
-        "patterns": [r"ggsave\s*\(", r"write\.csv\s*\(", r"write\.table\s*\(", r"writeLines\s*\("],
+        "patterns": [
+            r"ggsave\s*\(",
+            r"write\.csv\s*\(",
+            r"write\.table\s*\(",
+            r"writeLines\s*\(",
+        ],
         "description": "File writing and saving operations",
         "security_level": "medium",
     },
@@ -322,8 +327,8 @@ per-request `Context` — a fresh `Context` is built for every MCP request, so
 anything stored there would be forgotten before the next call:
 
 ```python
-context.lifespan.approved_operations   # {category: {operation: metadata}}
-context.lifespan.approved_packages     # set[str]
+context.lifespan.approved_operations  # {category: {operation: metadata}}
+context.lifespan.approved_packages  # set[str]
 ```
 
 They persist for the life of the server process. There is no environment

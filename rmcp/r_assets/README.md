@@ -66,10 +66,18 @@ R scripts are designed to work through the RMCP template system, which provides 
 from rmcp.r_assets.loader import get_r_script
 import subprocess, tempfile
 
-script_content = get_r_script('regression', 'linear_model')
-with tempfile.NamedTemporaryFile(mode='w', suffix='.R', delete=False) as f:
+script_content = get_r_script("regression", "linear_model")
+with tempfile.NamedTemporaryFile(mode="w", suffix=".R", delete=False) as f:
     f.write(script_content)
-    result = subprocess.run(['Rscript', f.name, '{"data": {"x": [1,2,3,4,5], "y": [2,4,6,8,10]}, "formula": "y ~ x"}'], capture_output=True, text=True)
+    result = subprocess.run(
+        [
+            "Rscript",
+            f.name,
+            '{"data": {"x": [1,2,3,4,5], "y": [2,4,6,8,10]}, "formula": "y ~ x"}',
+        ],
+        capture_output=True,
+        text=True,
+    )
     print(result.stdout)
 ```
 

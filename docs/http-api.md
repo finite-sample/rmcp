@@ -91,11 +91,14 @@ send a `notifications/initialized` notification → issue requests.
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
+
 async def main():
     headers = {"Authorization": "Bearer your-secret"}  # if auth is enabled
-    async with streamablehttp_client(
-        "http://localhost:8000/mcp", headers=headers
-    ) as (read, write, _):
+    async with streamablehttp_client("http://localhost:8000/mcp", headers=headers) as (
+        read,
+        write,
+        _,
+    ):
         async with ClientSession(read, write) as session:
             await session.initialize()
             tools = await session.list_tools()
@@ -119,14 +122,18 @@ response = client.beta.messages.create(
     model="claude-opus-4-8",
     max_tokens=1024,
     betas=["mcp-client-2025-11-20"],
-    mcp_servers=[{
-        "type": "url",
-        "url": "https://your-server.example.com/mcp",
-        "name": "rmcp-statistics",
-        "authorization_token": "your-secret",
-    }],
+    mcp_servers=[
+        {
+            "type": "url",
+            "url": "https://your-server.example.com/mcp",
+            "name": "rmcp-statistics",
+            "authorization_token": "your-secret",
+        }
+    ],
     tools=[{"type": "mcp_toolset", "mcp_server_name": "rmcp-statistics"}],
-    messages=[{"role": "user", "content": "Run a linear regression of sales on marketing."}],
+    messages=[
+        {"role": "user", "content": "Run a linear regression of sales on marketing."}
+    ],
 )
 ```
 
@@ -138,12 +145,14 @@ from openai import OpenAI
 client = OpenAI()
 response = client.responses.create(
     model="gpt-5",
-    tools=[{
-        "type": "mcp",
-        "server_label": "rmcp-statistics",
-        "server_url": "https://your-server.example.com/mcp",
-        "headers": {"Authorization": "Bearer your-secret"},
-    }],
+    tools=[
+        {
+            "type": "mcp",
+            "server_label": "rmcp-statistics",
+            "server_url": "https://your-server.example.com/mcp",
+            "headers": {"Authorization": "Bearer your-secret"},
+        }
+    ],
     input="Run a linear regression of sales on marketing.",
 )
 ```
