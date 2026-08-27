@@ -101,11 +101,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = [
-    "-v",
-    "--strict-markers",
-    "--strict-config",
-]
+addopts = ["-v", "--strict-markers", "--strict-config", "-ra"]
 filterwarnings = [
     # A test that returns instead of asserting silently passes no matter what
     # it computed. Make that a hard failure rather than a warning.
@@ -117,6 +113,9 @@ markers = [
     "asyncio: marks tests as async",
     "local: marks tests that require local IDE setup (not run in CI)",
 ]
+minversion = "6"
+log_level = "INFO"
+xfail_strict = true
 
 [tool.ruff]
 line-length = 88
