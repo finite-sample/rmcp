@@ -23,6 +23,7 @@ from ..exceptions import RExecutionError as DomainRExecutionError
 from ..logging_config import get_logger
 from ..r_integration import RExecutionError
 from ..security.vfs import VFSError
+from ._pagination import paginate_items
 
 # structlog rather than stdlib: this module logs keyword fields (tool,
 # duration_ms) that stdlib logging would drop.
@@ -78,35 +79,6 @@ class ToolHandler(Protocol):
     def __call__(
         self, context: Context, params: dict[str, Any]
     ) -> Awaitable[dict[str, Any]]: ...
-
-
-def _paginate_items(
-    items: list[Any], cursor: str | None, limit: int | None
-) -> tuple[list[Any], str | None]:
-    """Return a slice of items based on cursor/limit pagination."""
-    total_items = len(items)
-    start_index = 0
-    if cursor is not None:
-        if not isinstance(cursor, str):
-            raise ValueError("cursor must be a string if provided")
-        try:
-            start_index = int(cursor)
-        except ValueError as exc:  # pragma: no cover - defensive
-            raise ValueError("cursor must be an integer string") from exc
-        if start_index < 0 or start_index > total_items:
-            raise ValueError("cursor is out of range")
-    if limit is not None:
-        try:
-            limit_value = int(limit)
-        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
-            raise ValueError("limit must be an integer") from exc
-        if limit_value <= 0:
-            raise ValueError("limit must be a positive integer")
-    else:
-        limit_value = total_items - start_index
-    end_index = min(start_index + limit_value, total_items)
-    next_cursor = str(end_index) if end_index < total_items else None
-    return items[start_index:end_index], next_cursor
 
 
 @dataclass
@@ -174,7 +146,7 @@ class ToolsRegistry:
     ) -> dict[str, Any]:
         """List available tools for MCP tools/list."""
         ordered_tools = sorted(self._tools.values(), key=lambda tool: tool.name)
-        page, next_cursor = _paginate_items(ordered_tools, cursor, limit)
+        page, next_cursor = paginate_items(ordered_tools, cursor, limit)
         tools: list[dict[str, Any]] = []
         for tool_def in page:
             # outputSchema is deliberately not advertised. It accounted for

@@ -14,6 +14,7 @@ from typing import Any, Protocol
 
 from ..core.context import Context
 from ..core.schemas import SchemaError, validate_schema
+from ._pagination import paginate_items
 
 logger = logging.getLogger(__name__)
 
@@ -29,35 +30,6 @@ class PromptHandler(Protocol):
     _mcp_prompt_annotations: dict[str, Any] | None
 
     def __call__(self) -> str: ...
-
-
-def _paginate_items(
-    items: list["PromptDefinition"], cursor: str | None, limit: int | None
-) -> tuple[list["PromptDefinition"], str | None]:
-    """Return a slice of prompts based on cursor/limit pagination."""
-    total_items = len(items)
-    start_index = 0
-    if cursor is not None:
-        if not isinstance(cursor, str):
-            raise ValueError("cursor must be a string if provided")
-        try:
-            start_index = int(cursor)
-        except ValueError as exc:  # pragma: no cover - defensive
-            raise ValueError("cursor must be an integer string") from exc
-        if start_index < 0 or start_index > total_items:
-            raise ValueError("cursor is out of range")
-    if limit is not None:
-        try:
-            limit_value = int(limit)
-        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
-            raise ValueError("limit must be an integer") from exc
-        if limit_value <= 0:
-            raise ValueError("limit must be a positive integer")
-    else:
-        limit_value = total_items - start_index
-    end_index = min(start_index + limit_value, total_items)
-    next_cursor = str(end_index) if end_index < total_items else None
-    return items[start_index:end_index], next_cursor
 
 
 @dataclass
@@ -113,7 +85,7 @@ class PromptsRegistry:
     ) -> dict[str, Any]:
         """List available prompts for MCP prompts/list."""
         ordered_prompts = sorted(self._prompts.values(), key=lambda prompt: prompt.name)
-        page, next_cursor = _paginate_items(ordered_prompts, cursor, limit)
+        page, next_cursor = paginate_items(ordered_prompts, cursor, limit)
         prompts: list[dict[str, Any]] = []
         for prompt_def in page:
             prompt_info: dict[str, Any] = {
