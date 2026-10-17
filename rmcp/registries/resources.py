@@ -23,6 +23,7 @@ from ..core.context import Context
 from ..r_integration import execute_r_script_async
 from ..security import VFSError
 from ..tools.helpers import load_example
+from ._pagination import paginate_items
 from .tools import MAX_STORED_RESULTS
 
 logger = logging.getLogger(__name__)
@@ -51,35 +52,6 @@ _REQUIRED_R_PACKAGES: tuple[str, ...] = (
     "readxl",
     "knitr",
 )
-
-
-def _paginate_items(
-    items: list[dict[str, Any]], cursor: str | None, limit: int | None
-) -> tuple[list[dict[str, Any]], str | None]:
-    """Return a slice of items based on cursor/limit pagination."""
-    total_items = len(items)
-    start_index = 0
-    if cursor is not None:
-        if not isinstance(cursor, str):
-            raise ValueError("cursor must be a string if provided")
-        try:
-            start_index = int(cursor)
-        except ValueError as exc:  # pragma: no cover - defensive
-            raise ValueError("cursor must be an integer string") from exc
-        if start_index < 0 or start_index > total_items:
-            raise ValueError("cursor is out of range")
-    if limit is not None:
-        try:
-            limit_value = int(limit)
-        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
-            raise ValueError("limit must be an integer") from exc
-        if limit_value <= 0:
-            raise ValueError("limit must be a positive integer")
-    else:
-        limit_value = total_items - start_index
-    end_index = min(start_index + limit_value, total_items)
-    next_cursor = str(end_index) if end_index < total_items else None
-    return items[start_index:end_index], next_cursor
 
 
 class ResourcesRegistry:
@@ -185,7 +157,7 @@ class ResourcesRegistry:
                         "description": f"File system mount: {mount_path}",
                     }
                 )
-        page, next_cursor = _paginate_items(resources, cursor, limit)
+        page, next_cursor = paginate_items(resources, cursor, limit)
         await context.info(
             "Listed resources",
             count=len(page),
