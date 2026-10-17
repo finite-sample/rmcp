@@ -560,7 +560,7 @@ CASES = (
         "contract",
         "Reject misspelled or stale tool arguments",
         "summary_stats",
-        {"data": {"x": [1, 2, 3]}, "varibles": ["x"]},
+        {"data": {"x": [1, 2, 3]}, "varibles": ["x"]},  # codespell:ignore varibles
         error_contains="Additional properties are not allowed",
     ),
     EvalCase(

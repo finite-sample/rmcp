@@ -2,7 +2,7 @@
 """Degenerate-but-ordinary inputs, driven over the real MCP protocol.
 
 Every other test for these bugs calls ``ToolsRegistry.call_tool`` directly,
-which skips the transport, the SDK adapter, and serialisation to the client.
+which skips the transport, the SDK adapter, and serialization to the client.
 These bugs are *about what reaches the client*, so they are proven here
 instead: ``run_mcp_stdio_workflow`` spawns ``rmcp start`` as a subprocess and
 drives it with the official MCP client over stdio -- the same protocol and

@@ -30,11 +30,11 @@ class RequestState:
     cancelled: bool = False
 
     def is_cancelled(self) -> bool:
-        """Check if request has been cancelled."""
+        """Check if request has been canceled."""
         return self.cancelled
 
     def cancel(self) -> None:
-        """Mark request as cancelled."""
+        """Mark request as canceled."""
         self.cancelled = True
 
 
@@ -130,9 +130,9 @@ class Context:
         await self.log("error", message, **kwargs)
 
     def check_cancellation(self) -> None:
-        """Check if request has been cancelled, raise if so."""
+        """Check if request has been canceled, raise if so."""
         if self.request.is_cancelled():
-            raise asyncio.CancelledError("Request was cancelled")
+            raise asyncio.CancelledError("Request was canceled")
 
     # Security helpers
     def is_path_allowed(self, path: Path) -> bool:

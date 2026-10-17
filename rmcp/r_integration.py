@@ -433,7 +433,7 @@ async def execute_r_script_async(
         dict[str, Any]: Result data from R script execution
     Raises:
         RExecutionError: If R script execution fails
-        asyncio.CancelledError: If the operation is cancelled
+        asyncio.CancelledError: If the operation is canceled
     """
     effective_timeout = timeout if timeout is not None else get_config().r.timeout
     async with get_r_semaphore():  # Limit concurrent R processes
@@ -573,7 +573,7 @@ if (exists("result")) {{
                     )
                     stderr = "\n".join(stderr_lines) if stderr_lines else ""
                 except asyncio.CancelledError:
-                    logger.info("R script execution cancelled, terminating process")
+                    logger.info("R script execution canceled, terminating process")
                     # Graceful termination: SIGTERM first, then SIGKILL
                     proc.terminate()
                     try:

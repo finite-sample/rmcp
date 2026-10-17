@@ -450,7 +450,7 @@ class MCPServer:
         """
         if request_id in self._active_requests:
             self._active_requests[request_id].cancel()
-            logger.info(f"Cancelled request {request_id}")
+            logger.info(f"Canceled request {request_id}")
 
     async def _handle_initialize(self, params: dict[str, Any]) -> dict[str, Any]:
         """

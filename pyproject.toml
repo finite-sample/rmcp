@@ -224,3 +224,10 @@ linkify-it-py = "linkify_it_py"
 # FLEET for monitoring but does not adopt the copier template or the shared
 # workflow layer. See py-canon docs/fleet-inventory.md.
 skip_checks = ["template", "workflows", "ci-matrix"]
+
+[tool.codespell]
+# R package names and the mean absolute percentage error metric.
+ignore-words-list = "aer,mape"
+builtin = "clear,rare,en-GB_to_en-US"
+# Preserve the request field and MCP notification method.
+ignore-regex = '''\bcancelled(?=: bool)|(?<=\.)cancelled\b|notifications/cancelled'''  # codespell:ignore cancelled
