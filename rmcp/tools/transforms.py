@@ -61,7 +61,7 @@ async def lag_lead(context, params) -> dict[str, Any]:
 
     r_script = get_r_script("transforms", "lag_lead")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Lag/lead variables created successfully")
         return result
     except Exception as e:
@@ -145,7 +145,7 @@ async def winsorize(context, params) -> dict[str, Any]:
 
     r_script = get_r_script("transforms", "winsorize")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Variables winsorized successfully")
         return result
     except Exception as e:
@@ -214,7 +214,7 @@ async def difference(context, params) -> dict[str, Any]:
 
     r_script = get_r_script("transforms", "difference")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Variable differences computed successfully")
         return result
     except Exception as e:
@@ -290,7 +290,7 @@ async def standardize(context, params) -> dict[str, Any]:
 
     r_script = get_r_script("transforms", "standardize")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Variables standardized successfully")
         return result
     except Exception as e:

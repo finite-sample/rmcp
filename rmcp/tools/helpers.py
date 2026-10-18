@@ -315,7 +315,7 @@ async def _analyze_data_for_errors(context, data: dict) -> dict[str, Any]:
     """Analyze data to identify potential issues."""
     r_script = get_r_script("helpers", "analyze_data_for_errors")
     try:
-        analysis = await execute_r_script_async(r_script, {"data": data})
+        analysis = await execute_r_script_async(r_script, {"data": data}, context)
         return analysis
     except Exception:
         return {"issues": [], "suggestions": []}
@@ -443,6 +443,7 @@ async def validate_data(context, params) -> dict[str, Any]:
         result = await execute_r_script_async(
             r_script,
             {"data": data, "analysis_type": analysis_type, "strict": strict},
+            context,
         )
         # Add analysis-specific recommendations
         recommendations = _get_analysis_recommendations(analysis_type, result)
@@ -639,7 +640,7 @@ async def load_example(context, params) -> dict[str, Any]:
     await context.info("Loading example dataset", name=dataset_name, size=size)
     r_script = get_r_script("helpers", "load_example")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info(
             "Example dataset loaded successfully",
             rows=result["metadata"]["rows"],

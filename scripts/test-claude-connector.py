@@ -28,9 +28,7 @@ PROTOCOL_VERSION = "2025-11-25"
 class ConnectorTester:
     """Test RMCP connector integration over MCP Streamable HTTP."""
 
-    def __init__(
-        self, server_url: str = "https://rmcp-server-394229601724.us-central1.run.app"
-    ):
+    def __init__(self, server_url: str):
         self.server_url = server_url.rstrip("/")
         self.mcp_url = f"{self.server_url}/mcp"
         self.session_id: str | None = None
@@ -306,11 +304,11 @@ class ConnectorTester:
 
 def main():
     """Main test execution."""
-    server_url = (
-        sys.argv[1]
-        if len(sys.argv) > 1
-        else "https://rmcp-server-394229601724.us-central1.run.app"
-    )
+    # No default: the Cloud Run deployment this used to name no longer exists, and
+    # a dead default fails in a way that looks like a connector bug.
+    if len(sys.argv) < 2:
+        sys.exit("usage: test-claude-connector.py <server-url>")
+    server_url = sys.argv[1]
     claude_api_key = os.getenv("CLAUDE_API_KEY")
     tester = ConnectorTester(server_url)
     tester.run_comprehensive_test(claude_api_key)

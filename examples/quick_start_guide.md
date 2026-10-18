@@ -184,7 +184,6 @@ Should show:
 - Verify R is installed: `which R`
 
 **Need help?**
-- [GitHub Issues](https://github.com/gojiplus/rmcp/issues) for bugs
-- [GitHub Discussions](https://github.com/gojiplus/rmcp/discussions) for questions
+- [GitHub Issues](https://github.com/finite-sample/rmcp/issues) for bugs and questions
 
 Ready to analyze data through natural conversation with AI? You're all set! 🚀

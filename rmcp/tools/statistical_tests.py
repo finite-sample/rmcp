@@ -136,7 +136,7 @@ async def t_test(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("statistical_tests", "t_test")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("T-test completed successfully")
         return result
     except Exception as e:
@@ -245,7 +245,7 @@ async def anova(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("statistical_tests", "anova")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("ANOVA completed successfully")
         return result
     except Exception as e:
@@ -364,7 +364,7 @@ async def chi_square_test(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("statistical_tests", "chi_square_test")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Chi-square test completed successfully")
         return result
     except Exception as e:
@@ -459,7 +459,7 @@ async def normality_test(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("statistical_tests", "normality_test")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Normality test completed successfully")
         return result
     except Exception as e:

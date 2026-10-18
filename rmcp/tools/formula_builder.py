@@ -236,7 +236,7 @@ async def _validate_formula(context, formula: str, data: dict) -> dict[str, Any]
     r_script = get_r_script("formula_builder", "validate_formula")
     try:
         validation = await execute_r_script_async(
-            r_script, {"data": data, "formula": formula}
+            r_script, {"data": data, "formula": formula}, context
         )
         return validation
     except Exception as e:
