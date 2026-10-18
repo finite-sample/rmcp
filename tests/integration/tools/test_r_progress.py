@@ -111,3 +111,33 @@ def test_r_is_not_left_running_when_reading_its_output_fails(monkeypatch):
         asyncio.run(execute_r_script_async(script, {}, SlowClient(0), timeout=60))
 
     assert started and started[0].returncode is not None
+
+
+class StubbornClient:
+    """Its notice handler keeps running through cancellation."""
+
+    async def progress(self, message, current, total):
+        try:
+            await asyncio.Event().wait()
+        finally:
+            await asyncio.sleep(10)
+
+    async def info(self, message):
+        await self.progress(message, None, None)
+
+
+def test_a_callback_resisting_cancellation_cannot_hold_the_result(monkeypatch):
+    from rmcp import r_integration
+
+    monkeypatch.setattr(r_integration, "NOTICE_DRAIN_SECONDS", 0.5)
+    monkeypatch.setattr(r_integration, "SENDER_STOP_SECONDS", 0.5)
+
+    async def run():
+        started = time.monotonic()
+        result = await execute_r_script_async(SCRIPT, {}, StubbornClient(), timeout=5)
+        return result, time.monotonic() - started
+
+    result, elapsed = asyncio.run(run())
+
+    assert result == {"value": 1}
+    assert elapsed < 4
