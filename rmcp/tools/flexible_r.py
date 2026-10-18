@@ -347,10 +347,14 @@ Please respond with your choice. If you approve, the analysis will continue with
                 args,
                 include_image=True,
                 timeout=params.get("timeout_seconds"),
+                context=context,
             )
         else:
             result = await execute_r_script_async(
-                full_script, args, timeout=params.get("timeout_seconds")
+                full_script,
+                args,
+                context=context,
+                timeout=params.get("timeout_seconds"),
             )
 
         await context.info("R analysis completed successfully")

@@ -11,7 +11,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -224,6 +223,9 @@ linkify-it-py = "linkify_it_py"
 # FLEET for monitoring but does not adopt the copier template or the shared
 # workflow layer. See py-canon docs/fleet-inventory.md.
 skip_checks = ["template", "workflows", "ci-matrix"]
+# Not links: Starlette's TestClient base URL, and the hostname the local HTTPS
+# setup script writes into /etc/hosts.
+link_ignore = ["http://testserver", "https://rmcp.local"]
 
 [tool.codespell]
 # R package names and the mean absolute percentage error metric.

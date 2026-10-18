@@ -107,7 +107,7 @@ async def read_csv(context, params) -> dict[str, Any]:
     try:
         with context.stage_read_path(requested_path) as staged_path:
             delegated_params = {**params, "file_path": str(staged_path)}
-            result = await execute_r_script_async(r_script, delegated_params)
+            result = await execute_r_script_async(r_script, delegated_params, context)
         result["file_info"]["file_path"] = requested_path
         await context.info(
             "CSV file read successfully",
@@ -186,7 +186,7 @@ async def write_csv(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("fileops", "write_csv")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("CSV file written successfully")
         return result
     except Exception as e:
@@ -265,7 +265,7 @@ async def write_excel(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("fileops", "write_excel")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Excel file written successfully")
         return result
     except Exception as e:
@@ -363,7 +363,7 @@ async def data_info(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("fileops", "data_info")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Dataset analysis completed successfully")
         return result
     except Exception as e:
@@ -529,7 +529,7 @@ async def filter_data(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("fileops", "filter_data")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Data filtered successfully")
         return result
     except Exception as e:
@@ -625,7 +625,7 @@ async def read_excel(context, params) -> dict[str, Any]:
     try:
         with context.stage_read_path(requested_path) as staged_path:
             delegated_params = {**params, "file_path": str(staged_path)}
-            result = await execute_r_script_async(r_script, delegated_params)
+            result = await execute_r_script_async(r_script, delegated_params, context)
         result["file_info"]["file_path"] = requested_path
         await context.info(
             "Excel file read successfully",
@@ -725,7 +725,7 @@ async def read_json(context, params) -> dict[str, Any]:
     try:
         with context.stage_read_path(requested_path) as staged_path:
             delegated_params = {**params, "file_path": str(staged_path)}
-            result = await execute_r_script_async(r_script, delegated_params)
+            result = await execute_r_script_async(r_script, delegated_params, context)
         result["file_info"]["file_path"] = requested_path
         await context.info(
             "JSON file read successfully",
@@ -815,7 +815,7 @@ async def write_json(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("fileops", "write_json")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("JSON file written successfully")
         return result
     except Exception as e:

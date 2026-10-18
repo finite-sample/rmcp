@@ -186,7 +186,7 @@ async def linear_model(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("regression", "linear_model")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info(
             "Linear model fitted successfully",
             r_squared=result.get("r_squared"),
@@ -334,7 +334,7 @@ async def correlation_analysis(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("regression", "correlation_analysis")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info(
             "Correlation analysis completed",
             n_variables=len(result.get("variables", [])),
@@ -469,7 +469,7 @@ async def logistic_regression(context, params) -> dict[str, Any]:
     # Load R script from separated file
     r_script = get_r_script("regression", "logistic_regression")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info(
             "Logistic regression fitted successfully",
             aic=result.get("aic"),

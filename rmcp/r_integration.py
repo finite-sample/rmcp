@@ -36,6 +36,15 @@ from .logging_config import get_logger, log_r_execution
 
 logger = get_logger(__name__)
 
+#: How long a finished R run waits for queued progress notices to reach the client
+#: before dropping the rest. Delivery is not allowed to hold a result indefinitely.
+NOTICE_DRAIN_SECONDS = 5.0
+#: Most progress notices held for a slow client; the oldest are dropped first.
+NOTICE_QUEUE_SIZE = 256
+#: How long stopping the notice sender waits for it to wind down. A callback that
+#: is still running after that is left behind, logged, rather than holding the run.
+SENDER_STOP_SECONDS = 1.0
+
 # One R-process limiter per event loop. A single module-level Semaphore would
 # bind to whichever loop first made a caller wait, then raise "bound to a
 # different event loop" in every other loop. Keyed weakly so closed loops go.
@@ -413,27 +422,61 @@ Original error: {stderr.strip()}"""
                     pass
 
 
-async def execute_r_script_async(
-    script: str, args: dict[str, Any], context=None, timeout: float | None = None
-) -> dict[str, Any]:
-    """
-    Execute R script asynchronously with proper cancellation support and concurrency control.
-    This function provides:
-    - True async execution using asyncio.create_subprocess_exec
-    - Proper subprocess cancellation (SIGTERM -> SIGKILL)
-    - Global concurrency limiting via semaphore
-    - Progress reporting from R scripts via context
-    - Same interface and error handling as execute_r_script
+def _offer_notice(
+    notices: asyncio.Queue[tuple[str, tuple[Any, ...]] | None],
+    notice: tuple[str, tuple[Any, ...]] | None,
+) -> None:
+    """Queue a notice, dropping the oldest when full: the latest progress matters.
+
     Args:
-        script: R script code to execute
-        args: Arguments to pass to the R script as JSON
-        context: Optional context for progress reporting and logging
-        timeout: Per-call timeout in seconds, overriding the configured default
+        notices: The bounded notice queue.
+        notice: The notice, or ``None`` to tell the sender R has finished.
+    """
+    if notices.full():
+        notices.get_nowait()
+    notices.put_nowait(notice)
+
+
+async def _stop_sender(sender: asyncio.Task[None]) -> None:
+    """Cancel the notice sender, waiting at most SENDER_STOP_SECONDS for it.
+
+    asyncio.wait returns at the deadline even if a callback resists
+    cancellation; wait_for would wait for it to finish.
+
+    Args:
+        sender: The notice sender task.
+    """
+    if sender.done():
+        return
+    sender.cancel()
+    await asyncio.wait({sender}, timeout=SENDER_STOP_SECONDS)
+    if not sender.done():
+        logger.warning("A progress callback ignored cancellation; leaving it")
+
+
+async def _execute_r_script_locked(
+    script: str,
+    args: dict[str, Any],
+    notices: asyncio.Queue[tuple[str, tuple[Any, ...]] | None] | None,
+    timeout: float | None,
+) -> dict[str, Any]:
+    """Run one R script under the concurrency semaphore, queueing its notices.
+
+    Delivering the notices is the caller's job, after the semaphore is released,
+    so a client slow to accept them cannot hold an R slot.
+
+    Args:
+        script: R script code to execute.
+        args: Arguments to pass to the R script as JSON.
+        notices: Queue for progress notices, or ``None`` to discard them.
+        timeout: Per-call timeout in seconds, overriding the configured default.
+
     Returns:
-        dict[str, Any]: Result data from R script execution
+        dict[str, Any]: Result data from R script execution.
+
     Raises:
-        RExecutionError: If R script execution fails
-        asyncio.CancelledError: If the operation is canceled
+        RExecutionError: If R script execution fails.
+        asyncio.CancelledError: If the operation is canceled.
     """
     effective_timeout = timeout if timeout is not None else get_config().r.timeout
     async with get_r_semaphore():  # Limit concurrent R processes
@@ -530,9 +573,14 @@ if (exists("result")) {{
                             if not line:
                                 break
                             line_str = line.decode("utf-8").strip()
-                            stderr_lines.append(line_str)
+                            # Progress lines are protocol, not error output; keeping
+                            # them let a script that floods progress grow memory.
+                            if not line_str.startswith("RMCP_PROGRESS:"):
+                                stderr_lines.append(line_str)
                             # Parse progress messages if context is available
-                            if context and line_str.startswith("RMCP_PROGRESS:"):
+                            if notices is not None and line_str.startswith(
+                                "RMCP_PROGRESS:"
+                            ):
                                 try:
                                     import json
 
@@ -547,12 +595,15 @@ if (exists("result")) {{
                                         current = progress_data.get("current")
                                         total = progress_data.get("total")
                                         if current is not None and total is not None:
-                                            await context.progress(
-                                                message, current, total
+                                            _offer_notice(
+                                                notices,
+                                                ("progress", (message, current, total)),
                                             )
                                         else:
                                             # Send as info log if no numeric progress
-                                            await context.info(f"R: {message}")
+                                            _offer_notice(
+                                                notices, ("info", (f"R: {message}",))
+                                            )
                                 except (json.JSONDecodeError, AttributeError) as e:
                                     logger.debug(
                                         f"Failed to parse progress message: {e}"
@@ -574,20 +625,25 @@ if (exists("result")) {{
                     stderr = "\n".join(stderr_lines) if stderr_lines else ""
                 except asyncio.CancelledError:
                     logger.info("R script execution canceled, terminating process")
-                    # Graceful termination: SIGTERM first, then SIGKILL
-                    proc.terminate()
-                    try:
-                        await asyncio.wait_for(proc.wait(), timeout=0.5)
-                    except TimeoutError:
-                        logger.warning("R process didn't terminate gracefully, killing")
-                        proc.kill()
-                        await proc.wait()
+                    # Graceful termination: SIGTERM first, then SIGKILL. The process
+                    # may already have exited, and signaling it then raises.
+                    if proc.returncode is None:
+                        proc.terminate()
+                        try:
+                            await asyncio.wait_for(proc.wait(), timeout=0.5)
+                        except TimeoutError:
+                            logger.warning(
+                                "R process didn't terminate gracefully, killing"
+                            )
+                            proc.kill()
+                            await proc.wait()
                     raise
                 except TimeoutError:
                     logger.error(
                         "R script execution timed out", timeout=effective_timeout
                     )
-                    proc.kill()
+                    if proc.returncode is None:
+                        proc.kill()
                     await proc.wait()
                     raise RExecutionError(
                         f"R script execution timed out after {effective_timeout} seconds",
@@ -595,6 +651,12 @@ if (exists("result")) {{
                         stderr="Execution timed out",
                         returncode=-1,
                     )
+                finally:
+                    # Any other way out (a stream reader failing, say) must not
+                    # leave R running.
+                    if proc.returncode is None:
+                        proc.kill()
+                        await proc.wait()
                 if proc.returncode != 0:
                     # Enhanced error handling for missing packages
                     try:
@@ -804,6 +866,75 @@ Original error:
                         pass
 
 
+async def execute_r_script_async(
+    script: str, args: dict[str, Any], context=None, timeout: float | None = None
+) -> dict[str, Any]:
+    """
+    Execute R script asynchronously with proper cancellation support and concurrency control.
+    This function provides:
+    - True async execution using asyncio.create_subprocess_exec
+    - Proper subprocess cancellation (SIGTERM -> SIGKILL)
+    - Global concurrency limiting via semaphore
+    - Progress reporting from R scripts via context
+    - Same interface and error handling as execute_r_script
+    Args:
+        script: R script code to execute
+        args: Arguments to pass to the R script as JSON
+        context: Optional context for progress reporting and logging
+        timeout: Per-call timeout in seconds, overriding the configured default
+    Returns:
+        dict[str, Any]: Result data from R script execution
+    Raises:
+        RExecutionError: If R script execution fails
+        asyncio.CancelledError: If the operation is canceled
+    """
+    if context is None:
+        return await _execute_r_script_locked(script, args, None, timeout)
+
+    # Progress reaches the client through one sender task, outside the R
+    # timeout and outside the semaphore: awaiting each notice while reading
+    # stderr charged a slow client against the timeout, so a finished script
+    # could still time out, and held an R slot while it did.
+    notices: asyncio.Queue[tuple[str, tuple[Any, ...]] | None] = asyncio.Queue(
+        maxsize=NOTICE_QUEUE_SIZE
+    )
+
+    async def deliver_notices() -> None:
+        while (notice := await notices.get()) is not None:
+            kind, notice_args = notice
+            try:
+                await getattr(context, kind)(*notice_args)
+            except asyncio.CancelledError:
+                # Stopping the sender is a real cancellation; a callback that
+                # raised CancelledError itself is a failed notice.
+                current = asyncio.current_task()
+                if (
+                    current is not None
+                    and current.cancelling()  # codespell:ignore cancelling
+                ):
+                    raise
+                logger.debug(f"{kind} notice callback was canceled")
+            except Exception as e:  # a lost notice must not fail R
+                logger.debug(f"Failed to deliver {kind} notice: {e}")
+
+    sender = asyncio.create_task(deliver_notices())
+    try:
+        result = await _execute_r_script_locked(script, args, notices, timeout)
+        # R is done and its slot released; let queued notices reach the client,
+        # in order, for a bounded time. asyncio.wait returns at the deadline.
+        _offer_notice(notices, None)
+        await asyncio.wait({sender}, timeout=NOTICE_DRAIN_SECONDS)
+        if not sender.done():
+            logger.warning(
+                "Dropping R progress notices the client had not accepted "
+                f"{NOTICE_DRAIN_SECONDS}s after R finished"
+            )
+        return result
+    finally:
+        # Every way out, cancellation during the drain included.
+        await _stop_sender(sender)
+
+
 def get_r_image_encoder_script() -> str:
     """
     Get R script code for encoding plots as base64 images.
@@ -920,6 +1051,7 @@ async def execute_r_script_with_image_async(
     image_width: int = 800,
     image_height: int = 600,
     timeout: float | None = None,
+    context=None,
 ) -> dict[str, Any]:
     """
     Execute R script asynchronously and optionally include base64-encoded image data.
@@ -933,6 +1065,7 @@ async def execute_r_script_with_image_async(
         image_width: Width of captured image in pixels
         image_height: Height of captured image in pixels
         timeout: Per-call timeout in seconds, overriding the configured default
+        context: Optional context for progress reporting, as in execute_r_script_async
     Returns:
         Dict containing R script results, optionally with image_data and image_mime_type
     """
@@ -950,7 +1083,7 @@ async def execute_r_script_with_image_async(
         )
         # Execute the enhanced script asynchronously
         result = await execute_r_script_async(
-            enhanced_script, enhanced_args, timeout=timeout
+            enhanced_script, enhanced_args, context=context, timeout=timeout
         )
         # Check if the script included image data
         if isinstance(result, dict) and result.get("image_data"):
@@ -958,7 +1091,9 @@ async def execute_r_script_with_image_async(
         return result
     else:
         # Standard execution without image support
-        return await execute_r_script_async(script, args, timeout=timeout)
+        return await execute_r_script_async(
+            script, args, context=context, timeout=timeout
+        )
 
 
 def diagnose_r_installation() -> dict[str, Any]:

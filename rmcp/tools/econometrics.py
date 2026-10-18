@@ -258,7 +258,7 @@ async def instrumental_variables(context, params) -> dict[str, Any]:
 
     r_script = get_r_script("econometrics", "instrumental_variables")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("Instrumental variables model fitted successfully")
         return result
     except Exception as e:
@@ -382,7 +382,7 @@ async def var_model(context, params) -> dict[str, Any]:
 
     r_script = get_r_script("econometrics", "var_model")
     try:
-        result = await execute_r_script_async(r_script, params)
+        result = await execute_r_script_async(r_script, params, context)
         await context.info("VAR model fitted successfully")
         return result
     except Exception as e:
