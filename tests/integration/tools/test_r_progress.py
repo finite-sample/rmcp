@@ -189,13 +189,25 @@ def test_canceling_during_the_drain_stops_the_sender(monkeypatch):
     from rmcp import r_integration
 
     monkeypatch.setattr(r_integration, "NOTICE_DRAIN_SECONDS", 5.0)
+    started = []
+    real_exec = asyncio.create_subprocess_exec
+
+    async def recording_exec(*args, **kwargs):
+        started.append(await real_exec(*args, **kwargs))
+        return started[-1]
+
+    monkeypatch.setattr(r_integration.asyncio, "create_subprocess_exec", recording_exec)
 
     async def run():
         before = set(asyncio.all_tasks())
         runner = asyncio.create_task(
             execute_r_script_async(SCRIPT, {}, StuckClient(), timeout=10)
         )
-        await asyncio.sleep(1.5)  # R has finished; the runner is draining
+        # Wait for R itself to exit, so the cancel lands in the drain.
+        while not started or started[0].returncode is None:
+            await asyncio.sleep(0.05)
+        await asyncio.sleep(0.2)
+        assert not runner.done()
         runner.cancel()
         with pytest.raises(asyncio.CancelledError):
             await runner
