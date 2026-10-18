@@ -573,7 +573,10 @@ if (exists("result")) {{
                             if not line:
                                 break
                             line_str = line.decode("utf-8").strip()
-                            stderr_lines.append(line_str)
+                            # Progress lines are protocol, not error output; keeping
+                            # them let a script that floods progress grow memory.
+                            if not line_str.startswith("RMCP_PROGRESS:"):
+                                stderr_lines.append(line_str)
                             # Parse progress messages if context is available
                             if notices is not None and line_str.startswith(
                                 "RMCP_PROGRESS:"
@@ -917,20 +920,19 @@ async def execute_r_script_async(
     sender = asyncio.create_task(deliver_notices())
     try:
         result = await _execute_r_script_locked(script, args, notices, timeout)
-    except BaseException:
+        # R is done and its slot released; let queued notices reach the client,
+        # in order, for a bounded time. asyncio.wait returns at the deadline.
+        _offer_notice(notices, None)
+        await asyncio.wait({sender}, timeout=NOTICE_DRAIN_SECONDS)
+        if not sender.done():
+            logger.warning(
+                "Dropping R progress notices the client had not accepted "
+                f"{NOTICE_DRAIN_SECONDS}s after R finished"
+            )
+        return result
+    finally:
+        # Every way out, cancellation during the drain included.
         await _stop_sender(sender)
-        raise
-    # R is done and its slot released; let queued notices reach the client,
-    # in order, for a bounded time. asyncio.wait returns at the deadline.
-    _offer_notice(notices, None)
-    await asyncio.wait({sender}, timeout=NOTICE_DRAIN_SECONDS)
-    if not sender.done():
-        logger.warning(
-            "Dropping R progress notices the client had not accepted "
-            f"{NOTICE_DRAIN_SECONDS}s after R finished"
-        )
-        await _stop_sender(sender)
-    return result
 
 
 def get_r_image_encoder_script() -> str:

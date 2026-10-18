@@ -183,3 +183,36 @@ def test_a_flood_of_progress_keeps_the_latest_notice(monkeypatch):
     assert result == {"value": 1}
     assert len(client.received) < 2000
     assert client.received[-1] == ("step", 2000, 2000)
+
+
+def test_canceling_during_the_drain_stops_the_sender(monkeypatch):
+    from rmcp import r_integration
+
+    monkeypatch.setattr(r_integration, "NOTICE_DRAIN_SECONDS", 5.0)
+
+    async def run():
+        before = set(asyncio.all_tasks())
+        runner = asyncio.create_task(
+            execute_r_script_async(SCRIPT, {}, StuckClient(), timeout=10)
+        )
+        await asyncio.sleep(1.5)  # R has finished; the runner is draining
+        runner.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await runner
+        await asyncio.sleep(0)
+        return [
+            t for t in asyncio.all_tasks() - before if t is not asyncio.current_task()
+        ]
+
+    assert asyncio.run(run()) == []
+
+
+def test_progress_lines_are_not_kept_with_stderr(monkeypatch):
+    # A script that floods progress and then fails reports only its real stderr.
+    flood = 'for (i in 1:5000) rmcp_progress("step", i, 5000); stop("boom")'
+
+    with pytest.raises(RExecutionError) as raised:
+        asyncio.run(execute_r_script_async(flood, {}, SlowClient(0), timeout=30))
+
+    assert "RMCP_PROGRESS" not in raised.value.stderr
+    assert "boom" in raised.value.stderr
