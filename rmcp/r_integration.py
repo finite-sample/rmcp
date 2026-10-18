@@ -508,6 +508,23 @@ if (exists("result")) {{
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
+                # Progress reaches the client through one sender task, outside the
+                # timed section below. Awaiting each notice while reading stderr
+                # charged a slow client against the R timeout, so a script that
+                # had finished could still time out and fail.
+                notices: asyncio.Queue[tuple[str, tuple[Any, ...]] | None] = (
+                    asyncio.Queue()
+                )
+
+                async def deliver_notices() -> None:
+                    while (notice := await notices.get()) is not None:
+                        kind, notice_args = notice
+                        try:
+                            await getattr(context, kind)(*notice_args)
+                        except Exception as e:  # a lost notice must not fail R
+                            logger.debug(f"Failed to deliver {kind} notice: {e}")
+
+                sender = asyncio.create_task(deliver_notices()) if context else None
                 try:
                     # Monitor stderr for progress messages and collect output
                     stderr_lines = []
@@ -547,12 +564,14 @@ if (exists("result")) {{
                                         current = progress_data.get("current")
                                         total = progress_data.get("total")
                                         if current is not None and total is not None:
-                                            await context.progress(
-                                                message, current, total
+                                            notices.put_nowait(
+                                                ("progress", (message, current, total))
                                             )
                                         else:
                                             # Send as info log if no numeric progress
-                                            await context.info(f"R: {message}")
+                                            notices.put_nowait(
+                                                ("info", (f"R: {message}",))
+                                            )
                                 except (json.JSONDecodeError, AttributeError) as e:
                                     logger.debug(
                                         f"Failed to parse progress message: {e}"
@@ -572,22 +591,31 @@ if (exists("result")) {{
                         b"".join(stdout_chunks).decode("utf-8") if stdout_chunks else ""
                     )
                     stderr = "\n".join(stderr_lines) if stderr_lines else ""
+                    # R is done; let queued notices reach the client, in order.
+                    if sender is not None:
+                        notices.put_nowait(None)
+                        await sender
                 except asyncio.CancelledError:
                     logger.info("R script execution canceled, terminating process")
-                    # Graceful termination: SIGTERM first, then SIGKILL
-                    proc.terminate()
-                    try:
-                        await asyncio.wait_for(proc.wait(), timeout=0.5)
-                    except TimeoutError:
-                        logger.warning("R process didn't terminate gracefully, killing")
-                        proc.kill()
-                        await proc.wait()
+                    # Graceful termination: SIGTERM first, then SIGKILL. The process
+                    # may already have exited, and signaling it then raises.
+                    if proc.returncode is None:
+                        proc.terminate()
+                        try:
+                            await asyncio.wait_for(proc.wait(), timeout=0.5)
+                        except TimeoutError:
+                            logger.warning(
+                                "R process didn't terminate gracefully, killing"
+                            )
+                            proc.kill()
+                            await proc.wait()
                     raise
                 except TimeoutError:
                     logger.error(
                         "R script execution timed out", timeout=effective_timeout
                     )
-                    proc.kill()
+                    if proc.returncode is None:
+                        proc.kill()
                     await proc.wait()
                     raise RExecutionError(
                         f"R script execution timed out after {effective_timeout} seconds",
@@ -595,6 +623,9 @@ if (exists("result")) {{
                         stderr="Execution timed out",
                         returncode=-1,
                     )
+                finally:
+                    if sender is not None and not sender.done():
+                        sender.cancel()
                 if proc.returncode != 0:
                     # Enhanced error handling for missing packages
                     try:
