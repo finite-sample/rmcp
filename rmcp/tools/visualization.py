@@ -109,6 +109,7 @@ async def scatter_plot(context, params) -> dict[str, Any]:
             include_image=return_image,
             image_width=width,
             image_height=height,
+            context=context,
         )
         await context.info("Scatter plot created successfully")
         return result
@@ -217,6 +218,7 @@ async def histogram(context, params) -> dict[str, Any]:
             include_image=return_image,
             image_width=width,
             image_height=height,
+            context=context,
         )
         await context.info("Histogram created successfully")
         return result
@@ -319,6 +321,7 @@ async def boxplot(context, params) -> dict[str, Any]:
             include_image=return_image,
             image_width=width,
             image_height=height,
+            context=context,
         )
 
         # Ensure schema compliance by mapping R script result to expected format
@@ -502,6 +505,7 @@ async def time_series_plot(context, params) -> dict[str, Any]:
             include_image=return_image,
             image_width=width,
             image_height=height,
+            context=context,
         )
         await context.info("Time series plot created successfully")
         return result
@@ -614,6 +618,7 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
             include_image=return_image,
             image_width=width,
             image_height=height,
+            context=context,
         )
 
         # Ensure schema compliance by mapping R script result to expected format
@@ -755,6 +760,7 @@ async def regression_plot(context, params) -> dict[str, Any]:
             include_image=return_image,
             image_width=width,
             image_height=height,
+            context=context,
         )
         await context.info("Regression plots created successfully")
         return result

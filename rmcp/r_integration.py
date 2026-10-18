@@ -1051,6 +1051,7 @@ async def execute_r_script_with_image_async(
     image_width: int = 800,
     image_height: int = 600,
     timeout: float | None = None,
+    context=None,
 ) -> dict[str, Any]:
     """
     Execute R script asynchronously and optionally include base64-encoded image data.
@@ -1064,6 +1065,7 @@ async def execute_r_script_with_image_async(
         image_width: Width of captured image in pixels
         image_height: Height of captured image in pixels
         timeout: Per-call timeout in seconds, overriding the configured default
+        context: Optional context for progress reporting, as in execute_r_script_async
     Returns:
         Dict containing R script results, optionally with image_data and image_mime_type
     """
@@ -1081,7 +1083,7 @@ async def execute_r_script_with_image_async(
         )
         # Execute the enhanced script asynchronously
         result = await execute_r_script_async(
-            enhanced_script, enhanced_args, timeout=timeout
+            enhanced_script, enhanced_args, context=context, timeout=timeout
         )
         # Check if the script included image data
         if isinstance(result, dict) and result.get("image_data"):
@@ -1089,7 +1091,9 @@ async def execute_r_script_with_image_async(
         return result
     else:
         # Standard execution without image support
-        return await execute_r_script_async(script, args, timeout=timeout)
+        return await execute_r_script_async(
+            script, args, context=context, timeout=timeout
+        )
 
 
 def diagnose_r_installation() -> dict[str, Any]:
