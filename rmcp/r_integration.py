@@ -21,6 +21,7 @@ Example:
 """
 
 import asyncio
+import contextlib
 import json
 import os
 import re
@@ -35,6 +36,12 @@ from .config import get_config
 from .logging_config import get_logger, log_r_execution
 
 logger = get_logger(__name__)
+
+#: How long a finished R run waits for queued progress notices to reach the client
+#: before dropping the rest. Delivery is not allowed to hold a result indefinitely.
+NOTICE_DRAIN_SECONDS = 5.0
+#: How long stopping the notice sender waits for it to wind down.
+SENDER_STOP_SECONDS = 1.0
 
 # One R-process limiter per event loop. A single module-level Semaphore would
 # bind to whichever loop first made a caller wait, then raise "bound to a
@@ -521,6 +528,16 @@ if (exists("result")) {{
                         kind, notice_args = notice
                         try:
                             await getattr(context, kind)(*notice_args)
+                        except asyncio.CancelledError:
+                            # Stopping the sender is a real cancellation; a callback
+                            # that raised CancelledError itself is a failed notice.
+                            current = asyncio.current_task()
+                            if (
+                                current is not None
+                                and current.cancelling()  # codespell:ignore cancelling
+                            ):
+                                raise
+                            logger.debug(f"{kind} notice callback was canceled")
                         except Exception as e:  # a lost notice must not fail R
                             logger.debug(f"Failed to deliver {kind} notice: {e}")
 
@@ -591,10 +608,17 @@ if (exists("result")) {{
                         b"".join(stdout_chunks).decode("utf-8") if stdout_chunks else ""
                     )
                     stderr = "\n".join(stderr_lines) if stderr_lines else ""
-                    # R is done; let queued notices reach the client, in order.
+                    # R is done; let queued notices reach the client, in order, for
+                    # a bounded time.
                     if sender is not None:
                         notices.put_nowait(None)
-                        await sender
+                        try:
+                            await asyncio.wait_for(sender, NOTICE_DRAIN_SECONDS)
+                        except TimeoutError:
+                            logger.warning(
+                                "Dropping R progress notices the client had not "
+                                f"accepted {NOTICE_DRAIN_SECONDS}s after R finished"
+                            )
                 except asyncio.CancelledError:
                     logger.info("R script execution canceled, terminating process")
                     # Graceful termination: SIGTERM first, then SIGKILL. The process
@@ -626,6 +650,13 @@ if (exists("result")) {{
                 finally:
                     if sender is not None and not sender.done():
                         sender.cancel()
+                        with contextlib.suppress(BaseException):
+                            await asyncio.wait_for(sender, SENDER_STOP_SECONDS)
+                    # Any other way out (a stream reader failing, say) must not
+                    # leave R running.
+                    if proc.returncode is None:
+                        proc.kill()
+                        await proc.wait()
                 if proc.returncode != 0:
                     # Enhanced error handling for missing packages
                     try:
