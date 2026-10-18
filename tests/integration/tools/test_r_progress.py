@@ -141,3 +141,45 @@ def test_a_callback_resisting_cancellation_cannot_hold_the_result(monkeypatch):
 
     assert result == {"value": 1}
     assert elapsed < 4
+
+
+def test_draining_notices_does_not_hold_the_r_slot(monkeypatch):
+    # One R slot. A's client never accepts notices, so A drains for the full
+    # bound after R exits; B must get the slot as soon as A's R is done.
+    from rmcp import r_integration
+
+    monkeypatch.setattr(r_integration, "NOTICE_DRAIN_SECONDS", 2.0)
+
+    async def run():
+        slot = asyncio.Semaphore(1)
+        monkeypatch.setattr(r_integration, "get_r_semaphore", lambda: slot)
+        started = time.monotonic()
+        a = asyncio.create_task(
+            execute_r_script_async(SCRIPT, {}, StuckClient(), timeout=10)
+        )
+        await asyncio.sleep(0.05)
+        b_result = await execute_r_script_async("result <- list(value = 2)", {})
+        b_done = time.monotonic() - started
+        a_result = await a
+        return a_result, b_result, b_done, time.monotonic() - started
+
+    a_result, b_result, b_done, a_done = asyncio.run(run())
+
+    assert (a_result, b_result) == ({"value": 1}, {"value": 2})
+    assert b_done < a_done - 1
+
+
+def test_a_flood_of_progress_keeps_the_latest_notice(monkeypatch):
+    from rmcp import r_integration
+
+    monkeypatch.setattr(r_integration, "NOTICE_QUEUE_SIZE", 5)
+    client = SlowClient(delay=0.01)
+    flood = (
+        'for (i in 1:2000) rmcp_progress("step", i, 2000); result <- list(value = 1)'
+    )
+
+    result = asyncio.run(execute_r_script_async(flood, {}, client, timeout=30))
+
+    assert result == {"value": 1}
+    assert len(client.received) < 2000
+    assert client.received[-1] == ("step", 2000, 2000)
