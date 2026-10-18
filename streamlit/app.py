@@ -385,7 +385,7 @@ if client:
                 )
 
                 st.write("**Claude's Response:**")
-                st.write(message.content[0].text)
+                st.write("".join(block.text for block in message.content if block.type == "text"))
 
         except Exception as e:
             st.error(f"❌ Error communicating with Claude: {e}")
