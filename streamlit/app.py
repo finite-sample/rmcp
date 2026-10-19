@@ -374,7 +374,7 @@ if client:
                 """
 
                 message = client.messages.create(
-                    model="claude-3-5-sonnet-20241022",
+                    model="claude-sonnet-5-5",
                     max_tokens=1500,
                     messages=[
                         {
@@ -385,7 +385,11 @@ if client:
                 )
 
                 st.write("**Claude's Response:**")
-                st.write(message.content[0].text)
+                st.write(
+                    "".join(
+                        block.text for block in message.content if block.type == "text"
+                    )
+                )
 
         except Exception as e:
             st.error(f"❌ Error communicating with Claude: {e}")
