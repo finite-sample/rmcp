@@ -33,7 +33,7 @@ from .package_whitelist_comprehensive import (
 # Comprehensive whitelist drawn from CRAN task views
 ALLOWED_R_PACKAGES = COMPREHENSIVE_PACKAGES
 
-# Dangerous patterns to block
+# Patterns that are refused outright and cannot be approved.
 # Patterns moved to OPERATION_CATEGORIES for user approval:
 # - install.packages (now in package_installation)
 # - ggsave, write.csv, writeLines (now in file_operations)
@@ -137,23 +137,7 @@ def validate_r_code(
                             f"OPERATION_APPROVAL_NEEDED:{operation_type}:{specific_op}",
                         )
 
-    # Check for remaining dangerous patterns that cannot be approved
-    remaining_dangerous = [
-        r"setwd\s*\(",  # Change working directory
-        r"source\s*\(",  # Source external files
-        r"download\.",  # Download functions
-        r"file\.remove",  # File deletion
-        r"file\.rename",  # File renaming
-        r"unlink\s*\(",  # File deletion
-        r"(?<!gg)save\s*\(",  # Save workspace (but not ggsave)
-        r"save\.image",  # Save workspace image
-        r"load\s*\(",  # Load workspace
-        r"readLines\s*\(",  # Read arbitrary files
-        r"sink\s*\(",  # Redirect output
-        r"options\s*\(\s*warn",  # Change warning behavior
-    ]
-
-    for pattern in remaining_dangerous:
+    for pattern in DANGEROUS_PATTERNS:
         if re.search(pattern, r_code, re.IGNORECASE):
             return False, f"Dangerous pattern detected: {pattern}"
 

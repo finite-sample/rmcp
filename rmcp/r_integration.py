@@ -28,8 +28,10 @@ import subprocess
 import tempfile
 import time
 import weakref
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import IO, Any, NamedTuple
 
 from .config import get_config
 from .logging_config import get_logger, log_r_execution
@@ -214,6 +216,117 @@ def check_r_version() -> tuple[bool, str]:
         raise RExecutionError("R is not installed or not in PATH", "", "", None)
 
 
+#: What each commonly needed package provides, named in the missing-package error.
+_PACKAGE_FEATURES = {
+    "plm": "Panel Data Analysis",
+    "lmtest": "Statistical Testing",
+    "sandwich": "Robust Standard Errors",
+    "AER": "Applied Econometrics",
+    "jsonlite": "Data Exchange",
+    "forecast": "Time Series Forecasting",
+    "vars": "Vector Autoregression",
+    "urca": "Unit Root Testing",
+    "tseries": "Time Series Analysis",
+    "nortest": "Normality Testing",
+    "car": "Regression Diagnostics",
+    "rpart": "Decision Trees",
+    "randomForest": "Random Forest",
+    "ggplot2": "Data Visualization",
+    "gridExtra": "Plot Layouts",
+    "tidyr": "Data Tidying",
+    "rlang": "Programming Tools",
+    "dplyr": "Data Manipulation",
+    "knitr": "Table Formatting & Reporting",
+}
+
+
+def _r_environment() -> dict[str, str]:
+    """Environment variables that decide which R, and which library, runs."""
+    return {
+        "PATH": os.environ.get("PATH", ""),
+        "R_HOME": os.environ.get("R_HOME", ""),
+        "R_LIBS": os.environ.get("R_LIBS", ""),
+        "working_dir": str(Path.cwd()),
+    }
+
+
+class _RTempFiles(NamedTuple):
+    script: IO[str]
+    script_path: str
+    result_path: str
+    args_r_path: str
+    result_r_path: str
+
+
+@contextmanager
+def _r_temp_files(args: dict[str, Any]) -> Iterator[_RTempFiles]:
+    """Create the script, arguments and result files for one R run.
+
+    The arguments are written here. The ``*_r_path`` forms use forward slashes,
+    which R accepts on Windows where backslashes would be read as escapes. All
+    three files are removed on exit.
+    """
+    with (
+        tempfile.NamedTemporaryFile(suffix=".R", delete=False, mode="w") as script_file,
+        tempfile.NamedTemporaryFile(
+            suffix=".json", delete=False, mode="w"
+        ) as args_file,
+        tempfile.NamedTemporaryFile(suffix=".json", delete=False) as result_file,
+    ):
+        script_path = script_file.name
+        args_path = args_file.name
+        result_path = result_file.name
+        try:
+            json.dump(args, args_file, default=str)
+            args_file.flush()
+            yield _RTempFiles(
+                script=script_file,
+                script_path=script_path,
+                result_path=result_path,
+                args_r_path=args_path.replace("\\", "/"),
+                result_r_path=result_path.replace("\\", "/"),
+            )
+        finally:
+            for temp_path in [script_path, args_path, result_path]:
+                try:
+                    os.unlink(temp_path)
+                    logger.debug(f"Cleaned up temporary file: {temp_path}")
+                except OSError:
+                    pass
+
+
+def _r_failure_report(
+    returncode: int | None, script_path: str, stdout: str, stderr: str
+) -> str:
+    """Describe a failed R run: the command, its output and its environment."""
+    try:
+        r_path = get_r_binary_path()
+    except FileNotFoundError:
+        r_path = "R (not found in PATH)"
+    return f"""R script failed with return code {returncode}
+COMMAND: {r_path} --slave --no-restore --file={script_path}
+STDOUT:
+{stdout or "(empty)"}
+STDERR:
+{stderr or "(empty)"}
+ENVIRONMENT:
+{_r_environment()}"""
+
+
+def _missing_package_message(stderr: str) -> str | None:
+    """Explain a missing-package failure, or None if R named no package."""
+    match = re.search(r"there is no package called '([^']+)'", stderr)
+    if match is None:
+        return None
+    missing_pkg = match.group(1)
+    feature = _PACKAGE_FEATURES.get(missing_pkg, "Statistical Analysis")
+    return f"""❌ Missing R Package: '{missing_pkg}'
+🔍 This package is required for: {feature}
+📦 Install with:
+   R -e "install.packages('{missing_pkg}')"
+💡 Check package status: rmcp check-r-packages"""
+
+
 def execute_r_script(script: str, args: dict[str, Any]) -> dict[str, Any]:
     """
     Execute an R script with arguments and return JSON results.
@@ -265,161 +378,83 @@ def execute_r_script(script: str, args: dict[str, Any]) -> dict[str, Any]:
         >>> data = {"data": {"x": [1,2,3,4], "y": [2,4,6,8]}}
         >>> reg_result = execute_r_script(r_code, data)
     """
-    with (
-        tempfile.NamedTemporaryFile(suffix=".R", delete=False, mode="w") as script_file,
-        tempfile.NamedTemporaryFile(
-            suffix=".json", delete=False, mode="w"
-        ) as args_file,
-        tempfile.NamedTemporaryFile(suffix=".json", delete=False) as result_file,
-    ):
-        script_path = script_file.name
-        args_path = args_file.name
-        result_path = result_file.name
-        try:
-            # Write arguments to JSON file
-            json.dump(args, args_file, default=str)
-            args_file.flush()
-            # Normalize path for Windows compatibility
-            args_path_safe = args_path.replace("\\", "/")
-            result_path_safe = result_path.replace("\\", "/")
-            # Create complete R script
-            full_script = f"""
+    with _r_temp_files(args) as files:
+        script_path = files.script_path
+        result_path = files.result_path
+        # Create complete R script
+        full_script = f"""
 # Load required libraries
 library(jsonlite)
 # Define null-coalescing operator (from rlang, defined locally to avoid dependency)
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 # Load arguments
-args <- fromJSON("{args_path_safe}")
+args <- fromJSON("{files.args_r_path}")
 # User script
 {script}
 # Write result
-write_json(result, "{result_path_safe}", auto_unbox = TRUE)
+write_json(result, "{files.result_r_path}", auto_unbox = TRUE)
 """
-            script_file.write(full_script)
-            script_file.flush()
-            logger.debug(
-                "Executing R script",
-                argument_count=len(args),
-                argument_keys=sorted(args),
+        files.script.write(full_script)
+        files.script.flush()
+        logger.debug(
+            "Executing R script",
+            argument_count=len(args),
+            argument_keys=sorted(args),
+        )
+        # Execute R script
+        r_binary = get_r_binary_path()
+        process = subprocess.run(
+            [r_binary, "--slave", "--no-restore", "--file=" + script_path],
+            capture_output=True,
+            text=True,
+            timeout=get_config().r.timeout,
+        )
+        if process.returncode != 0:
+            error_msg = _r_failure_report(
+                process.returncode, script_path, process.stdout, process.stderr
             )
-            # Execute R script
-            r_binary = get_r_binary_path()
-            process = subprocess.run(
-                [r_binary, "--slave", "--no-restore", "--file=" + script_path],
-                capture_output=True,
-                text=True,
-                timeout=get_config().r.timeout,
-            )
-            if process.returncode != 0:
-                # Enhanced error handling for missing packages
-                try:
-                    r_path = get_r_binary_path()
-                except FileNotFoundError:
-                    r_path = "R (not found in PATH)"
-                env_info = {
-                    "PATH": os.environ.get("PATH", ""),
-                    "R_HOME": os.environ.get("R_HOME", ""),
-                    "R_LIBS": os.environ.get("R_LIBS", ""),
-                    "working_dir": str(Path.cwd()),
-                }
-
-                error_msg = f"""R script failed with return code {process.returncode}
-COMMAND: {r_path} --slave --no-restore --file={script_path}
-STDOUT:
-{process.stdout or "(empty)"}
-STDERR:
-{process.stderr or "(empty)"}
-ENVIRONMENT:
-{env_info}"""
-                stderr = process.stderr or ""
-                # Check for common R package errors
-                if "there is no package called" in stderr:
-                    # Extract package name from error
-                    import re
-
-                    match = re.search(r"there is no package called '([^']+)'", stderr)
-                    if match:
-                        missing_pkg = match.group(1)
-                        # Map package to feature category
-                        pkg_features = {
-                            "plm": "Panel Data Analysis",
-                            "lmtest": "Statistical Testing",
-                            "sandwich": "Robust Standard Errors",
-                            "AER": "Applied Econometrics",
-                            "jsonlite": "Data Exchange",
-                            "forecast": "Time Series Forecasting",
-                            "vars": "Vector Autoregression",
-                            "urca": "Unit Root Testing",
-                            "tseries": "Time Series Analysis",
-                            "nortest": "Normality Testing",
-                            "car": "Regression Diagnostics",
-                            "rpart": "Decision Trees",
-                            "randomForest": "Random Forest",
-                            "ggplot2": "Data Visualization",
-                            "gridExtra": "Plot Layouts",
-                            "tidyr": "Data Tidying",
-                            "rlang": "Programming Tools",
-                            "dplyr": "Data Manipulation",
-                            "knitr": "Table Formatting & Reporting",
-                        }
-                        feature = pkg_features.get(missing_pkg, "Statistical Analysis")
-                        error_msg = f"""❌ Missing R Package: '{missing_pkg}'
-🔍 This package is required for: {feature}
-📦 Install with:
-   install.packages("{missing_pkg}")
-🚀 Or install all RMCP packages:
-   install.packages(c(
-     "jsonlite", "plm", "lmtest", "sandwich", "AER", "dplyr", "forecast",
-     "vars", "urca", "tseries", "nortest", "car", "rpart", "randomForest",
-     "ggplot2", "gridExtra", "tidyr", "rlang", "knitr"
-   ))
-💡 Check package status: rmcp check-r-packages"""
-                elif "could not find function" in stderr:
-                    error_msg = f"""❌ R Function Error
+            stderr = process.stderr or ""
+            # Check for common R package errors
+            if "there is no package called" in stderr:
+                error_msg = _missing_package_message(stderr) or error_msg
+            elif "could not find function" in stderr:
+                error_msg = f"""❌ R Function Error
 The R script failed because a required function is missing. This usually means:
 1. A required package is not loaded
 2. A package is installed but not the right version
 💡 Try: rmcp check-r-packages
 Original error: {stderr.strip()}"""
-                logger.error(f"{error_msg}\\nOriginal stderr: {stderr}")
-                raise RExecutionError(
-                    error_msg,
-                    stdout=process.stdout,
-                    stderr=stderr,
-                    returncode=process.returncode,
-                )
-            # Read results
-            try:
-                with open(result_path) as f:
-                    result = json.load(f)
-                logger.debug(
-                    "R script executed successfully",
-                    result_type=type(result).__name__,
-                    result_keys=sorted(result) if isinstance(result, dict) else None,
-                )
-                return result
-            except FileNotFoundError:
-                exc = RExecutionError("R script did not produce output file")
-                exc.add_note(f"Expected output file: {result_path}")
-                exc.add_note(
-                    "This usually indicates R script execution failed before producing results"
-                )
-                raise exc
-            except json.JSONDecodeError as e:
-                exc = RExecutionError(f"R script produced invalid JSON: {e}")
-                exc.add_note(f"Output file: {result_path}")
-                exc.add_note(
-                    "Check R script for JSON formatting errors or unexpected output"
-                )
-                raise exc
-        finally:
-            # Cleanup temporary files
-            for temp_path in [script_path, args_path, result_path]:
-                try:
-                    os.unlink(temp_path)
-                    logger.debug(f"Cleaned up temporary file: {temp_path}")
-                except OSError:
-                    pass
+            logger.error(f"{error_msg}\\nOriginal stderr: {stderr}")
+            raise RExecutionError(
+                error_msg,
+                stdout=process.stdout,
+                stderr=stderr,
+                returncode=process.returncode,
+            )
+        # Read results
+        try:
+            with open(result_path) as f:
+                result = json.load(f)
+            logger.debug(
+                "R script executed successfully",
+                result_type=type(result).__name__,
+                result_keys=sorted(result) if isinstance(result, dict) else None,
+            )
+            return result
+        except FileNotFoundError:
+            exc = RExecutionError("R script did not produce output file")
+            exc.add_note(f"Expected output file: {result_path}")
+            exc.add_note(
+                "This usually indicates R script execution failed before producing results"
+            )
+            raise exc
+        except json.JSONDecodeError as e:
+            exc = RExecutionError(f"R script produced invalid JSON: {e}")
+            exc.add_note(f"Output file: {result_path}")
+            exc.add_note(
+                "Check R script for JSON formatting errors or unexpected output"
+            )
+            raise exc
 
 
 def _offer_notice(
@@ -481,28 +516,11 @@ async def _execute_r_script_locked(
     effective_timeout = timeout if timeout is not None else get_config().r.timeout
     async with get_r_semaphore():  # Limit concurrent R processes
         start_time = time.time()
-        # Create temporary files for script, arguments, and results
-        with (
-            tempfile.NamedTemporaryFile(
-                suffix=".R", delete=False, mode="w"
-            ) as script_file,
-            tempfile.NamedTemporaryFile(
-                suffix=".json", delete=False, mode="w"
-            ) as args_file,
-            tempfile.NamedTemporaryFile(suffix=".json", delete=False) as result_file,
-        ):
-            script_path = script_file.name
-            args_path = args_file.name
-            result_path = result_file.name
-            try:
-                # Write arguments to JSON file
-                json.dump(args, args_file, default=str)
-                args_file.flush()
-                # Normalize path for Windows compatibility
-                args_path_safe = args_path.replace("\\", "/")
-                result_path_safe = result_path.replace("\\", "/")
-                # Create complete R script with progress reporting
-                full_script = f"""
+        with _r_temp_files(args) as files:
+            script_path = files.script_path
+            result_path = files.result_path
+            # Create complete R script with progress reporting
+            full_script = f"""
 # Load required libraries
 library(jsonlite)
 # Define null-coalescing operator (from rlang, defined locally to avoid dependency)
@@ -523,235 +541,175 @@ rmcp_progress <- function(message, current = NULL, total = NULL) {{
     flush(stderr())
 }}
 # Load arguments
-args <- fromJSON("{args_path_safe}")
+args <- fromJSON("{files.args_r_path}")
 # User script
 {script}
 # Write result
 if (exists("result")) {{
-    writeLines(toJSON(result, auto_unbox = TRUE, na = "null", pretty = TRUE), "{result_path_safe}")
+    writeLines(toJSON(result, auto_unbox = TRUE, na = "null", pretty = TRUE), "{files.result_r_path}")
 }} else {{
     stop("R script must define a 'result' variable")
 }}
 """
-                # Write R script to file
-                script_file.write(full_script)
-                script_file.flush()
-                logger.debug(
-                    "Executing R script asynchronously",
-                    argument_count=len(args),
-                    argument_keys=sorted(args),
-                )
-                # Execute R script asynchronously
-                r_binary = get_r_binary_path()
-                proc = await asyncio.create_subprocess_exec(
-                    r_binary,
-                    "--slave",
-                    "--no-restore",
-                    f"--file={script_path}",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                try:
-                    # Monitor stderr for progress messages and collect output
-                    stderr_lines = []
-                    stdout_chunks = []
+            files.script.write(full_script)
+            files.script.flush()
+            logger.debug(
+                "Executing R script asynchronously",
+                argument_count=len(args),
+                argument_keys=sorted(args),
+            )
+            # Execute R script asynchronously
+            r_binary = get_r_binary_path()
+            proc = await asyncio.create_subprocess_exec(
+                r_binary,
+                "--slave",
+                "--no-restore",
+                f"--file={script_path}",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            try:
+                # Monitor stderr for progress messages and collect output
+                stderr_lines = []
+                stdout_chunks = []
 
-                    async def read_stdout():
-                        """Read stdout to completion."""
-                        assert proc.stdout is not None
-                        while True:
-                            chunk = await proc.stdout.read(1024)
-                            if not chunk:
-                                break
-                            stdout_chunks.append(chunk)
+                async def read_stdout():
+                    """Read stdout to completion."""
+                    assert proc.stdout is not None
+                    while True:
+                        chunk = await proc.stdout.read(1024)
+                        if not chunk:
+                            break
+                        stdout_chunks.append(chunk)
 
-                    async def monitor_stderr():
-                        """Monitor stderr for progress messages and errors."""
-                        assert proc.stderr is not None
-                        while True:
-                            line = await proc.stderr.readline()
-                            if not line:
-                                break
-                            line_str = line.decode("utf-8").strip()
-                            # Progress lines are protocol, not error output; keeping
-                            # them let a script that floods progress grow memory.
-                            if not line_str.startswith("RMCP_PROGRESS:"):
-                                stderr_lines.append(line_str)
-                            # Parse progress messages if context is available
-                            if notices is not None and line_str.startswith(
-                                "RMCP_PROGRESS:"
-                            ):
-                                try:
-                                    import json
+                async def monitor_stderr():
+                    """Monitor stderr for progress messages and errors."""
+                    assert proc.stderr is not None
+                    while True:
+                        line = await proc.stderr.readline()
+                        if not line:
+                            break
+                        line_str = line.decode("utf-8").strip()
+                        # Progress lines are protocol, not error output; keeping
+                        # them let a script that floods progress grow memory.
+                        if not line_str.startswith("RMCP_PROGRESS:"):
+                            stderr_lines.append(line_str)
+                        # Parse progress messages if context is available
+                        if notices is not None and line_str.startswith(
+                            "RMCP_PROGRESS:"
+                        ):
+                            try:
+                                import json
 
-                                    progress_json = line_str[
-                                        14:
-                                    ]  # Remove "RMCP_PROGRESS:" prefix
-                                    progress_data = json.loads(progress_json)
-                                    if progress_data.get("type") == "progress":
-                                        message = progress_data.get(
-                                            "message", "Processing..."
-                                        )
-                                        current = progress_data.get("current")
-                                        total = progress_data.get("total")
-                                        if current is not None and total is not None:
-                                            _offer_notice(
-                                                notices,
-                                                ("progress", (message, current, total)),
-                                            )
-                                        else:
-                                            # Send as info log if no numeric progress
-                                            _offer_notice(
-                                                notices, ("info", (f"R: {message}",))
-                                            )
-                                except (json.JSONDecodeError, AttributeError) as e:
-                                    logger.debug(
-                                        f"Failed to parse progress message: {e}"
+                                progress_json = line_str[
+                                    14:
+                                ]  # Remove "RMCP_PROGRESS:" prefix
+                                progress_data = json.loads(progress_json)
+                                if progress_data.get("type") == "progress":
+                                    message = progress_data.get(
+                                        "message", "Processing..."
                                     )
+                                    current = progress_data.get("current")
+                                    total = progress_data.get("total")
+                                    if current is not None and total is not None:
+                                        _offer_notice(
+                                            notices,
+                                            ("progress", (message, current, total)),
+                                        )
+                                    else:
+                                        # Send as info log if no numeric progress
+                                        _offer_notice(
+                                            notices, ("info", (f"R: {message}",))
+                                        )
+                            except (json.JSONDecodeError, AttributeError) as e:
+                                logger.debug(f"Failed to parse progress message: {e}")
 
-                    # The timeout must wrap the whole TaskGroup. Timing out a
-                    # sibling task instead surfaces as a BaseExceptionGroup, which
-                    # the `except TimeoutError` below cannot catch -- leaving the R
-                    # process orphaned.
-                    async with asyncio.timeout(effective_timeout):
-                        async with asyncio.TaskGroup() as tg:
-                            tg.create_task(read_stdout())
-                            tg.create_task(monitor_stderr())
-                            tg.create_task(proc.wait())
-                    # Combine output
-                    stdout = (
-                        b"".join(stdout_chunks).decode("utf-8") if stdout_chunks else ""
-                    )
-                    stderr = "\n".join(stderr_lines) if stderr_lines else ""
-                except asyncio.CancelledError:
-                    logger.info("R script execution canceled, terminating process")
-                    # Graceful termination: SIGTERM first, then SIGKILL. The process
-                    # may already have exited, and signaling it then raises.
-                    if proc.returncode is None:
-                        proc.terminate()
-                        try:
-                            await asyncio.wait_for(proc.wait(), timeout=0.5)
-                        except TimeoutError:
-                            logger.warning(
-                                "R process didn't terminate gracefully, killing"
-                            )
-                            proc.kill()
-                            await proc.wait()
-                    raise
-                except TimeoutError:
-                    logger.error(
-                        "R script execution timed out", timeout=effective_timeout
-                    )
-                    if proc.returncode is None:
-                        proc.kill()
-                    await proc.wait()
-                    raise RExecutionError(
-                        f"R script execution timed out after {effective_timeout} seconds",
-                        stdout="",
-                        stderr="Execution timed out",
-                        returncode=-1,
-                    )
-                finally:
-                    # Any other way out (a stream reader failing, say) must not
-                    # leave R running.
-                    if proc.returncode is None:
+                # The timeout must wrap the whole TaskGroup. Timing out a
+                # sibling task instead surfaces as a BaseExceptionGroup, which
+                # the `except TimeoutError` below cannot catch -- leaving the R
+                # process orphaned.
+                async with asyncio.timeout(effective_timeout):
+                    async with asyncio.TaskGroup() as tg:
+                        tg.create_task(read_stdout())
+                        tg.create_task(monitor_stderr())
+                        tg.create_task(proc.wait())
+                # Combine output
+                stdout = (
+                    b"".join(stdout_chunks).decode("utf-8") if stdout_chunks else ""
+                )
+                stderr = "\n".join(stderr_lines) if stderr_lines else ""
+            except asyncio.CancelledError:
+                logger.info("R script execution canceled, terminating process")
+                # Graceful termination: SIGTERM first, then SIGKILL. The process
+                # may already have exited, and signaling it then raises.
+                if proc.returncode is None:
+                    proc.terminate()
+                    try:
+                        await asyncio.wait_for(proc.wait(), timeout=0.5)
+                    except TimeoutError:
+                        logger.warning("R process didn't terminate gracefully, killing")
                         proc.kill()
                         await proc.wait()
-                if proc.returncode != 0:
-                    # Enhanced error handling for missing packages
-                    try:
-                        r_path = get_r_binary_path()
-                    except FileNotFoundError:
-                        r_path = "R (not found in PATH)"
-                    env_info = {
-                        "PATH": os.environ.get("PATH", ""),
-                        "R_HOME": os.environ.get("R_HOME", ""),
-                        "R_LIBS": os.environ.get("R_LIBS", ""),
-                        "working_dir": str(Path.cwd()),
-                    }
+                raise
+            except TimeoutError:
+                logger.error("R script execution timed out", timeout=effective_timeout)
+                if proc.returncode is None:
+                    proc.kill()
+                await proc.wait()
+                raise RExecutionError(
+                    f"R script execution timed out after {effective_timeout} seconds",
+                    stdout="",
+                    stderr="Execution timed out",
+                    returncode=-1,
+                )
+            finally:
+                # Any other way out (a stream reader failing, say) must not
+                # leave R running.
+                if proc.returncode is None:
+                    proc.kill()
+                    await proc.wait()
+            if proc.returncode != 0:
+                error_msg = _r_failure_report(
+                    proc.returncode, script_path, stdout, stderr
+                )
+                stderr = stderr or ""
+                # Check for common R package errors
+                if "there is no package called" in stderr:
+                    error_msg = _missing_package_message(stderr) or error_msg
+                    raise RExecutionError(
+                        error_msg,
+                        stdout=stdout,
+                        stderr=stderr,
+                        returncode=proc.returncode or 0,
+                    )
 
-                    error_msg = f"""R script failed with return code {proc.returncode}
-COMMAND: {r_path} --slave --no-restore --file={script_path}
-STDOUT:
-{stdout or "(empty)"}
-STDERR:
-{stderr or "(empty)"}
-ENVIRONMENT:
-{env_info}"""
-                    stderr = stderr or ""
-                    # Check for common R package errors
-                    if "there is no package called" in stderr:
-                        # Extract package name from error
+                # Enhanced error detection for statistical issues
+                combined_output = (stdout + stderr).lower()
+
+                if any(
+                    phrase in combined_output
+                    for phrase in [
+                        "insufficient data",
+                        "insufficient degrees",
+                        "need at least",
+                        "requires at least",
+                        "sample size",
+                    ]
+                ):
+                    # Extract context from R stderr if available
+                    context_info = ""
+                    if stderr and "parameters but only" in stderr:
+                        # Try to extract parameter and observation counts
                         import re
 
                         match = re.search(
-                            r"there is no package called '([^']+)'", stderr
+                            r"(\d+) parameters but only (\d+) observations", stderr
                         )
                         if match:
-                            missing_pkg = match.group(1)
-                            # Map package to feature category
-                            pkg_features = {
-                                "plm": "Panel Data Analysis",
-                                "lmtest": "Statistical Testing",
-                                "sandwich": "Robust Standard Errors",
-                                "AER": "Applied Econometrics",
-                                "jsonlite": "Data Exchange",
-                                "forecast": "Time Series Forecasting",
-                                "vars": "Vector Autoregression",
-                                "urca": "Unit Root Testing",
-                                "tseries": "Time Series Analysis",
-                                "nortest": "Normality Testing",
-                                "car": "Regression Diagnostics",
-                                "rpart": "Decision Trees",
-                                "randomForest": "Random Forest",
-                                "ggplot2": "Data Visualization",
-                                "gridExtra": "Plot Layouts",
-                                "tidyr": "Data Tidying",
-                                "rlang": "Programming Tools",
-                                "dplyr": "Data Manipulation",
-                            }
-                            feature = pkg_features.get(
-                                missing_pkg, "Statistical Analysis"
-                            )
-                            error_msg = f"""❌ Missing R Package: '{missing_pkg}'
-🔍 This package is required for: {feature}
-📦 Install with:
-   R -e "install.packages('{missing_pkg}')"
-💡 Check package status: rmcp check-r-packages"""
-                        raise RExecutionError(
-                            error_msg,
-                            stdout=stdout,
-                            stderr=stderr,
-                            returncode=proc.returncode or 0,
-                        )
+                            params, obs = match.groups()
+                            context_info = f"\n📋 Analysis details: {params} parameters, {obs} observations"
 
-                    # Enhanced error detection for statistical issues
-                    combined_output = (stdout + stderr).lower()
-
-                    if any(
-                        phrase in combined_output
-                        for phrase in [
-                            "insufficient data",
-                            "insufficient degrees",
-                            "need at least",
-                            "requires at least",
-                            "sample size",
-                        ]
-                    ):
-                        # Extract context from R stderr if available
-                        context_info = ""
-                        if stderr and "parameters but only" in stderr:
-                            # Try to extract parameter and observation counts
-                            import re
-
-                            match = re.search(
-                                r"(\d+) parameters but only (\d+) observations", stderr
-                            )
-                            if match:
-                                params, obs = match.groups()
-                                context_info = f"\n📋 Analysis details: {params} parameters, {obs} observations"
-
-                        helpful_msg = f"""❌ Insufficient Data for Statistical Analysis
+                    helpful_msg = f"""❌ Insufficient Data for Statistical Analysis
 
 🔍 The analysis requires more data points than provided.{context_info}
 
@@ -767,22 +725,22 @@ ENVIRONMENT:
 
 Original error:
 {error_msg}"""
-                        raise RExecutionError(
-                            helpful_msg,
-                            stdout=stdout,
-                            stderr=stderr,
-                            returncode=proc.returncode or 0,
-                        )
+                    raise RExecutionError(
+                        helpful_msg,
+                        stdout=stdout,
+                        stderr=stderr,
+                        returncode=proc.returncode or 0,
+                    )
 
-                    if any(
-                        phrase in combined_output
-                        for phrase in [
-                            "degrees of freedom",
-                            "non-numeric argument",
-                            "nans produced",
-                        ]
-                    ):
-                        helpful_msg = f"""❌ Statistical Computation Error
+                if any(
+                    phrase in combined_output
+                    for phrase in [
+                        "degrees of freedom",
+                        "non-numeric argument",
+                        "nans produced",
+                    ]
+                ):
+                    helpful_msg = f"""❌ Statistical Computation Error
 
 🔍 The analysis encountered a mathematical issue, often due to:
    • Insufficient degrees of freedom (too few observations vs parameters)
@@ -796,74 +754,64 @@ Original error:
 
 Original error:
 {error_msg}"""
-                        raise RExecutionError(
-                            helpful_msg,
-                            stdout=stdout,
-                            stderr=stderr,
-                            returncode=proc.returncode or 0,
-                        )
-
-                    # Fall back to general error
                     raise RExecutionError(
-                        error_msg,
+                        helpful_msg,
                         stdout=stdout,
                         stderr=stderr,
                         returncode=proc.returncode or 0,
                     )
-                # Read and parse results
-                try:
-                    with open(result_path) as f:
-                        result_json = f.read()
-                        result = json.loads(result_json)
-                        result_info = (
-                            list(result.keys())
-                            if isinstance(result, dict)
-                            else type(result)
-                        )
-                        # Log structured R execution completion
-                        execution_time_ms = int((time.time() - start_time) * 1000)
-                        log_r_execution(
-                            logger,
-                            r_command=script[:100] + "..."
-                            if len(script) > 100
-                            else script,
-                            execution_time_ms=execution_time_ms,
-                            success=True,
-                        )
 
-                        logger.debug(
-                            f"R script completed successfully, result keys: {result_info}"
-                        )
-                        return result
-                except (FileNotFoundError, json.JSONDecodeError) as e:
-                    # Log structured R execution failure
+                # Fall back to general error
+                raise RExecutionError(
+                    error_msg,
+                    stdout=stdout,
+                    stderr=stderr,
+                    returncode=proc.returncode or 0,
+                )
+            # Read and parse results
+            try:
+                with open(result_path) as f:
+                    result_json = f.read()
+                    result = json.loads(result_json)
+                    result_info = (
+                        list(result.keys())
+                        if isinstance(result, dict)
+                        else type(result)
+                    )
+                    # Log structured R execution completion
                     execution_time_ms = int((time.time() - start_time) * 1000)
                     log_r_execution(
                         logger,
                         r_command=script[:100] + "..." if len(script) > 100 else script,
                         execution_time_ms=execution_time_ms,
-                        success=False,
-                        error_message=str(e),
+                        success=True,
                     )
 
-                    error_msg = (
-                        f"Failed to read or parse R script results: {e}\\n\\n"
-                        f"R stdout: {stdout}\\n\\nR stderr: {stderr}"
+                    logger.debug(
+                        f"R script completed successfully, result keys: {result_info}"
                     )
-                    raise RExecutionError(
-                        error_msg,
-                        stdout=stdout,
-                        stderr=stderr,
-                        returncode=proc.returncode or 0,
-                    )
-            finally:
-                # Cleanup temporary files
-                for temp_path in [script_path, args_path, result_path]:
-                    try:
-                        os.unlink(temp_path)
-                        logger.debug(f"Cleaned up temporary file: {temp_path}")
-                    except OSError:
-                        pass
+                    return result
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                # Log structured R execution failure
+                execution_time_ms = int((time.time() - start_time) * 1000)
+                log_r_execution(
+                    logger,
+                    r_command=script[:100] + "..." if len(script) > 100 else script,
+                    execution_time_ms=execution_time_ms,
+                    success=False,
+                    error_message=str(e),
+                )
+
+                error_msg = (
+                    f"Failed to read or parse R script results: {e}\\n\\n"
+                    f"R stdout: {stdout}\\n\\nR stderr: {stderr}"
+                )
+                raise RExecutionError(
+                    error_msg,
+                    stdout=stdout,
+                    stderr=stderr,
+                    returncode=proc.returncode or 0,
+                )
 
 
 async def execute_r_script_async(
@@ -1096,6 +1044,49 @@ async def execute_r_script_with_image_async(
         )
 
 
+_JSONLITE_TEST_SCRIPT = """
+cat("R OK\\n")
+library(jsonlite)
+cat(toJSON(list(jsonlite_ok=TRUE)), "\\n")
+"""
+
+
+def _new_diagnosis() -> dict[str, Any]:
+    """Diagnosis before any check has run: nothing found, nothing failed."""
+    return {
+        "r_available": False,
+        "r_path": None,
+        "r_version": None,
+        "jsonlite_available": False,
+        "environment": _r_environment(),
+        "error": None,
+    }
+
+
+def _record_r_version(
+    diagnosis: dict[str, Any], returncode: int | None, stdout: str, stderr: str
+) -> None:
+    """Record the outcome of ``R --version`` in ``diagnosis``."""
+    if returncode == 0:
+        diagnosis["r_version"] = stdout.split("\n")[0] if stdout else "Unknown"
+    else:
+        diagnosis["error"] = (
+            f"R --version failed with return code {returncode}: {stderr}"
+        )
+
+
+def _record_jsonlite_test(
+    diagnosis: dict[str, Any], returncode: int | None, stdout: str, stderr: str
+) -> None:
+    """Record the outcome of running ``_JSONLITE_TEST_SCRIPT`` in ``diagnosis``."""
+    if returncode != 0:
+        diagnosis["error"] = f"R basic test failed (code {returncode}): {stderr}"
+    elif "jsonlite_ok" in stdout:
+        diagnosis["jsonlite_available"] = True
+    else:
+        diagnosis["error"] = f"jsonlite test failed - unexpected output: {stdout}"
+
+
 def diagnose_r_installation() -> dict[str, Any]:
     """
     Diagnose R installation and return comprehensive status information.
@@ -1109,22 +1100,7 @@ def diagnose_r_installation() -> dict[str, Any]:
         - environment: Relevant environment variables
         - error: Any error encountered during diagnosis
     """
-    import os
-    import subprocess
-
-    diagnosis: dict[str, Any] = {
-        "r_available": False,
-        "r_path": None,
-        "r_version": None,
-        "jsonlite_available": False,
-        "environment": {
-            "PATH": os.environ.get("PATH", ""),
-            "R_HOME": os.environ.get("R_HOME", ""),
-            "R_LIBS": os.environ.get("R_LIBS", ""),
-            "working_dir": str(Path.cwd()),
-        },
-        "error": None,
-    }
+    diagnosis = _new_diagnosis()
 
     try:
         # Check if R is available
@@ -1142,16 +1118,9 @@ def diagnose_r_installation() -> dict[str, Any]:
                 result = subprocess.run(
                     [r_path, "--version"], capture_output=True, text=True, timeout=30
                 )
-                if result.returncode == 0:
-                    # Extract first line which contains version info
-                    version_line = (
-                        result.stdout.split("\n")[0] if result.stdout else "Unknown"
-                    )
-                    diagnosis["r_version"] = version_line
-                else:
-                    diagnosis["error"] = (
-                        f"R --version failed with return code {result.returncode}: {result.stderr}"
-                    )
+                _record_r_version(
+                    diagnosis, result.returncode, result.stdout, result.stderr
+                )
             except subprocess.TimeoutExpired:
                 diagnosis["error"] = "R --version timed out after 30 seconds"
             except Exception as e:
@@ -1159,30 +1128,16 @@ def diagnose_r_installation() -> dict[str, Any]:
 
             # Test basic R functionality and jsonlite availability
             try:
-                test_script = """
-                cat("R OK\\n")
-                library(jsonlite)
-                cat(toJSON(list(jsonlite_ok=TRUE)), "\\n")
-                """
-
                 result = subprocess.run(
-                    [r_path, "--slave", "--no-restore", "-e", test_script],
+                    [r_path, "--slave", "--no-restore", "-e", _JSONLITE_TEST_SCRIPT],
                     capture_output=True,
                     text=True,
                     timeout=get_config().r.version_check_timeout,
                 )
 
-                if result.returncode == 0:
-                    if "jsonlite_ok" in result.stdout:
-                        diagnosis["jsonlite_available"] = True
-                    else:
-                        diagnosis["error"] = (
-                            f"jsonlite test failed - unexpected output: {result.stdout}"
-                        )
-                else:
-                    diagnosis["error"] = (
-                        f"R basic test failed (code {result.returncode}): {result.stderr}"
-                    )
+                _record_jsonlite_test(
+                    diagnosis, result.returncode, result.stdout, result.stderr
+                )
             except subprocess.TimeoutExpired:
                 diagnosis["error"] = "R basic test timed out after 30 seconds"
             except Exception as e:
@@ -1203,22 +1158,7 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
     Returns:
         dict containing the same diagnostic information as diagnose_r_installation
     """
-    import asyncio
-    import os
-
-    diagnosis: dict[str, Any] = {
-        "r_available": False,
-        "r_path": None,
-        "r_version": None,
-        "jsonlite_available": False,
-        "environment": {
-            "PATH": os.environ.get("PATH", ""),
-            "R_HOME": os.environ.get("R_HOME", ""),
-            "R_LIBS": os.environ.get("R_LIBS", ""),
-            "working_dir": str(Path.cwd()),
-        },
-        "error": None,
-    }
+    diagnosis = _new_diagnosis()
 
     try:
         # Check if R is available
@@ -1243,16 +1183,9 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
                     proc.communicate(), timeout=get_config().r.version_check_timeout
                 )
 
-                if proc.returncode == 0:
-                    # Extract first line which contains version info
-                    version_line = (
-                        stdout.decode().split("\n")[0] if stdout else "Unknown"
-                    )
-                    diagnosis["r_version"] = version_line
-                else:
-                    diagnosis["error"] = (
-                        f"R --version failed with return code {proc.returncode}: {stderr.decode()}"
-                    )
+                _record_r_version(
+                    diagnosis, proc.returncode, stdout.decode(), stderr.decode()
+                )
             except TimeoutError:
                 diagnosis["error"] = "R --version timed out after 30 seconds"
             except Exception as e:
@@ -1260,18 +1193,12 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
 
             # Test basic R functionality and jsonlite availability
             try:
-                test_script = """
-                cat("R OK\\n")
-                library(jsonlite)
-                cat(toJSON(list(jsonlite_ok=TRUE)), "\\n")
-                """
-
                 proc = await asyncio.create_subprocess_exec(
                     r_path,
                     "--slave",
                     "--no-restore",
                     "-e",
-                    test_script,
+                    _JSONLITE_TEST_SCRIPT,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
@@ -1279,18 +1206,9 @@ async def diagnose_r_installation_async() -> dict[str, Any]:
                     proc.communicate(), timeout=get_config().r.version_check_timeout
                 )
 
-                if proc.returncode == 0:
-                    stdout_str = stdout.decode()
-                    if "jsonlite_ok" in stdout_str:
-                        diagnosis["jsonlite_available"] = True
-                    else:
-                        diagnosis["error"] = (
-                            f"jsonlite test failed - unexpected output: {stdout_str}"
-                        )
-                else:
-                    diagnosis["error"] = (
-                        f"R basic test failed (code {proc.returncode}): {stderr.decode()}"
-                    )
+                _record_jsonlite_test(
+                    diagnosis, proc.returncode, stdout.decode(), stderr.decode()
+                )
             except TimeoutError:
                 diagnosis["error"] = "R basic test timed out after 30 seconds"
             except Exception as e:

@@ -5,7 +5,12 @@ Advanced econometric modeling for panel data, instrumental variables, etc.
 
 from typing import Any
 
-from ..core.schemas import formula_schema, table_schema
+from ..core.schemas import (
+    coefficient_inference_schema,
+    formula_schema,
+    r_squared_schema,
+    table_schema,
+)
 from ..r_assets.loader import get_r_script
 from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
@@ -37,27 +42,8 @@ from ..registries.tools import tool
                 "description": "Estimated coefficients",
                 "additionalProperties": {"type": "number"},
             },
-            "std_errors": {
-                "type": "object",
-                "description": "Standard errors of coefficients",
-                "additionalProperties": {"type": "number"},
-            },
-            "t_values": {
-                "type": "object",
-                "description": "t-statistics for coefficients",
-                "additionalProperties": {"type": "number"},
-            },
-            "p_values": {
-                "type": "object",
-                "description": "P-values for coefficient significance tests",
-                "additionalProperties": {"type": "number"},
-            },
-            "r_squared": {
-                "type": "number",
-                "description": "R-squared (overall fit)",
-                "minimum": 0,
-                "maximum": 1,
-            },
+            **coefficient_inference_schema(),
+            "r_squared": r_squared_schema(),
             "adj_r_squared": {
                 "type": "number",
                 "description": "Adjusted R-squared",
@@ -150,24 +136,12 @@ async def panel_regression(context, params) -> dict[str, Any]:
                 "description": "2SLS coefficient estimates",
                 "additionalProperties": {"type": "number"},
             },
-            "std_errors": {
-                "type": "object",
-                "description": "Standard errors of coefficients",
-                "additionalProperties": {"type": "number"},
-            },
-            "t_values": {
-                "type": "object",
-                "description": "t-statistics for coefficients",
-                "additionalProperties": {"type": "number"},
-            },
-            "p_values": {
-                "type": "object",
-                "description": "P-values for coefficient significance tests",
-                "additionalProperties": {"type": "number"},
-            },
+            **coefficient_inference_schema(),
+            # No lower bound: a 2SLS R-squared is negative when the instrumented
+            # fit is worse than the mean.
             "r_squared": {
                 "type": "number",
-                "description": "R-squared value",
+                "description": "R-squared (coefficient of determination)",
                 "maximum": 1,
             },
             "adj_r_squared": {

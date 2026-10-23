@@ -11,6 +11,60 @@ from ..r_integration import execute_r_script_async
 from ..registries.tools import tool
 
 
+def _read_summary_schema() -> dict[str, Any]:
+    """Schema for the ``summary`` block every read tool returns."""
+    return {
+        "type": "object",
+        "properties": {
+            "rows_read": {"type": "integer", "minimum": 0},
+            "columns_read": {"type": "integer", "minimum": 0},
+            "column_types": {
+                "type": "object",
+                "additionalProperties": {"type": "string"},
+            },
+            "missing_values": {
+                "type": "object",
+                "additionalProperties": {"type": "integer"},
+            },
+            "sample_data": {
+                "type": ["object", "array"],
+                "description": "First few rows as sample",
+            },
+        },
+        "description": "Data summary and quality information",
+    }
+
+
+def _write_result_properties() -> dict[str, Any]:
+    """Output properties every write tool reports, beyond the path written."""
+    return {
+        "rows_written": {
+            "type": "integer",
+            "description": "Number of rows written to file",
+            "minimum": 0,
+        },
+        "cols_written": {
+            "type": "integer",
+            "description": "Number of columns written to file",
+            "minimum": 0,
+        },
+        "file_size_bytes": {
+            "type": "number",
+            "description": "Size of the written file in bytes",
+            "minimum": 0,
+        },
+        "success": {
+            "type": "boolean",
+            "enum": [True],
+            "description": "Whether the file was written successfully",
+        },
+        "timestamp": {
+            "type": "string",
+            "description": "Timestamp when the file was written",
+        },
+    }
+
+
 @tool(
     name="read_csv",
     input_schema={
@@ -73,26 +127,7 @@ from ..registries.tools import tool
                 },
                 "description": "Parsing parameters used",
             },
-            "summary": {
-                "type": "object",
-                "properties": {
-                    "rows_read": {"type": "integer", "minimum": 0},
-                    "columns_read": {"type": "integer", "minimum": 0},
-                    "column_types": {
-                        "type": "object",
-                        "additionalProperties": {"type": "string"},
-                    },
-                    "missing_values": {
-                        "type": "object",
-                        "additionalProperties": {"type": "integer"},
-                    },
-                    "sample_data": {
-                        "type": ["object", "array"],
-                        "description": "First few rows as sample",
-                    },
-                },
-                "description": "Data summary and quality information",
-            },
+            "summary": _read_summary_schema(),
         },
         "required": ["data", "file_info", "parsing_info", "summary"],
         "additionalProperties": False,
@@ -139,30 +174,7 @@ async def read_csv(context, params) -> dict[str, Any]:
                 "type": "string",
                 "description": "Path where the file was written",
             },
-            "rows_written": {
-                "type": "integer",
-                "description": "Number of rows written to file",
-                "minimum": 0,
-            },
-            "cols_written": {
-                "type": "integer",
-                "description": "Number of columns written to file",
-                "minimum": 0,
-            },
-            "file_size_bytes": {
-                "type": "number",
-                "description": "Size of the written file in bytes",
-                "minimum": 0,
-            },
-            "success": {
-                "type": "boolean",
-                "enum": [True],
-                "description": "Whether the file was written successfully",
-            },
-            "timestamp": {
-                "type": "string",
-                "description": "Timestamp when the file was written",
-            },
+            **_write_result_properties(),
         },
         "required": [
             "file_path",
@@ -217,30 +229,7 @@ async def write_csv(context, params) -> dict[str, Any]:
                 "type": "string",
                 "description": "Name of the worksheet where data was written",
             },
-            "rows_written": {
-                "type": "integer",
-                "description": "Number of rows written to file",
-                "minimum": 0,
-            },
-            "cols_written": {
-                "type": "integer",
-                "description": "Number of columns written to file",
-                "minimum": 0,
-            },
-            "file_size_bytes": {
-                "type": "number",
-                "description": "Size of the written file in bytes",
-                "minimum": 0,
-            },
-            "success": {
-                "type": "boolean",
-                "enum": [True],
-                "description": "Whether the file was written successfully",
-            },
-            "timestamp": {
-                "type": "string",
-                "description": "Timestamp when the file was written",
-            },
+            **_write_result_properties(),
         },
         "required": [
             "file_path",
@@ -591,26 +580,7 @@ async def filter_data(context, params) -> dict[str, Any]:
                 },
                 "description": "Excel file metadata and structure information",
             },
-            "summary": {
-                "type": "object",
-                "properties": {
-                    "rows_read": {"type": "integer", "minimum": 0},
-                    "columns_read": {"type": "integer", "minimum": 0},
-                    "column_types": {
-                        "type": "object",
-                        "additionalProperties": {"type": "string"},
-                    },
-                    "missing_values": {
-                        "type": "object",
-                        "additionalProperties": {"type": "integer"},
-                    },
-                    "sample_data": {
-                        "type": ["object", "array"],
-                        "description": "First few rows as sample",
-                    },
-                },
-                "description": "Data summary and quality information",
-            },
+            "summary": _read_summary_schema(),
         },
         "required": ["data", "file_info", "summary"],
         "additionalProperties": False,
@@ -691,26 +661,7 @@ async def read_excel(context, params) -> dict[str, Any]:
                 },
                 "description": "JSON file metadata and structure information",
             },
-            "summary": {
-                "type": "object",
-                "properties": {
-                    "rows_read": {"type": "integer", "minimum": 0},
-                    "columns_read": {"type": "integer", "minimum": 0},
-                    "column_types": {
-                        "type": "object",
-                        "additionalProperties": {"type": "string"},
-                    },
-                    "missing_values": {
-                        "type": "object",
-                        "additionalProperties": {"type": "integer"},
-                    },
-                    "sample_data": {
-                        "type": ["object", "array"],
-                        "description": "First few rows as sample",
-                    },
-                },
-                "description": "Data summary and quality information",
-            },
+            "summary": _read_summary_schema(),
         },
         "required": ["data", "file_info", "summary"],
         "additionalProperties": False,
@@ -757,38 +708,15 @@ async def read_json(context, params) -> dict[str, Any]:
                 "type": "string",
                 "description": "Path where the JSON file was written",
             },
-            "rows_written": {
-                "type": "integer",
-                "description": "Number of rows written to file",
-                "minimum": 0,
-            },
-            "cols_written": {
-                "type": "integer",
-                "description": "Number of columns written to file",
-                "minimum": 0,
-            },
+            **_write_result_properties(),
             "variables_written": {
                 "type": "array",
                 "items": {"type": "string"},
                 "description": "Names of variables/columns written",
             },
-            "file_size_bytes": {
-                "type": "number",
-                "description": "Size of the written file in bytes",
-                "minimum": 0,
-            },
             "pretty_formatted": {
                 "type": "boolean",
                 "description": "Whether the JSON was formatted with indentation",
-            },
-            "success": {
-                "type": "boolean",
-                "enum": [True],
-                "description": "Whether the file was written successfully",
-            },
-            "timestamp": {
-                "type": "string",
-                "description": "Timestamp when the file was written",
             },
         },
         "required": [

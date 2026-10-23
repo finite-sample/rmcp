@@ -11,6 +11,43 @@ from ..r_integration import execute_r_script_with_image_async
 from ..registries.tools import tool
 
 
+def _image_output_properties() -> dict[str, Any]:
+    """Output properties for the image every plotting tool can return."""
+    return {
+        "dimensions": {
+            "type": "object",
+            "properties": {
+                "width": {"type": "integer"},
+                "height": {"type": "integer"},
+            },
+            "description": "Plot dimensions in pixels",
+        },
+        "image_data": {
+            "type": "string",
+            "description": "Base64-encoded PNG image data",
+        },
+        "image_mime_type": {
+            "type": "string",
+            "enum": ["image/png"],
+            "description": "MIME type of the image",
+        },
+    }
+
+
+async def _render_plot(
+    context, params, r_script: str, default_width: int, default_height: int
+) -> dict[str, Any]:
+    """Run a plotting script, returning the PNG too unless ``return_image`` is off."""
+    return await execute_r_script_with_image_async(
+        r_script,
+        params,
+        include_image=params.get("return_image", True),
+        image_width=params.get("width", default_width),
+        image_height=params.get("height", default_height),
+        context=context,
+    )
+
+
 @tool(
     name="scatter_plot",
     input_schema={
@@ -69,23 +106,7 @@ from ..registries.tools import tool
                 },
                 "description": "Statistical summary of the plot",
             },
-            "dimensions": {
-                "type": "object",
-                "properties": {
-                    "width": {"type": "integer"},
-                    "height": {"type": "integer"},
-                },
-                "description": "Plot dimensions in pixels",
-            },
-            "image_data": {
-                "type": "string",
-                "description": "Base64-encoded PNG image data",
-            },
-            "image_mime_type": {
-                "type": "string",
-                "enum": ["image/png"],
-                "description": "MIME type of the image",
-            },
+            **_image_output_properties(),
         },
         "required": ["plot_type", "variables"],
     },
@@ -99,18 +120,7 @@ async def scatter_plot(context, params) -> dict[str, Any]:
         context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "scatter_plot")
     try:
-        # Use the new image-enabled function
-        return_image = params.get("return_image", True)
-        width = params.get("width", 800)
-        height = params.get("height", 600)
-        result = await execute_r_script_with_image_async(
-            r_script,
-            params,
-            include_image=return_image,
-            image_width=width,
-            image_height=height,
-            context=context,
-        )
+        result = await _render_plot(context, params, r_script, 800, 600)
         await context.info("Scatter plot created successfully")
         return result
     except Exception as e:
@@ -178,23 +188,7 @@ async def scatter_plot(context, params) -> dict[str, Any]:
                 "description": "Number of valid observations",
                 "minimum": 0,
             },
-            "dimensions": {
-                "type": "object",
-                "properties": {
-                    "width": {"type": "integer"},
-                    "height": {"type": "integer"},
-                },
-                "description": "Plot dimensions in pixels",
-            },
-            "image_data": {
-                "type": "string",
-                "description": "Base64-encoded PNG image data",
-            },
-            "image_mime_type": {
-                "type": "string",
-                "enum": ["image/png"],
-                "description": "MIME type of the image",
-            },
+            **_image_output_properties(),
         },
         "required": ["plot_type", "variable", "bins", "statistics", "n_obs"],
     },
@@ -208,18 +202,7 @@ async def histogram(context, params) -> dict[str, Any]:
         context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "histogram")
     try:
-        # Use the new image-enabled function
-        return_image = params.get("return_image", True)
-        width = params.get("width", 800)
-        height = params.get("height", 600)
-        result = await execute_r_script_with_image_async(
-            r_script,
-            params,
-            include_image=return_image,
-            image_width=width,
-            image_height=height,
-            context=context,
-        )
+        result = await _render_plot(context, params, r_script, 800, 600)
         await context.info("Histogram created successfully")
         return result
     except Exception as e:
@@ -281,23 +264,7 @@ async def histogram(context, params) -> dict[str, Any]:
                     },
                 },
             },
-            "dimensions": {
-                "type": "object",
-                "properties": {
-                    "width": {"type": "integer"},
-                    "height": {"type": "integer"},
-                },
-                "description": "Plot dimensions in pixels",
-            },
-            "image_data": {
-                "type": "string",
-                "description": "Base64-encoded PNG image data",
-            },
-            "image_mime_type": {
-                "type": "string",
-                "enum": ["image/png"],
-                "description": "MIME type of the image",
-            },
+            **_image_output_properties(),
         },
         "required": ["plot_type", "variable", "summary_statistics"],
     },
@@ -311,18 +278,7 @@ async def boxplot(context, params) -> dict[str, Any]:
         context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "boxplot")
     try:
-        # Use the new image-enabled function
-        return_image = params.get("return_image", True)
-        width = params.get("width", 800)
-        height = params.get("height", 600)
-        result = await execute_r_script_with_image_async(
-            r_script,
-            params,
-            include_image=return_image,
-            image_width=width,
-            image_height=height,
-            context=context,
-        )
+        result = await _render_plot(context, params, r_script, 800, 600)
 
         # Ensure schema compliance by mapping R script result to expected format
         stats = result.get("statistics", {})
@@ -459,23 +415,7 @@ async def boxplot(context, params) -> dict[str, Any]:
                 "type": "boolean",
                 "description": "Whether trend line was included",
             },
-            "dimensions": {
-                "type": "object",
-                "properties": {
-                    "width": {"type": "integer"},
-                    "height": {"type": "integer"},
-                },
-                "description": "Plot dimensions in pixels",
-            },
-            "image_data": {
-                "type": "string",
-                "description": "Base64-encoded PNG image data",
-            },
-            "image_mime_type": {
-                "type": "string",
-                "enum": ["image/png"],
-                "description": "MIME type of the image",
-            },
+            **_image_output_properties(),
         },
         "required": [
             "plot_type",
@@ -495,18 +435,7 @@ async def time_series_plot(context, params) -> dict[str, Any]:
         context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "time_series_plot")
     try:
-        # Use the new image-enabled function
-        return_image = params.get("return_image", True)
-        width = params.get("width", 1000)
-        height = params.get("height", 600)
-        result = await execute_r_script_with_image_async(
-            r_script,
-            params,
-            include_image=return_image,
-            image_width=width,
-            image_height=height,
-            context=context,
-        )
+        result = await _render_plot(context, params, r_script, 1000, 600)
         await context.info("Time series plot created successfully")
         return result
     except Exception as e:
@@ -572,23 +501,7 @@ async def time_series_plot(context, params) -> dict[str, Any]:
                 "description": "Number of variables in correlation matrix",
                 "minimum": 2,
             },
-            "dimensions": {
-                "type": "object",
-                "properties": {
-                    "width": {"type": "integer"},
-                    "height": {"type": "integer"},
-                },
-                "description": "Plot dimensions in pixels",
-            },
-            "image_data": {
-                "type": "string",
-                "description": "Base64-encoded PNG image data",
-            },
-            "image_mime_type": {
-                "type": "string",
-                "enum": ["image/png"],
-                "description": "MIME type of the image",
-            },
+            **_image_output_properties(),
         },
         "required": [
             "plot_type",
@@ -608,18 +521,7 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
         context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "correlation_heatmap")
     try:
-        # Use the new image-enabled function
-        return_image = params.get("return_image", True)
-        width = params.get("width", 800)
-        height = params.get("height", 800)
-        result = await execute_r_script_with_image_async(
-            r_script,
-            params,
-            include_image=return_image,
-            image_width=width,
-            image_height=height,
-            context=context,
-        )
+        result = await _render_plot(context, params, r_script, 800, 800)
 
         # Ensure schema compliance by mapping R script result to expected format
         schema_compliant_result = {
@@ -712,23 +614,7 @@ async def correlation_heatmap(context, params) -> dict[str, Any]:
                 "description": "Number of observations in the model",
                 "minimum": 1,
             },
-            "dimensions": {
-                "type": "object",
-                "properties": {
-                    "width": {"type": "integer"},
-                    "height": {"type": "integer"},
-                },
-                "description": "Plot dimensions in pixels",
-            },
-            "image_data": {
-                "type": "string",
-                "description": "Base64-encoded PNG image data",
-            },
-            "image_mime_type": {
-                "type": "string",
-                "enum": ["image/png"],
-                "description": "MIME type of the image",
-            },
+            **_image_output_properties(),
         },
         "required": [
             "plot_type",
@@ -750,18 +636,7 @@ async def regression_plot(context, params) -> dict[str, Any]:
         context.require_write_path(params["file_path"])
     r_script = get_r_script("visualization", "regression_plot")
     try:
-        # Use the new image-enabled function
-        return_image = params.get("return_image", True)
-        width = params.get("width", 1200)
-        height = params.get("height", 800)
-        result = await execute_r_script_with_image_async(
-            r_script,
-            params,
-            include_image=return_image,
-            image_width=width,
-            image_height=height,
-            context=context,
-        )
+        result = await _render_plot(context, params, r_script, 1200, 800)
         await context.info("Regression plots created successfully")
         return result
     except Exception as e:
