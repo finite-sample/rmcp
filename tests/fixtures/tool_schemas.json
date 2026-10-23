@@ -1,0 +1,6177 @@
+{
+  "anova": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "formula": {
+          "description": "R formula (e.g., 'y ~ x1 + x2')",
+          "pattern": "^[^~]+~[^~]+$",
+          "type": "string",
+          "x-rmcp-formula": true
+        },
+        "type": {
+          "default": "I",
+          "enum": [
+            "I",
+            "II",
+            "III"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "formula"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "anova_table": {
+          "description": "ANOVA table with test statistics",
+          "properties": {
+            "df": {
+              "description": "Degrees of freedom",
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "f_value": {
+              "description": "F-statistics",
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "mean_sq": {
+              "description": "Mean squares",
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "p_value": {
+              "description": "P-values",
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "sum_sq": {
+              "description": "Sum of squares",
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "terms": {
+              "description": "Model terms/factors",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "anova_type": {
+          "description": "Type of ANOVA performed",
+          "enum": [
+            "Type I",
+            "Type II",
+            "Type III"
+          ],
+          "type": "string"
+        },
+        "formula": {
+          "description": "Model formula used",
+          "type": "string"
+        },
+        "model_summary": {
+          "description": "Overall model fit statistics",
+          "properties": {
+            "adj_r_squared": {
+              "description": "Adjusted R-squared value",
+              "maximum": 1,
+              "type": "number"
+            },
+            "df_residual": {
+              "description": "Residual degrees of freedom",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "n_obs": {
+              "description": "Number of observations",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "r_squared": {
+              "description": "R-squared value",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "residual_se": {
+              "description": "Residual standard error",
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "anova_table",
+        "model_summary",
+        "formula",
+        "anova_type"
+      ],
+      "type": "object"
+    }
+  },
+  "approve_operation": {
+    "input": {
+      "properties": {
+        "action": {
+          "default": "approve",
+          "description": "Whether to approve or deny the operation",
+          "enum": [
+            "approve",
+            "deny"
+          ],
+          "type": "string"
+        },
+        "directory": {
+          "description": "For file operations: directory to allow writing to (e.g., './plots', '~/Downloads')",
+          "type": "string"
+        },
+        "operation_type": {
+          "description": "Category of operation to approve",
+          "enum": [
+            "file_operations",
+            "package_installation",
+            "system_operations"
+          ],
+          "type": "string"
+        },
+        "scope": {
+          "default": "session",
+          "description": "Scope of approval - session only or permanent",
+          "enum": [
+            "session",
+            "permanent"
+          ],
+          "type": "string"
+        },
+        "specific_operation": {
+          "description": "Specific operation being approved (e.g., 'ggsave', 'install.packages')",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation_type",
+        "specific_operation"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "action": {
+          "enum": [
+            "approved",
+            "denied"
+          ],
+          "type": "string"
+        },
+        "approved_operations": {
+          "description": "Currently approved operations by category",
+          "type": "object"
+        },
+        "message": {
+          "type": "string"
+        },
+        "operation_type": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "security_info": {
+          "properties": {
+            "implications": {
+              "type": "string"
+            },
+            "level": {
+              "type": "string"
+            },
+            "recommendations": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "specific_operation": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "operation_type",
+        "action",
+        "message"
+      ],
+      "type": "object"
+    }
+  },
+  "approve_r_package": {
+    "input": {
+      "properties": {
+        "action": {
+          "description": "Whether to approve or deny the package",
+          "enum": [
+            "approve",
+            "deny"
+          ],
+          "type": "string"
+        },
+        "package_name": {
+          "description": "Name of the R package to approve for use",
+          "type": "string"
+        },
+        "session_only": {
+          "default": true,
+          "description": "Whether approval is only for current session (true) or permanent (false)",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "package_name",
+        "action"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "session_packages": {
+          "description": "List of currently approved session packages",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "package",
+        "action",
+        "message"
+      ],
+      "type": "object"
+    }
+  },
+  "arima_model": {
+    "input": {
+      "properties": {
+        "data": {
+          "properties": {
+            "dates": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "values": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "values"
+          ],
+          "type": "object"
+        },
+        "forecast_periods": {
+          "default": 12,
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "order": {
+          "description": "ARIMA order (p, d, q)",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "seasonal": {
+          "description": "Seasonal ARIMA order (P, D, Q, s)",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "accuracy": {
+          "additionalProperties": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "description": "Model accuracy metrics",
+          "type": "object"
+        },
+        "aic": {
+          "description": "Akaike Information Criterion",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "bic": {
+          "description": "Bayesian Information Criterion",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "coefficients": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Model coefficients",
+          "type": "object"
+        },
+        "fitted_values": {
+          "description": "Fitted values from the model",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "forecast_lower": {
+          "description": "Lower bounds of 95% prediction intervals",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "forecast_upper": {
+          "description": "Upper bounds of 95% prediction intervals",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "forecasts": {
+          "description": "Point forecasts",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "loglik": {
+          "description": "Log-likelihood value",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "model_type": {
+          "description": "Type of time series model",
+          "enum": [
+            "ARIMA"
+          ],
+          "type": "string"
+        },
+        "n_obs": {
+          "description": "Number of observations in training data",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "order": {
+          "description": "ARIMA order (p, d, q) and seasonal order if applicable",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "residuals": {
+          "description": "Model residuals",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "sigma2": {
+          "description": "Estimated innovation variance",
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "model_type",
+        "order",
+        "aic",
+        "bic",
+        "loglik",
+        "sigma2",
+        "fitted_values",
+        "residuals",
+        "forecasts",
+        "forecast_lower",
+        "forecast_upper",
+        "accuracy",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "boxplot": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "file_path": {
+          "description": "Optional: Save plot to this file",
+          "type": "string"
+        },
+        "group": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "height": {
+          "default": 600,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "return_image": {
+          "default": true,
+          "description": "Return image data for inline display",
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "variable": {
+          "type": "string"
+        },
+        "width": {
+          "default": 800,
+          "minimum": 100,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data",
+        "variable"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "dimensions": {
+          "description": "Plot dimensions in pixels",
+          "properties": {
+            "height": {
+              "type": "integer"
+            },
+            "width": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "group_variable": {
+          "description": "Grouping variable if specified",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "image_data": {
+          "description": "Base64-encoded PNG image data",
+          "type": "string"
+        },
+        "image_mime_type": {
+          "description": "MIME type of the image",
+          "enum": [
+            "image/png"
+          ],
+          "type": "string"
+        },
+        "plot_type": {
+          "description": "Type of plot generated",
+          "enum": [
+            "boxplot"
+          ],
+          "type": "string"
+        },
+        "summary_statistics": {
+          "additionalProperties": {
+            "properties": {
+              "iqr": {
+                "type": "number"
+              },
+              "median": {
+                "type": "number"
+              },
+              "n": {
+                "type": "integer"
+              },
+              "outliers": {
+                "type": "integer"
+              },
+              "q1": {
+                "type": "number"
+              },
+              "q3": {
+                "type": "number"
+              }
+            },
+            "type": "object"
+          },
+          "description": "Quartile statistics by group or overall",
+          "type": "object"
+        },
+        "variable": {
+          "description": "Variable analyzed in boxplot",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plot_type",
+        "variable",
+        "summary_statistics"
+      ],
+      "type": "object"
+    }
+  },
+  "build_formula": {
+    "input": {
+      "properties": {
+        "analysis_type": {
+          "default": "regression",
+          "enum": [
+            "regression",
+            "correlation",
+            "anova",
+            "classification",
+            "general"
+          ],
+          "type": "string"
+        },
+        "data": {
+          "description": "Optional data to validate variable names",
+          "type": "object"
+        },
+        "description": {
+          "description": "Natural language description of the relationship",
+          "type": "string"
+        },
+        "suggest_alternatives": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "description"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "alternatives": {
+          "description": "Alternative formula specifications",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "examples": {
+          "description": "Example formulas for the analysis type",
+          "items": {
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "formula": {
+                "type": "string"
+              },
+              "use_case": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "formula": {
+          "description": "Generated R formula",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "interpretation": {
+          "description": "Human-readable interpretation of the formula",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matched_pattern": {
+          "description": "Pattern that was matched to generate the formula",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suggestions": {
+          "description": "Suggestions for improving the formula",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "validation": {
+          "description": "Validation results if data was provided",
+          "properties": {
+            "available_variables": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "error": {
+              "type": "string"
+            },
+            "existing_variables": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "formula_parsed": {
+              "type": "boolean"
+            },
+            "is_valid": {
+              "type": "boolean"
+            },
+            "missing_variables": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "variable_types": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "warnings": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "formula",
+        "matched_pattern",
+        "alternatives",
+        "examples",
+        "interpretation",
+        "suggestions"
+      ],
+      "type": "object"
+    }
+  },
+  "chi_square_test": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "expected": {
+          "description": "Expected frequencies (for goodness of fit test)",
+          "items": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "test_type": {
+          "description": "Type of chi-square test",
+          "enum": [
+            "independence",
+            "goodness_of_fit"
+          ],
+          "type": "string"
+        },
+        "x": {
+          "description": "First variable (or only variable for goodness of fit)",
+          "type": "string"
+        },
+        "y": {
+          "description": "Second variable (required for independence test)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "test_type",
+        "x"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "categories": {
+          "description": "Category names (goodness of fit test)",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "contingency_table": {
+          "description": "Observed contingency table (independence test)",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "cramers_v": {
+          "description": "Cramer's V effect size (independence test)",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "df": {
+          "description": "Degrees of freedom",
+          "minimum": 0,
+          "type": "number"
+        },
+        "expected_frequencies": {
+          "description": "Expected frequencies under null hypothesis",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "observed_frequencies": {
+          "description": "Observed frequencies (goodness of fit test)",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "p_value": {
+          "description": "P-value of the test",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "residuals": {
+          "description": "Standardized residuals",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "statistic": {
+          "description": "Chi-square test statistic",
+          "minimum": 0,
+          "type": "number"
+        },
+        "test_type": {
+          "description": "Type of chi-square test performed",
+          "enum": [
+            "Chi-square test of independence",
+            "Chi-square goodness of fit test"
+          ],
+          "type": "string"
+        },
+        "x_variable": {
+          "description": "X variable name (independence test)",
+          "type": "string"
+        },
+        "y_variable": {
+          "description": "Y variable name (independence test)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "test_type",
+        "statistic",
+        "df",
+        "p_value",
+        "expected_frequencies",
+        "residuals"
+      ],
+      "type": "object"
+    }
+  },
+  "correlation_analysis": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "method": {
+          "description": "Correlation method",
+          "enum": [
+            "pearson",
+            "spearman",
+            "kendall"
+          ],
+          "type": "string"
+        },
+        "use": {
+          "description": "Missing value handling",
+          "enum": [
+            "everything",
+            "all.obs",
+            "complete.obs",
+            "na.or.complete",
+            "pairwise.complete.obs"
+          ],
+          "type": "string"
+        },
+        "variables": {
+          "description": "Variables to include in correlation analysis",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "correlation_matrix": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "description": "Correlation coefficients between variables",
+          "type": "object"
+        },
+        "method": {
+          "description": "Correlation method used",
+          "enum": [
+            "pearson",
+            "spearman",
+            "kendall"
+          ],
+          "type": "string"
+        },
+        "n_obs": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "description": "Number of observations used for each correlation",
+          "type": "object"
+        },
+        "significance_tests": {
+          "description": "P-values and test statistics for correlations",
+          "properties": {
+            "p_values": {
+              "additionalProperties": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              "type": "object"
+            },
+            "test_statistics": {
+              "additionalProperties": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "variables": {
+          "description": "Variables included in the analysis",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "correlation_matrix",
+        "method",
+        "variables"
+      ],
+      "type": "object"
+    }
+  },
+  "correlation_heatmap": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "file_path": {
+          "description": "Optional: Save plot to this file",
+          "type": "string"
+        },
+        "height": {
+          "default": 800,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "method": {
+          "default": "pearson",
+          "enum": [
+            "pearson",
+            "spearman",
+            "kendall"
+          ],
+          "type": "string"
+        },
+        "return_image": {
+          "default": true,
+          "description": "Return image data for inline display",
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "width": {
+          "default": 800,
+          "minimum": 100,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "correlation_matrix": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "Correlation coefficients between variables",
+          "type": "object"
+        },
+        "dimensions": {
+          "description": "Plot dimensions in pixels",
+          "properties": {
+            "height": {
+              "type": "integer"
+            },
+            "width": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "image_data": {
+          "description": "Base64-encoded PNG image data",
+          "type": "string"
+        },
+        "image_mime_type": {
+          "description": "MIME type of the image",
+          "enum": [
+            "image/png"
+          ],
+          "type": "string"
+        },
+        "method": {
+          "description": "Correlation method used",
+          "enum": [
+            "pearson",
+            "spearman",
+            "kendall"
+          ],
+          "type": "string"
+        },
+        "n_variables": {
+          "description": "Number of variables in correlation matrix",
+          "minimum": 2,
+          "type": "integer"
+        },
+        "plot_type": {
+          "description": "Type of plot generated",
+          "enum": [
+            "heatmap"
+          ],
+          "type": "string"
+        },
+        "variables": {
+          "description": "Variables included in correlation matrix",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "plot_type",
+        "correlation_matrix",
+        "variables",
+        "method",
+        "n_variables"
+      ],
+      "type": "object"
+    }
+  },
+  "data_info": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "include_sample": {
+          "default": true,
+          "type": "boolean"
+        },
+        "sample_size": {
+          "default": 5,
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "dimensions": {
+          "description": "Dataset dimensions",
+          "properties": {
+            "columns": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "rows": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "memory_usage_bytes": {
+          "description": "Memory usage of the dataset in bytes",
+          "minimum": 0,
+          "type": "number"
+        },
+        "missing_values": {
+          "description": "Missing value analysis",
+          "properties": {
+            "complete_cases": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "counts": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "description": "Missing value count per variable",
+              "type": "object"
+            },
+            "percentages": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "description": "Missing value percentage per variable",
+              "type": "object"
+            },
+            "total_missing": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "sample_data": {
+          "description": "Sample of the first few rows (if requested)",
+          "type": [
+            "object",
+            "array"
+          ]
+        },
+        "variable_types": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Data type for each variable",
+          "type": "object"
+        },
+        "variables": {
+          "description": "Variables grouped by data type",
+          "properties": {
+            "all": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "character": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "date": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "factor": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "logical": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "numeric": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "dimensions",
+        "variables",
+        "variable_types",
+        "missing_values",
+        "memory_usage_bytes"
+      ],
+      "type": "object"
+    }
+  },
+  "decision_tree": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "formula": {
+          "description": "R formula (e.g., 'y ~ x1 + x2')",
+          "pattern": "^[^~]+~[^~]+$",
+          "type": "string",
+          "x-rmcp-formula": true
+        },
+        "max_depth": {
+          "default": 30,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_split": {
+          "default": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "type": {
+          "default": "classification",
+          "enum": [
+            "classification",
+            "regression"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "formula"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "formula": {
+          "description": "Model formula used",
+          "type": "string"
+        },
+        "n_nodes": {
+          "description": "Number of nodes in the tree",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "n_obs": {
+          "description": "Number of observations",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "performance": {
+          "additionalProperties": false,
+          "description": "Model performance metrics",
+          "properties": {
+            "accuracy": {
+              "description": "Classification accuracy (for classification trees)",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "confusion_matrix": {
+              "description": "Confusion matrix (for classification trees)",
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "mse": {
+              "description": "Mean squared error (for regression trees)",
+              "minimum": 0,
+              "type": "number"
+            },
+            "r_squared": {
+              "description": "R-squared value (for regression trees)",
+              "maximum": 1,
+              "type": "number"
+            },
+            "rmse": {
+              "description": "Root mean squared error (for regression trees)",
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "predictions": {
+          "description": "Model predictions for training data",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "tree_complexity": {
+          "description": "Complexity parameter of the tree",
+          "minimum": 0,
+          "type": "number"
+        },
+        "tree_type": {
+          "description": "Type of decision tree",
+          "enum": [
+            "classification",
+            "regression"
+          ],
+          "type": "string"
+        },
+        "variable_importance": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Relative importance of variables",
+          "type": "object"
+        }
+      },
+      "required": [
+        "tree_type",
+        "performance",
+        "variable_importance",
+        "predictions",
+        "n_nodes",
+        "n_obs",
+        "formula",
+        "tree_complexity"
+      ],
+      "type": "object"
+    }
+  },
+  "decompose_timeseries": {
+    "input": {
+      "properties": {
+        "data": {
+          "properties": {
+            "dates": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "values": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "values"
+          ],
+          "type": "object"
+        },
+        "frequency": {
+          "default": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "type": {
+          "default": "additive",
+          "enum": [
+            "additive",
+            "multiplicative"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "frequency": {
+          "description": "Seasonal frequency used",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "n_obs": {
+          "description": "Number of observations in time series",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "original": {
+          "description": "Original time series values",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "remainder": {
+          "description": "Remainder/irregular component",
+          "items": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        },
+        "seasonal": {
+          "description": "Seasonal component",
+          "items": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        },
+        "trend": {
+          "description": "Trend component (may contain null values at ends)",
+          "items": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        },
+        "type": {
+          "description": "Type of decomposition performed",
+          "enum": [
+            "additive",
+            "multiplicative"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "original",
+        "trend",
+        "seasonal",
+        "remainder",
+        "type",
+        "frequency",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "difference": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "log_transform": {
+          "default": false,
+          "type": "boolean"
+        },
+        "order": {
+          "default": 1,
+          "maximum": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "variables"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "Dataset with differenced variables",
+          "type": "object"
+        },
+        "difference_order": {
+          "description": "Order of differencing applied",
+          "maximum": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "log_transformed": {
+          "description": "Whether log transformation was applied before differencing",
+          "type": "boolean"
+        },
+        "n_obs": {
+          "description": "Number of observations in result",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "variables_differenced": {
+          "description": "Original variables that were differenced",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "variables_differenced",
+        "difference_order",
+        "log_transformed",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "execute_r_analysis": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "Optional data to pass to R code as 'data' variable",
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "description": {
+          "description": "Description of what this analysis does",
+          "type": "string"
+        },
+        "packages": {
+          "default": [],
+          "description": "R packages required (must be in whitelist)",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "r_code": {
+          "description": "R code to execute. Must use 'result' variable for output.",
+          "type": "string"
+        },
+        "return_image": {
+          "default": false,
+          "description": "Whether to capture and return plot as base64 image",
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "default": 60,
+          "description": "Maximum execution time in seconds",
+          "maximum": 300,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "r_code",
+        "description"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "console_output": {
+          "description": "R console output if any",
+          "type": "string"
+        },
+        "image_data": {
+          "description": "Base64-encoded plot image if requested",
+          "type": "string"
+        },
+        "packages_loaded": {
+          "description": "R packages that were loaded",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "r_code_executed": {
+          "description": "The actual R code that was executed",
+          "type": "string"
+        },
+        "result": {
+          "description": "The R computation result",
+          "type": [
+            "object",
+            "array",
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "success": {
+          "description": "Whether execution succeeded",
+          "type": "boolean"
+        },
+        "warnings": {
+          "description": "R warnings if any",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "success"
+      ],
+      "type": "object"
+    }
+  },
+  "filter_data": {
+    "input": {
+      "properties": {
+        "conditions": {
+          "items": {
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "operator": {
+                      "enum": [
+                        "%in%",
+                        "!%in%"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "operator"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "items": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "operator": {
+                      "enum": [
+                        "==",
+                        "!="
+                      ]
+                    }
+                  },
+                  "required": [
+                    "operator"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "operator": {
+                      "enum": [
+                        ">",
+                        "<",
+                        ">=",
+                        "<="
+                      ]
+                    }
+                  },
+                  "required": [
+                    "operator"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean"
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "properties": {
+              "operator": {
+                "enum": [
+                  "==",
+                  "!=",
+                  ">",
+                  "<",
+                  ">=",
+                  "<=",
+                  "%in%",
+                  "!%in%"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "description": "A non-empty array for membership operators; a scalar for comparisons. Membership arrays may include null; a scalar null is supported only with == or !=."
+              },
+              "variable": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "variable",
+              "operator",
+              "value"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "logic": {
+          "default": "AND",
+          "enum": [
+            "AND",
+            "OR"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "conditions"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "Filtered dataset in column-wise format",
+          "type": "object"
+        },
+        "filter_expression": {
+          "description": "R expression used for filtering",
+          "type": "string"
+        },
+        "filtered_rows": {
+          "description": "Number of rows after filtering",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "original_rows": {
+          "description": "Number of rows in original dataset",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "removal_percentage": {
+          "description": "Percentage of rows removed",
+          "maximum": 100,
+          "minimum": 0,
+          "type": "number"
+        },
+        "rows_removed": {
+          "description": "Number of rows removed by filtering",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data",
+        "filter_expression",
+        "original_rows",
+        "filtered_rows",
+        "rows_removed",
+        "removal_percentage"
+      ],
+      "type": "object"
+    }
+  },
+  "frequency_table": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "include_percentages": {
+          "default": true,
+          "type": "boolean"
+        },
+        "sort_by": {
+          "default": "frequency",
+          "enum": [
+            "frequency",
+            "value"
+          ],
+          "type": "string"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "variables"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "frequency_tables": {
+          "additionalProperties": {
+            "properties": {
+              "frequencies": {
+                "description": "Count of each value",
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "missing_percentage": {
+                "description": "Percentage of missing values",
+                "maximum": 100,
+                "minimum": 0,
+                "type": "number"
+              },
+              "n_missing": {
+                "description": "Number of missing values",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "n_total": {
+                "description": "Total valid observations",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "percentages": {
+                "description": "Percentage of each value",
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "values": {
+                "description": "Unique values in the variable",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "values",
+              "frequencies",
+              "n_total"
+            ],
+            "type": "object"
+          },
+          "description": "Frequency tables by variable",
+          "type": "object"
+        },
+        "total_observations": {
+          "description": "Total number of observations in dataset",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "variables": {
+          "description": "Variables analyzed",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "frequency_tables",
+        "variables",
+        "total_observations"
+      ],
+      "type": "object"
+    }
+  },
+  "get_r_session_info": {
+    "input": {
+      "properties": {
+        "session_id": {
+          "description": "R session ID (optional)",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "output": null
+  },
+  "histogram": {
+    "input": {
+      "properties": {
+        "bins": {
+          "default": 30,
+          "maximum": 100,
+          "minimum": 5,
+          "type": "integer"
+        },
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "file_path": {
+          "description": "Optional: Save plot to this file",
+          "type": "string"
+        },
+        "group": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "height": {
+          "default": 600,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "return_image": {
+          "default": true,
+          "description": "Return image data for inline display",
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "variable": {
+          "type": "string"
+        },
+        "width": {
+          "default": 800,
+          "minimum": 100,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data",
+        "variable"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "bins": {
+          "description": "Number of bins used in histogram",
+          "type": "integer"
+        },
+        "dimensions": {
+          "description": "Plot dimensions in pixels",
+          "properties": {
+            "height": {
+              "type": "integer"
+            },
+            "width": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "group_variable": {
+          "description": "Grouping variable if specified",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "image_data": {
+          "description": "Base64-encoded PNG image data",
+          "type": "string"
+        },
+        "image_mime_type": {
+          "description": "MIME type of the image",
+          "enum": [
+            "image/png"
+          ],
+          "type": "string"
+        },
+        "n_obs": {
+          "description": "Number of valid observations",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "plot_type": {
+          "description": "Type of plot generated",
+          "enum": [
+            "histogram"
+          ],
+          "type": "string"
+        },
+        "statistics": {
+          "description": "Descriptive statistics for the variable",
+          "properties": {
+            "kurtosis": {
+              "type": "number"
+            },
+            "mean": {
+              "type": "number"
+            },
+            "median": {
+              "type": "number"
+            },
+            "sd": {
+              "type": "number"
+            },
+            "skewness": {
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "variable": {
+          "description": "Variable analyzed in histogram",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plot_type",
+        "variable",
+        "bins",
+        "statistics",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "inspect_r_object": {
+    "input": {
+      "properties": {
+        "include_structure": {
+          "default": true,
+          "description": "Include object structure details",
+          "type": "boolean"
+        },
+        "include_summary": {
+          "default": true,
+          "description": "Include statistical summary for data objects",
+          "type": "boolean"
+        },
+        "max_preview_rows": {
+          "default": 10,
+          "description": "Maximum rows to preview for data frames",
+          "type": "integer"
+        },
+        "object_name": {
+          "description": "Name of the R object to inspect",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "R session ID (optional)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "object_name"
+      ],
+      "type": "object"
+    },
+    "output": null
+  },
+  "instrumental_variables": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "formula": {
+          "description": "R formula (e.g., 'y ~ x1 + x2')",
+          "pattern": "^[^~]+~[^~]+$",
+          "type": "string",
+          "x-rmcp-formula": true
+        },
+        "robust": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "formula"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "adj_r_squared": {
+          "description": "Adjusted R-squared value",
+          "maximum": 1,
+          "type": "number"
+        },
+        "coefficients": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "2SLS coefficient estimates",
+          "type": "object"
+        },
+        "formula": {
+          "description": "IV regression formula used",
+          "type": "string"
+        },
+        "n_obs": {
+          "description": "Number of observations",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "p_values": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "P-values for coefficient significance tests",
+          "type": "object"
+        },
+        "r_squared": {
+          "description": "R-squared (coefficient of determination)",
+          "maximum": 1,
+          "type": "number"
+        },
+        "robust_se": {
+          "description": "Whether robust standard errors were used",
+          "type": "boolean"
+        },
+        "sargan": {
+          "description": "Test for overidentifying restrictions",
+          "properties": {
+            "p_value": {
+              "description": "P-value for Sargan test",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "statistic": {
+              "description": "Sargan test statistic",
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "std_errors": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Standard errors of coefficients",
+          "type": "object"
+        },
+        "t_values": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "t-statistics for coefficients",
+          "type": "object"
+        },
+        "weak_instruments": {
+          "description": "Test for weak instruments",
+          "properties": {
+            "p_value": {
+              "description": "P-value for weak instruments test",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "statistic": {
+              "description": "Weak instruments test statistic",
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "wu_hausman": {
+          "description": "Test for endogeneity",
+          "properties": {
+            "p_value": {
+              "description": "P-value for Wu-Hausman test",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "statistic": {
+              "description": "Wu-Hausman test statistic",
+              "type": "number"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "coefficients",
+        "std_errors",
+        "t_values",
+        "p_values",
+        "r_squared",
+        "adj_r_squared",
+        "weak_instruments",
+        "wu_hausman",
+        "sargan",
+        "robust_se",
+        "formula",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "kmeans_clustering": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "k": {
+          "maximum": 20,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "max_iter": {
+          "default": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "nstart": {
+          "default": 25,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "variables",
+        "k"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "between_ss": {
+          "description": "Between-cluster sum of squares",
+          "minimum": 0,
+          "type": "number"
+        },
+        "cluster_assignments": {
+          "description": "Cluster assignment for each observation",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "cluster_centers": {
+          "additionalProperties": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "description": "Centroid coordinates for each cluster",
+          "type": "object"
+        },
+        "cluster_sizes": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Number of observations in each cluster",
+          "type": "object"
+        },
+        "converged": {
+          "description": "Whether the algorithm converged",
+          "type": "boolean"
+        },
+        "k": {
+          "description": "Number of clusters",
+          "maximum": 20,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "n_obs": {
+          "description": "Number of observations clustered",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "silhouette_score": {
+          "description": "Average silhouette score (-1 to 1, higher is better)",
+          "maximum": 1,
+          "minimum": -1,
+          "type": "number"
+        },
+        "total_ss": {
+          "description": "Total sum of squares",
+          "minimum": 0,
+          "type": "number"
+        },
+        "total_within_ss": {
+          "description": "Total within-cluster sum of squares",
+          "minimum": 0,
+          "type": "number"
+        },
+        "variables": {
+          "description": "Variables used for clustering",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "variance_explained": {
+          "description": "Percentage of variance explained by clustering",
+          "maximum": 100,
+          "minimum": 0,
+          "type": "number"
+        },
+        "within_ss": {
+          "description": "Within-cluster sum of squares for each cluster",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "cluster_assignments",
+        "cluster_centers",
+        "cluster_sizes",
+        "within_ss",
+        "total_within_ss",
+        "between_ss",
+        "total_ss",
+        "variance_explained",
+        "silhouette_score",
+        "k",
+        "variables",
+        "n_obs",
+        "converged"
+      ],
+      "type": "object"
+    }
+  },
+  "lag_lead": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "lags": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "leads": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "variables"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "Transformed dataset with lag/lead variables",
+          "type": "object"
+        },
+        "n_obs": {
+          "description": "Number of observations in result",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operation": {
+          "description": "Type of transformation performed",
+          "enum": [
+            "lag_lead"
+          ],
+          "type": "string"
+        },
+        "variables_created": {
+          "description": "Names of newly created lag/lead variables",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "variables_created",
+        "n_obs",
+        "operation"
+      ],
+      "type": "object"
+    }
+  },
+  "linear_model": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "formula": {
+          "description": "R formula (e.g., 'y ~ x1 + x2')",
+          "pattern": "^[^~]+~[^~]+$",
+          "type": "string",
+          "x-rmcp-formula": true
+        },
+        "na_action": {
+          "enum": [
+            "na.omit",
+            "na.exclude",
+            "na.fail"
+          ],
+          "type": "string"
+        },
+        "weights": {
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "formula"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "adj_r_squared": {
+          "description": "Adjusted R-squared",
+          "maximum": 1,
+          "type": "number"
+        },
+        "coefficients": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Regression coefficients by variable name",
+          "type": "object"
+        },
+        "df_residual": {
+          "description": "Degrees of freedom for residuals",
+          "type": "integer"
+        },
+        "f_p_value": {
+          "description": "P-value for F-statistic",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "f_statistic": {
+          "description": "F-statistic for overall model significance",
+          "type": "number"
+        },
+        "fitted_values": {
+          "description": "Fitted/predicted values",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "method": {
+          "description": "Estimation method used",
+          "enum": [
+            "lm"
+          ],
+          "type": "string"
+        },
+        "n_obs": {
+          "description": "Number of observations",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "p_values": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "P-values for coefficient significance tests",
+          "type": "object"
+        },
+        "r_squared": {
+          "description": "R-squared (coefficient of determination)",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "residual_se": {
+          "description": "Residual standard error",
+          "minimum": 0,
+          "type": "number"
+        },
+        "residuals": {
+          "description": "Model residuals",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "std_errors": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Standard errors of coefficients",
+          "type": "object"
+        },
+        "t_values": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "t-statistics for coefficients",
+          "type": "object"
+        }
+      },
+      "required": [
+        "coefficients",
+        "r_squared",
+        "n_obs",
+        "method"
+      ],
+      "type": "object"
+    }
+  },
+  "list_allowed_r_packages": {
+    "input": {
+      "properties": {
+        "category": {
+          "default": "summary",
+          "description": "Category of packages to list based on CRAN task views",
+          "enum": [
+            "all",
+            "summary",
+            "base_r",
+            "core_infrastructure",
+            "tidyverse",
+            "machine_learning",
+            "econometrics",
+            "time_series",
+            "bayesian",
+            "survival",
+            "spatial",
+            "optimization",
+            "meta_analysis",
+            "clinical_trials",
+            "robust_stats",
+            "missing_data",
+            "nlp_text",
+            "data_io",
+            "experimental_design",
+            "network_analysis",
+            "stats",
+            "ml",
+            "visualization",
+            "data"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "category": {
+          "description": "Category requested",
+          "type": "string"
+        },
+        "packages": {
+          "description": "List of allowed R packages",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "total_count": {
+          "description": "Total number of allowed packages",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "packages",
+        "total_count",
+        "category"
+      ],
+      "type": "object"
+    }
+  },
+  "list_r_objects": {
+    "input": {
+      "properties": {
+        "include_hidden": {
+          "default": false,
+          "description": "Include hidden objects (starting with .)",
+          "type": "boolean"
+        },
+        "pattern": {
+          "description": "Optional regex pattern to filter object names",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "R session ID (optional, uses default if not specified)",
+          "type": "string"
+        },
+        "sort_by": {
+          "default": "name",
+          "description": "Sort objects by attribute",
+          "enum": [
+            "name",
+            "size",
+            "class",
+            "created"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "output": null
+  },
+  "list_r_packages": {
+    "input": {
+      "properties": {
+        "include_base": {
+          "default": false,
+          "description": "Include base R packages",
+          "type": "boolean"
+        },
+        "package_name": {
+          "description": "Specific package to inspect (optional)",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "R session ID (optional)",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "output": null
+  },
+  "load_example": {
+    "input": {
+      "properties": {
+        "add_noise": {
+          "default": false,
+          "description": "Add realistic noise/missing values",
+          "type": "boolean"
+        },
+        "dataset_name": {
+          "description": "Name of example dataset",
+          "enum": [
+            "sales",
+            "economics",
+            "customers",
+            "timeseries",
+            "survey"
+          ],
+          "type": "string"
+        },
+        "size": {
+          "default": "small",
+          "description": "Dataset size",
+          "enum": [
+            "small",
+            "medium",
+            "large"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset_name"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "Example dataset in column-wise format",
+          "type": "object"
+        },
+        "metadata": {
+          "description": "Dataset metadata and information",
+          "properties": {
+            "columns": {
+              "description": "Number of columns in the dataset",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "description": {
+              "description": "Dataset description and purpose",
+              "type": "string"
+            },
+            "has_noise": {
+              "description": "Whether noise/missing values were added",
+              "type": "boolean"
+            },
+            "name": {
+              "description": "Dataset name",
+              "enum": [
+                "sales",
+                "economics",
+                "customers",
+                "timeseries",
+                "survey"
+              ],
+              "type": "string"
+            },
+            "rows": {
+              "description": "Number of rows in the dataset",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "size": {
+              "description": "Size category of the dataset",
+              "enum": [
+                "small",
+                "medium",
+                "large"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "statistics": {
+          "additionalProperties": {
+            "properties": {
+              "max": {
+                "type": "number"
+              },
+              "mean": {
+                "type": "number"
+              },
+              "min": {
+                "type": "number"
+              },
+              "missing": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "sd": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "type": "object"
+          },
+          "description": "Basic statistics for numeric variables",
+          "type": "object"
+        },
+        "suggested_analyses": {
+          "description": "Suggested analyses appropriate for this dataset",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "variable_info": {
+          "description": "Information about variables in the dataset",
+          "properties": {
+            "categorical_variables": {
+              "description": "Names of categorical variables",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "numeric_variables": {
+              "description": "Names of numeric variables",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "variable_types": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Data type for each variable",
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "data",
+        "metadata",
+        "statistics",
+        "suggested_analyses",
+        "variable_info"
+      ],
+      "type": "object"
+    }
+  },
+  "logistic_regression": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "family": {
+          "description": "Error distribution family",
+          "enum": [
+            "binomial",
+            "poisson",
+            "gamma",
+            "inverse.gaussian"
+          ],
+          "type": "string"
+        },
+        "formula": {
+          "description": "R formula (e.g., 'y ~ x1 + x2')",
+          "pattern": "^[^~]+~[^~]+$",
+          "type": "string",
+          "x-rmcp-formula": true
+        },
+        "link": {
+          "description": "Link function for binomial family",
+          "enum": [
+            "logit",
+            "probit",
+            "cloglog",
+            "cauchit"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "formula"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "accuracy": {
+          "description": "Classification accuracy for binary models",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "aic": {
+          "description": "Akaike Information Criterion",
+          "type": "number"
+        },
+        "bic": {
+          "description": "Bayesian Information Criterion",
+          "type": "number"
+        },
+        "coefficients": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Model coefficients by variable name",
+          "type": "object"
+        },
+        "confusion_matrix": {
+          "additionalProperties": {
+            "type": "array"
+          },
+          "description": "Confusion matrix for binary classification",
+          "type": "object"
+        },
+        "deviance": {
+          "description": "Residual deviance of the model",
+          "type": "number"
+        },
+        "family": {
+          "description": "Error distribution family used",
+          "enum": [
+            "binomial",
+            "poisson",
+            "gamma",
+            "inverse.gaussian"
+          ],
+          "type": "string"
+        },
+        "fitted_values": {
+          "description": "Fitted/predicted values",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "link": {
+          "description": "Link function used",
+          "type": "string"
+        },
+        "mcfadden_r_squared": {
+          "description": "McFadden's pseudo R-squared for binomial models",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "n_obs": {
+          "description": "Number of observations",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "null_deviance": {
+          "description": "Null deviance of the model",
+          "type": "number"
+        },
+        "odds_ratios": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Odds ratios for binomial models",
+          "type": "object"
+        },
+        "p_values": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "P-values for coefficient significance tests",
+          "type": "object"
+        },
+        "predicted_probabilities": {
+          "description": "Predicted probabilities for binomial models",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "residuals": {
+          "description": "Deviance residuals",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "std_errors": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Standard errors of coefficients",
+          "type": "object"
+        },
+        "z_values": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Z-statistics for coefficients",
+          "type": "object"
+        }
+      },
+      "required": [
+        "coefficients",
+        "deviance",
+        "null_deviance",
+        "aic",
+        "bic",
+        "n_obs",
+        "family",
+        "link"
+      ],
+      "type": "object"
+    }
+  },
+  "normality_test": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "test": {
+          "default": "shapiro",
+          "enum": [
+            "shapiro",
+            "jarque_bera",
+            "anderson"
+          ],
+          "type": "string"
+        },
+        "variable": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "variable"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "df": {
+          "description": "Degrees of freedom (Jarque-Bera only)",
+          "minimum": 0,
+          "type": "number"
+        },
+        "excess_kurtosis": {
+          "description": "Excess kurtosis (normal distribution = 0)",
+          "type": "number"
+        },
+        "is_normal": {
+          "description": "Whether data appears normal (p > 0.05)",
+          "type": "boolean"
+        },
+        "mean": {
+          "description": "Sample mean",
+          "type": "number"
+        },
+        "n_obs": {
+          "description": "Number of valid observations",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "p_value": {
+          "description": "P-value of the test",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "sd": {
+          "description": "Sample standard deviation",
+          "minimum": 0,
+          "type": "number"
+        },
+        "skewness": {
+          "description": "Sample skewness",
+          "type": "number"
+        },
+        "statistic": {
+          "description": "Test statistic value",
+          "type": "number"
+        },
+        "test_name": {
+          "description": "Name of the normality test performed",
+          "enum": [
+            "Shapiro-Wilk normality test",
+            "Jarque-Bera normality test",
+            "Anderson-Darling normality test"
+          ],
+          "type": "string"
+        },
+        "variable": {
+          "description": "Variable tested for normality",
+          "type": "string"
+        }
+      },
+      "required": [
+        "test_name",
+        "statistic",
+        "p_value",
+        "is_normal",
+        "variable",
+        "n_obs",
+        "mean",
+        "sd",
+        "skewness",
+        "excess_kurtosis"
+      ],
+      "type": "object"
+    }
+  },
+  "outlier_detection": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "method": {
+          "default": "iqr",
+          "enum": [
+            "iqr",
+            "z_score",
+            "modified_z"
+          ],
+          "type": "string"
+        },
+        "threshold": {
+          "default": 3.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "variable": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "variable"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "bounds": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Detection bounds and parameters used",
+          "type": "object"
+        },
+        "method": {
+          "description": "Outlier detection method used",
+          "enum": [
+            "iqr",
+            "z_score",
+            "modified_z"
+          ],
+          "type": "string"
+        },
+        "n_obs": {
+          "description": "Number of valid observations",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "n_outliers": {
+          "description": "Number of outliers detected",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "outlier_indices": {
+          "description": "Row indices of outliers (1-based)",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "outlier_percentage": {
+          "description": "Percentage of observations that are outliers",
+          "maximum": 100,
+          "minimum": 0,
+          "type": "number"
+        },
+        "outlier_values": {
+          "description": "Actual outlier values",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "variable": {
+          "description": "Variable analyzed for outliers",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "variable",
+        "outlier_indices",
+        "outlier_values",
+        "n_outliers",
+        "n_obs",
+        "outlier_percentage",
+        "bounds"
+      ],
+      "type": "object"
+    }
+  },
+  "panel_regression": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "formula": {
+          "description": "R formula (e.g., 'y ~ x1 + x2')",
+          "pattern": "^[^~]+~[^~]+$",
+          "type": "string",
+          "x-rmcp-formula": true
+        },
+        "id_variable": {
+          "type": "string"
+        },
+        "model": {
+          "default": "within",
+          "enum": [
+            "pooling",
+            "within",
+            "between",
+            "random"
+          ],
+          "type": "string"
+        },
+        "robust": {
+          "default": true,
+          "type": "boolean"
+        },
+        "time_variable": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "formula",
+        "id_variable",
+        "time_variable"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "adj_r_squared": {
+          "description": "Adjusted R-squared",
+          "maximum": 1,
+          "type": "number"
+        },
+        "coefficients": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Estimated coefficients",
+          "type": "object"
+        },
+        "formula": {
+          "description": "Model formula used",
+          "type": "string"
+        },
+        "id_variable": {
+          "description": "Cross-sectional identifier variable",
+          "type": "string"
+        },
+        "model_type": {
+          "description": "Type of panel model estimated",
+          "enum": [
+            "pooling",
+            "within",
+            "between",
+            "random"
+          ],
+          "type": "string"
+        },
+        "n_groups": {
+          "description": "Number of cross-sectional units",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "n_obs": {
+          "description": "Total number of observations",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "p_values": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "P-values for coefficient significance tests",
+          "type": "object"
+        },
+        "r_squared": {
+          "description": "R-squared (coefficient of determination)",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "robust_se": {
+          "description": "Whether robust standard errors were used",
+          "type": "boolean"
+        },
+        "std_errors": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Standard errors of coefficients",
+          "type": "object"
+        },
+        "t_values": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "t-statistics for coefficients",
+          "type": "object"
+        },
+        "time_periods": {
+          "description": "Number of time periods",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "time_variable": {
+          "description": "Time identifier variable",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coefficients",
+        "std_errors",
+        "t_values",
+        "p_values",
+        "r_squared",
+        "adj_r_squared",
+        "model_type",
+        "robust_se",
+        "n_obs",
+        "n_groups",
+        "time_periods",
+        "formula",
+        "id_variable",
+        "time_variable"
+      ],
+      "type": "object"
+    }
+  },
+  "random_forest": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "formula": {
+          "description": "R formula (e.g., 'y ~ x1 + x2')",
+          "pattern": "^[^~]+~[^~]+$",
+          "type": "string",
+          "x-rmcp-formula": true
+        },
+        "importance": {
+          "default": true,
+          "type": "boolean"
+        },
+        "mtry": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "n_trees": {
+          "default": 500,
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data",
+        "formula"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "formula": {
+          "description": "Model formula used",
+          "type": "string"
+        },
+        "mtry": {
+          "description": "Number of variables randomly sampled at each split",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "n_obs": {
+          "description": "Number of observations",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "n_trees": {
+          "description": "Number of trees in the forest",
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "oob_error": {
+          "description": "Out-of-bag error estimate",
+          "minimum": 0,
+          "type": "number"
+        },
+        "performance": {
+          "additionalProperties": false,
+          "description": "Model performance metrics",
+          "properties": {
+            "class_error": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "description": "Error rate by class (for classification)",
+              "type": "object"
+            },
+            "confusion_matrix": {
+              "description": "Confusion matrix (for classification)",
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "mse": {
+              "description": "Mean squared error (for regression)",
+              "minimum": 0,
+              "type": "number"
+            },
+            "oob_error_rate": {
+              "description": "Out-of-bag error rate (for classification)",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "rmse": {
+              "description": "Root mean squared error (for regression)",
+              "minimum": 0,
+              "type": "number"
+            },
+            "variance_explained": {
+              "description": "Percentage of variance explained (for regression)",
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "problem_type": {
+          "description": "Type of machine learning problem",
+          "enum": [
+            "classification",
+            "regression"
+          ],
+          "type": "string"
+        },
+        "variable_importance": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Variable importance measures (if calculated)",
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "problem_type",
+        "performance",
+        "n_trees",
+        "mtry",
+        "oob_error",
+        "formula",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "read_csv": {
+    "input": {
+      "properties": {
+        "file_path": {
+          "type": "string"
+        },
+        "header": {
+          "default": true,
+          "type": "boolean"
+        },
+        "max_rows": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "na_strings": {
+          "default": [
+            "",
+            "NA",
+            "NULL"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sep": {
+          "default": ",",
+          "type": "string"
+        },
+        "skip_rows": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "CSV data in column-wise format",
+          "type": "object"
+        },
+        "file_info": {
+          "description": "File metadata and structure information",
+          "properties": {
+            "character_variables": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "column_names": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "factor_variables": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "file_path": {
+              "type": "string"
+            },
+            "file_size_bytes": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "is_url": {
+              "type": "boolean"
+            },
+            "modified_date": {
+              "description": "Last modification time in UTC",
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "n_cols": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "n_rows": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "numeric_variables": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "parsing_info": {
+          "description": "Parsing parameters used",
+          "properties": {
+            "header": {
+              "type": "boolean"
+            },
+            "na_strings": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "rows_skipped": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "separator": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "summary": {
+          "description": "Data summary and quality information",
+          "properties": {
+            "column_types": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "columns_read": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "missing_values": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "rows_read": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sample_data": {
+              "description": "First few rows as sample",
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "data",
+        "file_info",
+        "parsing_info",
+        "summary"
+      ],
+      "type": "object"
+    }
+  },
+  "read_excel": {
+    "input": {
+      "properties": {
+        "cell_range": {
+          "description": "Excel range like 'A1:D100'",
+          "type": "string"
+        },
+        "file_path": {
+          "type": "string"
+        },
+        "header": {
+          "default": true,
+          "type": "boolean"
+        },
+        "max_rows": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "na_strings": {
+          "default": [
+            "",
+            "NA",
+            "NULL"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sheet_name": {
+          "description": "Sheet name or index (default: first sheet)",
+          "type": "string"
+        },
+        "skip_rows": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "Excel data in column-wise format",
+          "type": "object"
+        },
+        "file_info": {
+          "description": "Excel file metadata and structure information",
+          "properties": {
+            "available_sheets": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "column_names": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "columns": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "file_path": {
+              "type": "string"
+            },
+            "file_size_bytes": {
+              "minimum": 0,
+              "type": "number"
+            },
+            "modified_date": {
+              "description": "Last modification time in UTC",
+              "format": "date-time",
+              "type": "string"
+            },
+            "rows": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sheet_name": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "summary": {
+          "description": "Data summary and quality information",
+          "properties": {
+            "column_types": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "columns_read": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "missing_values": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "rows_read": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sample_data": {
+              "description": "First few rows as sample",
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "data",
+        "file_info",
+        "summary"
+      ],
+      "type": "object"
+    }
+  },
+  "read_json": {
+    "input": {
+      "properties": {
+        "array_to_rows": {
+          "default": true,
+          "description": "Convert JSON arrays to separate rows",
+          "type": "boolean"
+        },
+        "file_path": {
+          "type": "string"
+        },
+        "flatten": {
+          "default": true,
+          "description": "Flatten nested JSON to tabular format",
+          "type": "boolean"
+        },
+        "max_depth": {
+          "default": 3,
+          "description": "Maximum nesting depth to flatten",
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "JSON data converted to column-wise format",
+          "type": "object"
+        },
+        "file_info": {
+          "description": "JSON file metadata and structure information",
+          "properties": {
+            "column_names": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "columns": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "file_path": {
+              "type": "string"
+            },
+            "file_size_bytes": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "is_url": {
+              "type": "boolean"
+            },
+            "modified_date": {
+              "description": "Last modification time in UTC",
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "rows": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "summary": {
+          "description": "Data summary and quality information",
+          "properties": {
+            "column_types": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "columns_read": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "missing_values": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "rows_read": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sample_data": {
+              "description": "First few rows as sample",
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "data",
+        "file_info",
+        "summary"
+      ],
+      "type": "object"
+    }
+  },
+  "regression_plot": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "file_path": {
+          "description": "Optional: Save plot to this file",
+          "type": "string"
+        },
+        "formula": {
+          "description": "R formula (e.g., 'y ~ x1 + x2')",
+          "pattern": "^[^~]+~[^~]+$",
+          "type": "string",
+          "x-rmcp-formula": true
+        },
+        "height": {
+          "default": 800,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "residual_plots": {
+          "default": true,
+          "type": "boolean"
+        },
+        "return_image": {
+          "default": true,
+          "description": "Return image data for inline display",
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "width": {
+          "default": 1200,
+          "minimum": 100,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data",
+        "formula"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "adj_r_squared": {
+          "description": "Adjusted R-squared value, or null with no residual degrees of freedom",
+          "maximum": 1,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "dimensions": {
+          "description": "Plot dimensions in pixels",
+          "properties": {
+            "height": {
+              "type": "integer"
+            },
+            "width": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "formula": {
+          "description": "Regression formula used",
+          "type": "string"
+        },
+        "image_data": {
+          "description": "Base64-encoded PNG image data",
+          "type": "string"
+        },
+        "image_mime_type": {
+          "description": "MIME type of the image",
+          "enum": [
+            "image/png"
+          ],
+          "type": "string"
+        },
+        "n_obs": {
+          "description": "Number of observations in the model",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "plot_type": {
+          "description": "Type of plot generated",
+          "enum": [
+            "regression_plot"
+          ],
+          "type": "string"
+        },
+        "r_squared": {
+          "description": "R-squared value of the regression model",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "residual_plots": {
+          "description": "Whether diagnostic plots were generated",
+          "type": "boolean"
+        },
+        "residual_se": {
+          "description": "Residual standard error, or null with no residual degrees of freedom",
+          "minimum": 0,
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "plot_type",
+        "r_squared",
+        "adj_r_squared",
+        "residual_se",
+        "formula",
+        "residual_plots",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "scatter_plot": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "file_path": {
+          "description": "Optional: Save plot to this file",
+          "type": "string"
+        },
+        "group": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "height": {
+          "default": 600,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "return_image": {
+          "default": true,
+          "description": "Return image data for inline display",
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "width": {
+          "default": 800,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "x": {
+          "type": "string"
+        },
+        "y": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "dimensions": {
+          "description": "Plot dimensions in pixels",
+          "properties": {
+            "height": {
+              "type": "integer"
+            },
+            "width": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "image_data": {
+          "description": "Base64-encoded PNG image data",
+          "type": "string"
+        },
+        "image_mime_type": {
+          "description": "MIME type of the image",
+          "enum": [
+            "image/png"
+          ],
+          "type": "string"
+        },
+        "plot_type": {
+          "description": "Type of plot generated",
+          "enum": [
+            "scatter"
+          ],
+          "type": "string"
+        },
+        "statistics": {
+          "description": "Statistical summary of the plot",
+          "properties": {
+            "correlation": {
+              "type": "number"
+            },
+            "n_points": {
+              "type": "integer"
+            },
+            "trend_line": {
+              "properties": {
+                "intercept": {
+                  "type": "number"
+                },
+                "r_squared": {
+                  "type": "number"
+                },
+                "slope": {
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "variables": {
+          "description": "Variables plotted",
+          "properties": {
+            "group": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "x": {
+              "type": "string"
+            },
+            "y": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "plot_type",
+        "variables"
+      ],
+      "type": "object"
+    }
+  },
+  "standardize": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "method": {
+          "default": "z_score",
+          "enum": [
+            "z_score",
+            "min_max",
+            "robust"
+          ],
+          "type": "string"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "variables"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "Dataset with standardized variables",
+          "type": "object"
+        },
+        "n_obs": {
+          "description": "Number of observations in result",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "scaling_info": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "type": "object"
+          },
+          "description": "Scaling parameters for each variable",
+          "type": "object"
+        },
+        "scaling_method": {
+          "description": "Standardization method used",
+          "enum": [
+            "z_score",
+            "min_max",
+            "robust"
+          ],
+          "type": "string"
+        },
+        "variables_scaled": {
+          "description": "Variables that were standardized",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "scaling_method",
+        "scaling_info",
+        "variables_scaled",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "stationarity_test": {
+    "input": {
+      "properties": {
+        "data": {
+          "properties": {
+            "values": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "values"
+          ],
+          "type": "object"
+        },
+        "test": {
+          "default": "adf",
+          "enum": [
+            "adf",
+            "kpss",
+            "pp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "alternative": {
+          "description": "Alternative hypothesis",
+          "type": "string"
+        },
+        "critical_values": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Critical values at different significance levels",
+          "type": "object"
+        },
+        "is_stationary": {
+          "description": "Whether time series appears to be stationary",
+          "type": "boolean"
+        },
+        "n_obs": {
+          "description": "Number of observations in time series",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "p_value": {
+          "description": "P-value of the test",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "statistic": {
+          "description": "Test statistic value",
+          "type": "number"
+        },
+        "test_name": {
+          "description": "Full name of the stationarity test",
+          "enum": [
+            "Augmented Dickey-Fuller",
+            "KPSS",
+            "Phillips-Perron"
+          ],
+          "type": "string"
+        },
+        "test_type": {
+          "description": "Short test identifier",
+          "enum": [
+            "adf",
+            "kpss",
+            "pp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "test_name",
+        "test_type",
+        "statistic",
+        "p_value",
+        "critical_values",
+        "alternative",
+        "is_stationary",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "suggest_fix": {
+    "input": {
+      "properties": {
+        "data": {
+          "description": "Optional data that caused the error",
+          "type": "object"
+        },
+        "error_message": {
+          "description": "Error message or description of the problem",
+          "type": "string"
+        },
+        "parameters": {
+          "description": "Optional parameters that were used",
+          "type": "object"
+        },
+        "tool_name": {
+          "description": "Name of the tool that failed",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_message"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data_suggestions": {
+          "description": "Data-specific suggestions based on analysis",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "documentation_links": {
+          "description": "Relevant documentation and help links",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "error_type": {
+          "description": "Categorized type of error",
+          "enum": [
+            "missing_package",
+            "missing_variable",
+            "formula_syntax",
+            "file_not_found",
+            "data_type",
+            "missing_values",
+            "memory_size",
+            "general"
+          ],
+          "type": "string"
+        },
+        "next_steps": {
+          "description": "Recommended next steps to resolve the issue",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "quick_fixes": {
+          "description": "Quick fix commands or code snippets",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "suggestions": {
+          "description": "Actionable suggestions to fix the error",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "error_type",
+        "suggestions",
+        "data_suggestions",
+        "next_steps",
+        "documentation_links",
+        "quick_fixes"
+      ],
+      "type": "object"
+    }
+  },
+  "summary_stats": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "group_by": {
+          "type": "string"
+        },
+        "percentiles": {
+          "default": [
+            0.25,
+            0.5,
+            0.75
+          ],
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "group_by": {
+          "description": "Grouping variable if applicable",
+          "type": "string"
+        },
+        "grouped": {
+          "description": "Whether statistics are grouped",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Group levels if grouped analysis",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "n_obs": {
+          "description": "Total number of observations",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "statistics": {
+          "additionalProperties": {
+            "properties": {
+              "kurtosis": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "max": {
+                "type": "number"
+              },
+              "mean": {
+                "type": "number"
+              },
+              "min": {
+                "type": "number"
+              },
+              "n": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "n_missing": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "range": {
+                "type": "number"
+              },
+              "sd": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "skewness": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "description": "Comprehensive statistics by variable or group",
+          "type": "object"
+        },
+        "variables": {
+          "description": "Variables included in analysis",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "statistics",
+        "variables",
+        "n_obs",
+        "grouped"
+      ],
+      "type": "object"
+    }
+  },
+  "t_test": {
+    "input": {
+      "properties": {
+        "alternative": {
+          "default": "two.sided",
+          "enum": [
+            "two.sided",
+            "less",
+            "greater"
+          ],
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "group": {
+          "description": "Required for two-sample t-test. Column name for group variable. Omit for one-sample t-test.",
+          "type": "string"
+        },
+        "mu": {
+          "default": 0,
+          "type": "number"
+        },
+        "paired": {
+          "default": false,
+          "type": "boolean"
+        },
+        "var_equal": {
+          "default": false,
+          "type": "boolean"
+        },
+        "variable": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "variable"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "alternative": {
+          "description": "Alternative hypothesis",
+          "enum": [
+            "two.sided",
+            "less",
+            "greater"
+          ],
+          "type": "string"
+        },
+        "confidence_interval": {
+          "description": "Confidence interval for the mean difference",
+          "properties": {
+            "level": {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "lower": {
+              "type": "number"
+            },
+            "upper": {
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "df": {
+          "description": "Degrees of freedom",
+          "minimum": 0,
+          "type": "number"
+        },
+        "groups": {
+          "description": "Group levels (two-sample test)",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mean": {
+          "description": "Sample mean (one-sample test)",
+          "type": "number"
+        },
+        "mean_difference": {
+          "description": "Difference between group means (two-sample test)",
+          "type": "number"
+        },
+        "mean_x": {
+          "description": "Mean of group x (two-sample test)",
+          "type": "number"
+        },
+        "mean_y": {
+          "description": "Mean of group y (two-sample test)",
+          "type": "number"
+        },
+        "n_obs": {
+          "description": "Number of observations (one-sample test)",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "n_obs_x": {
+          "description": "Number of observations in group x (two-sample test)",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "n_obs_y": {
+          "description": "Number of observations in group y (two-sample test)",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "null_value": {
+          "description": "Null hypothesis value (one-sample test)",
+          "type": "number"
+        },
+        "p_value": {
+          "description": "P-value of the test",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "paired": {
+          "description": "Whether test was paired (two-sample test)",
+          "type": "boolean"
+        },
+        "statistic": {
+          "description": "t-statistic value",
+          "type": "number"
+        },
+        "test_type": {
+          "description": "Type of t-test performed",
+          "enum": [
+            "One-sample t-test",
+            "Paired t-test",
+            "Two-sample t-test (equal variances)",
+            "Welch's t-test"
+          ],
+          "type": "string"
+        },
+        "var_equal": {
+          "description": "Whether equal variances assumed (two-sample test)",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "test_type",
+        "statistic",
+        "df",
+        "p_value",
+        "confidence_interval",
+        "alternative"
+      ],
+      "type": "object"
+    }
+  },
+  "time_series_plot": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": false,
+          "properties": {
+            "dates": {
+              "items": {
+                "format": "date",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "values": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "values"
+          ],
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "file_path": {
+          "description": "Optional: Save plot to this file",
+          "type": "string"
+        },
+        "height": {
+          "default": 600,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "return_image": {
+          "default": true,
+          "description": "Return image data for inline display",
+          "type": "boolean"
+        },
+        "show_trend": {
+          "default": true,
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "width": {
+          "default": 1000,
+          "minimum": 100,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "properties": {
+        "dimensions": {
+          "description": "Plot dimensions in pixels",
+          "properties": {
+            "height": {
+              "type": "integer"
+            },
+            "width": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "has_dates": {
+          "description": "Whether date information was provided",
+          "type": "boolean"
+        },
+        "image_data": {
+          "description": "Base64-encoded PNG image data",
+          "type": "string"
+        },
+        "image_mime_type": {
+          "description": "MIME type of the image",
+          "enum": [
+            "image/png"
+          ],
+          "type": "string"
+        },
+        "plot_type": {
+          "description": "Type of plot generated",
+          "enum": [
+            "time_series_plot"
+          ],
+          "type": "string"
+        },
+        "show_trend": {
+          "description": "Whether trend line was included",
+          "type": "boolean"
+        },
+        "statistics": {
+          "description": "Time series descriptive statistics",
+          "properties": {
+            "max": {
+              "type": "number"
+            },
+            "mean": {
+              "type": "number"
+            },
+            "min": {
+              "type": "number"
+            },
+            "n_obs": {
+              "type": "integer"
+            },
+            "range": {
+              "type": "number"
+            },
+            "sd": {
+              "description": "Sample standard deviation, or null with fewer than two nonmissing observations",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "time_axis": {
+          "additionalProperties": false,
+          "properties": {
+            "end": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "span_days": {
+              "type": "number"
+            },
+            "start": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "type": {
+              "enum": [
+                "date",
+                "index"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "start",
+            "end"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "plot_type",
+        "statistics",
+        "has_dates",
+        "time_axis",
+        "show_trend"
+      ],
+      "type": "object"
+    }
+  },
+  "validate_data": {
+    "input": {
+      "properties": {
+        "analysis_type": {
+          "default": "general",
+          "enum": [
+            "regression",
+            "correlation",
+            "timeseries",
+            "classification",
+            "general"
+          ],
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "strict": {
+          "default": false,
+          "description": "Enable strict validation with more checks",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data_quality": {
+          "description": "Detailed data quality assessment",
+          "properties": {
+            "data_issues": {
+              "properties": {
+                "constant_variables": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "duplicate_rows": {
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "high_outlier_variables": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "dimensions": {
+              "properties": {
+                "columns": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "rows": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "missing_values": {
+              "properties": {
+                "max_missing_percentage": {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "total_missing_cells": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "variables_with_missing": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "variable_types": {
+              "properties": {
+                "character": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "factor": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "logical": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "numeric": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "errors": {
+          "description": "Critical errors that prevent analysis",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "is_valid": {
+          "description": "Whether the data passes validation",
+          "type": "boolean"
+        },
+        "recommendations": {
+          "description": "Analysis-specific recommendations",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "suggestions": {
+          "description": "Suggestions for improving data quality",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "warnings": {
+          "description": "Validation warnings that don't prevent analysis",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "is_valid",
+        "warnings",
+        "errors",
+        "suggestions",
+        "data_quality",
+        "recommendations"
+      ],
+      "type": "object"
+    }
+  },
+  "validate_formula": {
+    "input": {
+      "properties": {
+        "analysis_type": {
+          "default": "regression",
+          "enum": [
+            "regression",
+            "anova",
+            "correlation"
+          ],
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "formula": {
+          "description": "R formula to validate",
+          "type": "string"
+        }
+      },
+      "required": [
+        "formula",
+        "data"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_type": {
+          "description": "Type of analysis the formula is intended for",
+          "enum": [
+            "regression",
+            "anova",
+            "correlation"
+          ],
+          "type": "string"
+        },
+        "available_variables": {
+          "description": "All variables available in the dataset",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "error": {
+          "description": "Error message if validation failed",
+          "type": "string"
+        },
+        "existing_variables": {
+          "description": "Variables in formula that exist in data",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "formula_parsed": {
+          "description": "Whether the formula syntax is valid",
+          "type": "boolean"
+        },
+        "is_valid": {
+          "description": "Whether the formula is valid",
+          "type": "boolean"
+        },
+        "missing_variables": {
+          "description": "Variables in formula but not in data",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "suggestions": {
+          "description": "Suggestions for fixing or improving the formula",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "variable_types": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Data types of variables in the formula",
+          "type": "object"
+        },
+        "warnings": {
+          "description": "Validation warnings about data quality or types",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "is_valid",
+        "formula_parsed",
+        "suggestions",
+        "analysis_type"
+      ],
+      "type": "object"
+    }
+  },
+  "var_model": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "lags": {
+          "default": 2,
+          "maximum": 10,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "type": {
+          "default": "const",
+          "enum": [
+            "const",
+            "trend",
+            "both",
+            "none"
+          ],
+          "type": "string"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "variables"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "aic": {
+          "description": "Akaike Information Criterion",
+          "type": "number"
+        },
+        "bic": {
+          "description": "Bayesian Information Criterion",
+          "type": "number"
+        },
+        "equations": {
+          "additionalProperties": {
+            "properties": {
+              "adj_r_squared": {
+                "description": "Adjusted R-squared for this equation",
+                "maximum": 1,
+                "type": "number"
+              },
+              "coefficients": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "description": "Coefficient estimates",
+                "type": "object"
+              },
+              "p_values": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "description": "P-values",
+                "type": "object"
+              },
+              "r_squared": {
+                "description": "R-squared for this equation",
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "std_errors": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "description": "Standard errors",
+                "type": "object"
+              },
+              "t_values": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "description": "t-statistics",
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "description": "Results for each equation in the VAR system",
+          "type": "object"
+        },
+        "lag_order": {
+          "description": "Number of lags in the VAR model",
+          "maximum": 10,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "loglik": {
+          "description": "Log-likelihood value",
+          "type": "number"
+        },
+        "n_obs": {
+          "description": "Number of observations used",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "n_variables": {
+          "description": "Number of variables in the system",
+          "minimum": 2,
+          "type": "integer"
+        },
+        "residual_covariance": {
+          "description": "Residual covariance matrix",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "var_type": {
+          "description": "Type of deterministic terms included",
+          "enum": [
+            "const",
+            "trend",
+            "both",
+            "none"
+          ],
+          "type": "string"
+        },
+        "variables": {
+          "description": "Variables included in the VAR system",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "equations",
+        "variables",
+        "lag_order",
+        "var_type",
+        "n_obs",
+        "n_variables",
+        "loglik",
+        "aic",
+        "bic",
+        "residual_covariance"
+      ],
+      "type": "object"
+    }
+  },
+  "winsorize": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "percentiles": {
+          "default": [
+            0.05,
+            0.95
+          ],
+          "description": "Lower and upper percentiles for winsorization [lower, upper]",
+          "items": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "variables"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "description": "Dataset with winsorized variables",
+          "type": "object"
+        },
+        "n_obs": {
+          "description": "Number of observations in result",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "outliers_summary": {
+          "additionalProperties": {
+            "properties": {
+              "lower_threshold": {
+                "type": "number"
+              },
+              "n_capped_lower": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "n_capped_upper": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "total_capped": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "upper_threshold": {
+                "type": "number"
+              }
+            },
+            "type": "object"
+          },
+          "description": "Summary of outliers capped by variable",
+          "type": "object"
+        },
+        "percentiles": {
+          "description": "Percentile thresholds used for winsorization",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "variables_winsorized": {
+          "description": "Variables that were winsorized",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "data",
+        "outliers_summary",
+        "percentiles",
+        "variables_winsorized",
+        "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "write_csv": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "file_path": {
+          "type": "string"
+        },
+        "include_rownames": {
+          "default": false,
+          "type": "boolean"
+        },
+        "na_string": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "cols_written": {
+          "description": "Number of columns written to file",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "file_path": {
+          "description": "Path where the file was written",
+          "type": "string"
+        },
+        "file_size_bytes": {
+          "description": "Size of the written file in bytes",
+          "minimum": 0,
+          "type": "number"
+        },
+        "rows_written": {
+          "description": "Number of rows written to file",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "success": {
+          "description": "Whether the file was written successfully",
+          "enum": [
+            true
+          ],
+          "type": "boolean"
+        },
+        "timestamp": {
+          "description": "Timestamp when the file was written",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_path",
+        "rows_written",
+        "cols_written",
+        "file_size_bytes",
+        "success",
+        "timestamp"
+      ],
+      "type": "object"
+    }
+  },
+  "write_excel": {
+    "input": {
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "file_path": {
+          "type": "string"
+        },
+        "include_rownames": {
+          "default": false,
+          "type": "boolean"
+        },
+        "sheet_name": {
+          "default": "Sheet1",
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "cols_written": {
+          "description": "Number of columns written to file",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "file_path": {
+          "description": "Path where the Excel file was written",
+          "type": "string"
+        },
+        "file_size_bytes": {
+          "description": "Size of the written file in bytes",
+          "minimum": 0,
+          "type": "number"
+        },
+        "rows_written": {
+          "description": "Number of rows written to file",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sheet_name": {
+          "description": "Name of the worksheet where data was written",
+          "type": "string"
+        },
+        "success": {
+          "description": "Whether the file was written successfully",
+          "enum": [
+            true
+          ],
+          "type": "boolean"
+        },
+        "timestamp": {
+          "description": "Timestamp when the file was written",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_path",
+        "sheet_name",
+        "rows_written",
+        "cols_written",
+        "file_size_bytes",
+        "success",
+        "timestamp"
+      ],
+      "type": "object"
+    }
+  },
+  "write_json": {
+    "input": {
+      "properties": {
+        "auto_unbox": {
+          "default": true,
+          "type": "boolean"
+        },
+        "data": {
+          "additionalProperties": {
+            "items": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "properties": {},
+          "type": "object",
+          "x-rmcp-table": true
+        },
+        "file_path": {
+          "type": "string"
+        },
+        "pretty": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "cols_written": {
+          "description": "Number of columns written to file",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "file_path": {
+          "description": "Path where the JSON file was written",
+          "type": "string"
+        },
+        "file_size_bytes": {
+          "description": "Size of the written file in bytes",
+          "minimum": 0,
+          "type": "number"
+        },
+        "pretty_formatted": {
+          "description": "Whether the JSON was formatted with indentation",
+          "type": "boolean"
+        },
+        "rows_written": {
+          "description": "Number of rows written to file",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "success": {
+          "description": "Whether the file was written successfully",
+          "enum": [
+            true
+          ],
+          "type": "boolean"
+        },
+        "timestamp": {
+          "description": "Timestamp when the file was written",
+          "type": "string"
+        },
+        "variables_written": {
+          "description": "Names of variables/columns written",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "file_path",
+        "rows_written",
+        "cols_written",
+        "variables_written",
+        "file_size_bytes",
+        "pretty_formatted",
+        "success",
+        "timestamp"
+      ],
+      "type": "object"
+    }
+  }
+}

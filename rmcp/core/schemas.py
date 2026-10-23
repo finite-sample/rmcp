@@ -147,6 +147,37 @@ def formula_schema() -> dict[str, Any]:
     }
 
 
+def coefficient_inference_schema() -> dict[str, Any]:
+    """Properties for the standard errors, t-statistics and p-values of a fit."""
+    return {
+        "std_errors": {
+            "type": "object",
+            "description": "Standard errors of coefficients",
+            "additionalProperties": {"type": "number"},
+        },
+        "t_values": {
+            "type": "object",
+            "description": "t-statistics for coefficients",
+            "additionalProperties": {"type": "number"},
+        },
+        "p_values": {
+            "type": "object",
+            "description": "P-values for coefficient significance tests",
+            "additionalProperties": {"type": "number"},
+        },
+    }
+
+
+def r_squared_schema() -> dict[str, Any]:
+    """Schema for an R-squared bounded to [0, 1]."""
+    return {
+        "type": "number",
+        "description": "R-squared (coefficient of determination)",
+        "minimum": 0,
+        "maximum": 1,
+    }
+
+
 def numeric_array_schema(min_length: int = 1) -> dict[str, Any]:
     """Schema for numeric arrays."""
     return {"type": "array", "items": {"type": "number"}, "minItems": min_length}
