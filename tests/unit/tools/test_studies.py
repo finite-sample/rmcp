@@ -1,5 +1,6 @@
 """Study handles preserve immutable inputs and session ownership."""
 
+import asyncio
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -7,8 +8,13 @@ from unittest.mock import AsyncMock
 import pytest
 from rmcp.core.context import Context, LifespanState
 from rmcp.core.schemas import SchemaError, validate_schema
+from rmcp.core.sdk_adapter import build_sdk_server
+from rmcp.core.server import create_server
+from rmcp.registries.tools import register_tool_functions
 from rmcp.security.vfs import VFS, VFSError
 from rmcp.tools import studies
+
+from tests.unit.core.test_sdk_adapter import create_connected_server_and_client_session
 
 
 @pytest.fixture
@@ -107,7 +113,7 @@ async def test_large_metadata_does_not_escape_into_shared_result_cache(
     [
         {"kind": "mean", "outcome": "x;system('id')", "weight": "w"},
         {"kind": "mean", "outcome": "y", "weight": "w", "formula": "y~x"},
-        {"kind": "effect", "outcome": "y", "assignment": "a"},
+        {"kind": "effect", "outcome": "y", "assignment": "a;system('id')"},
         {
             "kind": "effect",
             "outcome": "y",
@@ -116,9 +122,62 @@ async def test_large_metadata_does_not_escape_into_shared_result_cache(
         },
     ],
 )
-def test_analysis_schema_refuses_code_and_unsourced_completeness(analysis):
+def test_analysis_schema_refuses_code_and_request_only_roster_claims(analysis):
     with pytest.raises(SchemaError):
         validate_schema(
             {"handle": "study_" + "a" * 32, "analysis": analysis},
             studies._ANALYSIS_INPUT,
         )
+
+
+async def test_sdk_sessions_cannot_reuse_each_others_studies(bridge, tmp_path):
+    source = tmp_path / "study.superdf"
+    source.write_bytes(b"bundle")
+    server = create_server()
+    server.configure(allowed_paths=[str(tmp_path)], read_only=True)
+    register_tool_functions(server.tools, studies.open_study, studies.inspect_study)
+    sdk_server = build_sdk_server(server).sdk_server
+    async with create_connected_server_and_client_session(sdk_server) as first:
+        opened = await first.call_tool("open_study", {"file_path": str(source)})
+        first_payload = opened.model_dump(mode="json", by_alias=True)[
+            "structuredContent"
+        ]
+        assert first_payload["ok"]
+        handle = first_payload["handle"]
+        async with create_connected_server_and_client_session(sdk_server) as second:
+            rejected = await second.call_tool("inspect_study", {"handle": handle})
+            second_payload = rejected.model_dump(mode="json", by_alias=True)[
+                "structuredContent"
+            ]
+            assert second_payload["issues"][0]["code"] == "unknown_study"
+        inspected = await first.call_tool("inspect_study", {"handle": handle})
+        assert inspected.model_dump(mode="json", by_alias=True)["structuredContent"][
+            "ok"
+        ]
+
+
+async def test_simultaneous_duplicate_opens_share_one_snapshot(
+    study_context, bridge, tmp_path, monkeypatch
+):
+    source = tmp_path / "study.superdf"
+    source.write_bytes(b"bundle")
+    both_started = asyncio.Event()
+    arrivals = 0
+
+    async def inspect(*args, **kwargs):
+        nonlocal arrivals
+        arrivals += 1
+        if arrivals == 2:
+            both_started.set()
+        await both_started.wait()
+        return {"ok": True, "issues": []}
+
+    bridge.side_effect = inspect
+    monkeypatch.setattr(studies, "MAX_STUDIES", 1)
+    first, second = await asyncio.gather(
+        studies.open_study(study_context, {"file_path": str(source)}),
+        studies.open_study(study_context, {"file_path": str(source)}),
+    )
+    assert first["ok"] and second["ok"]
+    assert first["handle"] == second["handle"]
+    assert len(study_context.lifespan.studies) == 1

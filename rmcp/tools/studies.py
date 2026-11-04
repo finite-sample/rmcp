@@ -107,21 +107,8 @@ _REQUEST = {
                 "kind": {"const": "effect"},
                 "outcome": _ID,
                 "assignment": _ID,
-                "roster_assertion": {
-                    "type": "object",
-                    "properties": {
-                        "complete": {"const": True},
-                        "source": {
-                            "type": "string",
-                            "pattern": "\\S",
-                            "maxLength": 2000,
-                        },
-                    },
-                    "required": ["complete", "source"],
-                    "additionalProperties": False,
-                },
             },
-            "required": ["kind", "outcome", "assignment", "roster_assertion"],
+            "required": ["kind", "outcome", "assignment"],
             "additionalProperties": False,
         },
     ]
@@ -145,7 +132,7 @@ _ANALYSIS_INPUT = {
     output_schema=_OUTPUT,
     description=(
         "Open an authorized local SuperDF bundle as an immutable session-owned study. "
-        "Requires optional R superdf >= 0.2.0 and arrow. Returns metadata, not rows. "
+        "Requires optional R superdf >= 0.3.0 and arrow. Returns metadata, not rows. "
         "Limit: eight bundles of at most 16 MiB each per server; handles expire on restart. "
         "Use study tools for declared-design inference; existing table tools remain available."
     ),
@@ -176,7 +163,11 @@ async def open_study(context: Context, params: dict[str, Any]) -> dict[str, Any]
         )
     result = await _execute(context, snapshot, "inspect", {})
     if result["ok"]:
-        # Recheck after awaiting R: simultaneous opens must respect the memory bound.
+        # Another open may have completed while this request awaited R.
+        for handle, existing in context.lifespan.studies.items():
+            if existing.owner is snapshot.owner and existing.digest == snapshot.digest:
+                result["handle"] = handle
+                return result
         if len(context.lifespan.studies) >= MAX_STUDIES:
             return _error(
                 "study_limit",
@@ -224,12 +215,12 @@ async def inspect_study(context: Context, params: dict[str, Any]) -> dict[str, A
     name="check_study_analysis",
     input_schema=_ANALYSIS_INPUT,
     output_schema=_OUTPUT,
-    description="Check a mean or effect request by executing the R SuperDF adapter and suppressing estimates. This is execution-based validation, not a dry run or scientific certification. Effect requests require an explicit caller assertion and source for roster completeness; never infer it from response rows. Unsupported requests never fall back to generic tools.",
+    description="Check a mean or effect request through SuperDF without fitting an estimator. Returns structured requirements and evidence references. Effect inference requires a complete randomized-roster declaration in the bundle. Passing checks validate supplied declarations, not scientific truth. Unsupported requests never fall back to generic tools.",
 )
 async def check_study_analysis(
     context: Context, params: dict[str, Any]
 ) -> dict[str, Any]:
-    """Execute adapter validation while withholding estimates."""
+    """Return SuperDF requirements without fitting an estimator."""
     return await _with_study(context, params, "check")
 
 
@@ -237,7 +228,7 @@ async def check_study_analysis(
     name="run_study_analysis",
     input_schema=_ANALYSIS_INPUT,
     output_schema=_OUTPUT,
-    description="Run a declared-design mean or effect through R SuperDF and return inference plus provenance. Mean requires a named weight; effect requires a named assignment and sourced complete-roster assertion. Every run validates anew. No inference of missing design facts and no generic-estimator fallback.",
+    description="Run a declared-design mean or effect through R SuperDF and return inference plus provenance. Mean requires a named weight; effect requires a named assignment and attributed complete-roster declaration in the bundle. Every run validates anew. No inference of missing design facts and no generic-estimator fallback.",
 )
 async def run_study_analysis(
     context: Context, params: dict[str, Any]

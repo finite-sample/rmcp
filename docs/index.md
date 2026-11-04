@@ -22,7 +22,6 @@
 - [Examples](examples.md) - Working examples and use cases
 - [Evaluation](evaluation.md) - Contract, protocol, semantic, and model-level release gates
 - [Study analysis](studies.md) - Optional SuperDF bundles and declared-design inference
-- [Study integration plan](study-integration-plan.md) - Scope, dependencies, and acceptance gates
 - [Troubleshooting](troubleshooting.md) - Common issues and solutions
 
 ## API Reference
@@ -40,7 +39,6 @@
    examples
    evaluation
    studies
-   study-integration-plan
    troubleshooting
 ```
 
