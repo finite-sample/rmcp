@@ -682,6 +682,12 @@ def _register_builtin_tools(server):
         logistic_regression,
     )
     from .tools.statistical_tests import anova, chi_square_test, normality_test, t_test
+    from .tools.studies import (
+        check_study_analysis,
+        inspect_study,
+        open_study,
+        run_study_analysis,
+    )
     from .tools.timeseries import arima_model, decompose_timeseries, stationarity_test
     from .tools.transforms import difference, lag_lead, standardize, winsorize
     from .tools.visualization import (
@@ -749,6 +755,10 @@ def _register_builtin_tools(server):
         suggest_fix,
         validate_data,
         load_example,
+        open_study,
+        inspect_study,
+        check_study_analysis,
+        run_study_analysis,
         # Flexible R execution
         execute_r_analysis,
         list_allowed_r_packages,

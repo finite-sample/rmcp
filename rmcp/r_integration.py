@@ -494,6 +494,8 @@ async def _execute_r_script_locked(
     args: dict[str, Any],
     notices: asyncio.Queue[tuple[str, tuple[Any, ...]] | None] | None,
     timeout: float | None,
+    *,
+    full_precision: bool = False,
 ) -> dict[str, Any]:
     """Run one R script under the concurrency semaphore, queueing its notices.
 
@@ -505,6 +507,7 @@ async def _execute_r_script_locked(
         args: Arguments to pass to the R script as JSON.
         notices: Queue for progress notices, or ``None`` to discard them.
         timeout: Per-call timeout in seconds, overriding the configured default.
+        full_precision: Preserve numeric precision in JSON for callers opting in.
 
     Returns:
         dict[str, Any]: Result data from R script execution.
@@ -520,6 +523,7 @@ async def _execute_r_script_locked(
             script_path = files.script_path
             result_path = files.result_path
             # Create complete R script with progress reporting
+            precision_option = ", digits = NA" if full_precision else ""
             full_script = f"""
 # Load required libraries
 library(jsonlite)
@@ -546,7 +550,7 @@ args <- fromJSON("{files.args_r_path}")
 {script}
 # Write result
 if (exists("result")) {{
-    writeLines(toJSON(result, auto_unbox = TRUE, na = "null", pretty = TRUE), "{files.result_r_path}")
+    writeLines(toJSON(result, auto_unbox = TRUE, na = "null", pretty = TRUE{precision_option}), "{files.result_r_path}")
 }} else {{
     stop("R script must define a 'result' variable")
 }}
@@ -815,7 +819,12 @@ Original error:
 
 
 async def execute_r_script_async(
-    script: str, args: dict[str, Any], context=None, timeout: float | None = None
+    script: str,
+    args: dict[str, Any],
+    context=None,
+    timeout: float | None = None,
+    *,
+    full_precision: bool = False,
 ) -> dict[str, Any]:
     """
     Execute R script asynchronously with proper cancellation support and concurrency control.
@@ -830,6 +839,7 @@ async def execute_r_script_async(
         args: Arguments to pass to the R script as JSON
         context: Optional context for progress reporting and logging
         timeout: Per-call timeout in seconds, overriding the configured default
+        full_precision: Preserve numeric precision in JSON for callers opting in
     Returns:
         dict[str, Any]: Result data from R script execution
     Raises:
@@ -837,7 +847,9 @@ async def execute_r_script_async(
         asyncio.CancelledError: If the operation is canceled
     """
     if context is None:
-        return await _execute_r_script_locked(script, args, None, timeout)
+        return await _execute_r_script_locked(
+            script, args, None, timeout, full_precision=full_precision
+        )
 
     # Progress reaches the client through one sender task, outside the R
     # timeout and outside the semaphore: awaiting each notice while reading
@@ -867,7 +879,9 @@ async def execute_r_script_async(
 
     sender = asyncio.create_task(deliver_notices())
     try:
-        result = await _execute_r_script_locked(script, args, notices, timeout)
+        result = await _execute_r_script_locked(
+            script, args, notices, timeout, full_precision=full_precision
+        )
         # R is done and its slot released; let queued notices reach the client,
         # in order, for a bounded time. asyncio.wait returns at the deadline.
         _offer_notice(notices, None)

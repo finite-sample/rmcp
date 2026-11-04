@@ -129,6 +129,7 @@ class SDKServerAdapter:
             log_callback=log_callback,
         )
         context._server = self.rmcp_server
+        context._session = session
         self.rmcp_server._active_requests[request_id] = context.request
         return context
 
