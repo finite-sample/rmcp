@@ -14,7 +14,7 @@ from mcp.client.stdio import stdio_client
 
 @pytest.fixture(scope="module")
 def study_files(tmp_path_factory):
-    probe = "quit(status=if (requireNamespace('superdf',quietly=TRUE) && packageVersion('superdf') >= '0.3.0' && all(vapply(c('arrow','survey','estimatr','zip'),requireNamespace,logical(1),quietly=TRUE))) 0L else 1L)"
+    probe = "quit(status=if (requireNamespace('studyframe',quietly=TRUE) && packageVersion('studyframe') >= '0.3.0' && all(vapply(c('arrow','survey','estimatr','zip'),requireNamespace,logical(1),quietly=TRUE))) 0L else 1L)"
     ready = (
         shutil.which("Rscript")
         and subprocess.run(["Rscript", "-e", probe], capture_output=True).returncode
@@ -23,19 +23,19 @@ def study_files(tmp_path_factory):
     if not ready:
         if os.environ.get("RMCP_REQUIRE_STUDY_TESTS") == "1":
             pytest.fail(
-                "Install R superdf >= 0.3.0, arrow, survey, estimatr, and zip for required study tests"
+                "Install R studyframe >= 0.3.0, arrow, survey, estimatr, and zip for required study tests"
             )
         pytest.skip("Optional study integration dependencies are not installed")
     directory = tmp_path_factory.mktemp("study-protocol")
     script = r"""
-library(superdf)
-source(system.file('examples', 'simulated_study.R', package='superdf'))
+library(studyframe)
+source(system.file('examples', 'simulated_study.R', package='studyframe'))
 root <- commandArgs(trailingOnly=TRUE)[[1]]
 x <- collect_study(simulate_population())
-write_superdf(x, file.path(root, 'study.superdf'))
-write_superdf(x[-1, ], file.path(root, 'restricted.superdf'))
-unknown <- superdf(as.data.frame(x), 'id', 'pupil', 'unknown_roster', assignments=context(x)$assignments)
-write_superdf(unknown, file.path(root, 'unknown-roster.superdf'))
+write_studyframe(x, file.path(root, 'study.studyframe'))
+write_studyframe(x[-1, ], file.path(root, 'restricted.studyframe'))
+unknown <- studyframe(as.data.frame(x), 'id', 'pupil', 'unknown_roster', assignments=context(x)$assignments)
+write_studyframe(unknown, file.path(root, 'unknown-roster.studyframe'))
 rejected <- check_analysis(x[-1, ], analysis_request('effect','followup',assignment='school_offer'))
 writeLines(jsonlite::toJSON(rejected$issues, auto_unbox=TRUE, digits=NA), file.path(root,'issues.json'))
 writeLines(jsonlite::toJSON(analyze_study(x)$table, dataframe='rows', digits=NA), file.path(root, 'expected.json'))
@@ -75,7 +75,7 @@ async def test_study_protocol_and_existing_route(study_files):
                 "read_csv",
             } <= names
             opened = await call(
-                "open_study", {"file_path": str(study_files / "study.superdf")}
+                "open_study", {"file_path": str(study_files / "study.studyframe")}
             )
             assert opened["ok"], opened
             handle = opened["handle"]
@@ -137,7 +137,7 @@ async def test_study_protocol_and_existing_route(study_files):
             assert legacy["coefficients"]["x"] == pytest.approx(2)
             assert "receipt" not in legacy
             restricted = await call(
-                "open_study", {"file_path": str(study_files / "restricted.superdf")}
+                "open_study", {"file_path": str(study_files / "restricted.studyframe")}
             )
             refused = await call(
                 "run_study_analysis",
@@ -156,7 +156,8 @@ async def test_study_protocol_and_existing_route(study_files):
             )
             assert "estimate" not in refused
             undeclared = await call(
-                "open_study", {"file_path": str(study_files / "unknown-roster.superdf")}
+                "open_study",
+                {"file_path": str(study_files / "unknown-roster.studyframe")},
             )
             for name in ("check_study_analysis", "run_study_analysis"):
                 missing_roster = await call(

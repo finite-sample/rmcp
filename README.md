@@ -84,8 +84,8 @@ Formula building, error recovery, example datasets → *"Help me build a regress
 
 For datasets carrying collection context, the optional
 [study analysis route](https://finite-sample.github.io/rmcp/studies.html) adds bundle-backed handles and validated
-SuperDF adapters. Existing table-based tools retain their current behavior.
-The study route requires the collection-context R SuperDF package and its selected
+studyframe adapters. Existing table-based tools retain their current behavior.
+The study route requires the collection-context R studyframe package and its selected
 backends on the execution host.
 
 ### Prerequisites

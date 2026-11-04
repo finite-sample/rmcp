@@ -35,7 +35,7 @@ def bridge(monkeypatch):
 async def test_snapshot_survives_source_replacement_and_is_owned_by_session(
     study_context, bridge, tmp_path
 ):
-    source = tmp_path / "study.superdf"
+    source = tmp_path / "study.studyframe"
     source.write_bytes(b"original bundle")
     owner = object()
     study_context._session = owner
@@ -61,12 +61,12 @@ async def test_snapshot_survives_source_replacement_and_is_owned_by_session(
 async def test_authorization_and_size_limit_precede_r(
     study_context, bridge, tmp_path, monkeypatch
 ):
-    outside = tmp_path.parent / "outside.superdf"
+    outside = tmp_path.parent / "outside.studyframe"
     with pytest.raises(VFSError):
         await studies.open_study(study_context, {"file_path": str(outside)})
     bridge.assert_not_called()
     monkeypatch.setattr(studies, "MAX_BUNDLE_BYTES", 2)
-    source = tmp_path / "large.superdf"
+    source = tmp_path / "large.studyframe"
     source.write_bytes(b"abc")
     rejected = await studies.open_study(study_context, {"file_path": str(source)})
     assert rejected["issues"][0]["code"] == "bundle_too_large"
@@ -76,7 +76,7 @@ async def test_authorization_and_size_limit_precede_r(
 async def test_failed_open_is_not_registered_and_limit_does_not_evict(
     study_context, bridge, tmp_path, monkeypatch
 ):
-    source = tmp_path / "study.superdf"
+    source = tmp_path / "study.studyframe"
     source.write_bytes(b"bundle")
     bridge.return_value = {"ok": False, "issues": [{"code": "missing_dependency"}]}
     failed = await studies.open_study(study_context, {"file_path": str(source)})
@@ -96,7 +96,7 @@ async def test_failed_open_is_not_registered_and_limit_does_not_evict(
 async def test_large_metadata_does_not_escape_into_shared_result_cache(
     study_context, bridge, tmp_path
 ):
-    source = tmp_path / "study.superdf"
+    source = tmp_path / "study.studyframe"
     source.write_bytes(b"bundle")
     bridge.return_value = {
         "ok": True,
@@ -131,7 +131,7 @@ def test_analysis_schema_refuses_code_and_request_only_roster_claims(analysis):
 
 
 async def test_sdk_sessions_cannot_reuse_each_others_studies(bridge, tmp_path):
-    source = tmp_path / "study.superdf"
+    source = tmp_path / "study.studyframe"
     source.write_bytes(b"bundle")
     server = create_server()
     server.configure(allowed_paths=[str(tmp_path)], read_only=True)
@@ -159,7 +159,7 @@ async def test_sdk_sessions_cannot_reuse_each_others_studies(bridge, tmp_path):
 async def test_simultaneous_duplicate_opens_share_one_snapshot(
     study_context, bridge, tmp_path, monkeypatch
 ):
-    source = tmp_path / "study.superdf"
+    source = tmp_path / "study.studyframe"
     source.write_bytes(b"bundle")
     both_started = asyncio.Event()
     arrivals = 0

@@ -1,5 +1,5 @@
 study_dependencies <- function() {
-  for (package in c("superdf", "arrow", "zip", "survey", "estimatr")) {
+  for (package in c("studyframe", "arrow", "zip", "survey", "estimatr")) {
     if (!requireNamespace(package, quietly = TRUE)) {
       if (Sys.getenv("RMCP_REQUIRE_STUDY_TESTS") == "1") {
         stop("Required study dependency is missing: ", package)
@@ -7,9 +7,9 @@ study_dependencies <- function() {
       testthat::skip(paste("Optional study dependency:", package))
     }
   }
-  if (utils::packageVersion("superdf") < "0.3.0") {
-    if (Sys.getenv("RMCP_REQUIRE_STUDY_TESTS") == "1") stop("superdf >= 0.3.0 required")
-    testthat::skip("Optional study route needs superdf >= 0.3.0")
+  if (utils::packageVersion("studyframe") < "0.3.0") {
+    if (Sys.getenv("RMCP_REQUIRE_STUDY_TESTS") == "1") stop("studyframe >= 0.3.0 required")
+    testthat::skip("Optional study route needs studyframe >= 0.3.0")
   }
 }
 
@@ -22,12 +22,12 @@ study_bridge <- function(path, action = "inspect", request = list()) {
 
 testthat::test_that("study bridge matches direct inference and withholds row identities", {
   study_dependencies()
-  library(superdf)
-  source(system.file("examples", "simulated_study.R", package = "superdf"), local = TRUE)
+  library(studyframe)
+  source(system.file("examples", "simulated_study.R", package = "studyframe"), local = TRUE)
   study <- collect_study(simulate_population())
-  path <- tempfile(fileext = ".superdf")
+  path <- tempfile(fileext = ".studyframe")
   on.exit(unlink(path), add = TRUE)
-  write_superdf(study, path)
+  write_studyframe(study, path)
   info <- study_bridge(path)
   testthat::expect_true(info$ok)
   testthat::expect_equal(info$study$current_rows, 96L)
@@ -58,14 +58,14 @@ testthat::test_that("study bridge matches direct inference and withholds row ide
 
 testthat::test_that("bridge preflight does not call the estimator", {
   study_dependencies()
-  library(superdf)
-  source(system.file("examples", "workflows.R", package = "superdf"), local = TRUE)
-  path <- tempfile(fileext = ".superdf")
+  library(studyframe)
+  source(system.file("examples", "workflows.R", package = "studyframe"), local = TRUE)
+  path <- tempfile(fileext = ".studyframe")
   on.exit(unlink(path), add = TRUE)
-  write_superdf(reference_workflows()$survey, path)
+  write_studyframe(reference_workflows()$survey, path)
   testthat::local_mocked_bindings(
     run_analysis = function(...) stop("Estimator was invoked during check"),
-    .package = "superdf"
+    .package = "studyframe"
   )
   request <- list(kind = "mean", outcome = "income", weight = "main")
   checked <- study_bridge(path, "check", request)
@@ -75,12 +75,12 @@ testthat::test_that("bridge preflight does not call the estimator", {
 
 testthat::test_that("typed requirements pass unchanged through check and execution", {
   study_dependencies()
-  library(superdf)
-  source(system.file("examples", "workflows.R", package = "superdf"), local = TRUE)
+  library(studyframe)
+  source(system.file("examples", "workflows.R", package = "studyframe"), local = TRUE)
   restricted <- reference_workflows()$experiment[-1, ]
-  path <- tempfile(fileext = ".superdf")
+  path <- tempfile(fileext = ".studyframe")
   on.exit(unlink(path), add = TRUE)
-  write_superdf(restricted, path)
+  write_studyframe(restricted, path)
   request <- list(kind = "effect", outcome = "outcome", assignment = "offer_assignment")
   expected <- check_analysis(restricted, do.call(analysis_request, request))
   for (action in c("check", "run")) {
@@ -89,11 +89,11 @@ testthat::test_that("typed requirements pass unchanged through check and executi
     testthat::expect_equal(rejected$issues, expected$issues)
     testthat::expect_null(rejected$estimate)
   }
-  unknown <- superdf(as.data.frame(restricted), "id", "pupil", "unknown_roster",
+  unknown <- studyframe(as.data.frame(restricted), "id", "pupil", "unknown_roster",
     assignments = context(restricted)$assignments
   )
   unlink(path)
-  write_superdf(unknown, path)
+  write_studyframe(unknown, path)
   for (action in c("check", "run")) {
     rejected <- study_bridge(path, action, request)
     testthat::expect_false(rejected$ok)
@@ -115,5 +115,5 @@ testthat::test_that("optional dependency failure is actionable", {
   testthat::expect_false(env$result$ok)
   testthat::expect_equal(env$result$issues[[1]]$code, "missing_dependency")
   testthat::expect_equal(env$result$issues[[1]]$category, "dependency")
-  testthat::expect_match(env$result$issues[[1]]$message, "superdf, arrow")
+  testthat::expect_match(env$result$issues[[1]]$message, "studyframe, arrow")
 })

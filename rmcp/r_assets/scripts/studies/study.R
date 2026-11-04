@@ -6,7 +6,7 @@ study_error <- function(code, message, category = "invalid") {
 }
 
 study_main <- function(args) {
-  required <- c("superdf", "arrow")
+  required <- c("studyframe", "arrow")
   absent <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
   if (length(absent)) {
     return(study_error(
@@ -15,14 +15,14 @@ study_main <- function(args) {
       "dependency"
     ))
   }
-  if (utils::packageVersion("superdf") < "0.3.0") {
-    return(study_error("unsupported_superdf", "This route requires R superdf >= 0.3.0 with structured analysis requirements.", "dependency"))
+  if (utils::packageVersion("studyframe") < "0.3.0") {
+    return(study_error("unsupported_studyframe", "This route requires R studyframe >= 0.3.0 with structured analysis requirements.", "dependency"))
   }
-  study <- tryCatch(superdf::read_superdf(args$path), error = identity)
+  study <- tryCatch(studyframe::read_studyframe(args$path), error = identity)
   if (inherits(study, "error")) {
     return(study_error("invalid_bundle", conditionMessage(study)))
   }
-  ctx <- superdf::context(study)
+  ctx <- studyframe::context(study)
   if (args$action == "inspect") {
     return(list(
       ok = TRUE,
@@ -31,19 +31,19 @@ study_main <- function(args) {
         dataset = ctx$dataset,
         schema_version = ctx$schema_version,
         current_rows = nrow(study),
-        roster_rows = nrow(superdf::collection_data(study)),
+        roster_rows = nrow(studyframe::collection_data(study)),
         roster = ctx$roster,
         declarations_verified = FALSE,
-        superdf_version = as.character(utils::packageVersion("superdf"))
+        studyframe_version = as.character(utils::packageVersion("studyframe"))
       ),
       context = ctx
     ))
   }
   tryCatch(
     {
-      request <- do.call(superdf::analysis_request, args$request)
+      request <- do.call(studyframe::analysis_request, args$request)
       if (args$action == "check") {
-        checked <- superdf::check_analysis(study, request)
+        checked <- studyframe::check_analysis(study, request)
         return(list(
           ok = checked$ok,
           issues = checked$issues,
@@ -54,7 +54,7 @@ study_main <- function(args) {
           )
         ))
       }
-      fit <- superdf::run_analysis(study, request)
+      fit <- studyframe::run_analysis(study, request)
       if (request$kind == "mean") {
         interval <- stats::confint(fit$fit, df = fit$analysis$design_df)
         estimate <- list(
@@ -81,7 +81,7 @@ study_main <- function(args) {
         receipt = list(request = request, analysis = analysis, declarations_verified = FALSE)
       )
     },
-    superdf_analysis_error = function(e) {
+    studyframe_analysis_error = function(e) {
       list(ok = FALSE, issues = e$issues)
     },
     error = function(e) {
