@@ -422,6 +422,25 @@ jobs:
         which R && echo "✅ R available for tool integration tests" || echo "❌ R required but not available"
         pytest tests/integration/tools/ -v --tb=short --cov=rmcp --cov-append
 
+    - name: Verify study tools without the optional package
+      env:
+        RMCP_REQUIRE_NO_STUDYFRAME: "1"
+      run: |
+        pytest tests/integration/tools/test_studies.py::test_missing_studyframe_keeps_ordinary_tools_working -v --tb=short
+
+    - name: Install optional study dependencies
+      run: |
+        Rscript -e 'packages <- c("digest", "jsonlite", "jsonvalidate", "arrow", "survey", "estimatr", "zip", "testthat"); missing <- setdiff(packages, rownames(installed.packages())); if (length(missing)) install.packages(missing, repos = "https://cloud.r-project.org")'
+        Rscript -e 'install.packages("https://github.com/gojiplus/superdf/archive/91d3d14b772874b36d43189494ebea20e83f22f1.tar.gz", repos = NULL, type = "source")'
+
+    - name: Run required study tests
+      env:
+        RMCP_REQUIRE_STUDY_TESTS: "1"
+        RMCP_REQUIRE_STUDY_REGRESSION: "1"
+      run: |
+        pytest tests/unit/tools/test_studies.py tests/integration/tools/test_studies.py -v --tb=short --cov=rmcp --cov-append
+        Rscript rmcp/r_assets/run_tests.R
+
     - name: Run integration tests - transport (HTTP transport)
       run: |
         pytest tests/integration/transport/ -v --tb=short --cov=rmcp --cov-append

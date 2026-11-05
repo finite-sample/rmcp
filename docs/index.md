@@ -21,6 +21,7 @@
 ### Resources
 - [Examples](examples.md) - Working examples and use cases
 - [Evaluation](evaluation.md) - Contract, protocol, semantic, and model-level release gates
+- [Study analysis](studies.md) - Optional studyframe bundles and declared-design inference
 - [Troubleshooting](troubleshooting.md) - Common issues and solutions
 
 ## API Reference
@@ -37,6 +38,7 @@
    http-api
    examples
    evaluation
+   studies
    troubleshooting
 ```
 

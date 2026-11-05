@@ -62,6 +62,15 @@ Complete API documentation for RMCP components.
    :show-inheritance:
 ```
 
+### Study Bundles
+
+The optional [study route](studies.md) keeps collection declarations with supported inference requests.
+
+```{eval-rst}
+.. automodule:: rmcp.tools.studies
+   :members: inspect_study, check_study_analysis, run_study_analysis
+```
+
 ## R Integration
 
 ### R Integration Core
