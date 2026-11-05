@@ -496,6 +496,7 @@ async def _execute_r_script_locked(
     timeout: float | None,
     *,
     full_precision: bool = False,
+    preserve_nulls: bool = False,
 ) -> dict[str, Any]:
     """Run one R script under the concurrency semaphore, queueing its notices.
 
@@ -508,6 +509,7 @@ async def _execute_r_script_locked(
         notices: Queue for progress notices, or ``None`` to discard them.
         timeout: Per-call timeout in seconds, overriding the configured default.
         full_precision: Preserve numeric precision in JSON for callers opting in.
+        preserve_nulls: Encode R NULL as JSON null instead of an empty object.
 
     Returns:
         dict[str, Any]: Result data from R script execution.
@@ -524,6 +526,7 @@ async def _execute_r_script_locked(
             result_path = files.result_path
             # Create complete R script with progress reporting
             precision_option = ", digits = NA" if full_precision else ""
+            null_option = ', null = "null"' if preserve_nulls else ""
             full_script = f"""
 # Load required libraries
 library(jsonlite)
@@ -550,7 +553,7 @@ args <- fromJSON("{files.args_r_path}")
 {script}
 # Write result
 if (exists("result")) {{
-    writeLines(toJSON(result, auto_unbox = TRUE, na = "null", pretty = TRUE{precision_option}), "{files.result_r_path}")
+    writeLines(toJSON(result, auto_unbox = TRUE, na = "null", pretty = TRUE{precision_option}{null_option}), "{files.result_r_path}")
 }} else {{
     stop("R script must define a 'result' variable")
 }}
@@ -825,6 +828,7 @@ async def execute_r_script_async(
     timeout: float | None = None,
     *,
     full_precision: bool = False,
+    preserve_nulls: bool = False,
 ) -> dict[str, Any]:
     """
     Execute R script asynchronously with proper cancellation support and concurrency control.
@@ -840,6 +844,7 @@ async def execute_r_script_async(
         context: Optional context for progress reporting and logging
         timeout: Per-call timeout in seconds, overriding the configured default
         full_precision: Preserve numeric precision in JSON for callers opting in
+        preserve_nulls: Encode R NULL as JSON null instead of an empty object
     Returns:
         dict[str, Any]: Result data from R script execution
     Raises:
@@ -848,7 +853,12 @@ async def execute_r_script_async(
     """
     if context is None:
         return await _execute_r_script_locked(
-            script, args, None, timeout, full_precision=full_precision
+            script,
+            args,
+            None,
+            timeout,
+            full_precision=full_precision,
+            preserve_nulls=preserve_nulls,
         )
 
     # Progress reaches the client through one sender task, outside the R
@@ -880,7 +890,12 @@ async def execute_r_script_async(
     sender = asyncio.create_task(deliver_notices())
     try:
         result = await _execute_r_script_locked(
-            script, args, notices, timeout, full_precision=full_precision
+            script,
+            args,
+            notices,
+            timeout,
+            full_precision=full_precision,
+            preserve_nulls=preserve_nulls,
         )
         # R is done and its slot released; let queued notices reach the client,
         # in order, for a bounded time. asyncio.wait returns at the deadline.

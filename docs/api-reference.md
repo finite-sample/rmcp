@@ -68,7 +68,7 @@ The optional [study route](studies.md) keeps collection declarations with suppor
 
 ```{eval-rst}
 .. automodule:: rmcp.tools.studies
-   :members: open_study, inspect_study, check_study_analysis, run_study_analysis
+   :members: inspect_study, check_study_analysis, run_study_analysis
 ```
 
 ## R Integration

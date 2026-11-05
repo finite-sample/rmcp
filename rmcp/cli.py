@@ -685,7 +685,6 @@ def _register_builtin_tools(server):
     from .tools.studies import (
         check_study_analysis,
         inspect_study,
-        open_study,
         run_study_analysis,
     )
     from .tools.timeseries import arima_model, decompose_timeseries, stationarity_test
@@ -755,7 +754,6 @@ def _register_builtin_tools(server):
         suggest_fix,
         validate_data,
         load_example,
-        open_study,
         inspect_study,
         check_study_analysis,
         run_study_analysis,

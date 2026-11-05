@@ -761,6 +761,148 @@
       "type": "object"
     }
   },
+  "check_study_analysis": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "domain": {
+                  "type": "boolean"
+                },
+                "kind": {
+                  "const": "mean"
+                },
+                "missing": {
+                  "enum": [
+                    "fail",
+                    "omit"
+                  ]
+                },
+                "outcome": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                },
+                "weight": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "outcome",
+                "weight"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "assignment": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "effect"
+                },
+                "outcome": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "outcome",
+                "assignment"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "study_ref": {
+          "additionalProperties": false,
+          "properties": {
+            "file_path": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "file_path",
+            "sha256"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "study_ref",
+        "analysis"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "bundle_sha256": {
+          "type": "string"
+        },
+        "context": {
+          "type": "object"
+        },
+        "estimate": {
+          "type": "object"
+        },
+        "issues": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "receipt": {
+          "type": "object"
+        },
+        "study": {
+          "type": "object"
+        },
+        "study_ref": {
+          "additionalProperties": false,
+          "properties": {
+            "file_path": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "file_path",
+            "sha256"
+          ],
+          "type": "object"
+        },
+        "validation_method": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "issues"
+      ],
+      "type": "object"
+    }
+  },
   "chi_square_test": {
     "input": {
       "additionalProperties": false,
@@ -2304,6 +2446,76 @@
       "type": "object"
     },
     "output": null
+  },
+  "inspect_study": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "bundle_sha256": {
+          "type": "string"
+        },
+        "context": {
+          "type": "object"
+        },
+        "estimate": {
+          "type": "object"
+        },
+        "issues": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "receipt": {
+          "type": "object"
+        },
+        "study": {
+          "type": "object"
+        },
+        "study_ref": {
+          "additionalProperties": false,
+          "properties": {
+            "file_path": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "file_path",
+            "sha256"
+          ],
+          "type": "object"
+        },
+        "validation_method": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "issues"
+      ],
+      "type": "object"
+    }
   },
   "instrumental_variables": {
     "input": {
@@ -4423,6 +4635,148 @@
         "formula",
         "residual_plots",
         "n_obs"
+      ],
+      "type": "object"
+    }
+  },
+  "run_study_analysis": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "domain": {
+                  "type": "boolean"
+                },
+                "kind": {
+                  "const": "mean"
+                },
+                "missing": {
+                  "enum": [
+                    "fail",
+                    "omit"
+                  ]
+                },
+                "outcome": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                },
+                "weight": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "outcome",
+                "weight"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "assignment": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "effect"
+                },
+                "outcome": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "outcome",
+                "assignment"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "study_ref": {
+          "additionalProperties": false,
+          "properties": {
+            "file_path": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "file_path",
+            "sha256"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "study_ref",
+        "analysis"
+      ],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "bundle_sha256": {
+          "type": "string"
+        },
+        "context": {
+          "type": "object"
+        },
+        "estimate": {
+          "type": "object"
+        },
+        "issues": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "receipt": {
+          "type": "object"
+        },
+        "study": {
+          "type": "object"
+        },
+        "study_ref": {
+          "additionalProperties": false,
+          "properties": {
+            "file_path": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "file_path",
+            "sha256"
+          ],
+          "type": "object"
+        },
+        "validation_method": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "issues"
       ],
       "type": "object"
     }

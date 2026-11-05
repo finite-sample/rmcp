@@ -6,7 +6,7 @@
 [![Documentation](https://github.com/finite-sample/rmcp/actions/workflows/docs.yml/badge.svg)](https://finite-sample.github.io/rmcp/)
 [![License](https://img.shields.io/github/license/finite-sample/rmcp)](https://github.com/finite-sample/rmcp/blob/main/LICENSE)
 
-**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with **58 tools**, including an optional study-aware analysis route, and **429 R packages** from systematic CRAN task views. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
+**Turn conversations into comprehensive statistical analysis** - A Model Context Protocol (MCP) server with statistical tools, an optional study analysis route, and **429 R packages** from systematic CRAN task views. RMCP enables AI assistants to perform sophisticated statistical modeling, econometric analysis, machine learning, time series analysis, and data science tasks through natural conversation.
 
 ## 🚀 Quick Start (30 seconds)
 
@@ -83,7 +83,7 @@ Formula building, error recovery, example datasets → *"Help me build a regress
 ## 📦 Installation
 
 For datasets carrying collection context, the optional
-[study analysis route](https://finite-sample.github.io/rmcp/studies.html) adds bundle-backed handles and validated
+[study analysis route](https://finite-sample.github.io/rmcp/studies.html) adds content-verified file references and validated
 studyframe adapters. Existing table-based tools retain their current behavior.
 The study route requires the collection-context R studyframe package and its selected
 backends on the execution host.

@@ -60,7 +60,6 @@ class LifespanState:
     # because a fresh Context is built per request -- approvals must outlive it.
     approved_operations: dict[str, dict[str, Any]] = field(default_factory=dict)
     approved_packages: set[str] = field(default_factory=set)
-    studies: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -78,7 +77,6 @@ class Context:
     _log_callback: Callable[[str, str, dict[str, Any]], Awaitable[None]] | None = None
     # Server reference for accessing resources
     _server: Optional["MCPServer"] = None
-    _session: Any | None = None
 
     @classmethod
     def create(
