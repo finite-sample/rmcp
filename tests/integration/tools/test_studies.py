@@ -151,9 +151,9 @@ async def test_study_protocol_and_existing_route(study_files):
             # Existing handlers and result shape remain the ordinary-table route.
             legacy = await call(
                 "linear_model",
-                {"data": {"x": [1, 2, 3, 4], "y": [3, 5, 7, 9]}, "formula": "y ~ x"},
+                {"data": {"x": [1, 2, 3, 4], "y": [3, 5, 6, 9]}, "formula": "y ~ x"},
             )
-            assert legacy["coefficients"]["x"] == pytest.approx(2)
+            assert legacy["coefficients"]["x"] == pytest.approx(1.9)
             assert "receipt" not in legacy
             restricted = await call(
                 "inspect_study",
