@@ -430,7 +430,7 @@ jobs:
 
     - name: Install optional study dependencies
       run: |
-        Rscript -e 'install.packages(c("digest", "jsonlite", "jsonvalidate", "arrow", "survey", "estimatr", "zip", "testthat"), repos = "https://cloud.r-project.org")'
+        Rscript -e 'packages <- c("digest", "jsonlite", "jsonvalidate", "arrow", "survey", "estimatr", "zip", "testthat"); missing <- setdiff(packages, rownames(installed.packages())); if (length(missing)) install.packages(missing, repos = "https://cloud.r-project.org")'
         Rscript -e 'install.packages("https://github.com/gojiplus/superdf/releases/download/v0.3.0/studyframe_0.3.0.tar.gz", repos = NULL, type = "source")'
 
     - name: Run required study tests
