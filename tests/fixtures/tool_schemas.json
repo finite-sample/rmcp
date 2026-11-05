@@ -819,6 +819,70 @@
                 "assignment"
               ],
               "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "assumptions": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                },
+                "cluster": {
+                  "anyOf": [
+                    {
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "kind": {
+                  "const": "regression"
+                },
+                "missing": {
+                  "enum": [
+                    "fail",
+                    "omit"
+                  ]
+                },
+                "outcome": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                },
+                "predictors": {
+                  "items": {
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "se_type": {
+                  "enum": [
+                    "HC2",
+                    "CR2",
+                    "stata"
+                  ]
+                },
+                "target": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "outcome",
+                "predictors",
+                "target",
+                "assumptions"
+              ],
+              "type": "object"
             }
           ]
         },
@@ -4695,6 +4759,70 @@
                 "kind",
                 "outcome",
                 "assignment"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "assumptions": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                },
+                "cluster": {
+                  "anyOf": [
+                    {
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "kind": {
+                  "const": "regression"
+                },
+                "missing": {
+                  "enum": [
+                    "fail",
+                    "omit"
+                  ]
+                },
+                "outcome": {
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                  "type": "string"
+                },
+                "predictors": {
+                  "items": {
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "se_type": {
+                  "enum": [
+                    "HC2",
+                    "CR2",
+                    "stata"
+                  ]
+                },
+                "target": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "outcome",
+                "predictors",
+                "target",
+                "assumptions"
               ],
               "type": "object"
             }

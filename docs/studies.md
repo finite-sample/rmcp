@@ -2,8 +2,9 @@
 
 The optional study tools use R studyframe bundles. Existing RMCP tools continue to
 accept ordinary tables with their current behavior. Study tools initially support
-numeric survey means and complete-outcome randomized effects; unsupported requests
-return issues and do not switch to an ordinary regression or t-test.
+numeric survey means, complete-outcome randomized effects, and explicitly
+model-based regressions. Unsupported requests return issues and do not switch
+estimators automatically.
 
 Install R studyframe 0.3.0 from its GitHub release on the execution host. The R
 package is named `studyframe`; its source repository is `gojiplus/superdf`. It is
@@ -109,9 +110,58 @@ these tools do not introduce per-user isolation or a persistent artifact store.
 Bundles are limited to 16 MiB compressed per call, with a separate 256 MiB
 uncompressed limit enforced by R. Temporary snapshot files are removed after
 each call. No study bytes are retained in a server registry.
-Metadata responses are limited to 32 KiB of JSON and fail explicitly above that
-limit. They are not moved into RMCP's shared oversized-result cache; paginated
-inspection of larger studies is future work.
+Metadata responses are limited to 256 KiB of JSON and fail explicitly above that
+limit. Real questionnaires with hundreds of variables can exceed 32 KiB before
+adding collection evidence. The larger finite limit accommodates these codebooks;
+study responses remain inline and never enter RMCP's shared oversized-result cache.
+Paginated inspection of larger studies is future work.
+
+## Run the handoff from a local client
+
+The executable example uses the official MCP client to inspect a bundle, check
+the supplied request, and run it only when the check succeeds:
+
+```sh
+uv run python examples/analyze_study.py /path/to/collected.studyframe request.json \
+  --output receipt.json
+```
+
+The server starts with the bundle's directory as its filesystem root. It inherits
+the client's R library configuration. The report contains inspection metadata,
+the requirements check, and the analysis receipt, with no observation rows.
+It refuses to overwrite an existing output file and exits nonzero when the
+request is refused. See the [official SDK client documentation](https://py.sdk.modelcontextprotocol.io/client/).
+
+## Explicit model-based regression
+
+Regression requires a studyframe build exporting `regression_request()`; the
+0.3.0 release supports only means and effects. The server reports an actionable
+dependency issue if that API is unavailable. A regression request uses variable
+identifiers rather than executable formulas:
+
+```json
+{
+  "kind": "regression",
+  "outcome": "recall_extremity",
+  "predictors": ["recall_rank"],
+  "cluster": "respondent_id",
+  "se_type": "stata",
+  "missing": "omit",
+  "target": "Association among observed recall records",
+  "assumptions": ["Respondent clusters are independent; the linear conditional mean is an adequate working model."]
+}
+```
+
+The result returns one entry per model term in `estimate.coefficients`, each with
+`term`, `value`, `standard_error`, `lower`, `upper`, `p_value`, and
+`degrees_of_freedom`. The receipt records the target, assumptions, exclusions,
+and variance choice. An explicit regression request does not establish randomized
+assignment or probability sampling, and is never selected as a fallback when
+a mean or effect request fails.
+
+To require the regression protocol test instead of skipping when its optional
+R API is absent, set `RMCP_REQUIRE_STUDY_REGRESSION=1` when running
+`tests/integration/tools/test_studies.py` with the newer R library.
 
 For required study validation in a development environment:
 

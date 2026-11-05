@@ -75,6 +75,7 @@ class ToolHandler(Protocol):
     _mcp_tool_title: str | None
     _mcp_tool_description: str | None
     _mcp_tool_annotations: dict[str, Any] | None
+    _mcp_tool_cache_large_results: bool
 
     def __call__(
         self, context: Context, params: dict[str, Any]
@@ -92,6 +93,7 @@ class ToolDefinition:
     title: str | None = None
     description: str | None = None
     annotations: dict[str, Any] | None = None
+    cache_large_results: bool = True
 
 
 #: How many oversized tool results to keep resolvable via ``rmcp://data/{id}``.
@@ -119,6 +121,7 @@ class ToolsRegistry:
         title: str | None = None,
         description: str | None = None,
         annotations: dict[str, Any] | None = None,
+        cache_large_results: bool = True,
     ) -> None:
         """Register a tool with the registry."""
         if name in self._tools:
@@ -134,6 +137,7 @@ class ToolsRegistry:
             title=title or name,
             description=description or f"Execute {name}",
             annotations=annotations or {},
+            cache_large_results=cache_large_results,
         )
         logger.debug(f"Registered tool: {name}")
         self._emit_list_changed([name])
@@ -323,7 +327,11 @@ class ToolsRegistry:
         structured_content: dict[str, Any] | None = None
         if isinstance(base_payload, dict | list) and base_payload:
             # Check if this is a large dataset that should be stored as a resource
-            resource_uri = self._check_for_large_data_and_create_resource(base_payload)
+            resource_uri = (
+                self._check_for_large_data_and_create_resource(base_payload)
+                if tool_def.cache_large_results
+                else None
+            )
             if resource_uri:
                 # Large dataset - provide resource link instead of inline data
                 content.append(
@@ -555,6 +563,7 @@ def tool(
     title: str | None = None,
     description: str | None = None,
     annotations: dict[str, Any] | None = None,
+    cache_large_results: bool = True,
 ):
     """
     Decorator to register a function as an MCP tool.
@@ -573,6 +582,7 @@ def tool(
         func._mcp_tool_title = title
         func._mcp_tool_description = description
         func._mcp_tool_annotations = annotations
+        func._mcp_tool_cache_large_results = cache_large_results
         return func  # type: ignore
 
     return decorator
@@ -589,4 +599,5 @@ def register_tool_functions(registry: ToolsRegistry, *functions: ToolHandler) ->
             title=func._mcp_tool_title,
             description=func._mcp_tool_description,
             annotations=func._mcp_tool_annotations,
+            cache_large_results=func._mcp_tool_cache_large_results,
         )

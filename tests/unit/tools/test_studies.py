@@ -172,12 +172,55 @@ async def test_large_metadata_does_not_escape_into_shared_result_cache(
     assert "study_ref" not in result
 
 
+@pytest.mark.parametrize("size, accepted", [(100 * 1024, True), (256 * 1024, False)])
+async def test_metadata_limits_through_protocol_without_shared_cache(
+    bridge, tmp_path, size, accepted
+):
+    source = tmp_path / "study.studyframe"
+    source.write_bytes(b"bundle")
+    bridge.return_value = {
+        "ok": True,
+        "issues": [],
+        "context": {"notes": "x" * size},
+    }
+    server = create_server()
+    server.configure(allowed_paths=[str(tmp_path)], read_only=True)
+    register_tool_functions(server.tools, studies.inspect_study)
+    async with create_connected_server_and_client_session(
+        build_sdk_server(server).sdk_server
+    ) as session:
+        response = await session.call_tool("inspect_study", {"file_path": str(source)})
+        assert not response.is_error
+        result = response.structured_content
+        assert result["ok"] is accepted
+        if accepted:
+            assert result["context"]["notes"] == "x" * size
+            assert result["study_ref"] == reference(source)
+        else:
+            assert result["issues"][0]["code"] == "result_too_large"
+        assert not server.tools._large_data_store
+
+
 @pytest.mark.parametrize(
     "analysis",
     [
         {"kind": "mean", "outcome": "x;system('id')", "weight": "w"},
         {"kind": "mean", "outcome": "y", "weight": "w", "formula": "y~x"},
         {"kind": "effect", "outcome": "y", "assignment": "a;system('id')"},
+        {
+            "kind": "regression",
+            "outcome": "y",
+            "predictors": ["x;system('id')"],
+            "target": "Observed respondents",
+            "assumptions": ["Independent clusters"],
+        },
+        {
+            "kind": "regression",
+            "outcome": "y",
+            "predictors": ["x"],
+            "target": "Observed respondents",
+            "assumptions": [],
+        },
         {
             "kind": "effect",
             "outcome": "y",

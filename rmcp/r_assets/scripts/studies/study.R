@@ -41,7 +41,16 @@ study_main <- function(args) {
   }
   tryCatch(
     {
-      request <- do.call(studyframe::analysis_request, args$request)
+      if (identical(args$request$kind, "regression")) {
+        if (!"regression_request" %in% getNamespaceExports("studyframe")) {
+          return(study_error("unsupported_studyframe", "Install a studyframe version with regression_request() for model-based regression.", "dependency"))
+        }
+        request_args <- args$request
+        request_args$kind <- NULL
+        request <- do.call(studyframe::regression_request, request_args)
+      } else {
+        request <- do.call(studyframe::analysis_request, args$request)
+      }
       if (args$action == "check") {
         checked <- studyframe::check_analysis(study, request)
         return(list(
@@ -63,6 +72,21 @@ study_main <- function(args) {
           lower = unname(interval[1, 1]), upper = unname(interval[1, 2]),
           confidence_level = 0.95, degrees_of_freedom = fit$analysis$design_df
         )
+      } else if (request$kind == "regression") {
+        estimate <- list(
+          coefficients = lapply(seq_along(fit$fit$coefficients), function(i) {
+            list(
+              term = unname(fit$fit$term[[i]]),
+              value = unname(fit$fit$coefficients[[i]]),
+              standard_error = unname(fit$fit$std.error[[i]]),
+              lower = unname(fit$fit$conf.low[[i]]),
+              upper = unname(fit$fit$conf.high[[i]]),
+              p_value = unname(fit$fit$p.value[[i]]),
+              degrees_of_freedom = unname(fit$fit$df[[i]])
+            )
+          }),
+          confidence_level = 0.95
+        )
       } else {
         estimate <- list(
           value = unname(fit$fit$coefficients[[1]]),
@@ -71,7 +95,12 @@ study_main <- function(args) {
           confidence_level = 0.95, degrees_of_freedom = unname(fit$fit$df[[1]])
         )
       }
-      if (any(!is.finite(unlist(estimate)))) {
+      numeric_estimates <- if (request$kind == "regression") {
+        unlist(lapply(estimate$coefficients, function(coefficient) coefficient[names(coefficient) != "term"]))
+      } else {
+        unlist(estimate)
+      }
+      if (any(!is.finite(numeric_estimates))) {
         return(study_error("nonfinite_inference", "The backend returned undefined or nonfinite inference.", "unsupported"))
       }
       analysis <- fit$analysis

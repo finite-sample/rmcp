@@ -431,11 +431,12 @@ jobs:
     - name: Install optional study dependencies
       run: |
         Rscript -e 'packages <- c("digest", "jsonlite", "jsonvalidate", "arrow", "survey", "estimatr", "zip", "testthat"); missing <- setdiff(packages, rownames(installed.packages())); if (length(missing)) install.packages(missing, repos = "https://cloud.r-project.org")'
-        Rscript -e 'install.packages("https://github.com/gojiplus/superdf/releases/download/v0.3.0/studyframe_0.3.0.tar.gz", repos = NULL, type = "source")'
+        Rscript -e 'install.packages("https://github.com/gojiplus/superdf/archive/41dd2884a95e8b56c188bbf5fea649be1eb7de5b.tar.gz", repos = NULL, type = "source")'
 
     - name: Run required study tests
       env:
         RMCP_REQUIRE_STUDY_TESTS: "1"
+        RMCP_REQUIRE_STUDY_REGRESSION: "1"
       run: |
         pytest tests/unit/tools/test_studies.py tests/integration/tools/test_studies.py -v --tb=short --cov=rmcp --cov-append
         Rscript rmcp/r_assets/run_tests.R

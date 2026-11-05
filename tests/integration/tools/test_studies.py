@@ -48,6 +48,10 @@ receipts <- lapply(requests, function(request) {
   analysis
 })
 writeLines(jsonlite::toJSON(receipts, auto_unbox=TRUE, digits=NA, null='null'), file.path(root, 'receipts.json'))
+wide_data <- data.frame(id=1:3)
+for (i in seq_len(200)) wide_data[[paste0('question_', i)]] <- seq_len(3)
+wide <- studyframe(wide_data, 'id', 'person', 'wide_questionnaire', variables=lapply(names(wide_data), function(column) variable_spec(column, label=paste(rep('Question wording', 10), collapse=' '))))
+write_studyframe(wide, file.path(root, 'wide.studyframe'))
 """
     subprocess.run(
         ["Rscript", "-e", script, str(directory)], check=True, capture_output=True
@@ -93,6 +97,12 @@ async def test_study_protocol_and_existing_route(study_files):
             study_ref = opened["study_ref"]
             assert opened["context"] == expected_context
             assert opened["study"]["current_rows"] == 96
+            wide = await call(
+                "inspect_study", {"file_path": str(study_files / "wide.studyframe")}
+            )
+            assert wide["ok"], wide
+            assert len(wide["context"]["variables"]) == 201
+            assert len(json.dumps(wide).encode()) > 50 * 1024
             requests = [
                 {"kind": "mean", "outcome": "baseline", "weight": "sample_weight"},
                 {
@@ -198,6 +208,124 @@ async def test_study_protocol_and_existing_route(study_files):
             )
             assert changed["issues"][0]["code"] == "study_changed"
             assert "estimate" not in changed
+
+
+def test_study_client_runner(study_files, tmp_path):
+    root = Path(__file__).resolve().parents[3]
+    request = tmp_path / "request.json"
+    request.write_text(
+        json.dumps({"kind": "mean", "outcome": "baseline", "weight": "sample_weight"})
+    )
+    output = tmp_path / "report.json"
+    process = subprocess.run(
+        [
+            sys.executable,
+            str(root / "examples/analyze_study.py"),
+            str(study_files / "study.studyframe"),
+            str(request),
+            "--output",
+            str(output),
+        ],
+        cwd=root,
+        env={**os.environ, "PYTHONPATH": str(root)},
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert process.returncode == 0, process.stderr
+    report = json.loads(output.read_text())
+    assert report["ok"]
+    assert report["check"]["validation_method"] == "requirements_check"
+    expected = json.loads((study_files / "expected.json").read_text())[0]
+    assert report["run"]["estimate"]["value"] == pytest.approx(expected["estimate"])
+    assert report["inspection"]["study_ref"] == report["run"]["study_ref"]
+    request.write_text(
+        json.dumps({"kind": "mean", "outcome": "baseline", "weight": "absent"})
+    )
+    output = tmp_path / "refused.json"
+    process = subprocess.run(
+        [
+            sys.executable,
+            str(root / "examples/analyze_study.py"),
+            str(study_files / "study.studyframe"),
+            str(request),
+            "--output",
+            str(output),
+        ],
+        cwd=root,
+        env={**os.environ, "PYTHONPATH": str(root)},
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert process.returncode == 1, process.stderr
+    report = json.loads(output.read_text())
+    assert not report["ok"]
+    assert "run" not in report
+
+
+def test_regression_client_runner(tmp_path):
+    probe = "quit(status=if (requireNamespace('studyframe',quietly=TRUE) && 'regression_request' %in% getNamespaceExports('studyframe')) 0L else 1L)"
+    ready = (
+        shutil.which("Rscript")
+        and subprocess.run(["Rscript", "-e", probe], capture_output=True).returncode
+        == 0
+    )
+    if not ready:
+        if os.environ.get("RMCP_REQUIRE_STUDY_REGRESSION") == "1":
+            pytest.fail(
+                "Install studyframe with regression_request() for regression protocol tests"
+            )
+        pytest.skip("Optional studyframe regression adapter is not installed")
+    script = r"""
+library(studyframe)
+root <- commandArgs(trailingOnly=TRUE)[[1]]
+data <- data.frame(id=1:40, respondent=rep(1:10, each=4), rank=rep(1:4, 10))
+data$outcome <- 2 + data$rank/3 + sin(data$id) + data$respondent/10
+x <- studyframe(data, 'id', 'recall', 'observed_recalls')
+request <- regression_request('outcome', 'rank', cluster='respondent', se_type='stata', target='Observed recall records', assumptions='Independent respondent clusters and a linear conditional mean')
+fit <- run_analysis(x, request)$fit
+write_studyframe(x, file.path(root, 'study.studyframe'))
+writeLines(jsonlite::toJSON(request, auto_unbox=TRUE, null='null'), file.path(root, 'request.json'))
+expected <- data.frame(term=fit$term, value=fit$coefficients, standard_error=fit$std.error, lower=fit$conf.low, upper=fit$conf.high, p_value=fit$p.value, degrees_of_freedom=fit$df, row.names=NULL)
+writeLines(jsonlite::toJSON(expected, dataframe='rows', digits=NA), file.path(root, 'expected.json'))
+"""
+    subprocess.run(
+        ["Rscript", "-e", script, str(tmp_path)], check=True, capture_output=True
+    )
+    root = Path(__file__).resolve().parents[3]
+    output = tmp_path / "receipt.json"
+    process = subprocess.run(
+        [
+            sys.executable,
+            str(root / "examples/analyze_study.py"),
+            str(tmp_path / "study.studyframe"),
+            str(tmp_path / "request.json"),
+            "--output",
+            str(output),
+        ],
+        cwd=root,
+        env={**os.environ, "PYTHONPATH": str(root)},
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert process.returncode == 0, process.stderr
+    report = json.loads(output.read_text())
+    assert report["ok"]
+    expected = json.loads((tmp_path / "expected.json").read_text())
+    actual = report["run"]["estimate"]["coefficients"]
+    assert len(actual) == len(expected) == 2
+    for coefficient, reference in zip(actual, expected, strict=True):
+        assert coefficient["term"] == reference["term"]
+        for field in reference.keys() - {"term"}:
+            assert coefficient[field] == pytest.approx(
+                reference[field], rel=1e-12, abs=1e-12
+            )
+    analysis = report["run"]["receipt"]["analysis"]
+    assert analysis["inference"] == "model_based_association"
+    assert analysis["request"]["target"] == "Observed recall records"
+    assert "current_keys" not in analysis
 
 
 async def test_missing_studyframe_keeps_ordinary_tools_working(tmp_path):
