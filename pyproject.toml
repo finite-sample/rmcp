@@ -223,9 +223,6 @@ linkify-it-py = "linkify_it_py"
 # FLEET for monitoring but does not adopt the copier template or the shared
 # workflow layer. See py-canon docs/fleet-inventory.md.
 skip_checks = ["template", "workflows", "ci-matrix"]
-# Not links: Starlette's TestClient base URL, and the hostname the local HTTPS
-# setup script writes into /etc/hosts.
-link_ignore = ["http://testserver", "https://rmcp.local"]
 
 [tool.codespell]
 # R package names and the mean absolute percentage error metric.

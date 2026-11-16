@@ -1,0 +1,8 @@
+# Patterns are written without a scheme: preen's links check scans this file
+# too, and a pattern with one would be extracted and checked as a link.
+exclude = [
+  # Not links: Starlette's TestClient base URL, and the hostname the local
+  # HTTPS setup script writes into /etc/hosts.
+  '//testserver',
+  '//rmcp\.local',
+]
