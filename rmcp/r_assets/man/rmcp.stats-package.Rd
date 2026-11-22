@@ -18,11 +18,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: RMCP Team \email{contact@gsood.com}
+\strong{Maintainer}: RMCP Team \url{https://github.com/finite-sample/rmcp/issues}
 
 Authors:
 \itemize{
-  \item RMCP Team \email{contact@gsood.com}
+  \item RMCP Team \url{https://github.com/finite-sample/rmcp/issues}
 }
 
 }

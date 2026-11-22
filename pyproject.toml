@@ -2,7 +2,7 @@
 name = "rmcp"
 version = "0.12.0"
 description = "Model Context Protocol server bringing R statistical analysis to Claude Desktop and Claude web, over stdio and Streamable HTTP"
-authors = [{name = "Gaurav Sood", email = "contact@gsood.com"}]
+authors = [{name = "Gaurav Sood"}]
 license = "MIT"
 license-files = ["LICENSE"]
 readme = "README.md"

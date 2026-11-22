@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   MCP evaluations to CI.
 - Replaced Hatchling and dynamic VCS versioning with the native `uv_build`
   backend and explicit versions managed by `uv version`.
-- Updated Python and R package contact metadata to `contact@gsood.com`.
+- Updated Python and R package contact metadata.
 - Replaced `filter_data` string-built R evaluation with typed operations that
   treat user values as data and enforce operator-specific operand shapes.
 - Simplified the comprehensive and Docker E2E runners around the canonical pytest
