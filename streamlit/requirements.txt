@@ -1,4 +1,4 @@
 streamlit>=1.67.0
 pandas>=2.0.0
-anthropic>=2.7.0
+anthropic>=2.9.0
 numpy>=1.24.0
