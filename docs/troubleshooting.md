@@ -5,19 +5,19 @@ Common issues and solutions for RMCP installation, configuration, and usage.
 ## Installation Issues
 
 ### Python Version Compatibility
-**Issue**: RMCP requires Python 3.11+
+**Issue**: RMCP requires Python 3.13+
 
 **Solution**:
 ```bash
 # Check Python version
 python --version
 
-# Install Python 3.11+ if needed
+# Install Python 3.13+ if needed
 # macOS with Homebrew:
-brew install python@3.11
+brew install python@3.13
 
 # Ubuntu/Debian:
-sudo apt update && sudo apt install python3.11
+sudo apt update && sudo apt install python3.13
 
 # Windows: Download from python.org
 ```

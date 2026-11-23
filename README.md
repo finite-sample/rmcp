@@ -89,7 +89,7 @@ The study route requires the collection-context R studyframe package and its sel
 backends on the execution host.
 
 ### Prerequisites
-- **Python 3.11+**
+- **Python 3.13+**
 - **R 4.4.0+** with **comprehensive package ecosystem**: RMCP uses a systematic 429-package whitelist from CRAN task views organized into 19+ categories:
 
 ```r

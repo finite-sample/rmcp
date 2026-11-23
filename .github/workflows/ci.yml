@@ -21,7 +21,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v7
       with:
-        python-version: "3.11"
+        python-version: "3.13"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v10.3.3
@@ -56,7 +56,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v7
       with:
-        python-version: "3.11"
+        python-version: "3.13"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v10.3.3
@@ -579,7 +579,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v7
       with:
-        python-version: "3.11"
+        python-version: "3.13"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v10.3.3
@@ -740,7 +740,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.11', '3.12']
+        python-version: ['3.13', '3.14']
 
     steps:
     - uses: actions/checkout@v7
