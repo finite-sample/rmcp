@@ -13,14 +13,13 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: R",
     "Topic :: Scientific/Engineering :: Information Analysis",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Distributed Computing",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 
 dependencies = [
     "click>=8.1.0",        # CLI interface
@@ -117,7 +116,7 @@ xfail_strict = true
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py313"
 src = ["rmcp", "tests", "docs", "streamlit"]
 
 [tool.ruff.lint]
@@ -167,7 +166,7 @@ exclude = [
     "streamlit/",
     "**/__pycache__",
 ]
-pythonVersion = "3.12"
+pythonVersion = "3.13"
 typeCheckingMode = "basic"
 useLibraryCodeForTypes = true
 reportMissingImports = true
