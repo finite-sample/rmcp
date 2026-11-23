@@ -477,7 +477,7 @@ is keyed to it. Renaming it breaks publishing until the publisher config is
 updated on pypi.org. See py-canon `STANDARD.md` "Legacy publishers".
 
 ## Important Notes
-- Python 3.11+ required
+- Python 3.13+ required
 - R environment provided via Docker (no local R installation needed for development)
 - All R communication uses JSON via subprocess
 - HTTP transport is MCP Streamable HTTP (SDK-managed sessions); bearer auth via RMCP_API_KEY

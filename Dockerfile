@@ -14,8 +14,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-runtime-${TARGETPLATFORM} \
     set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-        python3 \
-        python3-venv \
         libcurl4 \
         libssl3 \
         libxml2 \
@@ -25,6 +23,16 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-runtime-${TARGETPLATFORM} \
         ca-certificates; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Ubuntu noble's python3 is 3.12, below the package's 3.13 floor, so every
+# stage uses a uv-managed CPython from /opt/python instead. It lives in the
+# base stage so the production stage, which copies only /opt/venv, still has
+# the interpreter that venv points at.
+COPY --from=ghcr.io/astral-sh/uv:0.12.0 /uv /uvx /bin/
+ENV UV_PYTHON_INSTALL_DIR=/opt/python \
+    UV_PYTHON=3.13 \
+    UV_PYTHON_PREFERENCE=only-managed
+RUN uv python install 3.13 && chmod -R a+rX /opt/python
 
 RUN echo "options(bspm.enable=TRUE, bspm.quiet=TRUE)" >> /etc/R/Rprofile.site
 
@@ -67,7 +75,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-development-${TARGETPLATFORM
     apt-get install -y --no-install-recommends \
         build-essential \
         git \
-        python3-dev \
         libcurl4-openssl-dev \
         libssl-dev \
         libxml2-dev \
