@@ -1460,15 +1460,15 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.1.0" },
-    { name = "httpx", marker = "extra == 'all'", specifier = ">=0.25.0" },
-    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.25.0" },
-    { name = "jsonschema", specifier = ">=4.0.0" },
+    { name = "httpx", marker = "extra == 'all'", specifier = ">=0.25.1" },
+    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.25.1" },
+    { name = "jsonschema", specifier = ">=4.20.0" },
     { name = "mcp", specifier = ">=2,<3" },
-    { name = "openpyxl", marker = "extra == 'all'", specifier = ">=3.0.0" },
-    { name = "openpyxl", marker = "extra == 'http'", specifier = ">=3.0.0" },
-    { name = "pandas", marker = "extra == 'all'", specifier = ">=1.5.0" },
-    { name = "pandas", marker = "extra == 'http'", specifier = ">=1.5.0" },
-    { name = "psutil", specifier = ">=5.0.0" },
+    { name = "openpyxl", marker = "extra == 'all'", specifier = ">=3.0.4" },
+    { name = "openpyxl", marker = "extra == 'http'", specifier = ">=3.0.4" },
+    { name = "pandas", marker = "extra == 'all'", specifier = ">=2.2.3" },
+    { name = "pandas", marker = "extra == 'http'", specifier = ">=2.2.3" },
+    { name = "psutil", specifier = ">=5.9.4" },
     { name = "structlog", specifier = ">=23.1.0" },
     { name = "uvicorn", specifier = ">=0.31.1" },
 ]

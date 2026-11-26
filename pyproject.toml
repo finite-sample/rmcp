@@ -23,9 +23,9 @@ requires-python = ">=3.13"
 
 dependencies = [
     "click>=8.1.0",        # CLI interface
-    "jsonschema>=4.0.0",   # Schema validation
+    "jsonschema>=4.20.0",   # Schema validation
     "mcp>=2,<3",           # Official MCP SDK (protocol, stdio + Streamable HTTP)
-    "psutil>=5.0.0",       # R process management
+    "psutil>=5.9.4",       # R process management
     "uvicorn>=0.31.1",     # ASGI server for the Streamable HTTP transport
     "structlog>=23.1.0",   # Structured logging for MCP observability
     # subprocess module is built-in for Python 3.8+
@@ -35,14 +35,14 @@ dependencies = [
 # The Streamable HTTP transport ships with the base install (via the mcp SDK).
 # These extras carry test/data tooling only; kept for install compatibility.
 http = [
-    "httpx>=0.25.0",
-    "pandas>=1.5.0",           # Test Excel file creation
-    "openpyxl>=3.0.0",         # Test Excel support
+    "httpx>=0.25.1",
+    "pandas>=2.2.3",           # Test Excel file creation
+    "openpyxl>=3.0.4",         # Test Excel support
 ]
 all = [
-    "httpx>=0.25.0",
-    "pandas>=1.5.0",           # Test Excel file creation
-    "openpyxl>=3.0.0",         # Test Excel support
+    "httpx>=0.25.1",
+    "pandas>=2.2.3",           # Test Excel file creation
+    "openpyxl>=3.0.4",         # Test Excel support
 ]
 
 [dependency-groups]
