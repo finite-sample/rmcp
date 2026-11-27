@@ -53,13 +53,32 @@ if (is.null(group)) {
   }
 
   # Extract and clean data for each group
-  x <- data[[variable]][group_values == unique_groups[1]]
-  y <- data[[variable]][group_values == unique_groups[2]]
-  x <- x[!is.na(x)]
-  y <- y[!is.na(y)]
+  x <- data[[variable]][!is.na(group_values) & group_values == unique_groups[1]]
+  y <- data[[variable]][!is.na(group_values) & group_values == unique_groups[2]]
+  if (paired) {
+    if (length(x) != length(y)) {
+      stop("Paired t-test requires equal number of observations in both groups")
+    }
+    complete <- !is.na(x) & !is.na(y)
+    x <- x[complete]
+    y <- y[complete]
+  } else {
+    x <- x[!is.na(x)]
+    y <- y[!is.na(y)]
+  }
 
   test_result <- t.test(x, y, alternative = alternative, paired = paired, var.equal = var_equal)
   test_type <- if (paired) "Paired t-test" else if (var_equal) "Two-sample t-test (equal variances)" else "Welch's t-test"
+
+  if (paired) {
+    mean_x <- mean(x)
+    mean_y <- mean(y)
+    mean_difference <- as.numeric(test_result$estimate[1])
+  } else {
+    mean_x <- as.numeric(test_result$estimate[1])
+    mean_y <- as.numeric(test_result$estimate[2])
+    mean_difference <- as.numeric(test_result$estimate[1] - test_result$estimate[2])
+  }
 
   result <- list(
     test_type = test_type,
@@ -71,9 +90,9 @@ if (is.null(group)) {
       upper = as.numeric(test_result$conf.int[2]),
       level = if (!is.null(attr(test_result$conf.int, "conf.level"))) attr(test_result$conf.int, "conf.level") else 0.95
     ),
-    mean_x = as.numeric(test_result$estimate[1]),
-    mean_y = as.numeric(test_result$estimate[2]),
-    mean_difference = as.numeric(test_result$estimate[1] - test_result$estimate[2]),
+    mean_x = mean_x,
+    mean_y = mean_y,
+    mean_difference = mean_difference,
     groups = unique_groups,
     alternative = alternative,
     paired = paired,

@@ -241,3 +241,55 @@ def test_validate_data_honors_analysis_type_and_strict_mode(server):
     assert payload["is_valid"] is False
     assert "Correlation requires at least 2 numeric variables" in payload["errors"]
     assert payload["data_quality"]["data_issues"]["duplicate_rows"] == 1
+
+
+def test_paired_t_test_reports_group_means_and_difference(server):
+    before = [10.0, 12.0, 14.0, 16.0, 18.0]
+    after = [12.0, 15.0, 13.0, 19.0, 20.0]
+    result = call_tool(
+        server,
+        "t_test",
+        {
+            "data": {
+                "value": before + after,
+                "group": ["before"] * len(before) + ["after"] * len(after),
+            },
+            "variable": "value",
+            "group": "group",
+            "paired": True,
+        },
+    )
+
+    payload = assert_success(result)
+    assert payload["test_type"] == "Paired t-test"
+    assert payload["groups"] == ["after", "before"]
+    assert payload["mean_x"] == pytest.approx(15.8)
+    assert payload["mean_y"] == pytest.approx(14.0)
+    assert payload["mean_difference"] == pytest.approx(1.8)
+    assert payload["n_obs_x"] == 5
+    assert payload["n_obs_y"] == 5
+
+
+def test_paired_t_test_drops_incomplete_pairs_together(server):
+    # Pair 2 has a missing value in "before"; pairs 1, 3, 4, 5 stay aligned
+    # with differences (after - before) = [2, -1, 3, 2] -> mean_diff = 1.5
+    result = call_tool(
+        server,
+        "t_test",
+        {
+            "data": {
+                "value": [10.0, None, 14.0, 16.0, 18.0, 12.0, 15.0, 13.0, 19.0, 20.0],
+                "group": ["before"] * 5 + ["after"] * 5,
+            },
+            "variable": "value",
+            "group": "group",
+            "paired": True,
+        },
+    )
+
+    payload = assert_success(result)
+    assert payload["n_obs_x"] == 4
+    assert payload["n_obs_y"] == 4
+    assert payload["mean_x"] == pytest.approx(16.0)
+    assert payload["mean_y"] == pytest.approx(14.5)
+    assert payload["mean_difference"] == pytest.approx(1.5)
